@@ -195,6 +195,7 @@ export default function AdminPortal() {
   const [licenseSearch, setLicenseSearch] = useState("");
   const [licenseBulkBusy, setLicenseBulkBusy] = useState(false);
   const [licenseBulkSummary, setLicenseBulkSummary] = useState(null);
+  const [inviteLinkPreview, setInviteLinkPreview] = useState("");
   const [commissionSearch, setCommissionSearch] = useState("");
   const [mentorMgmtSearch, setMentorMgmtSearch] = useState("");
   const [mentorBulkBusy, setMentorBulkBusy] = useState(false);
@@ -408,21 +409,36 @@ export default function AdminPortal() {
       botName: ea?.name || "Bot",
       duration: licenseDuration || "lifetime",
     });
-    const origin =
-      typeof window !== "undefined" && window.location?.origin
-        ? window.location.origin
-        : "https://apex-ea.com";
-    return `${origin}/?${params.toString()}`;
+    // Always share the public .com host — never capacitor/localhost origin.
+    return `https://apex-ea.com/?${params.toString()}`;
   }
 
   async function copyMentorInviteLink() {
     const link = buildMentorInviteLink();
     if (!link) return;
+    setInviteLinkPreview(link);
     try {
-      await navigator.clipboard.writeText(link);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        throw new Error("clipboard unavailable");
+      }
       showToast("Invite link copied — send it to your clients");
     } catch {
-      window.prompt("Copy invite link:", link);
+      try {
+        const input = document.createElement("textarea");
+        input.value = link;
+        input.setAttribute("readonly", "");
+        input.style.position = "fixed";
+        input.style.left = "-9999px";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        showToast("Invite link copied — send it to your clients");
+      } catch {
+        window.prompt("Copy this invite link:", link);
+      }
     }
   }
 
@@ -2253,6 +2269,24 @@ export default function AdminPortal() {
                   Copy invite link
                 </button>
               </div>
+              {inviteLinkPreview ? (
+                <p
+                  className="ea-hint"
+                  style={{
+                    marginTop: 10,
+                    wordBreak: "break-all",
+                    fontSize: 12,
+                    opacity: 0.9,
+                  }}
+                >
+                  {inviteLinkPreview}
+                </p>
+              ) : (
+                <p className="ea-hint" style={{ marginTop: 10 }}>
+                  The link must include <strong>?invite=</strong> and{" "}
+                  <strong>&bot=</strong> — not just apex-ea.com.
+                </p>
+              )}
             </div>
 
             <div className="admin-card" style={{ marginTop: 14 }}>

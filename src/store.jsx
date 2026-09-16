@@ -1418,6 +1418,20 @@ export function AppProvider({ children }) {
   }, [activeBot, coverEmail, eas, licenseKeys, mentorDirectory]);
 
   const resolveLockStep = useCallback(() => {
+    // Mentor invite links must win over the normal unlock flow.
+    try {
+      const params = new URLSearchParams(window.location.search || "");
+      const invite = String(params.get("invite") || "")
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+      if (invite) {
+        setLockStep("invite");
+        return;
+      }
+    } catch {
+      // ignore
+    }
     const signup = getSignup(coverEmail);
     if (!coverEmail) {
       setLockStep("cover");

@@ -136,11 +136,14 @@ export default function CoverLock() {
   }, [coverEmail]);
 
   // Mentor invite link → clients claim their own key (no CSV / no mentor typing).
+  // Re-assert when the normal unlock resolver tries to overwrite lockStep.
   useEffect(() => {
     const meta = readInviteFromUrl();
     if (!meta?.invite) return undefined;
     setInviteMeta(meta);
-    setLockStep("invite");
+    if (lockStep !== "invite" && lockStep !== "license") {
+      setLockStep("invite");
+    }
     let cancelled = false;
     void fetchInvitePreview(meta.invite)
       .then((invite) => {
@@ -151,7 +154,7 @@ export default function CoverLock() {
     return () => {
       cancelled = true;
     };
-  }, [setLockStep]);
+  }, [lockStep, setLockStep]);
 
   // Warm license lookup — only treat as paid if the key is already bound to THIS phone.
   useEffect(() => {
