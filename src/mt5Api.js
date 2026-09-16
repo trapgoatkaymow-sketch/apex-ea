@@ -7,32 +7,56 @@ export const MT5_API_BASE = String(
     DEFAULT_MT5_API_BASE
 ).replace(/\/$/, "");
 
-async function mt5Fetch(path, { signal, base = MT5_API_BASE } = {}) {
+function canUseDirectHttp(base) {
+  const root = String(base || "").trim();
+  if (!root.startsWith("http://")) return true;
+  if (typeof window === "undefined") return true;
+  // HTTPS pages block cleartext → skip instead of hanging/failing oddly.
+  try {
+    return window.location?.protocol !== "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function mt5Fetch(path, { signal, base = MT5_API_BASE, timeoutMs = 2500 } = {}) {
   const root = String(base || MT5_API_BASE).replace(/\/$/, "");
   const url = `${root}${path.startsWith("/") ? path : `/${path}`}`;
-  const response = await fetch(url, {
-    method: "GET",
-    signal,
-    headers: { Accept: "application/json" },
-  });
-
-  const text = await response.text();
-  let data = text;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+  }
   try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    // Connect endpoints often return a plain token string.
-  }
+    const response = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
 
-  if (!response.ok) {
-    const message =
-      typeof data === "string"
-        ? data
-        : data?.message || data?.title || `MT5 API error ${response.status}`;
-    throw new Error(message);
-  }
+    const text = await response.text();
+    let data = text;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      // Connect endpoints often return a plain token string.
+    }
 
-  return data;
+    if (!response.ok) {
+      const message =
+        typeof data === "string"
+          ? data
+          : data?.message || data?.title || `MT5 API error ${response.status}`;
+      throw new Error(message);
+    }
+
+    return data;
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener("abort", onAbort);
+  }
 }
 
 /** Map Swagger Company[] → UI broker rows. */
@@ -67,7 +91,8 @@ export function mapMt5SearchResults(data, platform = "MT5") {
 
 /**
  * Broker search via MT5API /Search?company=…
- * Tries direct base, then same-origin /mt5-api proxy.
+ * Tries direct base (when allowed), then same-origin /mt5-api proxy.
+ * Failures time out quickly so MetaAPI fallback can run.
  */
 export async function searchBrokersMt5(company, platform = "MT5", { signal } = {}) {
   const q = String(company || "").trim();
@@ -75,18 +100,17 @@ export async function searchBrokersMt5(company, platform = "MT5", { signal } = {
 
   const path = `/Search?company=${encodeURIComponent(q)}`;
   const bases = [];
-  // Direct VPS first — works from phones that can open the Swagger page.
-  if (MT5_API_BASE) bases.push(MT5_API_BASE);
-  // Same-origin proxy (Vercel rewrite / Vite proxy) when direct is blocked/mixed-content.
+  if (MT5_API_BASE && canUseDirectHttp(MT5_API_BASE)) bases.push(MT5_API_BASE);
   bases.push("/mt5-api");
 
   let lastError = null;
   for (const base of bases) {
     try {
-      const data = await mt5Fetch(path, { signal, base });
+      const data = await mt5Fetch(path, { signal, base, timeoutMs: 2500 });
       const brokers = mapMt5SearchResults(data, platform);
       if (brokers.length) return brokers;
     } catch (error) {
+      if (signal?.aborted) throw error;
       lastError = error;
     }
   }

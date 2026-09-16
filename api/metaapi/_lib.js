@@ -187,7 +187,9 @@ export async function searchMt5ApiBrokers(query, platform = "MT5") {
   const plat = String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5";
   const url = `${MT5_API_BASE}/Search?company=${encodeURIComponent(q)}`;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  // Keep this short — the VPS often drops datacenter traffic and a long wait
+  // made broker search feel broken before MetaAPI fallback could run.
+  const timer = setTimeout(() => controller.abort(), 2500);
   let response;
   try {
     response = await fetch(url, {
@@ -256,38 +258,51 @@ export async function searchKnownServers(query, platform = "MT5", { token } = {}
   const q = String(query || "").trim();
   if (!q) return [];
 
-  // Prefer the dedicated MT5API broker catalog (logos + access hosts).
-  try {
-    const fromMt5 = await searchMt5ApiBrokers(q, platform);
-    if (fromMt5.length) return fromMt5;
-  } catch (error) {
-    console.warn("mt5api broker search failed", error.message || error);
-  }
-
   const version = String(platform).toUpperCase() === "MT4" ? 4 : 5;
-  const url = `${PROVISIONING_BASE}/known-mt-servers/${version}/search?query=${encodeURIComponent(q)}`;
-  const { data } = await metaFetch(url, { token });
 
-  const brokers = [];
-  const grouped = data && typeof data === "object" ? data : {};
-  Object.entries(grouped).forEach(([company, servers]) => {
-    const list = Array.isArray(servers) ? servers : [];
-    list.forEach((serverName, index) => {
-      brokers.push({
-        id: `${company}::${serverName}::${index}`,
-        company,
-        name: serverName,
-        site: "",
-        logoUrl: "",
-        access: [],
-        platform: version === 4 ? "MT4" : "MT5",
-        custom: false,
-        source: "metaapi",
+  async function fromMetaApi() {
+    const url = `${PROVISIONING_BASE}/known-mt-servers/${version}/search?query=${encodeURIComponent(q)}`;
+    const { data } = await metaFetch(url, { token });
+    const brokers = [];
+    const grouped = data && typeof data === "object" ? data : {};
+    Object.entries(grouped).forEach(([company, servers]) => {
+      const list = Array.isArray(servers) ? servers : [];
+      list.forEach((serverName, index) => {
+        brokers.push({
+          id: `${company}::${serverName}::${index}`,
+          company,
+          name: serverName,
+          site: "",
+          logoUrl: "",
+          access: [],
+          platform: version === 4 ? "MT4" : "MT5",
+          custom: false,
+          source: "metaapi",
+        });
       });
     });
-  });
+    return brokers;
+  }
 
-  return brokers;
+  // Run both in parallel. Cap is the short MT5 timeout (~2.5s), not a 15s hang.
+  const [mt5, meta] = await Promise.all([
+    searchMt5ApiBrokers(q, platform).catch((error) => {
+      console.warn("mt5api broker search failed", error.message || error);
+      return [];
+    }),
+    fromMetaApi(),
+  ]);
+
+  if (mt5.length) {
+    if (!meta.length) return mt5;
+    const seen = new Set(mt5.map((b) => `${b.company}::${b.name}`.toLowerCase()));
+    return [
+      ...mt5,
+      ...meta.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase())),
+    ];
+  }
+
+  return meta;
 }
 
 function parseRetryAfterSeconds(response, fallback = 60) {
@@ -620,7 +635,7 @@ export async function connectTradingAccount({
         platform: mtPlatform,
         magic: 0,
         manualTrades: true,
-        type: "cloud-g2",
+        type: "cloud-g1",
         copyFactoryRoles: ["SUBSCRIBER"],
         copyFactoryResourceSlots: 1,
         resourceSlots: 1,

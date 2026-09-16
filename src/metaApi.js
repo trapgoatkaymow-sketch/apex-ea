@@ -86,39 +86,35 @@ export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
   const { searchLocalBrokers } = await import("./brokerCatalog.js");
   const local = searchLocalBrokers(q, platform);
 
-  // Prefer MT5API Swagger /Search (direct or /mt5-api proxy) — real logos + access hosts.
-  try {
-    const { searchBrokersMt5 } = await import("./mt5Api.js");
-    const fromMt5 = await searchBrokersMt5(q, platform, { signal });
-    if (fromMt5.length) {
-      const seen = new Set(
-        fromMt5.map((b) => `${b.company}::${b.name}`.toLowerCase())
-      );
-      const extras = local.filter(
-        (b) => !seen.has(`${b.company}::${b.name}`.toLowerCase())
-      );
-      return [...fromMt5, ...extras];
+  // MetaAPI via our server is the reliable path. MT5API is optional and must
+  // not block — it previously hung ~15s on a dead VPS and broke search/connect.
+  const params = new URLSearchParams({
+    q,
+    platform: String(platform || "MT5").toUpperCase(),
+  });
+  const remotePromise = apiFetch(`/brokers?${params.toString()}`, { signal })
+    .then((data) => (Array.isArray(data?.brokers) ? data.brokers : []))
+    .catch(() => []);
+  const mt5Promise = import("./mt5Api.js")
+    .then(({ searchBrokersMt5 }) => searchBrokersMt5(q, platform, { signal }))
+    .catch(() => []);
+
+  const [remote, fromMt5] = await Promise.all([remotePromise, mt5Promise]);
+  let merged = remote;
+  if (fromMt5.length) {
+    const byKey = new Map(
+      remote.map((b) => [`${b.company}::${b.name}`.toLowerCase(), b])
+    );
+    for (const row of fromMt5) {
+      byKey.set(`${row.company}::${row.name}`.toLowerCase(), row);
     }
-  } catch {
-    // Fall through to server MetaAPI path.
+    merged = Array.from(byKey.values());
   }
 
-  try {
-    const params = new URLSearchParams({
-      q,
-      platform: String(platform || "MT5").toUpperCase(),
-    });
-    // Server hits MT5API /Search first, then MetaAPI known-mt-servers fallback.
-    const data = await apiFetch(`/brokers?${params.toString()}`, { signal });
-    const remote = Array.isArray(data?.brokers) ? data.brokers : [];
-    if (!remote.length) return local;
-
-    const seen = new Set(remote.map((b) => `${b.company}::${b.name}`.toLowerCase()));
-    const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));
-    return [...remote, ...extras];
-  } catch {
-    return local;
-  }
+  if (!merged.length) return local;
+  const seen = new Set(merged.map((b) => `${b.company}::${b.name}`.toLowerCase()));
+  const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));
+  return [...merged, ...extras];
 }
 
 export async function getAccountStatus(accountId, { company = "", strategyId = "", signal } = {}) {
