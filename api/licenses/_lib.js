@@ -1554,7 +1554,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   }
   const clientEmail = normalizeEmail(current.clientEmail) || claimEmail;
   const signup = clientEmail ? await findSignup(clientEmail) : null;
-  const accessPaid = Boolean(signup?.accessPaid);
+  const accessPaid = Boolean(signup?.accessPaid) && !signup?.accessBypassed;
   const alreadyUnlocked = Boolean(signup?.appAccessUnlockedAt);
   const priorUsed = currentList.some(
     (row) =>
@@ -1567,11 +1567,13 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   );
   const commissionReason = commissionEligible
     ? "first_paid_access"
-    : !accessPaid
-      ? "not_paid"
-      : alreadyUnlocked || priorUsed
-        ? "access_already_active"
-        : "ineligible";
+    : signup?.accessBypassed
+      ? "invite_migrate_bypass"
+      : !accessPaid
+        ? "not_paid"
+        : alreadyUnlocked || priorUsed
+          ? "access_already_active"
+          : "ineligible";
 
   let result = null;
   const now = Date.now();
