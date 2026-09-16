@@ -296,13 +296,15 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     try {
       await advance(0);
       await advance(1);
+      // Do not send client email on connect — MetaAPI allows max 3 account keywords
+      // and email tag would exceed the limit on some deployments. Email is registered
+      // after connect via syncHostedAccount (mt5-accounts registry).
       const connected = await connectAccount({
         login,
         password,
         server,
         platform,
         company: selectedBroker?.company || "",
-        email: normalizeEmail(coverEmail),
         onProgress: async () => {
           setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
         },
