@@ -635,9 +635,9 @@ export async function connectTradingAccount({
         platform: mtPlatform,
         magic: 0,
         manualTrades: true,
+        // G1 is enough for Chart Scanner market trades. Do NOT enable CopyFactory
+        // roles here — unpaid CopyFactory blocks account create entirely.
         type: "cloud-g1",
-        copyFactoryRoles: ["SUBSCRIBER"],
-        copyFactoryResourceSlots: 1,
         resourceSlots: 1,
         metastatsApiEnabled: false,
         riskManagementApiEnabled: false,
