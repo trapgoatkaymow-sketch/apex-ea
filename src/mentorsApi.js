@@ -90,6 +90,12 @@ function normalizeLicenseKeysAllowed(value, { role } = {}) {
 function publicLocal(mentor) {
   if (!mentor) return null;
   const role = mentor.role || "mentor";
+  const id = String(mentor.id || "");
+  const inviteFromId = id
+    .replace(/-/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 8);
   return {
     id: mentor.id,
     username: mentor.username,
@@ -102,6 +108,7 @@ function publicLocal(mentor) {
     licenseKeysAllowed: normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role,
     }),
+    inviteCode: String(mentor.inviteCode || inviteFromId || "").trim().toUpperCase(),
   };
 }
 
@@ -199,6 +206,17 @@ function mergeMentorLists(localList = [], remoteList = []) {
               : "mentor",
         }
       ),
+      inviteCode: String(
+        item.inviteCode ||
+          prev?.inviteCode ||
+          String(item.id || prev?.id || "")
+            .replace(/-/g, "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "")
+            .slice(0, 8)
+      )
+        .trim()
+        .toUpperCase(),
     });
   }
   return Array.from(map.values()).sort(

@@ -1,5 +1,6 @@
 import { endOptions } from "../_cors.js";
 import {
+  claimLicenseViaInvite,
   createLicense,
   createLicensesBulk,
   deactivateLicense,
@@ -27,6 +28,29 @@ export default async function handler(req, res) {
       const url = new URL(req.url || "/", `http://${host}`);
       const key = url.searchParams.get("key") || "";
       const email = url.searchParams.get("email") || "";
+      const invite = url.searchParams.get("invite") || "";
+      if (invite) {
+        try {
+          const { findMentorByInviteCode } = await import("../mentors/_lib.js");
+          const mentor = await findMentorByInviteCode(invite);
+          if (!mentor) {
+            sendJson(res, 404, { error: "Invalid invite link" });
+            return;
+          }
+          sendJson(res, 200, {
+            invite: {
+              code: String(invite).trim().toUpperCase().replace(/[^A-Z0-9]/g, ""),
+              mentorName: mentor.username || "",
+              mentorId: mentor.id || "",
+            },
+          });
+        } catch (error) {
+          sendJson(res, error.status || 500, {
+            error: error.message || "Invite lookup failed",
+          });
+        }
+        return;
+      }
       if (key) {
         const license = await findLicense(key);
         if (!license) {
@@ -52,6 +76,11 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const body = await readJsonBody(req);
       const action = String(body?.action || "").toLowerCase();
+      if (action === "claim" || action === "invite-claim" || action === "invite") {
+        const result = await claimLicenseViaInvite(body);
+        sendJson(res, 200, result);
+        return;
+      }
       if (action === "bulk" || Array.isArray(body?.clients)) {
         const result = await createLicensesBulk(body);
         sendJson(res, 200, result);

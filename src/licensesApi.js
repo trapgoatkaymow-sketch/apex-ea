@@ -402,6 +402,31 @@ export async function createLicensesBulkRemote(payload) {
   };
 }
 
+/** Preview a mentor invite link (name only). */
+export async function fetchInvitePreview(inviteCode) {
+  const code = String(inviteCode || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  if (!code) return null;
+  const data = await apiFetch(`?invite=${encodeURIComponent(code)}`);
+  return data?.invite || null;
+}
+
+/** Client self-claims a key from a mentor invite link. */
+export async function claimInviteLicenseRemote(payload) {
+  const data = await apiFetch("", {
+    method: "POST",
+    body: { action: "claim", ...(payload || {}) },
+  });
+  return {
+    license: normalizeLicense(data?.license),
+    created: Boolean(data?.created),
+    mentorName: String(data?.mentorName || "").trim(),
+    inviteCode: String(data?.inviteCode || "").trim(),
+  };
+}
+
 export async function uploadBotPhotoRemote(botId, photo) {
   const data = await apiFetch("/photo", {
     method: "POST",

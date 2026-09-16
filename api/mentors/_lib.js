@@ -144,6 +144,18 @@ export function hashPassword(password, salt) {
     .digest("hex");
 }
 
+/** Stable short code mentors share so clients can self-claim a license key. */
+export function mentorInviteCode(mentor) {
+  const id = String(mentor?.id || "")
+    .replace(/-/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  if (id.length >= 8) return id.slice(0, 8);
+  const email = normalizeEmail(mentor?.email);
+  if (!email) return "";
+  return crypto.createHash("sha1").update(email).digest("hex").slice(0, 8).toUpperCase();
+}
+
 export function publicMentor(mentor) {
   if (!mentor) return null;
   const banking = normalizeBanking(mentor.banking);
@@ -160,7 +172,27 @@ export function publicMentor(mentor) {
     licenseKeysAllowed: normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role,
     }),
+    inviteCode: mentorInviteCode(mentor),
   };
+}
+
+export async function findMentorByInviteCode(rawCode) {
+  const needle = String(rawCode || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  if (!needle) return null;
+  const mentors = await listMentors();
+  const match = mentors.find((m) => mentorInviteCode(m) === needle);
+  if (!match) return null;
+  const status = String(match.status || "").toLowerCase();
+  const role = String(match.role || "").toLowerCase();
+  if (role !== "superadmin" && status !== "approved") {
+    const err = new Error("This mentor is not accepting clients yet");
+    err.status = 403;
+    throw err;
+  }
+  return match;
 }
 
 function normalizeBanking(raw = {}) {

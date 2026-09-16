@@ -368,6 +368,64 @@ export default function AdminPortal() {
     downloadTextFile(`apexea-bulk-licenses-${Date.now()}.csv`, csv);
   }
 
+  function mentorInviteCodeFor(mentorOrSession) {
+    const fromField = String(mentorOrSession?.inviteCode || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
+    if (fromField) return fromField;
+    const id = String(mentorOrSession?.id || "")
+      .replace(/-/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
+    return id.slice(0, 8);
+  }
+
+  function buildMentorInviteLink() {
+    const ownerEmail = String(adminSession.email || "")
+      .trim()
+      .toLowerCase();
+    const ownerMentor =
+      mentors.find(
+        (m) =>
+          String(m.email || "")
+            .trim()
+            .toLowerCase() === ownerEmail
+      ) || adminSession;
+    const code = mentorInviteCodeFor(ownerMentor);
+    if (!code) {
+      showToast("Could not build invite code — re-login to mentor portal");
+      return "";
+    }
+    if (!licenseBotId) {
+      showToast("Select a bot first");
+      return "";
+    }
+    const ea = myEas.find((b) => b.id === licenseBotId);
+    const params = new URLSearchParams({
+      invite: code,
+      bot: licenseBotId,
+      botName: ea?.name || "Bot",
+      duration: licenseDuration || "lifetime",
+    });
+    const origin =
+      typeof window !== "undefined" && window.location?.origin
+        ? window.location.origin
+        : "https://apex-ea.com";
+    return `${origin}/?${params.toString()}`;
+  }
+
+  async function copyMentorInviteLink() {
+    const link = buildMentorInviteLink();
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      showToast("Invite link copied — send it to your clients");
+    } catch {
+      window.prompt("Copy invite link:", link);
+    }
+  }
+
   async function runBulkLicenseImport(file) {
     if (!file) return;
     if (!licenseBotId) {
@@ -2175,15 +2233,38 @@ export default function AdminPortal() {
 
             <div className="admin-card" style={{ marginTop: 14 }}>
               <div className="admin-card-title-row">
+                <h3>Share invite link</h3>
+                <span className="admin-badge">No CSV needed</span>
+              </div>
+              <p className="admin-card-meta">
+                Moving people from another platform and you only have mentor
+                portal access? Select the bot above, copy this link, and send it
+                in WhatsApp/Telegram. Each client enters their own name + email
+                and gets a license key automatically — you do not generate 800
+                keys yourself.
+              </p>
+              <div className="admin-btn-row" style={{ marginTop: 8 }}>
+                <button
+                  className="admin-btn admin-btn-solid admin-btn-sm"
+                  type="button"
+                  disabled={myEas.length === 0 || !licenseBotId}
+                  onClick={() => void copyMentorInviteLink()}
+                >
+                  Copy invite link
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-card" style={{ marginTop: 14 }}>
+              <div className="admin-card-title-row">
                 <h3>Bulk import (CSV)</h3>
                 <span className="admin-badge">Migrate clients</span>
               </div>
               <p className="admin-card-meta">
-                Moving people from another platform? Upload a CSV with{" "}
+                Already have a list of emails? Upload a CSV with{" "}
                 <strong>name,email</strong> (up to 1000 rows). This generates all
                 license keys at once, auto-approves those emails, and lets you
-                download the keys to send out — no need to click Generate 800+
-                times.
+                download the keys to send out.
               </p>
               <label className="ea-field">
                 <span>CSV file</span>

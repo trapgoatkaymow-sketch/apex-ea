@@ -1347,6 +1347,146 @@ export async function createLicensesBulk(payload = {}) {
 }
 
 /**
+ * Client self-claim via mentor invite link — no mentor CSV required.
+ * Creates (or returns) a key for the mentor's bot and auto-approves access.
+ */
+export async function claimLicenseViaInvite(payload = {}) {
+  const { findMentorByInviteCode } = await import("../mentors/_lib.js");
+  const mentor = await findMentorByInviteCode(payload.inviteCode || payload.invite);
+  if (!mentor) {
+    const err = new Error("Invalid invite link");
+    err.status = 404;
+    throw err;
+  }
+
+  const botId = String(payload.botId || payload.bot?.id || "").trim();
+  const botName =
+    String(payload.botName || payload.bot?.name || "Bot").trim() || "Bot";
+  if (!botId) {
+    const err = new Error("botId is required on the invite link");
+    err.status = 400;
+    throw err;
+  }
+
+  const clientEmail = normalizeEmail(payload.clientEmail || payload.email || "");
+  const clientName = String(payload.clientName || payload.name || "").trim();
+  if (!clientName || !clientEmail || !clientEmail.includes("@")) {
+    const err = new Error("Enter your name and a valid email");
+    err.status = 400;
+    throw err;
+  }
+
+  const durationId = String(payload.duration || "lifetime").trim().toLowerCase();
+  const rawPhoto = String(payload.bot?.photo || payload.photo || "/logo.png").trim();
+  let photo = await resolveEmbeddablePhoto(botId, rawPhoto);
+  if (String(photo).startsWith("data:image/")) {
+    photo = `/api/licenses/photo?botId=${encodeURIComponent(botId)}`;
+  }
+  const bot = {
+    id: botId,
+    name: botName,
+    photo,
+    strategy: String(payload.bot?.strategy || payload.strategy || "scalper"),
+    symbols: Array.isArray(payload.bot?.symbols)
+      ? payload.bot.symbols
+      : Array.isArray(payload.symbols)
+        ? payload.symbols
+        : [],
+  };
+
+  const mentorEmail = normalizeEmail(mentor.email);
+  const mentorId = String(mentor.id || "").trim();
+  const mentorName = String(mentor.username || "").trim();
+
+  let keyAllowance = null;
+  try {
+    const { getMentorLicenseKeysAllowed } = await import("../mentors/_lib.js");
+    keyAllowance = await getMentorLicenseKeysAllowed(mentorEmail);
+  } catch {
+    keyAllowance = 1500;
+  }
+
+  let license = null;
+  let created = false;
+  await mutateStore((licenses, api) => {
+    const existing = licenses.find(
+      (row) =>
+        normalizeEmail(row.clientEmail) === clientEmail &&
+        String(row.botId || row.bot?.id || "").trim() === botId &&
+        !api.isDeleted?.(row.key)
+    );
+    if (existing) {
+      license = existing;
+      created = false;
+      return licenses;
+    }
+
+    if (keyAllowance != null) {
+      const used = licenses.filter(
+        (row) => normalizeEmail(row.mentorEmail) === mentorEmail
+      ).length;
+      if (used >= keyAllowance) {
+        const err = new Error(
+          `This mentor has no license keys left (${used}/${keyAllowance}). Ask them to request more.`
+        );
+        err.status = 403;
+        throw err;
+      }
+    }
+
+    const usedKeys = new Set(
+      licenses.map((row) => normalizeLicenseKey(row.key)).filter(Boolean)
+    );
+    let key = randomLicenseKeyServer(usedKeys);
+    while (api.isDeleted?.(key) || usedKeys.has(key)) {
+      key = randomLicenseKeyServer(usedKeys);
+    }
+    const now = Date.now();
+    const timing = resolveLicenseExpiry(durationId, now);
+    license = {
+      key,
+      botId,
+      botName,
+      clientEmail,
+      clientName,
+      mainText: clientName,
+      mentorEmail,
+      mentorId,
+      mentorName,
+      used: false,
+      commissionEligible: false,
+      commissionReason: "",
+      duration: timing.duration,
+      expiresAt: timing.expiresAt,
+      createdAt: now,
+      usedAt: null,
+      deviceId: null,
+      boundAt: null,
+      updatedAt: now,
+      bot,
+    };
+    created = true;
+    return [license, ...licenses];
+  }, `invite claim · ${mentorName || mentorEmail} · ${clientEmail}`);
+
+  try {
+    const { upsertSignupsApprovedBulk } = await import("../signups/_lib.js");
+    await upsertSignupsApprovedBulk([clientEmail]);
+  } catch (error) {
+    console.warn("invite claim signup approve failed", error.message || error);
+  }
+
+  return {
+    license,
+    created,
+    mentorName,
+    inviteCode: String(payload.inviteCode || payload.invite || "")
+      .trim()
+      .toUpperCase(),
+  };
+}
+
+/**
  * Bind a license to the activating phone.
  * Same phone can re-open automatically. A different phone is always rejected —
  * only super admin can deactivate/reset a used key for a new phone.

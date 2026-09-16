@@ -12,6 +12,8 @@ import {
   rememberDeviceAccess,
 } from "./deviceAccess.js";
 import {
+  claimInviteLicenseRemote,
+  fetchInvitePreview,
   fetchLicensesByEmail,
   isLicenseExpired,
 } from "./licensesApi.js";
@@ -26,6 +28,53 @@ function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
+}
+
+function readInviteFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    const hash = String(window.location.hash || "");
+    const hashQuery = hash.includes("?")
+      ? hash.slice(hash.indexOf("?") + 1)
+      : hash.startsWith("#")
+        ? hash.slice(1)
+        : "";
+    const hashParams = new URLSearchParams(hashQuery);
+    const invite = String(
+      params.get("invite") || hashParams.get("invite") || ""
+    )
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
+    if (!invite) return null;
+    return {
+      invite,
+      botId: String(params.get("bot") || hashParams.get("bot") || "").trim(),
+      botName: String(
+        params.get("botName") || hashParams.get("botName") || "Bot"
+      ).trim(),
+      duration: String(
+        params.get("duration") || hashParams.get("duration") || "lifetime"
+      )
+        .trim()
+        .toLowerCase(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearInviteFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("invite");
+    url.searchParams.delete("bot");
+    url.searchParams.delete("botName");
+    url.searchParams.delete("duration");
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+  } catch {
+    // ignore
+  }
 }
 
 function licenseStillValid(row) {
@@ -73,6 +122,11 @@ export default function CoverLock() {
   const [checkingPaid, setCheckingPaid] = useState(false);
   const [paypalReady, setPaypalReady] = useState(false);
   const [paypalError, setPaypalError] = useState("");
+  const [inviteMeta, setInviteMeta] = useState(() => readInviteFromUrl());
+  const [inviteMentorName, setInviteMentorName] = useState("");
+  const [inviteClientName, setInviteClientName] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [claimedKey, setClaimedKey] = useState("");
   const hotspotRef = useRef({ count: 0, first: 0 });
   const paypalButtonsRef = useRef(null);
   const paypalRenderedRef = useRef(false);
@@ -80,6 +134,24 @@ export default function CoverLock() {
   useEffect(() => {
     setEmail(coverEmail || "");
   }, [coverEmail]);
+
+  // Mentor invite link → clients claim their own key (no CSV / no mentor typing).
+  useEffect(() => {
+    const meta = readInviteFromUrl();
+    if (!meta?.invite) return undefined;
+    setInviteMeta(meta);
+    setLockStep("invite");
+    let cancelled = false;
+    void fetchInvitePreview(meta.invite)
+      .then((invite) => {
+        if (cancelled || !invite) return;
+        setInviteMentorName(String(invite.mentorName || "").trim());
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [setLockStep]);
 
   // Warm license lookup — only treat as paid if the key is already bound to THIS phone.
   useEffect(() => {
@@ -462,8 +534,63 @@ export default function CoverLock() {
     const ok = await activateLicense(licenseKey);
     if (ok) {
       setLicenseKey("");
+      setClaimedKey("");
       // Close the overlay after a successful add/activate.
       setLockStep("cover");
+    }
+  }
+
+  async function submitInviteClaim(event) {
+    event.preventDefault();
+    if (!inviteMeta?.invite || !inviteMeta?.botId) {
+      showToast("This invite link is missing the bot — ask your mentor for a new link");
+      return;
+    }
+    const clientEmail = normalizeEmail(email);
+    const clientName = String(inviteClientName || "").trim();
+    if (!clientName || !clientEmail.includes("@")) {
+      showToast("Enter your name and a valid email");
+      return;
+    }
+    if (inviteBusy) return;
+    setInviteBusy(true);
+    try {
+      const result = await claimInviteLicenseRemote({
+        inviteCode: inviteMeta.invite,
+        botId: inviteMeta.botId,
+        botName: inviteMeta.botName || "Bot",
+        duration: inviteMeta.duration || "lifetime",
+        clientName,
+        clientEmail,
+        photo: "/logo.png",
+      });
+      const key = String(result?.license?.key || "").trim();
+      if (!key) {
+        showToast("Could not create your license key");
+        return;
+      }
+      await requestSignup?.(clientEmail);
+      rememberDeviceAccess(clientEmail, { paid: true, bypassed: true });
+      ingestSignup?.({
+        email: clientEmail,
+        status: "approved",
+        accessPaid: true,
+        accessPaidAt: Date.now(),
+      });
+      setClaimedKey(key);
+      setLicenseKey(key);
+      setInviteMentorName(result.mentorName || inviteMentorName);
+      clearInviteFromUrl();
+      setLockStep("license");
+      showToast(
+        result.created
+          ? "Your key is ready — tap Unlock app"
+          : "You already have a key — tap Unlock app"
+      );
+    } catch (error) {
+      showToast(error.message || "Invite claim failed");
+    } finally {
+      setInviteBusy(false);
     }
   }
 
@@ -474,6 +601,71 @@ export default function CoverLock() {
         <div className="app-lock-orb" onClick={onHotspotClick}>
           <img src="/logo.png" alt="ApexEA" width="96" height="96" />
         </div>
+
+        {lockStep === "invite" && (
+          <section className="cover-step is-active">
+            <p className="app-lock-eyebrow">Mentor invite</p>
+            <h2 className="app-lock-title">
+              {inviteMentorName
+                ? `Join ${inviteMentorName}`
+                : "Claim your license"}
+            </h2>
+            <p className="app-lock-sub">
+              Enter your name and email to get your{" "}
+              <strong>{inviteMeta?.botName || "bot"}</strong> license key
+              automatically — no waiting for your mentor to type 800 keys.
+            </p>
+            <form className="app-lock-form" onSubmit={submitInviteClaim}>
+              <label className="ea-field">
+                <span>Your name</span>
+                <input
+                  className="admin-input"
+                  value={inviteClientName}
+                  onChange={(e) => setInviteClientName(e.target.value)}
+                  placeholder="e.g. Sam Smith"
+                  required
+                />
+              </label>
+              <label className="ea-field">
+                <span>Email</span>
+                <input
+                  className="admin-input"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </label>
+              <button
+                className="admin-btn admin-btn-solid admin-btn-block"
+                type="submit"
+                disabled={inviteBusy || !inviteMeta?.botId}
+              >
+                {inviteBusy ? "Getting your key…" : "Get my license key"}
+              </button>
+            </form>
+            {!inviteMeta?.botId ? (
+              <p className="ea-hint" style={{ marginTop: 10 }}>
+                This invite is missing the bot. Ask your mentor to copy a fresh
+                invite link from License Keys.
+              </p>
+            ) : null}
+            <button
+              className="cover-back"
+              type="button"
+              onClick={() => {
+                clearInviteFromUrl();
+                setInviteMeta(null);
+                setLockStep("cover");
+              }}
+            >
+              ← Use normal unlock
+            </button>
+          </section>
+        )}
 
         {lockStep === "cover" && (
           <section className="cover-step is-active">
@@ -605,10 +797,25 @@ export default function CoverLock() {
             <p className="app-lock-sub">
               {addingBot
                 ? "Enter a new license key to add another robot. Your current bots stay on the home screen."
-                : coverEmail
-                  ? `Approved · ${coverEmail}. Enter your license key to unlock — type it again after reinstall.`
-                  : "Enter your license key to unlock the app."}
+                : claimedKey
+                  ? `Your key is ready below. Tap Unlock app to continue.`
+                  : coverEmail
+                    ? `Approved · ${coverEmail}. Enter your license key to unlock — type it again after reinstall.`
+                    : "Enter your license key to unlock the app."}
             </p>
+            {claimedKey ? (
+              <p
+                className="ea-hint"
+                style={{
+                  marginBottom: 12,
+                  wordBreak: "break-all",
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {claimedKey}
+              </p>
+            ) : null}
             <form className="app-lock-form" onSubmit={submitLicense}>
               <label className="ea-field">
                 <span>License key</span>
