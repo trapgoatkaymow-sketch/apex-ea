@@ -1441,11 +1441,15 @@ export function AppProvider({ children }) {
     // Mentor invite links must win over the normal unlock flow.
     try {
       const params = new URLSearchParams(window.location.search || "");
-      const invite = String(params.get("invite") || "")
+      const hash = String(window.location.hash || "");
+      const fromHash = hash.includes("invite=") || hash.includes("code=");
+      const invite = String(
+        params.get("invite") || params.get("code") || ""
+      )
         .trim()
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, "");
-      if (invite) {
+      if (invite || fromHash) {
         setLockStep("invite");
         return;
       }

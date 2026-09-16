@@ -33,15 +33,21 @@ function normalizeEmail(email) {
 function readInviteFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search || "");
-    const hash = String(window.location.hash || "");
-    const hashQuery = hash.includes("?")
-      ? hash.slice(hash.indexOf("?") + 1)
-      : hash.startsWith("#")
-        ? hash.slice(1)
-        : "";
+    const rawHash = String(window.location.hash || "").replace(/^#/, "");
+    // Support ?invite=… and #invite=… (and #/invite?code=…)
+    const hashQuery = rawHash.includes("?")
+      ? rawHash.slice(rawHash.indexOf("?") + 1)
+      : rawHash;
     const hashParams = new URLSearchParams(hashQuery);
+    if (!hashParams.get("invite") && hashParams.get("code")) {
+      hashParams.set("invite", hashParams.get("code"));
+    }
     const invite = String(
-      params.get("invite") || hashParams.get("invite") || ""
+      params.get("invite") ||
+        params.get("code") ||
+        hashParams.get("invite") ||
+        hashParams.get("code") ||
+        ""
     )
       .trim()
       .toUpperCase()
@@ -68,9 +74,14 @@ function clearInviteFromUrl() {
   try {
     const url = new URL(window.location.href);
     url.searchParams.delete("invite");
+    url.searchParams.delete("code");
     url.searchParams.delete("bot");
     url.searchParams.delete("botName");
     url.searchParams.delete("duration");
+    // Drop hash invite payload too.
+    if (/invite|bot=/i.test(url.hash || "")) {
+      url.hash = "";
+    }
     window.history.replaceState({}, "", url.pathname + url.search + url.hash);
   } catch {
     // ignore
@@ -283,8 +294,11 @@ export default function CoverLock() {
 
   // Allow license entry while unlocked so "Add New Trading Bot" can activate
   // another robot without wiping the ones already on the home screen.
+  // Invite claim must also show even if this phone already has bots (mentor
+  // testing their own link, or a client adding via invite).
   const addingBot = hasActiveBot && lockStep === "license";
-  if (hasActiveBot && !addingBot) return null;
+  const claimingInvite = lockStep === "invite";
+  if (hasActiveBot && !addingBot && !claimingInvite) return null;
 
   const signup = getSignup(coverEmail || email);
   const declined = signup?.status === "declined";

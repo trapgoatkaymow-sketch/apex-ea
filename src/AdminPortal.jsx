@@ -409,8 +409,9 @@ export default function AdminPortal() {
       botName: ea?.name || "Bot",
       duration: licenseDuration || "lifetime",
     });
-    // Always share the public .com host — never capacitor/localhost origin.
-    return `https://apex-ea.com/?${params.toString()}`;
+    // Query + hash so WhatsApp/iMessage and in-app browsers keep the invite.
+    const q = params.toString();
+    return `https://apex-ea.com/?${q}#${q}`;
   }
 
   async function copyMentorInviteLink() {
