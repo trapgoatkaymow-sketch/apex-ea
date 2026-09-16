@@ -319,7 +319,6 @@ export const BROKER_CATALOG = [
   { company: "YesTrader", aliases: [] },
   { company: "Z.com Forex", aliases: [] },
   { company: "Razor Markets", aliases: ["razor", "razormarkets", "razor markets sa", "razor mt5"] },
-  { company: "Razor Markets SA", aliases: ["razor", "razormarkets"] },
   { company: "GT247", aliases: [] },
   { company: "GT247.com", aliases: ["gt247", "gt 247"] },
   { company: "EasyTrader", aliases: [] },

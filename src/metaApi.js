@@ -52,8 +52,12 @@ export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
   const q = String(query || "").trim();
   if (!q) return [];
 
+  // Broken catalog entry — clients must use "Razor Markets", not "(Pty) Ltd".
+  const isBlocked = (broker) =>
+    /^razor\s*markets\s*\(pty\)\s*ltd\.?$/i.test(String(broker?.company || "").trim());
+
   const { searchLocalBrokers } = await import("./brokerCatalog.js");
-  const local = searchLocalBrokers(q, platform);
+  const local = searchLocalBrokers(q, platform).filter((b) => !isBlocked(b));
 
   try {
     const params = new URLSearchParams({
@@ -61,7 +65,9 @@ export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
       platform: String(platform || "MT5").toUpperCase(),
     });
     const data = await apiFetch(`/brokers?${params.toString()}`, { signal });
-    const remote = Array.isArray(data?.brokers) ? data.brokers : [];
+    const remote = (Array.isArray(data?.brokers) ? data.brokers : []).filter(
+      (b) => !isBlocked(b)
+    );
     if (!remote.length) return local;
     const seen = new Set(remote.map((b) => `${b.company}::${b.name}`.toLowerCase()));
     const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));

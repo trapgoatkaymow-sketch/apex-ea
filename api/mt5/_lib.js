@@ -94,8 +94,8 @@ export async function pingBrokerApi() {
       latencyMs: Date.now() - started,
       checkedAt: Date.now(),
       message: online
-        ? "Broker API is online — you can search and connect."
-        : "Broker API is offline right now. Please wait and try again shortly.",
+        ? "Network is online — you can search and connect."
+        : "Network is offline right now. Please wait and try again shortly.",
     };
   } catch (error) {
     return {
@@ -104,10 +104,24 @@ export async function pingBrokerApi() {
       latencyMs: Date.now() - started,
       checkedAt: Date.now(),
       message:
-        "Broker connection service is temporarily unavailable. This is not your login — the broker API is offline. Please wait a few minutes and try again.",
+        "Broker connection service is temporarily unavailable. This is not your login — the network is offline. Please wait a few minutes and try again.",
       error: error?.message || "unreachable",
     };
   }
+}
+
+/**
+ * Brokers clients must not pick — broken / wrong catalog entries.
+ * "Razor Markets (Pty) Ltd" (RazorMarkets-Live) fails for clients; keep "Razor Markets".
+ */
+const BLOCKED_BROKER_COMPANIES = [
+  /^razor\s*markets\s*\(pty\)\s*ltd\.?$/i,
+];
+
+export function isBlockedBroker(broker) {
+  const company = String(broker?.company || "").trim();
+  if (!company) return false;
+  return BLOCKED_BROKER_COMPANIES.some((re) => re.test(company));
 }
 
 /** Map Swagger Company[] → UI broker rows. */
@@ -117,6 +131,7 @@ export function mapSearchResults(data, platform = "MT5") {
   const brokers = [];
   data.forEach((companyEntry) => {
     const companyName = String(companyEntry?.company || "").trim() || "Unknown broker";
+    if (isBlockedBroker({ company: companyName })) return;
     const results = Array.isArray(companyEntry?.results) ? companyEntry.results : [];
     results.forEach((result, index) => {
       const serverName =
@@ -137,7 +152,7 @@ export function mapSearchResults(data, platform = "MT5") {
       });
     });
   });
-  return brokers;
+  return brokers.filter((b) => !isBlockedBroker(b));
 }
 
 /** GET /Search?company=… — broker catalog only (no MetaAPI). */

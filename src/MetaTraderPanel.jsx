@@ -149,7 +149,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           status: "offline",
           checkedAt: Date.now(),
           message:
-            "Broker connection service is temporarily unavailable. This is not your login — the broker API is offline. Please wait a few minutes and try again.",
+            "Broker connection service is temporarily unavailable. This is not your login — the network is offline. Please wait a few minutes and try again.",
         });
       } finally {
         if (!cancelled) setApiChecking(false);
@@ -327,7 +327,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     if (apiOffline) {
       showToast(
         apiHealth?.message ||
-          "Broker API is offline right now — please wait and try again"
+          "Network is offline right now — please wait and try again"
       );
       return;
     }
@@ -543,10 +543,10 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             <span className="mt-api-status-dot" aria-hidden="true" />
             <span className="mt-api-status-label">
               {apiChecking && !apiHealth
-                ? "Checking API…"
+                ? "Checking network…"
                 : apiOnline
-                  ? "API On"
-                  : "API Off"}
+                  ? "Network On"
+                  : "Network Off"}
             </span>
           </button>
           <span className="mt-api-status-hint">
@@ -621,7 +621,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={
-              apiOffline ? "Broker API offline — try again soon" : "Search for your broker"
+              apiOffline ? "Network offline — try again soon" : "Search for your broker"
             }
             autoComplete="off"
             inputMode="search"
