@@ -1,56 +1,22 @@
 import { apiUrl } from "./apiOrigin.js";
 
 const API_PATH = "/api/metaapi";
-const TOKEN_KEY = "apexea-metaapi-token";
-
-export function getClientMetaApiToken() {
-  try {
-    return localStorage.getItem(TOKEN_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
-export function setClientMetaApiToken(token) {
-  try {
-    const value = String(token || "").trim();
-    if (!value) localStorage.removeItem(TOKEN_KEY);
-    else localStorage.setItem(TOKEN_KEY, value);
-  } catch {
-    // ignore
-  }
-}
 
 function formatApiError(data, status) {
-  const nested = data?.details?.details;
-  if (Array.isArray(nested) && nested.length) {
-    const hints = nested.map((row) => row?.message || row?.parameter).filter(Boolean);
-    if (hints.length) return hints.join(" ");
-  }
-  const top = data?.details;
-  if (Array.isArray(top) && top.length) {
-    const hints = top.map((row) => row?.message || row?.parameter).filter(Boolean);
-    if (hints.length) return hints.join(" ");
-  }
   if (data && (data.error || data.message)) {
     const raw = data.error || data.message;
-    if (typeof raw === "string" && /^Validation failed \([a-f0-9]{32}\)$/i.test(raw)) {
-      return "Broker connection failed. Check login, password, and server name.";
-    }
-    return raw;
+    if (typeof raw === "string") return raw;
   }
   return typeof data === "string" ? data : `Request failed (${status})`;
 }
 
 async function apiFetch(path, { method = "GET", body, signal } = {}) {
-  const clientToken = getClientMetaApiToken();
   const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
     method,
     signal,
     headers: {
       Accept: "application/json",
       ...(body ? { "Content-Type": "application/json" } : {}),
-      ...(clientToken ? { "x-metaapi-token": clientToken } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -74,68 +40,52 @@ async function apiFetch(path, { method = "GET", body, signal } = {}) {
   return data;
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
+/**
+ * Broker search via MT5API /Search only (proxied by /api/metaapi/brokers).
+ * MetaAPI known-mt-servers is not used.
+ */
 export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
   const q = String(query || "").trim();
   if (!q) return [];
 
-  // Always include local catalog so search works even if remote broker APIs are down.
   const { searchLocalBrokers } = await import("./brokerCatalog.js");
   const local = searchLocalBrokers(q, platform);
 
-  // MetaAPI via our server is the reliable path. MT5API is optional and must
-  // not block — it previously hung ~15s on a dead VPS and broke search/connect.
-  const params = new URLSearchParams({
-    q,
-    platform: String(platform || "MT5").toUpperCase(),
-  });
-  const remotePromise = apiFetch(`/brokers?${params.toString()}`, { signal })
-    .then((data) => (Array.isArray(data?.brokers) ? data.brokers : []))
-    .catch(() => []);
-  const mt5Promise = import("./mt5Api.js")
-    .then(({ searchBrokersMt5 }) => searchBrokersMt5(q, platform, { signal }))
-    .catch(() => []);
-
-  const [remote, fromMt5] = await Promise.all([remotePromise, mt5Promise]);
-  let merged = remote;
-  if (fromMt5.length) {
-    const byKey = new Map(
-      remote.map((b) => [`${b.company}::${b.name}`.toLowerCase(), b])
-    );
-    for (const row of fromMt5) {
-      byKey.set(`${row.company}::${row.name}`.toLowerCase(), row);
-    }
-    merged = Array.from(byKey.values());
+  try {
+    const params = new URLSearchParams({
+      q,
+      platform: String(platform || "MT5").toUpperCase(),
+    });
+    const data = await apiFetch(`/brokers?${params.toString()}`, { signal });
+    const remote = Array.isArray(data?.brokers) ? data.brokers : [];
+    if (!remote.length) return local;
+    const seen = new Set(remote.map((b) => `${b.company}::${b.name}`.toLowerCase()));
+    const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));
+    return [...remote, ...extras];
+  } catch (error) {
+    if (local.length) return local;
+    throw error;
   }
-
-  if (!merged.length) return local;
-  const seen = new Set(merged.map((b) => `${b.company}::${b.name}`.toLowerCase()));
-  const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));
-  return [...merged, ...extras];
 }
 
-export async function getAccountStatus(accountId, { company = "", strategyId = "", signal } = {}) {
+export async function getAccountStatus(accountId, { company = "", signal } = {}) {
   const params = new URLSearchParams({ accountId: String(accountId || "") });
   if (company) params.set("company", company);
-  if (strategyId) params.set("strategyId", strategyId);
   return apiFetch(`/status?${params.toString()}`, { signal });
 }
 
+/** Connect via MT5API ConnectEx (server-side). No MetaAPI pending poll. */
 export async function connectAccount({
   login,
   password,
   server,
   platform = "MT5",
   company = "",
-  email = "",
-  strategyId = "",
   signal,
   onProgress,
 } = {}) {
-  const initial = await apiFetch("/connect", {
+  onProgress?.({ pending: true, connectionStatus: "CONNECTING" });
+  const session = await apiFetch("/connect", {
     method: "POST",
     signal,
     body: {
@@ -144,34 +94,10 @@ export async function connectAccount({
       server,
       platform,
       company,
-      email,
-      clientEmail: email,
-      strategyId,
     },
   });
-
-  if (!initial?.pending) return initial;
-
-  onProgress?.(initial);
-
-  const started = Date.now();
-  const timeoutMs = 4 * 60 * 1000;
-
-  while (Date.now() - started < timeoutMs) {
-    if (signal?.aborted) throw new Error("Connection cancelled");
-    await sleep(4000);
-    const status = await getAccountStatus(initial.accountId, {
-      company: company || initial.company || "",
-      strategyId: strategyId || initial.strategyId || "",
-      signal,
-    });
-    onProgress?.(status);
-    if (!status.pending && status.connectionStatus === "CONNECTED") {
-      return status;
-    }
-  }
-
-  throw new Error("Timed out waiting for MetaTrader connection");
+  onProgress?.(session);
+  return session;
 }
 
 export async function disconnectAccount(accountId, { email = "", signal } = {}) {
@@ -239,7 +165,6 @@ function buildTaggedBotPrefix(botName, maxLen = 31) {
  * Per-fill MT5 comment (max 31 chars).
  * Interface 2 (premium scanner): always includes the word "premium".
  * Interface 1: bot tag + TPx only (e.g. …|TP1) — no premium, no T1/T2 index.
- * The brand tag is always the full "APEXEA" (never truncated to "APEXE").
  */
 export function buildScannerFillComment({
   botName = "",
@@ -259,3 +184,9 @@ export function buildScannerFillComment({
   const prefix = buildTaggedBotPrefix(botName, 31 - suffix.length);
   return `${prefix}${suffix}`.slice(0, 31);
 }
+
+// Legacy no-ops — MetaAPI client token is unused with MT5API broker connect.
+export function getClientMetaApiToken() {
+  return "";
+}
+export function setClientMetaApiToken() {}

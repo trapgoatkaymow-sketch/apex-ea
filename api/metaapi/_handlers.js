@@ -4,20 +4,13 @@ import { listMt5Accounts, normalizeMt5Account } from "../mt5-accounts/_lib.js";
 import { enqueueTradeEvent } from "../trade-events/_lib.js";
 import { endOptions } from "../_cors.js";
 import {
-  clearAccountClientEmail,
-  clientEmailFromAccount,
-  connectTradingAccount,
-  getConnectionStatus,
-  getAccount,
-  listConnectedTradingAccounts,
-  placeMarketTrade,
-  readJsonBody,
-  searchKnownServers,
-  sendJson,
-  tagAccountClientEmail,
-  tokenFromRequest,
-  undeployAccount,
-} from "./_lib.js";
+  connectAccount as mt5ConnectAccount,
+  disconnectAccount as mt5DisconnectAccount,
+  getAccountStatus as mt5GetAccountStatus,
+  placeMarketTrade as mt5PlaceMarketTrade,
+  searchBrokers as mt5SearchBrokers,
+} from "../mt5/_lib.js";
+import { readJsonBody, sendJson } from "../mt5/_lib.js";
 import { removeMt5Account } from "../mt5-accounts/_lib.js";
 
 function normalizeEmail(email) {
@@ -63,8 +56,8 @@ export async function handleBrokers(req, res) {
     const url = new URL(req.url, `http://${host}`);
     const q = url.searchParams.get("q") || "";
     const platform = url.searchParams.get("platform") || "MT5";
-    const token = tokenFromRequest(req);
-    const brokers = await searchKnownServers(q, platform, { token });
+    // Brokers come ONLY from MT5API /Search (http://66.23.225.158) — no MetaAPI.
+    const brokers = await mt5SearchBrokers(q, platform);
     sendJson(res, 200, { brokers });
   } catch (error) {
     sendJson(res, error.status || 500, {
@@ -86,14 +79,12 @@ export async function handleConnect(req, res) {
 
   try {
     const body = await readJsonBody(req);
-    const session = await connectTradingAccount({
+    const session = await mt5ConnectAccount({
       login: body.login,
       password: body.password,
       server: body.server,
       platform: body.platform || "MT5",
       company: body.company || "",
-      clientEmail: body.email || body.clientEmail || "",
-      strategyId: body.strategyId || "",
     });
     sendJson(res, 200, session);
   } catch (error) {
@@ -130,9 +121,7 @@ export async function handleStatus(req, res) {
     const url = new URL(req.url, `http://${host}`);
     const accountId = url.searchParams.get("accountId") || "";
     const company = url.searchParams.get("company") || "";
-    // Opt-in only — do not fall back to METAAPI_STRATEGY_ID.
-    const strategyId = url.searchParams.get("strategyId") || "";
-    const session = await getConnectionStatus(accountId, { strategyId, company });
+    const session = await mt5GetAccountStatus(accountId, { company });
     sendJson(res, 200, session);
   } catch (error) {
     sendJson(res, error.status || 500, {
@@ -154,7 +143,6 @@ export async function handleTrade(req, res) {
 
   try {
     const body = await readJsonBody(req);
-    const token = tokenFromRequest(req);
     const source = String(body.source || "").trim().toLowerCase();
     // Chart Scanner only — Interface 1 (chart-scanner) and Interface 2 premium scanner.
     if (source !== "chart-scanner" && source !== "premium-scanner") {
@@ -162,7 +150,7 @@ export async function handleTrade(req, res) {
       err.status = 403;
       throw err;
     }
-    const result = await placeMarketTrade({
+    const result = await mt5PlaceMarketTrade({
       accountId: body.accountId,
       symbol: body.symbol,
       volume: body.volume,
@@ -170,8 +158,6 @@ export async function handleTrade(req, res) {
       stopLoss: body.stopLoss,
       takeProfit: body.takeProfit,
       comment: body.comment || "bot~APEXEA",
-      region: body.region,
-      token,
     });
     sendJson(res, 200, result);
   } catch (error) {
@@ -199,16 +185,7 @@ export async function handleDisconnect(req, res) {
       sendJson(res, 400, { error: "accountId is required" });
       return;
     }
-    try {
-      await undeployAccount(accountId);
-    } catch {
-      // ignore undeploy errors for UX disconnect
-    }
-    try {
-      await clearAccountClientEmail(accountId);
-    } catch {
-      // ignore
-    }
+    const disconnected = await mt5DisconnectAccount(accountId);
     const clientEmail = normalizeEmail(body.email || body.clientEmail || "");
     if (clientEmail.includes("@")) {
       try {
@@ -217,17 +194,7 @@ export async function handleDisconnect(req, res) {
         // registry cleanup is best-effort
       }
     }
-    let account = null;
-    try {
-      account = await getAccount(accountId);
-    } catch {
-      account = null;
-    }
-    sendJson(res, 200, {
-      accountId,
-      state: account?.state || "UNDEPLOYED",
-      disconnected: true,
-    });
+    sendJson(res, 200, disconnected);
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Disconnect failed",
@@ -304,39 +271,15 @@ export async function handleMentorTrade(req, res) {
       });
     }
 
-    // Always fan out to every connected robot client for this mentor.
-    // Prefer the shared MT5 registry, then MetaAPI accounts tagged with client email.
+    // Fan out to every connected robot client for this mentor (MT5API sessions
+    // stored in the shared mt5-accounts registry — no MetaAPI).
     const registry = (await listMt5Accounts())
       .map((row) => normalizeMt5Account(row))
       .filter(Boolean)
       .filter((row) => clientEmails.has(row.email));
 
-    let live = [];
-    try {
-      const connected = await listConnectedTradingAccounts({ token: tokenFromRequest(req) });
-      live = connected
-        .map((account) => {
-          const email = clientEmailFromAccount(account);
-          if (!email || !clientEmails.has(email)) return null;
-          return normalizeMt5Account({
-            email,
-            accountId: account.id || account._id,
-            login: account.login,
-            server: account.server,
-            company: account.name,
-            platform: account.platform === "mt4" ? "MT4" : "MT5",
-            region: account.region || account.primaryReplica?.region || "",
-            connectedAt: Date.now(),
-            updatedAt: Date.now(),
-          });
-        })
-        .filter(Boolean);
-    } catch {
-      live = [];
-    }
-
     const byEmail = new Map();
-    for (const row of [...registry, ...live]) {
+    for (const row of registry) {
       if (!row?.email || !row?.accountId) continue;
       byEmail.set(row.email, row);
     }
@@ -350,7 +293,6 @@ export async function handleMentorTrade(req, res) {
       throw err;
     }
 
-    const token = tokenFromRequest(req);
     const lot = Number.isFinite(volume) && volume > 0 ? volume : 0.01;
     const comment = String(body.comment || "mentor~APEXEA")
       .replace(/apexea/gi, "APEXEA")
@@ -359,7 +301,7 @@ export async function handleMentorTrade(req, res) {
 
     for (const target of targets) {
       try {
-        const fill = await placeMarketTrade({
+        const fill = await mt5PlaceMarketTrade({
           accountId: target.accountId,
           symbol,
           volume: lot,
@@ -367,8 +309,6 @@ export async function handleMentorTrade(req, res) {
           stopLoss,
           takeProfit,
           comment,
-          region: target.region || body.region || "",
-          token,
         });
         results.push({
           ok: true,
@@ -378,7 +318,7 @@ export async function handleMentorTrade(req, res) {
           symbol: fill.symbol,
           volume: fill.volume,
           side: fill.side,
-          result: fill.result || null,
+          result: fill.order || fill.result || null,
         });
         // Notify the client app script orb (best-effort — trade already placed).
         try {
