@@ -199,10 +199,21 @@ export async function connectAccount({
     throw error;
   }
 
-  const id = typeof token === "string" ? token.trim().replace(/^"|"$/g, "") : String(token || "").trim();
-  if (!id) {
-    const err = new Error("Broker connection failed — no session token");
-    err.status = 502;
+  const id =
+    typeof token === "string"
+      ? token.trim().replace(/^"|"$/g, "")
+      : String(token || "").trim();
+
+  // MT5API often returns HTTP 200 with bodies like "[error]:INVALID_ACCOUNT".
+  if (!id || /^\[error\]/i.test(id) || /^error[:\s]/i.test(id)) {
+    const hint = id.replace(/^\[error\]:?\s*/i, "").trim() || "INVALID_ACCOUNT";
+    const friendly =
+      /invalid_account|invalid_password|password|login|auth/i.test(hint)
+        ? "Broker rejected the login credentials"
+        : `Broker connection failed (${hint})`;
+    const err = new Error(friendly);
+    err.status = 400;
+    err.data = { raw: id };
     throw err;
   }
 
