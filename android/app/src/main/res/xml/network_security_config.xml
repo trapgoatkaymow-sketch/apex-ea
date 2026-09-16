@@ -9,4 +9,11 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">66.23.225.158</domain>
     </domain-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">apex-ea.com</domain>
+        <domain includeSubdomains="true">metaapi.cloud</domain>
+        <domain includeSubdomains="true">agiliumtrade.ai</domain>
+        <domain includeSubdomains="true">paypal.com</domain>
+        <domain includeSubdomains="true">paypalobjects.com</domain>
+    </domain-config>
 </network-security-config>
