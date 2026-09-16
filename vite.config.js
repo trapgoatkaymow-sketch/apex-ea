@@ -148,8 +148,20 @@ export default defineConfig(({ mode }) => {
   process.env.PAYPAL_CLIENT_SECRET =
     process.env.PAYPAL_CLIENT_SECRET || env.PAYPAL_CLIENT_SECRET || ''
   process.env.PAYPAL_MODE = process.env.PAYPAL_MODE || env.PAYPAL_MODE || 'live'
+  process.env.MT5_API_BASE =
+    process.env.MT5_API_BASE || env.MT5_API_BASE || env.MT5_API_TARGET || 'http://66.23.225.158'
 
   return {
     plugins: [react(), metaApiDevPlugin()],
+    server: {
+      proxy: {
+        '/mt5-api': {
+          target: process.env.MT5_API_BASE,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/mt5-api/, ''),
+        },
+      },
+    },
   }
 })

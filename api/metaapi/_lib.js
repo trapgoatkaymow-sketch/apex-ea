@@ -10,6 +10,13 @@ const COPYFACTORY_URL_TEMPLATE =
   process.env.METAAPI_COPYFACTORY_URL_TEMPLATE ||
   "https://copyfactory-api-v1.{region}.agiliumtrade.agiliumtrade.ai";
 
+/** Self-hosted MT5API RESTful broker search (Swagger /Search). */
+const MT5_API_BASE = (
+  process.env.MT5_API_BASE ||
+  process.env.MT5_API_TARGET ||
+  "http://66.23.225.158"
+).replace(/\/$/, "");
+
 
 function requireToken(requestToken = "") {
   const token =
@@ -169,9 +176,93 @@ function normalizeClientEmail(email) {
     .toLowerCase();
 }
 
+/**
+ * Broker search via MT5API /Search?company=… (https://66.23.225.158/swagger).
+ * Returns Company[] → { company, results:[{ name, logo_url, site, access }] }.
+ */
+export async function searchMt5ApiBrokers(query, platform = "MT5") {
+  const q = String(query || "").trim();
+  if (!q) return [];
+
+  const plat = String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5";
+  const url = `${MT5_API_BASE}/Search?company=${encodeURIComponent(q)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const err = new Error(
+      error?.name === "AbortError"
+        ? "Broker search timed out"
+        : error?.message || "Broker search unreachable"
+    );
+    err.status = 502;
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!response.ok) {
+    const message =
+      (typeof data === "string" && data) ||
+      data?.message ||
+      data?.title ||
+      `Broker search error ${response.status}`;
+    const err = new Error(message);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+  if (!Array.isArray(data)) return [];
+
+  const brokers = [];
+  data.forEach((companyEntry) => {
+    const companyName = String(companyEntry?.company || "").trim() || "Unknown broker";
+    const results = Array.isArray(companyEntry?.results) ? companyEntry.results : [];
+    results.forEach((result, index) => {
+      const serverName = String(result?.name || "").trim() || `${companyName} server`;
+      const access = Array.isArray(result?.access)
+        ? result.access.map(String).map((v) => v.trim()).filter(Boolean)
+        : [];
+      brokers.push({
+        id: `${companyName}::${serverName}::${index}`,
+        company: companyName,
+        name: serverName,
+        site: String(result?.site || "").trim(),
+        logoUrl: String(result?.logo_url || result?.logoUrl || "").trim(),
+        access,
+        platform: plat,
+        custom: false,
+        source: "mt5api",
+      });
+    });
+  });
+  return brokers;
+}
+
 export async function searchKnownServers(query, platform = "MT5", { token } = {}) {
   const q = String(query || "").trim();
   if (!q) return [];
+
+  // Prefer the dedicated MT5API broker catalog (logos + access hosts).
+  try {
+    const fromMt5 = await searchMt5ApiBrokers(q, platform);
+    if (fromMt5.length) return fromMt5;
+  } catch (error) {
+    console.warn("mt5api broker search failed", error.message || error);
+  }
 
   const version = String(platform).toUpperCase() === "MT4" ? 4 : 5;
   const url = `${PROVISIONING_BASE}/known-mt-servers/${version}/search?query=${encodeURIComponent(q)}`;
@@ -191,6 +282,7 @@ export async function searchKnownServers(query, platform = "MT5", { token } = {}
         access: [],
         platform: version === 4 ? "MT4" : "MT5",
         custom: false,
+        source: "metaapi",
       });
     });
   });

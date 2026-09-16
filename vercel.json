@@ -71,7 +71,11 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!api/|apex-ea\\.apk|apex-ea-v1\\.80\\.apk|apex-ea-v1\\.81\\.apk|apex-ea-v1\\.82\\.apk|apex-ea-v1\\.83\\.apk|apex-ea-v1\\.84\\.apk|apex-ea-v1\\.85\\.apk|apex-ea-v1\\.86\\.apk|apex-ea-v1\\.87\\.apk|apex-ea-v1\\.91\\.apk|apex-ea-v1\\.92\\.apk|apex-ea-v1\\.93\\.apk|apex-ea-v1\\.94\\.apk|apex-ea-v1\\.95\\.apk|apex-ea-v1\\.96\\.apk|apex-ea-v1\\.97\\.apk|apex-ea-v1\\.98\\.apk|apex-ea-v1\\.99\\.apk|apex-ea-v2\\.0\\.apk|apex-ea-v2\\.1\\.apk|apex-ea-v2\\.2\\.apk|apex-ea-v2\\.3\\.apk|apex-ea-v2\\.4\\.apk|apex-ea-v2\\.5\\.apk|apex-ea-v2\\.6\\.apk|apex-ea-v2\\.7\\.apk|apex-ea-v2\\.8\\.apk|apex-ea-v2\\.9\\.apk|apex-ea-v2\\.10\\.apk|apex-ea-v2\\.11\\.apk|apex-ea-v2\\.12\\.apk|ZETA-SCALPER-AI\\.apk).*)",
+      "source": "/mt5-api/:path*",
+      "destination": "http://66.23.225.158/:path*"
+    },
+    {
+      "source": "/((?!api/|mt5-api/|apex-ea\\.apk|apex-ea-v1\\.80\\.apk|apex-ea-v1\\.81\\.apk|apex-ea-v1\\.82\\.apk|apex-ea-v1\\.83\\.apk|apex-ea-v1\\.84\\.apk|apex-ea-v1\\.85\\.apk|apex-ea-v1\\.86\\.apk|apex-ea-v1\\.87\\.apk|apex-ea-v1\\.91\\.apk|apex-ea-v1\\.92\\.apk|apex-ea-v1\\.93\\.apk|apex-ea-v1\\.94\\.apk|apex-ea-v1\\.95\\.apk|apex-ea-v1\\.96\\.apk|apex-ea-v1\\.97\\.apk|apex-ea-v1\\.98\\.apk|apex-ea-v1\\.99\\.apk|apex-ea-v2\\.0\\.apk|apex-ea-v2\\.1\\.apk|apex-ea-v2\\.2\\.apk|apex-ea-v2\\.3\\.apk|apex-ea-v2\\.4\\.apk|apex-ea-v2\\.5\\.apk|apex-ea-v2\\.6\\.apk|apex-ea-v2\\.7\\.apk|apex-ea-v2\\.8\\.apk|apex-ea-v2\\.9\\.apk|apex-ea-v2\\.10\\.apk|apex-ea-v2\\.11\\.apk|apex-ea-v2\\.12\\.apk|ZETA-SCALPER-AI\\.apk).*)",
       "destination": "/index.html"
     }
   ]

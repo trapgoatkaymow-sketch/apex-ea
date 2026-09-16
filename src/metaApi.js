@@ -82,7 +82,7 @@ export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
   const q = String(query || "").trim();
   if (!q) return [];
 
-  // Always include local catalog so search works even if MetaAPI env is missing.
+  // Always include local catalog so search works even if remote broker APIs are down.
   const { searchLocalBrokers } = await import("./brokerCatalog.js");
   const local = searchLocalBrokers(q, platform);
 
@@ -91,11 +91,12 @@ export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
       q,
       platform: String(platform || "MT5").toUpperCase(),
     });
+    // Server hits MT5API /Search (66.23.225.158) first, then MetaAPI fallback.
     const data = await apiFetch(`/brokers?${params.toString()}`, { signal });
     const remote = Array.isArray(data?.brokers) ? data.brokers : [];
     if (!remote.length) return local;
 
-    // Prefer MetaAPI server names; append local matches not already present.
+    // Prefer live API rows (logos/access); append local matches not already present.
     const seen = new Set(remote.map((b) => `${b.company}::${b.name}`.toLowerCase()));
     const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));
     return [...remote, ...extras];
