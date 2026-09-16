@@ -129,6 +129,8 @@ export async function createLifetimeOrder(email, { purpose = "access" } = {}) {
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
         brand_name: "ApexEA",
+        return_url: "https://apex-ea.com/",
+        cancel_url: "https://apex-ea.com/",
       },
     },
   });

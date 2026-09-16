@@ -448,6 +448,10 @@ export function AppProvider({ children }) {
   );
   const [adminPage, setAdminPage] = useState("dashboard");
   const [lockStep, setLockStep] = useState("cover");
+  const lockStepRef = useRef(lockStep);
+  useEffect(() => {
+    lockStepRef.current = lockStep;
+  }, [lockStep]);
   const [pairsOpen, setPairsOpen] = useState(false);
   const [zetaView, setZetaView] = useState("home");
   const [v2View, setV2View] = useState("home");
@@ -1438,6 +1442,11 @@ export function AppProvider({ children }) {
   }, [activeBot, coverEmail, eas, licenseKeys, mentorDirectory]);
 
   const resolveLockStep = useCallback(() => {
+    const current = lockStepRef.current;
+    // Never interrupt an active PayPal checkout — remounting the buttons
+    // mid-card-entry looks like the page "restarting itself".
+    if (current === "pay") return;
+
     // Mentor invite links must win over the normal unlock flow.
     try {
       const params = new URLSearchParams(window.location.search || "");
@@ -1456,6 +1465,11 @@ export function AppProvider({ children }) {
     } catch {
       // ignore
     }
+
+    // Keep invite / license key entry while the user is actively on them
+    // (unless invite URL above forced invite).
+    if (current === "invite" || current === "license") return;
+
     const signup = getSignup(coverEmail);
     if (!coverEmail) {
       setLockStep("cover");

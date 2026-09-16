@@ -26,6 +26,11 @@ export default function V2ScannerPaywall({ onClose }) {
   const [paypalReady, setPaypalReady] = useState(false);
   const [paypalError, setPaypalError] = useState("");
   const paypalButtonsRef = useRef(null);
+  const paypalRenderedRef = useRef(false);
+  const payEmailRef = useRef(coverEmail || email || "");
+  const showToastRef = useRef(showToast);
+  const refreshSignupsRef = useRef(refreshSignups);
+  const unlockScannerRef = useRef(unlockV2ScannerPremium);
 
   useEffect(() => {
     setEmail(coverEmail || "");
@@ -33,8 +38,34 @@ export default function V2ScannerPaywall({ onClose }) {
   }, [coverEmail, showAlreadyPaid]);
 
   useEffect(() => {
+    payEmailRef.current = String(coverEmail || email || "")
+      .trim()
+      .toLowerCase();
+  }, [coverEmail, email]);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+    refreshSignupsRef.current = refreshSignups;
+    unlockScannerRef.current = unlockV2ScannerPremium;
+  }, [showToast, refreshSignups, unlockV2ScannerPremium]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
+      const buyer = String(payEmailRef.current || "")
+        .trim()
+        .toLowerCase();
+      if (!buyer || !buyer.includes("@")) {
+        setPaypalError("Enter your account email before paying.");
+        setPaypalReady(false);
+        return;
+      }
+      // Keep existing buttons if already mounted — do not restart checkout.
+      if (paypalRenderedRef.current && paypalButtonsRef.current?.childElementCount) {
+        setPaypalReady(true);
+        return;
+      }
+
       setPaypalError("");
       setPaypalReady(false);
       try {
@@ -48,67 +79,70 @@ export default function V2ScannerPaywall({ onClose }) {
           );
         }
 
-        const buyer = String(coverEmail || email || "")
-          .trim()
-          .toLowerCase();
-        if (!buyer || !buyer.includes("@")) {
-          setPaypalError("Enter your account email before paying.");
-          return;
-        }
-
         const paypal = await loadPaypalSdk(config.clientId);
         if (cancelled || !paypalButtonsRef.current) return;
+        if (paypalRenderedRef.current && paypalButtonsRef.current.childElementCount) {
+          if (!cancelled) setPaypalReady(true);
+          return;
+        }
         paypalButtonsRef.current.innerHTML = "";
 
-        paypal
-          .Buttons({
-            style: {
-              layout: "vertical",
-              color: "gold",
-              shape: "rect",
-              label: "pay",
-            },
-            createOrder: async () => {
-              // Always create a scanner-purpose order — separate from app access.
-              const order = await createPaypalOrder(buyer, "scanner");
-              if (!order?.id) throw new Error("Could not start PayPal checkout");
-              return order.id;
-            },
-            onApprove: async (data) => {
-              setPaying(true);
-              try {
-                const result = await capturePaypalOrder(
-                  data.orderID,
-                  buyer,
-                  "scanner"
+        const buttons = paypal.Buttons({
+          style: {
+            layout: "vertical",
+            color: "gold",
+            shape: "rect",
+            label: "pay",
+            height: 48,
+          },
+          createOrder: async () => {
+            const activeBuyer = payEmailRef.current;
+            if (!activeBuyer || !activeBuyer.includes("@")) {
+              throw new Error("Enter a valid email before paying");
+            }
+            // Always create a scanner-purpose order — separate from app access.
+            const order = await createPaypalOrder(activeBuyer, "scanner");
+            if (!order?.id) throw new Error("Could not start PayPal checkout");
+            return order.id;
+          },
+          onApprove: async (data) => {
+            setPaying(true);
+            try {
+              const activeBuyer = payEmailRef.current;
+              const result = await capturePaypalOrder(
+                data.orderID,
+                activeBuyer,
+                "scanner"
+              );
+              await refreshSignupsRef.current?.();
+              // Only unlock when this capture was a scanner purchase.
+              if (result?.purpose === "scanner" || result?.premiumScanner) {
+                unlockScannerRef.current?.(result?.email || activeBuyer);
+                showToastRef.current("Premium scanner unlocked — 20 scans per day");
+              } else {
+                showToastRef.current(
+                  "That payment was for app access only. Chart Scanner needs its own payment."
                 );
-                await refreshSignups?.();
-                // Only unlock when this capture was a scanner purchase.
-                if (result?.purpose === "scanner" || result?.premiumScanner) {
-                  unlockV2ScannerPremium?.(result?.email || buyer);
-                  showToast("Premium scanner unlocked — 20 scans per day");
-                } else {
-                  showToast(
-                    "That payment was for app access only. Chart Scanner needs its own payment."
-                  );
-                }
-              } catch (error) {
-                showToast(error.message || "Payment capture failed");
-              } finally {
-                setPaying(false);
               }
-            },
-            onError: () => {
-              showToast("PayPal checkout error — try again");
-            },
-            onCancel: () => {
-              showToast("Payment cancelled");
-            },
-          })
-          .render(paypalButtonsRef.current);
+            } catch (error) {
+              showToastRef.current(error.message || "Payment capture failed");
+            } finally {
+              setPaying(false);
+            }
+          },
+          onError: () => {
+            showToastRef.current("PayPal checkout error — try again");
+          },
+          onCancel: () => {
+            showToastRef.current("Payment cancelled");
+          },
+        });
+        paypalRenderedRef.current = true;
+        await buttons.render(paypalButtonsRef.current);
 
         if (!cancelled) setPaypalReady(true);
       } catch (error) {
+        paypalRenderedRef.current = false;
         if (!cancelled) {
           setPaypalError(error.message || "PayPal is unavailable");
           setPaypalReady(false);
@@ -118,15 +152,10 @@ export default function V2ScannerPaywall({ onClose }) {
 
     return () => {
       cancelled = true;
-      if (paypalButtonsRef.current) paypalButtonsRef.current.innerHTML = "";
     };
-  }, [
-    coverEmail,
-    email,
-    refreshSignups,
-    showToast,
-    unlockV2ScannerPremium,
-  ]);
+    // Mount once on open; email updates are read via payEmailRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function saveEmail(event) {
     event.preventDefault();

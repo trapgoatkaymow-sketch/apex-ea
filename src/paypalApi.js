@@ -65,7 +65,7 @@ export function loadPaypalSdk(clientId) {
     const script = document.createElement("script");
     script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(
       clientId
-    )}&currency=USD&intent=capture&components=buttons`;
+    )}&currency=USD&intent=capture&components=buttons&enable-funding=paypal,card&disable-funding=credit,paylater&commit=true`;
     script.async = true;
     script.dataset.apexeaPaypal = "1";
     script.onload = () => {

@@ -141,10 +141,29 @@ export default function CoverLock() {
   const hotspotRef = useRef({ count: 0, first: 0 });
   const paypalButtonsRef = useRef(null);
   const paypalRenderedRef = useRef(false);
+  const paypalButtonsInstanceRef = useRef(null);
+  const payEmailRef = useRef(coverEmail || email || "");
+  const showToastRef = useRef(showToast);
+  const refreshSignupsRef = useRef(refreshSignups);
+  const ingestSignupRef = useRef(ingestSignup);
+  const setLockStepRef = useRef(setLockStep);
 
   useEffect(() => {
     setEmail(coverEmail || "");
   }, [coverEmail]);
+
+  useEffect(() => {
+    payEmailRef.current = String(coverEmail || email || "")
+      .trim()
+      .toLowerCase();
+  }, [coverEmail, email]);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+    refreshSignupsRef.current = refreshSignups;
+    ingestSignupRef.current = ingestSignup;
+    setLockStepRef.current = setLockStep;
+  }, [showToast, refreshSignups, ingestSignup, setLockStep]);
 
   // Mentor invite link → clients claim their own key (no CSV / no mentor typing).
   // Re-assert when the normal unlock resolver tries to overwrite lockStep.
@@ -203,14 +222,27 @@ export default function CoverLock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run when paywall email changes
   }, [lockStep, coverEmail]);
 
+  // PayPal buttons: mount ONCE per pay session. Re-rendering mid-checkout
+  // (email/toast deps changing) was restarting card entry for clients.
   useEffect(() => {
     if (lockStep !== "pay") {
       paypalRenderedRef.current = false;
+      try {
+        paypalButtonsInstanceRef.current?.close?.();
+      } catch {
+        // ignore
+      }
+      paypalButtonsInstanceRef.current = null;
       if (paypalButtonsRef.current) paypalButtonsRef.current.innerHTML = "";
       return undefined;
     }
 
+    if (paypalRenderedRef.current && paypalButtonsRef.current?.childElementCount) {
+      return undefined;
+    }
+
     let cancelled = false;
+    let buttons = null;
 
     (async () => {
       setPaypalError("");
@@ -227,59 +259,89 @@ export default function CoverLock() {
         }
         const paypal = await loadPaypalSdk(config.clientId);
         if (cancelled || !paypalButtonsRef.current) return;
+        // Another pass already mounted buttons.
+        if (paypalRenderedRef.current && paypalButtonsRef.current.childElementCount) {
+          if (!cancelled) setPaypalReady(true);
+          return;
+        }
 
         paypalButtonsRef.current.innerHTML = "";
-        paypalRenderedRef.current = true;
-
-        paypal
-          .Buttons({
-            style: {
-              layout: "vertical",
-              color: "gold",
-              shape: "rect",
-              label: "pay",
-            },
-            createOrder: async () => {
-              const order = await createPaypalOrder(coverEmail || email);
-              if (!order?.id) throw new Error("Could not start PayPal checkout");
-              return order.id;
-            },
-            onApprove: async (data) => {
-              setPaying(true);
+        buttons = paypal.Buttons({
+          style: {
+            layout: "vertical",
+            color: "gold",
+            shape: "rect",
+            label: "pay",
+            height: 48,
+          },
+          // Keep checkout on PayPal / card — avoid fragile funding methods.
+          fundingSource: undefined,
+          createOrder: async () => {
+            const buyer = payEmailRef.current;
+            if (!buyer || !buyer.includes("@")) {
+              throw new Error("Enter a valid email before paying");
+            }
+            try {
+              sessionStorage.setItem("apexea-paypal-email", buyer);
+            } catch {
+              // ignore
+            }
+            const order = await createPaypalOrder(buyer, "access");
+            if (!order?.id) throw new Error("Could not start PayPal checkout");
+            return order.id;
+          },
+          onApprove: async (data) => {
+            setPaying(true);
+            try {
+              let paidEmail = payEmailRef.current;
               try {
-                const paidEmail = String(coverEmail || email || "")
-                  .trim()
-                  .toLowerCase();
-                const result = await capturePaypalOrder(
-                  data.orderID,
-                  paidEmail
-                );
-                rememberDeviceAccess(paidEmail, { paid: true });
-                await refreshSignups?.();
-                setLockStep("license");
-                showToast(
-                  result?.email
-                    ? `Payment received — ${result.email} approved`
-                    : "Payment received — account approved"
-                );
-              } catch (error) {
-                showToast(error.message || "Payment capture failed");
-              } finally {
-                setPaying(false);
+                paidEmail =
+                  paidEmail ||
+                  String(sessionStorage.getItem("apexea-paypal-email") || "")
+                    .trim()
+                    .toLowerCase();
+              } catch {
+                // ignore
               }
-            },
-            onError: (error) => {
-              console.error(error);
-              showToast("PayPal checkout error — try again");
-            },
-            onCancel: () => {
-              showToast("Payment cancelled");
-            },
-          })
-          .render(paypalButtonsRef.current);
+              const result = await capturePaypalOrder(data.orderID, paidEmail, "access");
+              const confirmed = String(result?.email || paidEmail || "")
+                .trim()
+                .toLowerCase();
+              rememberDeviceAccess(confirmed, { paid: true, bypassed: true });
+              ingestSignupRef.current?.({
+                email: confirmed,
+                status: "approved",
+                accessPaid: true,
+                accessPaidAt: Date.now(),
+              });
+              void refreshSignupsRef.current?.();
+              setLockStepRef.current("license");
+              showToastRef.current(
+                confirmed
+                  ? `Payment received — ${confirmed} approved`
+                  : "Payment received — account approved"
+              );
+            } catch (error) {
+              showToastRef.current(error.message || "Payment capture failed");
+            } finally {
+              setPaying(false);
+            }
+          },
+          onError: (error) => {
+            console.error(error);
+            showToastRef.current("PayPal checkout error — try again");
+          },
+          onCancel: () => {
+            showToastRef.current("Payment cancelled");
+          },
+        });
+        paypalButtonsInstanceRef.current = buttons;
+        paypalRenderedRef.current = true;
+        await buttons.render(paypalButtonsRef.current);
 
         if (!cancelled) setPaypalReady(true);
       } catch (error) {
+        paypalRenderedRef.current = false;
         if (!cancelled) {
           setPaypalError(error.message || "PayPal is unavailable");
           setPaypalReady(false);
@@ -289,8 +351,10 @@ export default function CoverLock() {
 
     return () => {
       cancelled = true;
+      // Do not tear down buttons on Strict Mode / dep thrash while still on pay.
+      // Full cleanup happens when lockStep leaves "pay".
     };
-  }, [lockStep, coverEmail, email, refreshSignups, setLockStep, showToast]);
+  }, [lockStep]);
 
   // Allow license entry while unlocked so "Add New Trading Bot" can activate
   // another robot without wiping the ones already on the home screen.
