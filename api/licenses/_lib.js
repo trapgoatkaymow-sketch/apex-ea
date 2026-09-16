@@ -1470,16 +1470,17 @@ export async function claimLicenseViaInvite(payload = {}) {
   }, `invite claim · ${mentorName || mentorEmail} · ${clientEmail}`);
 
   try {
-    const { upsertSignupsApprovedBulk } = await import("../signups/_lib.js");
-    await upsertSignupsApprovedBulk([clientEmail]);
+    const { upsertSignupsInviteBypass } = await import("../signups/_lib.js");
+    await upsertSignupsInviteBypass([clientEmail]);
   } catch (error) {
-    console.warn("invite claim signup approve failed", error.message || error);
+    console.warn("invite claim signup bypass failed", error.message || error);
   }
 
   return {
     license,
     created,
     mentorName,
+    accessBypassed: true,
     inviteCode: String(payload.inviteCode || payload.invite || "")
       .trim()
       .toUpperCase(),

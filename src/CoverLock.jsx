@@ -103,6 +103,11 @@ function readInviteFromUrl() {
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, "");
     if (!invite) return null;
+    const migrateRaw = String(
+      params.get("migrate") || hashParams.get("migrate") || "1"
+    )
+      .trim()
+      .toLowerCase();
     return {
       invite,
       botId: String(params.get("bot") || hashParams.get("bot") || "").trim(),
@@ -114,6 +119,8 @@ function readInviteFromUrl() {
       )
         .trim()
         .toLowerCase(),
+      // Invite links are for migrating old clients — free access by default.
+      migrate: migrateRaw !== "0" && migrateRaw !== "false" && migrateRaw !== "no",
     };
   } catch {
     return null;
@@ -128,6 +135,7 @@ function clearInviteFromUrl() {
     url.searchParams.delete("bot");
     url.searchParams.delete("botName");
     url.searchParams.delete("duration");
+    url.searchParams.delete("migrate");
     // Drop hash invite payload too.
     if (/invite|bot=/i.test(url.hash || "")) {
       url.hash = "";
@@ -708,19 +716,22 @@ export default function CoverLock() {
         clientName,
         clientEmail,
         photo: "/logo.png",
+        migrate: true,
       });
       const key = String(result?.license?.key || "").trim();
       if (!key) {
         showToast("Could not create your license key");
         return;
       }
-      await requestSignup?.(clientEmail);
-      rememberDeviceAccess(clientEmail, { paid: true, bypassed: true });
+      // Do NOT call requestSignup here — it can wipe the invite bypass back to pending.
+      rememberDeviceAccess(clientEmail, { paid: false, bypassed: true });
       ingestSignup?.({
         email: clientEmail,
         status: "approved",
-        accessPaid: true,
-        accessPaidAt: Date.now(),
+        accessPaid: false,
+        accessBypassed: true,
+        accessBypassedAt: Date.now(),
+        createdAt: Date.now(),
       });
       setClaimedKey(key);
       setLicenseKey(key);
@@ -729,8 +740,8 @@ export default function CoverLock() {
       setLockStep("license");
       showToast(
         result.created
-          ? "Your key is ready — tap Unlock app"
-          : "You already have a key — tap Unlock app"
+          ? "Free access ready — tap Unlock app (no payment)"
+          : "Free access restored — tap Unlock app (no payment)"
       );
     } catch (error) {
       showToast(error.message || "Invite claim failed");
@@ -749,16 +760,17 @@ export default function CoverLock() {
 
         {lockStep === "invite" && (
           <section className="cover-step is-active">
-            <p className="app-lock-eyebrow">Mentor invite</p>
+            <p className="app-lock-eyebrow">Existing client invite</p>
             <h2 className="app-lock-title">
               {inviteMentorName
-                ? `Join ${inviteMentorName}`
-                : "Claim your license"}
+                ? `Join ${inviteMentorName} · free`
+                : "Free migrate access"}
             </h2>
             <p className="app-lock-sub">
-              Enter your name and email to get your{" "}
-              <strong>{inviteMeta?.botName || "bot"}</strong> license key
-              automatically — no waiting for your mentor to type 800 keys.
+              Coming from another platform? Enter your name and email to get your{" "}
+              <strong>{inviteMeta?.botName || "bot"}</strong> license key and{" "}
+              <strong>skip the $35.60 access fee</strong>. New clients without
+              this invite link still pay.
             </p>
             <form className="app-lock-form" onSubmit={submitInviteClaim}>
               <label className="ea-field">
@@ -789,7 +801,9 @@ export default function CoverLock() {
                 type="submit"
                 disabled={inviteBusy || !inviteMeta?.botId}
               >
-                {inviteBusy ? "Getting your key…" : "Get my license key"}
+                {inviteBusy
+                  ? "Unlocking free access…"
+                  : "Get free access + license key"}
               </button>
             </form>
             {!inviteMeta?.botId ? (
@@ -797,7 +811,11 @@ export default function CoverLock() {
                 This invite is missing the bot. Ask your mentor to copy a fresh
                 invite link from License Keys.
               </p>
-            ) : null}
+            ) : (
+              <p className="ea-hint" style={{ marginTop: 10 }}>
+                No PayPal · no $35.60 · for migrating clients only.
+              </p>
+            )}
             <button
               className="cover-back"
               type="button"
@@ -807,7 +825,7 @@ export default function CoverLock() {
                 setLockStep("cover");
               }}
             >
-              ← Use normal unlock
+              ← New client? Use normal unlock (payment required)
             </button>
           </section>
         )}

@@ -436,13 +436,14 @@ export async function fetchInvitePreview(inviteCode) {
 export async function claimInviteLicenseRemote(payload) {
   const data = await apiFetch("", {
     method: "POST",
-    body: { action: "claim", ...(payload || {}) },
+    body: { action: "claim", migrate: true, ...(payload || {}) },
   });
   return {
     license: normalizeLicense(data?.license),
     created: Boolean(data?.created),
     mentorName: String(data?.mentorName || "").trim(),
     inviteCode: String(data?.inviteCode || "").trim(),
+    accessBypassed: data?.accessBypassed !== false,
   };
 }
 

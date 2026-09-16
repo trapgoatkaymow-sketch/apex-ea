@@ -84,6 +84,10 @@ export function mergeSignups(localList = [], remoteList = []) {
           : null,
         accessPaid: Boolean(item.accessPaid),
         accessPaidAt: item.accessPaidAt ? Number(item.accessPaidAt) : null,
+        accessBypassed: Boolean(item.accessBypassed),
+        accessBypassedAt: item.accessBypassedAt
+          ? Number(item.accessBypassedAt)
+          : null,
         appAccessUnlockedAt: item.appAccessUnlockedAt
           ? Number(item.appAccessUnlockedAt)
           : null,
@@ -105,6 +109,11 @@ export function mergeSignups(localList = [], remoteList = []) {
       Number(prev.accessPaidAt) || 0,
       Number(item.accessPaidAt) || 0
     );
+    const accessBypassed = Boolean(prev.accessBypassed || item.accessBypassed);
+    const accessBypassedAt = Math.max(
+      Number(prev.accessBypassedAt) || 0,
+      Number(item.accessBypassedAt) || 0
+    );
     const unlockStamps = [prev.appAccessUnlockedAt, item.appAccessUnlockedAt]
       .map((n) => Number(n) || 0)
       .filter((n) => n > 0);
@@ -119,6 +128,8 @@ export function mergeSignups(localList = [], remoteList = []) {
       premiumScannerAt: premiumScanner ? premiumScannerAt || null : null,
       accessPaid,
       accessPaidAt: accessPaid ? accessPaidAt || null : null,
+      accessBypassed,
+      accessBypassedAt: accessBypassed ? accessBypassedAt || null : null,
       appAccessUnlockedAt,
     });
   });

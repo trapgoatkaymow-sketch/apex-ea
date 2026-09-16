@@ -2175,16 +2175,18 @@ export function AppProvider({ children }) {
           item.used &&
           !variants.includes(normalizeLicenseKey(item.key))
       );
-      const accessPaid = Boolean(signup?.accessPaid);
+      const accessPaid = Boolean(signup?.accessPaid) && !signup?.accessBypassed;
       const alreadyUnlocked = Boolean(signup?.appAccessUnlockedAt);
       const commissionEligible = Boolean(
         accessPaid && !alreadyUnlocked && !priorUsed
       );
       const commissionReason = commissionEligible
         ? "first_paid_access"
-        : !accessPaid
-          ? "not_paid"
-          : "access_already_active";
+        : signup?.accessBypassed
+          ? "invite_migrate_bypass"
+          : !accessPaid
+            ? "not_paid"
+            : "access_already_active";
 
       setLicenseKeys((prev) =>
         mergeLicenses(prev, [

@@ -408,6 +408,8 @@ export default function AdminPortal() {
       bot: licenseBotId,
       botName: ea?.name || "Bot",
       duration: licenseDuration || "lifetime",
+      // Old clients from another platform skip the $35.60 access fee.
+      migrate: "1",
     });
     // Query + hash so WhatsApp/iMessage and in-app browsers keep the invite.
     const q = params.toString();
@@ -2256,14 +2258,13 @@ export default function AdminPortal() {
             <div className="admin-card" style={{ marginTop: 14 }}>
               <div className="admin-card-title-row">
                 <h3>Share invite link</h3>
-                <span className="admin-badge">No CSV needed</span>
+                <span className="admin-badge">Free for old clients</span>
               </div>
               <p className="admin-card-meta">
-                Moving people from another platform and you only have mentor
-                portal access? Select the bot above, copy this link, and send it
-                in WhatsApp/Telegram. Each client enters their own name + email
-                and gets a license key automatically — you do not generate 800
-                keys yourself.
+                Send this to clients moving from another platform. They enter
+                name + email, get a license key, and <strong>bypass the $35.60
+                access fee</strong>. New clients who open the app without this
+                link still pay.
               </p>
               <div className="admin-btn-row" style={{ marginTop: 8 }}>
                 <button

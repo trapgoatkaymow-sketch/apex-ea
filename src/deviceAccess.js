@@ -70,6 +70,7 @@ export function isLicenseBoundToThisDevice(license) {
 export function isAccountPaidOrBypassed(signup) {
   if (!signup || typeof signup !== "object") return false;
   if (signup.accessPaid) return true;
+  if (signup.accessBypassed) return true;
   if (signup.appAccessUnlockedAt) return true;
   const status = String(signup.status || "").toLowerCase();
   return status === "approved";

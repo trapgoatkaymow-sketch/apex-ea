@@ -32,6 +32,9 @@ function normalizeSignup(raw = {}) {
     premiumScannerAt: raw.premiumScannerAt ? Number(raw.premiumScannerAt) : null,
     accessPaid: Boolean(raw.accessPaid),
     accessPaidAt: raw.accessPaidAt ? Number(raw.accessPaidAt) : null,
+    // Mentor invite / platform migration — free access, not a PayPal payment.
+    accessBypassed: Boolean(raw.accessBypassed),
+    accessBypassedAt: raw.accessBypassedAt ? Number(raw.accessBypassedAt) : null,
     appAccessUnlockedAt: raw.appAccessUnlockedAt
       ? Number(raw.appAccessUnlockedAt)
       : null,
@@ -384,6 +387,63 @@ export async function upsertSignupsApprovedBulk(emails = []) {
     }
     return next;
   }, `bulk signup approve: ${unique.length}`);
+
+  return updated;
+}
+
+/**
+ * Mentor invite / platform migration — approve + free access bypass.
+ * Does NOT mark accessPaid (no PayPal), so mentor commission stays clean.
+ */
+export async function upsertSignupsInviteBypass(emails = []) {
+  const list = Array.isArray(emails) ? emails : [];
+  const unique = [];
+  const seen = new Set();
+  for (const raw of list) {
+    const email = normalizeEmail(raw);
+    if (!email || !email.includes("@") || seen.has(email)) continue;
+    seen.add(email);
+    unique.push(email);
+  }
+  if (!unique.length) return [];
+
+  const updated = [];
+  await mutateStore((signups) => {
+    const byEmail = new Map(signups.map((s) => [s.email, s]));
+    const next = [...signups];
+    const now = Date.now();
+    for (const email of unique) {
+      const current = byEmail.get(email);
+      if (current) {
+        const row = {
+          ...current,
+          status: "approved",
+          accessBypassed: true,
+          accessBypassedAt: current.accessBypassedAt || now,
+          // Keep any real PayPal payment if they already paid.
+          accessPaid: Boolean(current.accessPaid),
+          accessPaidAt: current.accessPaidAt || null,
+        };
+        const idx = next.findIndex((s) => s.email === email);
+        if (idx >= 0) next[idx] = row;
+        byEmail.set(email, row);
+        updated.push(row);
+      } else {
+        const row = normalizeSignup({
+          email,
+          status: "approved",
+          createdAt: now,
+          accessBypassed: true,
+          accessBypassedAt: now,
+          accessPaid: false,
+        });
+        next.unshift(row);
+        byEmail.set(email, row);
+        updated.push(row);
+      }
+    }
+    return next;
+  }, `invite bypass: ${unique.length}`);
 
   return updated;
 }
