@@ -4,6 +4,7 @@ import {
   handleBrokers,
   handleConnect,
   handleDisconnect,
+  handleHealth,
   handleMentorTrade,
   handleStatus,
   handleTrade,
@@ -102,6 +103,9 @@ function metaApiDevPlugin() {
 
           if (req.method === 'GET' && url.pathname === '/api/metaapi/brokers') {
             return handleBrokers(req, res)
+          }
+          if (req.method === 'GET' && url.pathname === '/api/metaapi/health') {
+            return handleHealth(req, res)
           }
           if (req.method === 'GET' && url.pathname === '/api/metaapi/status') {
             return handleStatus(req, res)

@@ -81,6 +81,35 @@ async function mt5Fetch(path, { method = "GET", signal, timeoutMs = 45000 } = {}
   }
 }
 
+/** Lightweight health check — MT5API GET /Ping returns "OK" when online. */
+export async function pingBrokerApi() {
+  const started = Date.now();
+  try {
+    const data = await mt5Fetch("/Ping", { timeoutMs: 4000 });
+    const raw = typeof data === "string" ? data.trim() : String(data ?? "");
+    const online = /^ok$/i.test(raw) || raw.length > 0;
+    return {
+      online,
+      status: online ? "online" : "offline",
+      latencyMs: Date.now() - started,
+      checkedAt: Date.now(),
+      message: online
+        ? "Broker API is online — you can search and connect."
+        : "Broker API is offline right now. Please wait and try again shortly.",
+    };
+  } catch (error) {
+    return {
+      online: false,
+      status: "offline",
+      latencyMs: Date.now() - started,
+      checkedAt: Date.now(),
+      message:
+        "Broker connection service is temporarily unavailable. This is not your login — the broker API is offline. Please wait a few minutes and try again.",
+      error: error?.message || "unreachable",
+    };
+  }
+}
+
 /** Map Swagger Company[] → UI broker rows. */
 export function mapSearchResults(data, platform = "MT5") {
   if (!Array.isArray(data)) return [];

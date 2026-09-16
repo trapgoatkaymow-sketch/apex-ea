@@ -44,6 +44,10 @@ async function apiFetch(path, { method = "GET", body, signal } = {}) {
  * Broker search via MT5API /Search only (proxied by /api/metaapi/brokers).
  * MetaAPI known-mt-servers is not used.
  */
+export async function checkBrokerApiHealth({ signal } = {}) {
+  return apiFetch("/health", { signal });
+}
+
 export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
   const q = String(query || "").trim();
   if (!q) return [];

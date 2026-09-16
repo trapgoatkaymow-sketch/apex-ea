@@ -1626,6 +1626,112 @@ html:has(.phone[data-interface="v2"]) body {
   line-height: 1.45;
 }
 
+.mt-api-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mt-api-status.is-on {
+  border-color: rgba(46, 204, 113, 0.45);
+  background: linear-gradient(
+    160deg,
+    rgba(46, 204, 113, 0.16),
+    rgba(255, 255, 255, 0.03)
+  );
+}
+
+.mt-api-status.is-off {
+  border-color: rgba(255, 82, 82, 0.5);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 82, 82, 0.16),
+    rgba(255, 255, 255, 0.03)
+  );
+}
+
+.mt-api-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mt-api-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mt-api-status.is-on .mt-api-status-btn {
+  border-color: rgba(46, 204, 113, 0.55);
+}
+
+.mt-api-status.is-off .mt-api-status-btn {
+  border-color: rgba(255, 82, 82, 0.55);
+}
+
+.mt-api-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+.mt-api-status.is-on .mt-api-status-dot {
+  background: #2ecc71;
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.22);
+  animation: mt-api-pulse 1.8s ease-in-out infinite;
+}
+
+.mt-api-status.is-off .mt-api-status-dot {
+  background: #ff5252;
+  box-shadow: 0 0 0 3px rgba(255, 82, 82, 0.22);
+}
+
+.mt-api-status.is-checking .mt-api-status-dot {
+  background: #f1c40f;
+  animation: mt-api-pulse 1s ease-in-out infinite;
+}
+
+.mt-api-status-hint {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.mt-api-status-msg {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(255, 230, 230, 0.92);
+}
+
+@keyframes mt-api-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.75;
+  }
+}
+
 .mt-platform-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

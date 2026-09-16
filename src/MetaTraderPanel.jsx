@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import EnginePanel from "./EnginePanel.jsx";
 import { CONNECT_ENGINE_STEPS, sleep } from "./chartScanner.js";
 import { brokerInitials, resolveBrokerLogoCandidates } from "./brokerLogos.js";
-import { connectAccount, disconnectAccount, getAccountStatus, searchBrokers } from "./metaApi.js";
+import { connectAccount, disconnectAccount, getAccountStatus, searchBrokers, checkBrokerApiHealth } from "./metaApi.js";
 import { removeMt5Account, upsertMt5Account } from "./mt5AccountsApi.js";
 import { useApp } from "./store.jsx";
 
@@ -96,10 +96,14 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
   const [creds, setCreds] = useState(emptyLogin);
   const [connecting, setConnecting] = useState(false);
   const [accountMetrics, setAccountMetrics] = useState(null);
+  const [apiHealth, setApiHealth] = useState(null);
+  const [apiChecking, setApiChecking] = useState(true);
   const searchRef = useRef(0);
 
   const hasQuery = query.trim().length > 0;
   const session = mt5Session;
+  const apiOnline = apiHealth?.online === true;
+  const apiOffline = apiHealth?.online === false;
 
   async function syncHostedAccount(sessionRow, email = coverEmail) {
     const accountEmail = normalizeEmail(email);
@@ -126,6 +130,45 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     void syncHostedAccount(session, coverEmail);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when session or cover email changes
   }, [session?.accountId, coverEmail]);
+
+  // Broker API on/off — poll so clients see when 66.23.225.158 is down.
+  useEffect(() => {
+    let cancelled = false;
+    let timer = null;
+
+    async function check(showSpinner = false) {
+      if (showSpinner) setApiChecking(true);
+      try {
+        const health = await checkBrokerApiHealth();
+        if (cancelled) return;
+        setApiHealth(health);
+      } catch {
+        if (cancelled) return;
+        setApiHealth({
+          online: false,
+          status: "offline",
+          checkedAt: Date.now(),
+          message:
+            "Broker connection service is temporarily unavailable. This is not your login — the broker API is offline. Please wait a few minutes and try again.",
+        });
+      } finally {
+        if (!cancelled) setApiChecking(false);
+      }
+    }
+
+    void check(true);
+    timer = setInterval(() => void check(false), 20000);
+    const onVisible = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      void check(false);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   // Keep connected session fresh and pull live balance / floating profit.
   useEffect(() => {
@@ -278,6 +321,14 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
 
     if (!login || !password || !server) {
       showToast("Enter login, password, and server");
+      return;
+    }
+
+    if (apiOffline) {
+      showToast(
+        apiHealth?.message ||
+          "Broker API is offline right now — please wait and try again"
+      );
       return;
     }
 
@@ -437,8 +488,16 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             />
           </label>
 
-          <button className="mt-connect-btn" type="submit" disabled={connecting}>
-            {connecting ? "Starting connecting engine…" : "Connect"}
+          <button
+            className="mt-connect-btn"
+            type="submit"
+            disabled={connecting || apiOffline}
+          >
+            {connecting
+              ? "Starting connecting engine…"
+              : apiOffline
+                ? "API offline — try later"
+                : "Connect"}
           </button>
         </form>
       </div>
@@ -454,6 +513,53 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           Search brokers, connect MT5, then arm the ApexEA trading engine.
         </p>
       </header>
+
+      <div
+        className={`mt-api-status${apiOnline ? " is-on" : ""}${apiOffline ? " is-off" : ""}${apiChecking && !apiHealth ? " is-checking" : ""}`}
+        role="status"
+        aria-live="polite"
+      >
+        <div className="mt-api-status-row">
+          <button
+            type="button"
+            className="mt-api-status-btn"
+            onClick={() => {
+              setApiChecking(true);
+              void checkBrokerApiHealth()
+                .then((health) => setApiHealth(health))
+                .catch(() =>
+                  setApiHealth({
+                    online: false,
+                    status: "offline",
+                    checkedAt: Date.now(),
+                    message:
+                      "Broker connection service is temporarily unavailable. Please wait a few minutes and try again.",
+                  })
+                )
+                .finally(() => setApiChecking(false));
+            }}
+            aria-pressed={apiOnline}
+          >
+            <span className="mt-api-status-dot" aria-hidden="true" />
+            <span className="mt-api-status-label">
+              {apiChecking && !apiHealth
+                ? "Checking API…"
+                : apiOnline
+                  ? "API On"
+                  : "API Off"}
+            </span>
+          </button>
+          <span className="mt-api-status-hint">
+            {apiOnline ? "Broker service ready" : "Service issue"}
+          </span>
+        </div>
+        {apiOffline ? (
+          <p className="mt-api-status-msg">
+            {apiHealth?.message ||
+              "Broker connection service is temporarily unavailable. This is not your fault — please wait a few minutes and try again."}
+          </p>
+        ) : null}
+      </div>
 
       {session?.accountId ? (
         <div className="mt-session">
@@ -514,9 +620,12 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for your broker"
+            placeholder={
+              apiOffline ? "Broker API offline — try again soon" : "Search for your broker"
+            }
             autoComplete="off"
             inputMode="search"
+            disabled={apiOffline}
           />
         </label>
 

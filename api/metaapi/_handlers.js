@@ -7,6 +7,7 @@ import {
   connectAccount as mt5ConnectAccount,
   disconnectAccount as mt5DisconnectAccount,
   getAccountStatus as mt5GetAccountStatus,
+  pingBrokerApi,
   placeMarketTrade as mt5PlaceMarketTrade,
   readJsonBody,
   searchBrokers as mt5SearchBrokers,
@@ -64,6 +65,31 @@ export async function handleBrokers(req, res) {
     sendJson(res, error.status || 500, {
       error: error.message || "Broker search failed",
       details: error.data || null,
+    });
+  }
+}
+
+export async function handleHealth(req, res) {
+  if (req.method === "OPTIONS") {
+    endOptions(res);
+    return;
+  }
+  if (req.method !== "GET") {
+    sendJson(res, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  try {
+    const health = await pingBrokerApi();
+    sendJson(res, 200, health);
+  } catch (error) {
+    sendJson(res, 200, {
+      online: false,
+      status: "offline",
+      checkedAt: Date.now(),
+      message:
+        "Broker connection service is temporarily unavailable. Please wait and try again shortly.",
+      error: error?.message || "health check failed",
     });
   }
 }
