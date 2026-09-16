@@ -210,17 +210,25 @@ function parseRetryAfterSeconds(response, fallback = 60) {
   return fallback;
 }
 
+function sanitizeAccountPayload(payload = {}) {
+  const next = { ...payload };
+  if (Array.isArray(next.keywords)) {
+    next.keywords = trimMetaApiKeywords(next.keywords);
+  }
+  return next;
+}
+
 async function createAccountWithRetry(payload, { maxAttempts = 10 } = {}) {
   let lastError;
   let tx = transactionId();
-  let currentPayload = { ...payload };
+  let currentPayload = sanitizeAccountPayload(payload);
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
       const { data, response } = await metaFetch(`${PROVISIONING_BASE}/users/current/accounts`, {
         method: "POST",
         headers: { "transaction-id": tx },
-        body: currentPayload,
+        body: sanitizeAccountPayload(currentPayload),
       });
 
       // 202 accepted — reuse same transaction-id and retry after delay

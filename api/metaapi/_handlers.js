@@ -98,10 +98,21 @@ export async function handleConnect(req, res) {
     sendJson(res, 200, session);
   } catch (error) {
     sendJson(res, error.status || 500, {
-      error: error.message || "Connection failed",
+      error: formatHandlerError(error, "Connection failed"),
       details: error.data || null,
     });
   }
+}
+
+function formatHandlerError(error, fallback) {
+  const detailList = error?.data?.details;
+  if (Array.isArray(detailList) && detailList.length) {
+    const hints = detailList
+      .map((row) => row?.message || row?.parameter)
+      .filter(Boolean);
+    if (hints.length) return hints.join(" ");
+  }
+  return error?.message || fallback;
 }
 
 export async function handleStatus(req, res) {

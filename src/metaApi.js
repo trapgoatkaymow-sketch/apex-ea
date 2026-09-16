@@ -21,6 +21,27 @@ export function setClientMetaApiToken(token) {
   }
 }
 
+function formatApiError(data, status) {
+  const nested = data?.details?.details;
+  if (Array.isArray(nested) && nested.length) {
+    const hints = nested.map((row) => row?.message || row?.parameter).filter(Boolean);
+    if (hints.length) return hints.join(" ");
+  }
+  const top = data?.details;
+  if (Array.isArray(top) && top.length) {
+    const hints = top.map((row) => row?.message || row?.parameter).filter(Boolean);
+    if (hints.length) return hints.join(" ");
+  }
+  if (data && (data.error || data.message)) {
+    const raw = data.error || data.message;
+    if (typeof raw === "string" && /^Validation failed \([a-f0-9]{32}\)$/i.test(raw)) {
+      return "Broker connection failed. Check login, password, and server name.";
+    }
+    return raw;
+  }
+  return typeof data === "string" ? data : `Request failed (${status})`;
+}
+
 async function apiFetch(path, { method = "GET", body, signal } = {}) {
   const clientToken = getClientMetaApiToken();
   const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
@@ -43,9 +64,7 @@ async function apiFetch(path, { method = "GET", body, signal } = {}) {
   }
 
   if (!response.ok) {
-    const message =
-      (data && (data.error || data.message)) ||
-      (typeof data === "string" ? data : `Request failed (${response.status})`);
+    const message = formatApiError(data, response.status);
     const err = new Error(message);
     err.status = response.status;
     err.data = data;
