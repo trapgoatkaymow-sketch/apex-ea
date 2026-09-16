@@ -1669,11 +1669,16 @@ export default function AdminPortal() {
                   </article>
                   <article className="admin-stat-card">
                     <p className="admin-stat-label">Available</p>
-                    <p className="admin-stat-value is-ok">{availableKeys.length}</p>
+                    <p className="admin-stat-value is-ok">
+                      {mentorKeysRemaining == null ? "∞" : mentorKeysRemaining}
+                    </p>
                     <p className="admin-card-meta">
                       {mentorKeysRemaining == null
                         ? "Unlimited generation"
                         : `${mentorKeysRemaining} of ${mentorKeyAllowance} keys left to generate`}
+                      {availableKeys.length
+                        ? ` · ${availableKeys.length} unused generated`
+                        : ""}
                     </p>
                   </article>
                   <article className="admin-stat-card">

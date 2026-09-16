@@ -192,6 +192,30 @@ function loadState() {
           : backup.premiumScannerEmails || [],
       };
     }
+    // If a refresh wiped keys from primary but backup still has them, restore.
+    if (
+      primary &&
+      backup &&
+      Array.isArray(backup.licenseKeys) &&
+      backup.licenseKeys.length >
+        (Array.isArray(primary.licenseKeys) ? primary.licenseKeys.length : 0)
+    ) {
+      const byKey = new Map();
+      for (const row of [
+        ...(Array.isArray(primary.licenseKeys) ? primary.licenseKeys : []),
+        ...backup.licenseKeys,
+      ]) {
+        const key = String(row?.key || "")
+          .trim()
+          .toUpperCase();
+        if (!key) continue;
+        if (!byKey.has(key)) byKey.set(key, row);
+      }
+      return {
+        ...primary,
+        licenseKeys: Array.from(byKey.values()),
+      };
+    }
     return primary || backup;
   } catch {
     return null;
@@ -852,16 +876,12 @@ export function AppProvider({ children }) {
   const refreshLicenses = useCallback(async () => {
     try {
       const remote = await fetchLicenses();
-      // Remote list is authoritative: keys missing there were permanently deleted.
-      // Also drop anything on the local deleted-key deny list (resurrect block).
-      const remoteKeys = new Set(
-        remote.map((row) => normalizeLicenseKey(row.key)).filter(Boolean)
-      );
+      // Merge remote + local. Do NOT drop local-only keys just because GitHub
+      // lag / failed durable writes omitted them — that made freshly generated
+      // keys "disappear" after refresh. Only tombstones remove keys.
       setLicenseKeys((prev) => {
         const keptLocal = (Array.isArray(prev) ? prev : []).filter(
-          (row) =>
-            remoteKeys.has(normalizeLicenseKey(row.key)) &&
-            !isRememberedDeletedLicenseKey(row.key)
+          (row) => !isRememberedDeletedLicenseKey(row.key)
         );
         return filterOutDeletedLicenses(mergeLicenses(keptLocal, remote));
       });

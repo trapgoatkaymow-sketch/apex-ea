@@ -77,6 +77,21 @@ export function rememberDeletedLicenseKey(rawKey) {
   writeDeletedKeyMap(map);
 }
 
+/** Clear a local tombstone when the server still has the key. */
+export function forgetDeletedLicenseKey(rawKey) {
+  const key = normalizeLicenseKey(rawKey);
+  if (!key) return;
+  const map = readDeletedKeyMap();
+  let changed = false;
+  for (const variant of licenseKeyVariants(key)) {
+    if (map[variant]) {
+      delete map[variant];
+      changed = true;
+    }
+  }
+  if (changed) writeDeletedKeyMap(map);
+}
+
 export function rememberDeletedLicenseKeys(input) {
   if (!input) return;
   const map = readDeletedKeyMap();
@@ -348,6 +363,10 @@ export async function fetchLicenses() {
   const rows = Array.isArray(data?.licenses)
     ? data.licenses.map(normalizeLicense).filter(Boolean)
     : [];
+  // Server still has these keys → clear stale local denials so they reappear.
+  for (const row of rows) {
+    if (row?.key) forgetDeletedLicenseKey(row.key);
+  }
   return filterOutDeletedLicenses(rows);
 }
 
