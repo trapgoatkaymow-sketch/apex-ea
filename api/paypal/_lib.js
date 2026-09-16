@@ -97,7 +97,7 @@ export async function getPayPalAccessToken() {
   return cachedToken;
 }
 
-export async function createLifetimeOrder(email, { purpose = "access" } = {}) {
+export async function createLifetimeOrder(email, { purpose = "access", returnUrl = "", cancelUrl = "" } = {}) {
   const buyer = normalizeEmail(email);
   if (!buyer || !buyer.includes("@")) {
     const err = new Error("Enter a valid email before paying");
@@ -107,6 +107,11 @@ export async function createLifetimeOrder(email, { purpose = "access" } = {}) {
 
   const kind = String(purpose || "access").toLowerCase() === "scanner" ? "scanner" : "access";
   const accessToken = await getPayPalAccessToken();
+  const safeReturn =
+    String(returnUrl || "").trim() || "https://apex-ea.com/?paypal_return=1";
+  const safeCancel =
+    String(cancelUrl || "").trim() || "https://apex-ea.com/?paypal_cancel=1";
+
   return paypalFetch("/v2/checkout/orders", {
     method: "POST",
     accessToken,
@@ -129,11 +134,19 @@ export async function createLifetimeOrder(email, { purpose = "access" } = {}) {
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
         brand_name: "ApexEA",
-        return_url: "https://apex-ea.com/",
-        cancel_url: "https://apex-ea.com/",
+        // Full redirect checkout — card entry happens on PayPal, not inside our app
+        // (in-app card fields were restarting on mobile).
+        return_url: safeReturn,
+        cancel_url: safeCancel,
       },
     },
   });
+}
+
+export function extractApproveUrl(order) {
+  const links = Array.isArray(order?.links) ? order.links : [];
+  const approve = links.find((link) => String(link?.rel || "").toLowerCase() === "approve");
+  return String(approve?.href || "").trim();
 }
 
 export async function captureLifetimeOrder(orderId) {

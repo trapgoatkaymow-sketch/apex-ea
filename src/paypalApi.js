@@ -32,10 +32,15 @@ export async function fetchPaypalConfig() {
   return apiFetch("/config");
 }
 
-export async function createPaypalOrder(email, purpose = "access") {
+export async function createPaypalOrder(email, purpose = "access", urls = {}) {
   return apiFetch("/create-order", {
     method: "POST",
-    body: { email, purpose },
+    body: {
+      email,
+      purpose,
+      returnUrl: urls.returnUrl || "",
+      cancelUrl: urls.cancelUrl || "",
+    },
   });
 }
 

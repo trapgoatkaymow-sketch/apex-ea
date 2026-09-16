@@ -1172,11 +1172,16 @@ export function AppProvider({ children }) {
         );
       }
       if (status === "approved" && normalizeEmail(coverEmail) === key) {
-        setLockStep("license");
-        if (!silent) showToast("Approved — enter your license key");
+        // Never yank someone out of an active PayPal checkout.
+        if (lockStepRef.current !== "pay") {
+          setLockStep("license");
+          if (!silent) showToast("Approved — enter your license key");
+        }
       }
       if (status === "declined" && normalizeEmail(coverEmail) === key) {
-        setLockStep("pending");
+        if (lockStepRef.current !== "pay") {
+          setLockStep("pending");
+        }
       }
       return true;
     },
@@ -1450,6 +1455,15 @@ export function AppProvider({ children }) {
     // Mentor invite links must win over the normal unlock flow.
     try {
       const params = new URLSearchParams(window.location.search || "");
+      // Returning from PayPal hosted checkout — stay on pay until capture finishes.
+      if (
+        params.get("paypal_return") === "1" ||
+        params.get("paypal_cancel") === "1" ||
+        (params.get("token") && params.get("PayerID"))
+      ) {
+        setLockStep("pay");
+        return;
+      }
       const hash = String(window.location.hash || "");
       const fromHash = hash.includes("invite=") || hash.includes("code=");
       const invite = String(

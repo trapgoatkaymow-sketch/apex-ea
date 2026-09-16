@@ -3,7 +3,6 @@ import {
   capturePaypalOrder,
   createPaypalOrder,
   fetchPaypalConfig,
-  loadPaypalSdk,
 } from "./paypalApi.js";
 import {
   hasPaidOnThisDevice,
@@ -24,10 +23,61 @@ import {
 } from "./signupsApi.js";
 import { useApp } from "./store.jsx";
 
+const PAYPAL_EMAIL_KEY = "apexea-paypal-email";
+const PAYPAL_ORDER_KEY = "apexea-paypal-order";
+
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
+}
+
+function readPaypalReturnFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("paypal_cancel") === "1") {
+      return { cancelled: true, orderId: "" };
+    }
+    const orderId = String(params.get("token") || params.get("orderId") || "").trim();
+    const payerId = String(params.get("PayerID") || params.get("payerId") || "").trim();
+    const flagged = params.get("paypal_return") === "1";
+    if (orderId && (flagged || payerId)) {
+      return { cancelled: false, orderId, payerId };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPaypalReturnFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    [
+      "paypal_return",
+      "paypal_cancel",
+      "token",
+      "orderId",
+      "PayerID",
+      "payerId",
+    ].forEach((key) => url.searchParams.delete(key));
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+  } catch {
+    // ignore
+  }
+}
+
+function buildPaypalReturnUrls() {
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://apex-ea.com";
+  // Always bounce back to production host when possible so APK/WebView return works.
+  const base = origin.includes("apex-ea.com") ? origin : "https://apex-ea.com";
+  return {
+    returnUrl: `${base}/?paypal_return=1`,
+    cancelUrl: `${base}/?paypal_cancel=1`,
+  };
 }
 
 function readInviteFromUrl() {
@@ -131,7 +181,6 @@ export default function CoverLock() {
   const [licenseKey, setLicenseKey] = useState("");
   const [paying, setPaying] = useState(false);
   const [checkingPaid, setCheckingPaid] = useState(false);
-  const [paypalReady, setPaypalReady] = useState(false);
   const [paypalError, setPaypalError] = useState("");
   const [inviteMeta, setInviteMeta] = useState(() => readInviteFromUrl());
   const [inviteMentorName, setInviteMentorName] = useState("");
@@ -139,14 +188,13 @@ export default function CoverLock() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [claimedKey, setClaimedKey] = useState("");
   const hotspotRef = useRef({ count: 0, first: 0 });
-  const paypalButtonsRef = useRef(null);
-  const paypalRenderedRef = useRef(false);
-  const paypalButtonsInstanceRef = useRef(null);
   const payEmailRef = useRef(coverEmail || email || "");
+  const paypalReturnHandledRef = useRef(false);
   const showToastRef = useRef(showToast);
   const refreshSignupsRef = useRef(refreshSignups);
   const ingestSignupRef = useRef(ingestSignup);
   const setLockStepRef = useRef(setLockStep);
+  const requestSignupRef = useRef(requestSignup);
 
   useEffect(() => {
     setEmail(coverEmail || "");
@@ -163,15 +211,93 @@ export default function CoverLock() {
     refreshSignupsRef.current = refreshSignups;
     ingestSignupRef.current = ingestSignup;
     setLockStepRef.current = setLockStep;
-  }, [showToast, refreshSignups, ingestSignup, setLockStep]);
+    requestSignupRef.current = requestSignup;
+  }, [showToast, refreshSignups, ingestSignup, setLockStep, requestSignup]);
+
+  // After PayPal hosted checkout, capture the order and unlock.
+  useEffect(() => {
+    if (paypalReturnHandledRef.current) return undefined;
+    const returned = readPaypalReturnFromUrl();
+    if (!returned) return undefined;
+    paypalReturnHandledRef.current = true;
+    clearPaypalReturnFromUrl();
+
+    if (returned.cancelled) {
+      setLockStep("pay");
+      showToast("Payment cancelled — try again");
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPaying(true);
+    setLockStep("pay");
+    (async () => {
+      try {
+        let paidEmail = "";
+        let storedOrder = "";
+        try {
+          paidEmail = String(sessionStorage.getItem(PAYPAL_EMAIL_KEY) || "")
+            .trim()
+            .toLowerCase();
+          storedOrder = String(sessionStorage.getItem(PAYPAL_ORDER_KEY) || "").trim();
+        } catch {
+          // ignore
+        }
+        if (paidEmail) {
+          setEmail(paidEmail);
+          await requestSignupRef.current?.(paidEmail);
+        }
+        const orderId = returned.orderId || storedOrder;
+        if (!orderId) throw new Error("Missing PayPal order — tap Pay again");
+        const result = await capturePaypalOrder(orderId, paidEmail, "access");
+        const confirmed = String(result?.email || paidEmail || "")
+          .trim()
+          .toLowerCase();
+        if (!confirmed.includes("@")) {
+          throw new Error("Payment ok, but email was missing — tap I have paid");
+        }
+        rememberDeviceAccess(confirmed, { paid: true, bypassed: true });
+        ingestSignupRef.current?.({
+          email: confirmed,
+          status: "approved",
+          accessPaid: true,
+          accessPaidAt: Date.now(),
+        });
+        void refreshSignupsRef.current?.();
+        try {
+          sessionStorage.removeItem(PAYPAL_EMAIL_KEY);
+          sessionStorage.removeItem(PAYPAL_ORDER_KEY);
+        } catch {
+          // ignore
+        }
+        if (cancelled) return;
+        setLockStepRef.current("license");
+        showToastRef.current(`Payment received — ${confirmed} approved`);
+      } catch (error) {
+        if (!cancelled) {
+          setPaypalError(error.message || "Could not confirm PayPal payment");
+          setLockStep("pay");
+          showToastRef.current(error.message || "Payment capture failed");
+        }
+      } finally {
+        if (!cancelled) setPaying(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setLockStep, showToast]);
 
   // Mentor invite link → clients claim their own key (no CSV / no mentor typing).
   // Re-assert when the normal unlock resolver tries to overwrite lockStep.
   useEffect(() => {
     const meta = readInviteFromUrl();
     if (!meta?.invite) return undefined;
+    // Don't steal focus during PayPal return capture.
+    if (readPaypalReturnFromUrl()) return undefined;
     setInviteMeta(meta);
-    if (lockStep !== "invite" && lockStep !== "license") {
+    if (lockStep !== "invite" && lockStep !== "license" && lockStep !== "pay") {
       setLockStep("invite");
     }
     let cancelled = false;
@@ -222,137 +348,26 @@ export default function CoverLock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run when paywall email changes
   }, [lockStep, coverEmail]);
 
-  // PayPal buttons: mount ONCE per pay session. Re-rendering mid-checkout
-  // (email/toast deps changing) was restarting card entry for clients.
+  // Warm PayPal config so the pay button can fail fast if misconfigured.
   useEffect(() => {
-    if (lockStep !== "pay") {
-      paypalRenderedRef.current = false;
-      try {
-        paypalButtonsInstanceRef.current?.close?.();
-      } catch {
-        // ignore
-      }
-      paypalButtonsInstanceRef.current = null;
-      if (paypalButtonsRef.current) paypalButtonsRef.current.innerHTML = "";
-      return undefined;
-    }
-
-    if (paypalRenderedRef.current && paypalButtonsRef.current?.childElementCount) {
-      return undefined;
-    }
-
+    if (lockStep !== "pay" && lockStep !== "pending") return undefined;
     let cancelled = false;
-    let buttons = null;
-
-    (async () => {
-      setPaypalError("");
-      setPaypalReady(false);
-      try {
-        const config = await fetchPaypalConfig();
-        if (!config?.clientId) {
-          throw new Error("PayPal client id is missing");
-        }
-        if (!config.ready) {
-          throw new Error(
-            "PayPal secret not set yet. Add PAYPAL_CLIENT_SECRET on Vercel, then retry."
+    void fetchPaypalConfig()
+      .then((config) => {
+        if (cancelled) return;
+        if (!config?.ready) {
+          setPaypalError(
+            "PayPal is not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel."
           );
+        } else {
+          setPaypalError("");
         }
-        const paypal = await loadPaypalSdk(config.clientId);
-        if (cancelled || !paypalButtonsRef.current) return;
-        // Another pass already mounted buttons.
-        if (paypalRenderedRef.current && paypalButtonsRef.current.childElementCount) {
-          if (!cancelled) setPaypalReady(true);
-          return;
-        }
-
-        paypalButtonsRef.current.innerHTML = "";
-        buttons = paypal.Buttons({
-          style: {
-            layout: "vertical",
-            color: "gold",
-            shape: "rect",
-            label: "pay",
-            height: 48,
-          },
-          // Keep checkout on PayPal / card — avoid fragile funding methods.
-          fundingSource: undefined,
-          createOrder: async () => {
-            const buyer = payEmailRef.current;
-            if (!buyer || !buyer.includes("@")) {
-              throw new Error("Enter a valid email before paying");
-            }
-            try {
-              sessionStorage.setItem("apexea-paypal-email", buyer);
-            } catch {
-              // ignore
-            }
-            const order = await createPaypalOrder(buyer, "access");
-            if (!order?.id) throw new Error("Could not start PayPal checkout");
-            return order.id;
-          },
-          onApprove: async (data) => {
-            setPaying(true);
-            try {
-              let paidEmail = payEmailRef.current;
-              try {
-                paidEmail =
-                  paidEmail ||
-                  String(sessionStorage.getItem("apexea-paypal-email") || "")
-                    .trim()
-                    .toLowerCase();
-              } catch {
-                // ignore
-              }
-              const result = await capturePaypalOrder(data.orderID, paidEmail, "access");
-              const confirmed = String(result?.email || paidEmail || "")
-                .trim()
-                .toLowerCase();
-              rememberDeviceAccess(confirmed, { paid: true, bypassed: true });
-              ingestSignupRef.current?.({
-                email: confirmed,
-                status: "approved",
-                accessPaid: true,
-                accessPaidAt: Date.now(),
-              });
-              void refreshSignupsRef.current?.();
-              setLockStepRef.current("license");
-              showToastRef.current(
-                confirmed
-                  ? `Payment received — ${confirmed} approved`
-                  : "Payment received — account approved"
-              );
-            } catch (error) {
-              showToastRef.current(error.message || "Payment capture failed");
-            } finally {
-              setPaying(false);
-            }
-          },
-          onError: (error) => {
-            console.error(error);
-            showToastRef.current("PayPal checkout error — try again");
-          },
-          onCancel: () => {
-            showToastRef.current("Payment cancelled");
-          },
-        });
-        paypalButtonsInstanceRef.current = buttons;
-        paypalRenderedRef.current = true;
-        await buttons.render(paypalButtonsRef.current);
-
-        if (!cancelled) setPaypalReady(true);
-      } catch (error) {
-        paypalRenderedRef.current = false;
-        if (!cancelled) {
-          setPaypalError(error.message || "PayPal is unavailable");
-          setPaypalReady(false);
-        }
-      }
-    })();
-
+      })
+      .catch((error) => {
+        if (!cancelled) setPaypalError(error.message || "PayPal unavailable");
+      });
     return () => {
       cancelled = true;
-      // Do not tear down buttons on Strict Mode / dep thrash while still on pay.
-      // Full cleanup happens when lockStep leaves "pay".
     };
   }, [lockStep]);
 
@@ -621,6 +636,39 @@ export default function CoverLock() {
     }
   }
 
+  async function startPaypalCheckout() {
+    const buyer = normalizeEmail(coverEmail || email || payEmailRef.current);
+    if (!buyer.includes("@")) {
+      showToast("Enter a valid email before paying");
+      setLockStep("cover");
+      return;
+    }
+    if (paying) return;
+    setPaying(true);
+    setPaypalError("");
+    try {
+      await requestSignup?.(buyer);
+      const urls = buildPaypalReturnUrls();
+      const order = await createPaypalOrder(buyer, "access", urls);
+      const approveUrl = String(order?.approveUrl || "").trim();
+      if (!order?.id || !approveUrl) {
+        throw new Error("Could not start PayPal checkout");
+      }
+      try {
+        sessionStorage.setItem(PAYPAL_EMAIL_KEY, buyer);
+        sessionStorage.setItem(PAYPAL_ORDER_KEY, order.id);
+      } catch {
+        // ignore
+      }
+      // Leave our app entirely — card details are entered on PayPal's site.
+      window.location.assign(approveUrl);
+    } catch (error) {
+      setPaypalError(error.message || "Could not open PayPal");
+      showToast(error.message || "Could not open PayPal");
+      setPaying(false);
+    }
+  }
+
   async function submitInviteClaim(event) {
     event.preventDefault();
     if (!inviteMeta?.invite || !inviteMeta?.botId) {
@@ -782,8 +830,9 @@ export default function CoverLock() {
             <h2 className="app-lock-title">Pay with PayPal</h2>
             <p className="app-lock-sub">
               Mandatory one-time payment of <strong>$35.60 USD</strong> for{" "}
-              <strong>{coverEmail || email || "your email"}</strong>. Required for
-              every first-time user. When PayPal confirms, you are auto-approved.
+              <strong>{coverEmail || email || "your email"}</strong>. You will
+              finish payment on PayPal’s secure page, then return here
+              automatically.
             </p>
             <div className="paypal-panel">
               {paypalError ? (
@@ -791,17 +840,24 @@ export default function CoverLock() {
                   {paypalError}
                 </p>
               ) : null}
-              {!paypalReady && !paypalError ? (
-                <p className="ea-hint">Loading PayPal…</p>
-              ) : null}
-              <div ref={paypalButtonsRef} className="paypal-buttons" />
-              {paying ? <p className="ea-hint">Confirming payment…</p> : null}
+              <button
+                className="admin-btn admin-btn-solid admin-btn-block"
+                type="button"
+                onClick={() => void startPaypalCheckout()}
+                disabled={paying}
+              >
+                {paying ? "Opening PayPal…" : "Continue to PayPal · $35.60"}
+              </button>
+              <p className="ea-hint" style={{ marginTop: 10, textAlign: "center" }}>
+                Card and PayPal login happen on PayPal — this page will not
+                restart while you enter details.
+              </p>
             </div>
             <button
               className="admin-btn admin-btn-outline admin-btn-block"
               type="button"
               onClick={checkPaidStatus}
-              disabled={checkingPaid}
+              disabled={checkingPaid || paying}
               style={{ marginTop: 12 }}
             >
               {checkingPaid ? "Checking…" : "I have paid"}
@@ -814,6 +870,7 @@ export default function CoverLock() {
               className="cover-back"
               type="button"
               onClick={() => setLockStep("cover")}
+              disabled={paying}
             >
               ← Change email
             </button>
