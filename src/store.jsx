@@ -19,6 +19,7 @@ import {
 } from "./signupsApi.js";
 import {
   createLicenseRemote,
+  createLicensesBulkRemote,
   deactivateLicenseRemote,
   deleteLicenseRemote,
   fetchLicense,
@@ -1820,6 +1821,90 @@ export function AppProvider({ children }) {
     [bots, eas, licenseKeys, showToast]
   );
 
+  const generateLicensesBulk = useCallback(
+    async (
+      botId,
+      clients = [],
+      {
+        duration = "lifetime",
+        mentorEmail = "",
+        mentorId = "",
+        mentorName = "",
+      } = {}
+    ) => {
+      const bot = bots.find((b) => b.id === botId);
+      if (!bot) {
+        showToast("Select a bot");
+        return null;
+      }
+      const list = Array.isArray(clients) ? clients : [];
+      if (!list.length) {
+        showToast("Upload a CSV with client name and email columns");
+        return null;
+      }
+      const ea = eas.find((item) => item.id === botId);
+      const ownerEmail =
+        String(mentorEmail || ea?.ownerEmail || "")
+          .trim()
+          .toLowerCase() || "";
+      const ownerId = String(mentorId || ea?.ownerId || "").trim();
+      const ownerName = String(mentorName || "").trim();
+
+      let photo = String(bot.photo || ea?.photo || "/logo.png").trim() || "/logo.png";
+      if (photo.startsWith("data:image/")) {
+        try {
+          const uploaded = await uploadBotPhotoRemote(bot.id, photo);
+          if (String(uploaded || "").trim()) photo = String(uploaded).trim();
+        } catch {
+          // keep local
+        }
+      }
+
+      try {
+        const result = await createLicensesBulkRemote({
+          botId: bot.id,
+          botName: bot.name,
+          duration,
+          mentorEmail: ownerEmail,
+          mentorId: ownerId,
+          mentorName: ownerName,
+          bot: {
+            id: bot.id,
+            name: bot.name,
+            photo,
+            strategy: ea?.strategy || "scalper",
+            symbols: Array.isArray(ea?.symbols) ? ea.symbols : [],
+          },
+          clients: list,
+        });
+        if (result.created?.length) {
+          setLicenseKeys((prev) => mergeLicenses(prev, result.created));
+          setSignups((prev) =>
+            mergeSignups(
+              prev,
+              result.created.map((row) => ({
+                email: row.clientEmail,
+                status: "approved",
+                accessPaid: true,
+                createdAt: Date.now(),
+              }))
+            )
+          );
+        }
+        showToast(
+          `Imported ${result.createdCount} key${result.createdCount === 1 ? "" : "s"}` +
+            (result.skippedCount ? ` · ${result.skippedCount} already existed` : "") +
+            (result.errorCount ? ` · ${result.errorCount} row error(s)` : "")
+        );
+        return result;
+      } catch (error) {
+        showToast(error.message || "Bulk import failed");
+        return null;
+      }
+    },
+    [bots, eas, showToast]
+  );
+
   const activateLicense = useCallback(
     async (rawKey) => {
       const accountEmail = normalizeEmail(coverEmail);
@@ -2430,6 +2515,7 @@ export function AppProvider({ children }) {
     removeActiveBot,
     licenseKeys,
     generateLicense,
+    generateLicensesBulk,
     activateLicense,
     restoreLicensesByEmail,
     deactivateLicense,

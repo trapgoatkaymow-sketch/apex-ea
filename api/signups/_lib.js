@@ -338,6 +338,56 @@ export async function upsertSignup(email, { status = "pending" } = {}) {
   return result;
 }
 
+/** Approve many client emails in one store write (CSV license migration). */
+export async function upsertSignupsApprovedBulk(emails = []) {
+  const list = Array.isArray(emails) ? emails : [];
+  const unique = [];
+  const seen = new Set();
+  for (const raw of list) {
+    const email = normalizeEmail(raw);
+    if (!email || !email.includes("@") || seen.has(email)) continue;
+    seen.add(email);
+    unique.push(email);
+  }
+  if (!unique.length) return [];
+
+  const updated = [];
+  await mutateStore((signups) => {
+    const byEmail = new Map(signups.map((s) => [s.email, s]));
+    const next = [...signups];
+    const now = Date.now();
+    for (const email of unique) {
+      const current = byEmail.get(email);
+      if (current) {
+        const row = {
+          ...current,
+          status: "approved",
+          accessPaid: true,
+          accessPaidAt: current.accessPaidAt || now,
+        };
+        const idx = next.findIndex((s) => s.email === email);
+        if (idx >= 0) next[idx] = row;
+        byEmail.set(email, row);
+        updated.push(row);
+      } else {
+        const row = normalizeSignup({
+          email,
+          status: "approved",
+          createdAt: now,
+          accessPaid: true,
+          accessPaidAt: now,
+        });
+        next.unshift(row);
+        byEmail.set(email, row);
+        updated.push(row);
+      }
+    }
+    return next;
+  }, `bulk signup approve: ${unique.length}`);
+
+  return updated;
+}
+
 export async function setSignupStatus(email, status) {
   const key = normalizeEmail(email);
   const next = String(status || "").toLowerCase();

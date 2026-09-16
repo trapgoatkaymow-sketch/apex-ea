@@ -1,6 +1,7 @@
 import { endOptions } from "../_cors.js";
 import {
   createLicense,
+  createLicensesBulk,
   deactivateLicense,
   deleteLicense,
   findLicense,
@@ -12,7 +13,7 @@ import {
   sendJson,
 } from "./_lib.js";
 
-export const config = { maxDuration: 30 };
+export const config = { maxDuration: 60 };
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -50,6 +51,12 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
       const body = await readJsonBody(req);
+      const action = String(body?.action || "").toLowerCase();
+      if (action === "bulk" || Array.isArray(body?.clients)) {
+        const result = await createLicensesBulk(body);
+        sendJson(res, 200, result);
+        return;
+      }
       const license = await createLicense(body);
       sendJson(res, 200, { license });
       return;

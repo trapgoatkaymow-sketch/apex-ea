@@ -166,6 +166,7 @@ export default function AdminPortal() {
     bots,
     licenseKeys,
     generateLicense,
+    generateLicensesBulk,
     deactivateLicense,
     deleteLicense,
     refreshLicenses,
@@ -192,6 +193,8 @@ export default function AdminPortal() {
   const [licenseClientEmail, setLicenseClientEmail] = useState("");
   const [licenseDuration, setLicenseDuration] = useState("1m");
   const [licenseSearch, setLicenseSearch] = useState("");
+  const [licenseBulkBusy, setLicenseBulkBusy] = useState(false);
+  const [licenseBulkSummary, setLicenseBulkSummary] = useState(null);
   const [commissionSearch, setCommissionSearch] = useState("");
   const [mentorMgmtSearch, setMentorMgmtSearch] = useState("");
   const [mentorBulkBusy, setMentorBulkBusy] = useState(false);
@@ -263,6 +266,153 @@ export default function AdminPortal() {
       } catch {
         showToast("Could not copy — select the key manually");
       }
+    }
+  }
+
+  function parseClientCsv(text) {
+    const lines = String(text || "")
+      .replace(/^\uFEFF/, "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!lines.length) return [];
+
+    const splitRow = (line) => {
+      const cells = [];
+      let cur = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            cur += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+        if ((ch === "," || ch === ";" || ch === "\t") && !inQuotes) {
+          cells.push(cur.trim());
+          cur = "";
+          continue;
+        }
+        cur += ch;
+      }
+      cells.push(cur.trim());
+      return cells.map((c) => c.replace(/^"|"$/g, "").trim());
+    };
+
+    const rows = lines.map(splitRow);
+    const header = rows[0].map((c) => c.toLowerCase());
+    const looksHeader =
+      header.some((h) => h.includes("email")) ||
+      header.some((h) => h.includes("name"));
+    const dataRows = looksHeader ? rows.slice(1) : rows;
+    let nameIdx = header.findIndex((h) => h === "name" || h === "clientname" || h === "client_name" || h === "client name");
+    let emailIdx = header.findIndex((h) => h === "email" || h === "clientemail" || h === "client_email" || h === "client email");
+    if (!looksHeader) {
+      nameIdx = 0;
+      emailIdx = 1;
+    } else {
+      if (nameIdx < 0) nameIdx = 0;
+      if (emailIdx < 0) emailIdx = header.length > 1 ? 1 : 0;
+    }
+
+    return dataRows
+      .map((cols) => ({
+        clientName: String(cols[nameIdx] || "").trim(),
+        clientEmail: String(cols[emailIdx] || "").trim().toLowerCase(),
+      }))
+      .filter((row) => row.clientName && row.clientEmail.includes("@"));
+  }
+
+  function downloadTextFile(filename, text) {
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadBulkLicenseCsv(result) {
+    const rows = [
+      ["clientName", "clientEmail", "licenseKey", "status"],
+      ...(result?.created || []).map((row) => [
+        row.clientName || "",
+        row.clientEmail || "",
+        row.key || "",
+        "created",
+      ]),
+      ...(result?.skipped || []).map((row) => [
+        row.clientName || "",
+        row.clientEmail || "",
+        row.key || "",
+        row.reason || "skipped",
+      ]),
+    ];
+    const csv = rows
+      .map((cols) =>
+        cols
+          .map((value) => {
+            const raw = String(value ?? "");
+            return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
+          })
+          .join(",")
+      )
+      .join("\n");
+    downloadTextFile(`apexea-bulk-licenses-${Date.now()}.csv`, csv);
+  }
+
+  async function runBulkLicenseImport(file) {
+    if (!file) return;
+    if (!licenseBotId) {
+      showToast("Select a bot first");
+      return;
+    }
+    if (licenseBulkBusy) return;
+    setLicenseBulkBusy(true);
+    setLicenseBulkSummary(null);
+    try {
+      const text = await file.text();
+      const clients = parseClientCsv(text);
+      if (!clients.length) {
+        showToast("CSV needs columns like name,email (one client per row)");
+        return;
+      }
+      const ea = myEas.find((b) => b.id === licenseBotId);
+      const ownerEmail =
+        String(ea?.ownerEmail || "").trim().toLowerCase() ||
+        String(adminSession.email || "").trim().toLowerCase();
+      const ownerMentor = mentors.find(
+        (m) =>
+          String(m.email || "")
+            .trim()
+            .toLowerCase() === ownerEmail
+      );
+      const mentorName =
+        String(ownerMentor?.username || "").trim() ||
+        String(adminSession.username || "").trim();
+      const mentorId =
+        String(ownerMentor?.id || ea?.ownerId || adminSession.id || "").trim();
+      const result = await generateLicensesBulk(licenseBotId, clients, {
+        duration: licenseDuration,
+        mentorEmail: ownerEmail,
+        mentorId,
+        mentorName,
+      });
+      if (result) {
+        setLicenseBulkSummary(result);
+        await refreshLicenses?.();
+      }
+    } catch (error) {
+      showToast(error.message || "Could not read CSV");
+    } finally {
+      setLicenseBulkBusy(false);
     }
   }
 
@@ -2022,6 +2172,77 @@ export default function AdminPortal() {
                 </div>
               ) : null}
             </div>
+
+            <div className="admin-card" style={{ marginTop: 14 }}>
+              <div className="admin-card-title-row">
+                <h3>Bulk import (CSV)</h3>
+                <span className="admin-badge">Migrate clients</span>
+              </div>
+              <p className="admin-card-meta">
+                Moving people from another platform? Upload a CSV with{" "}
+                <strong>name,email</strong> (up to 1000 rows). This generates all
+                license keys at once, auto-approves those emails, and lets you
+                download the keys to send out — no need to click Generate 800+
+                times.
+              </p>
+              <label className="ea-field">
+                <span>CSV file</span>
+                <input
+                  className="admin-input"
+                  type="file"
+                  accept=".csv,text/csv,text/plain"
+                  disabled={licenseBulkBusy || myEas.length === 0}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    void runBulkLicenseImport(file);
+                  }}
+                />
+              </label>
+              <div className="admin-btn-row" style={{ marginTop: 8 }}>
+                <button
+                  className="admin-btn admin-btn-outline admin-btn-sm"
+                  type="button"
+                  onClick={() =>
+                    downloadTextFile(
+                      "apexea-clients-template.csv",
+                      "name,email\nSam Smith,sam@email.com\nAlex Lee,alex@email.com\n"
+                    )
+                  }
+                >
+                  Download CSV template
+                </button>
+                {licenseBulkSummary &&
+                (licenseBulkSummary.createdCount ||
+                  licenseBulkSummary.skippedCount) ? (
+                  <button
+                    className="admin-btn admin-btn-solid admin-btn-sm"
+                    type="button"
+                    onClick={() => downloadBulkLicenseCsv(licenseBulkSummary)}
+                  >
+                    Download keys CSV
+                  </button>
+                ) : null}
+              </div>
+              {licenseBulkBusy ? (
+                <p className="ea-hint" style={{ marginTop: 10 }}>
+                  Importing keys… keep this page open.
+                </p>
+              ) : null}
+              {licenseBulkSummary ? (
+                <p className="ea-hint" style={{ marginTop: 10 }}>
+                  Created {licenseBulkSummary.createdCount}
+                  {licenseBulkSummary.skippedCount
+                    ? ` · skipped ${licenseBulkSummary.skippedCount} (already had a key)`
+                    : ""}
+                  {licenseBulkSummary.errorCount
+                    ? ` · ${licenseBulkSummary.errorCount} bad row(s)`
+                    : ""}
+                  .
+                </p>
+              ) : null}
+            </div>
+
             <div className="admin-card" style={{ marginTop: 14 }}>
               <div className="admin-card-title-row">
                 <h3>Generated keys</h3>

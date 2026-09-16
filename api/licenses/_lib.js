@@ -1135,6 +1135,217 @@ export async function createLicense(payload = {}) {
   return result;
 }
 
+function randomLicenseKeyServer(existingKeys = new Set()) {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const chunk = () =>
+    Array.from({ length: 4 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join(
+      ""
+    );
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const key = `APEX-${chunk()}-${chunk()}`;
+    if (!existingKeys.has(key)) return key;
+  }
+  return `APEX-${chunk()}-${chunk()}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+}
+
+/**
+ * Create many licenses in one durable store write (CSV migration).
+ * Each client needs name + email. Keys are generated server-side.
+ */
+export async function createLicensesBulk(payload = {}) {
+  const clientsIn = Array.isArray(payload.clients) ? payload.clients : [];
+  if (!clientsIn.length) {
+    const err = new Error("Add at least one client (name + email)");
+    err.status = 400;
+    throw err;
+  }
+  if (clientsIn.length > 1000) {
+    const err = new Error("Bulk import is limited to 1000 clients per upload");
+    err.status = 400;
+    throw err;
+  }
+
+  const botId = String(payload.botId || payload.bot?.id || "").trim();
+  const botName = String(payload.botName || payload.bot?.name || "Bot").trim() || "Bot";
+  if (!botId) {
+    const err = new Error("botId is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const rawPhoto = String(payload.bot?.photo || payload.photo || "/logo.png").trim();
+  let photo = await resolveEmbeddablePhoto(botId, rawPhoto);
+  // Never duplicate a huge data URL across hundreds of license rows.
+  if (String(photo).startsWith("data:image/")) {
+    photo = `/api/licenses/photo?botId=${encodeURIComponent(botId)}`;
+  }
+  const bot = {
+    id: botId,
+    name: botName,
+    photo,
+    strategy: String(payload.bot?.strategy || payload.strategy || "scalper"),
+    symbols: Array.isArray(payload.bot?.symbols)
+      ? payload.bot.symbols
+      : Array.isArray(payload.symbols)
+        ? payload.symbols
+        : [],
+  };
+
+  const mentorEmail = normalizeEmail(payload.mentorEmail || payload.ownerEmail || "");
+  const mentorId = String(payload.mentorId || payload.ownerId || "").trim();
+  const mentorName = String(payload.mentorName || payload.ownerName || "").trim();
+  const durationId = String(payload.duration || "lifetime").trim().toLowerCase();
+
+  const normalizedClients = [];
+  const seenEmails = new Set();
+  const errors = [];
+  for (let i = 0; i < clientsIn.length; i += 1) {
+    const row = clientsIn[i] || {};
+    const clientEmail = normalizeEmail(row.clientEmail || row.email || "");
+    const clientName = String(row.clientName || row.name || "").trim();
+    if (!clientName || !clientEmail || !clientEmail.includes("@")) {
+      errors.push({
+        row: i + 1,
+        error: "Each row needs a client name and a valid email",
+        clientEmail,
+        clientName,
+      });
+      continue;
+    }
+    if (seenEmails.has(clientEmail)) {
+      errors.push({
+        row: i + 1,
+        error: "Duplicate email in this upload",
+        clientEmail,
+        clientName,
+      });
+      continue;
+    }
+    seenEmails.add(clientEmail);
+    normalizedClients.push({ clientEmail, clientName });
+  }
+
+  if (!normalizedClients.length) {
+    const err = new Error("No valid clients in this upload");
+    err.status = 400;
+    err.data = { errors };
+    throw err;
+  }
+
+  let keyAllowance = null;
+  if (mentorEmail) {
+    try {
+      const { getMentorLicenseKeysAllowed } = await import("../mentors/_lib.js");
+      keyAllowance = await getMentorLicenseKeysAllowed(mentorEmail);
+    } catch {
+      keyAllowance = 1500;
+    }
+  }
+
+  const created = [];
+  const skipped = [];
+  await mutateStore((licenses, api) => {
+    created.length = 0;
+    skipped.length = 0;
+    const usedKeys = new Set(
+      licenses.map((row) => normalizeLicenseKey(row.key)).filter(Boolean)
+    );
+    const byEmailBot = new Map(
+      licenses
+        .filter((row) => String(row.botId || row.bot?.id || "").trim() === botId)
+        .map((row) => [
+          `${normalizeEmail(row.clientEmail)}::${botId}`,
+          row,
+        ])
+    );
+
+    if (mentorEmail && keyAllowance != null) {
+      const used = licenses.filter(
+        (row) => normalizeEmail(row.mentorEmail) === mentorEmail
+      ).length;
+      const need = normalizedClients.filter((c) => {
+        const existing = byEmailBot.get(`${c.clientEmail}::${botId}`);
+        return !existing;
+      }).length;
+      if (used + need > keyAllowance) {
+        const err = new Error(
+          `License key limit reached (${used}/${keyAllowance}). Need ${need} more — ask super admin to raise your allotment.`
+        );
+        err.status = 403;
+        throw err;
+      }
+    }
+
+    const next = [...licenses];
+    const now = Date.now();
+    for (const client of normalizedClients) {
+      const mapKey = `${client.clientEmail}::${botId}`;
+      const existing = byEmailBot.get(mapKey);
+      if (existing && !api.isDeleted?.(existing.key)) {
+        skipped.push({
+          clientEmail: client.clientEmail,
+          clientName: client.clientName,
+          key: existing.key,
+          reason: "already_has_key_for_bot",
+        });
+        continue;
+      }
+
+      let key = randomLicenseKeyServer(usedKeys);
+      while (api.isDeleted?.(key) || usedKeys.has(key)) {
+        key = randomLicenseKeyServer(usedKeys);
+      }
+      usedKeys.add(key);
+      const timing = resolveLicenseExpiry(durationId, now);
+      const entry = {
+        key,
+        botId,
+        botName,
+        clientEmail: client.clientEmail,
+        clientName: client.clientName,
+        mainText: client.clientName,
+        mentorEmail,
+        mentorId,
+        mentorName,
+        used: false,
+        commissionEligible: false,
+        commissionReason: "",
+        duration: timing.duration,
+        expiresAt: timing.expiresAt,
+        createdAt: now,
+        usedAt: null,
+        deviceId: null,
+        boundAt: null,
+        updatedAt: now,
+        bot,
+      };
+      next.unshift(entry);
+      byEmailBot.set(mapKey, entry);
+      created.push(entry);
+    }
+    return next;
+  }, `bulk licenses · ${botName} · ${normalizedClients.length} clients`);
+
+  // Approve signups in one pass so clients can activate immediately.
+  try {
+    const { upsertSignupsApprovedBulk } = await import("../signups/_lib.js");
+    await upsertSignupsApprovedBulk(
+      created.map((row) => row.clientEmail).concat(skipped.map((row) => row.clientEmail))
+    );
+  } catch (error) {
+    console.warn("bulk signup approve failed", error.message || error);
+  }
+
+  return {
+    created,
+    skipped,
+    errors,
+    createdCount: created.length,
+    skippedCount: skipped.length,
+    errorCount: errors.length,
+  };
+}
+
 /**
  * Bind a license to the activating phone.
  * Same phone can re-open automatically. A different phone is always rejected —

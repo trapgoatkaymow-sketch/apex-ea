@@ -384,6 +384,24 @@ export async function createLicenseRemote(payload) {
   return normalizeLicense(data?.license);
 }
 
+/** CSV migration — create many keys in one server write. */
+export async function createLicensesBulkRemote(payload) {
+  const data = await apiFetch("", {
+    method: "POST",
+    body: { action: "bulk", ...(payload || {}) },
+  });
+  return {
+    created: Array.isArray(data?.created)
+      ? data.created.map(normalizeLicense).filter(Boolean)
+      : [],
+    skipped: Array.isArray(data?.skipped) ? data.skipped : [],
+    errors: Array.isArray(data?.errors) ? data.errors : [],
+    createdCount: Number(data?.createdCount) || 0,
+    skippedCount: Number(data?.skippedCount) || 0,
+    errorCount: Number(data?.errorCount) || 0,
+  };
+}
+
 export async function uploadBotPhotoRemote(botId, photo) {
   const data = await apiFetch("/photo", {
     method: "POST",
