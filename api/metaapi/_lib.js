@@ -37,6 +37,70 @@ function transactionId() {
   return randomBytes(16).toString("hex");
 }
 
+const METAAPI_MAX_KEYWORDS = 3;
+
+/** MetaAPI allows at most 3 account keywords — prioritize client tagging. */
+function buildAccountKeywords({ company = "", server = "", clientEmail = "" } = {}) {
+  const emailTag = normalizeClientEmail(clientEmail);
+  const brokerLabel = String(company || server || "").trim();
+  const serverName = String(server || "").trim();
+  const out = [];
+
+  const push = (value) => {
+    const v = String(value || "").trim();
+    if (!v || out.includes(v) || out.length >= METAAPI_MAX_KEYWORDS) return;
+    out.push(v);
+  };
+
+  push("apexea-client");
+  if (emailTag.includes("@")) push(`${CLIENT_EMAIL_TAG}${emailTag}`);
+  push(brokerLabel);
+  if (serverName && serverName !== brokerLabel) push(serverName);
+  return out;
+}
+
+function trimMetaApiKeywords(keywords = []) {
+  const list = Array.from(
+    new Set(keywords.map(String).map((k) => k.trim()).filter(Boolean))
+  );
+  const emailTags = list.filter((k) => k.toLowerCase().startsWith(CLIENT_EMAIL_TAG));
+  const hasClient = list.some((k) => k.toLowerCase() === "apexea-client");
+  const brokerish = list.filter(
+    (k) => !k.toLowerCase().startsWith(CLIENT_EMAIL_TAG) && k.toLowerCase() !== "apexea-client"
+  );
+  const out = [];
+  if (emailTags[0]) out.push(emailTags[0]);
+  if (hasClient) out.push("apexea-client");
+  for (const keyword of brokerish) {
+    if (out.length >= METAAPI_MAX_KEYWORDS) break;
+    out.push(keyword);
+  }
+  return out.slice(0, METAAPI_MAX_KEYWORDS);
+}
+
+function formatMetaApiError(data, status) {
+  if (!data) return `MetaAPI error ${status}`;
+  const detailList = Array.isArray(data.details) ? data.details : null;
+  if (detailList?.length) {
+    const hints = detailList
+      .map((row) => row?.message || row?.parameter)
+      .filter(Boolean);
+    if (hints.length) return hints.join(" ");
+  }
+  const details = data.details;
+  if (typeof details === "string" && details && details !== "ValidationError") {
+    return details;
+  }
+  const raw = data.message || data.error;
+  if (typeof raw === "string") {
+    if (/^Validation failed \([a-f0-9]{32}\)$/i.test(raw)) {
+      return "Broker connection validation failed. Check login, password, and server name.";
+    }
+    return raw;
+  }
+  return typeof raw === "object" ? JSON.stringify(raw) : `MetaAPI error ${status}`;
+}
+
 async function metaFetch(url, { method = "GET", body, headers = {}, token } = {}) {
   const auth = requireToken(token);
   const response = await fetch(url, {
@@ -60,7 +124,7 @@ async function metaFetch(url, { method = "GET", body, headers = {}, token } = {}
 
   if (!response.ok) {
     const message =
-      (data && (data.message || data.error || data.details)) ||
+      (data && formatMetaApiError(data, response.status)) ||
       (typeof data === "string" ? data : `MetaAPI error ${response.status}`);
     const err = new Error(typeof message === "string" ? message : JSON.stringify(message));
     err.status = response.status;
@@ -433,10 +497,11 @@ export async function connectTradingAccount({
 
   const mtPlatform = String(platform).toUpperCase() === "MT4" ? "mt4" : "mt5";
   const emailTag = normalizeClientEmail(clientEmail);
-  const keywords = [company, userServer, "apexea-client"]
-    .map((v) => String(v || "").trim())
-    .filter(Boolean);
-  if (emailTag.includes("@")) keywords.push(`${CLIENT_EMAIL_TAG}${emailTag}`);
+  const keywords = buildAccountKeywords({
+    company,
+    server: userServer,
+    clientEmail: emailTag,
+  });
 
   // Reuse an already-provisioned account for this login/server (avoids E_AUTH on reconnect).
   const existing = await findExistingAccount({ login: userLogin, server: userServer });
@@ -860,13 +925,11 @@ export async function tagAccountClientEmail(accountId, email, { token } = {}) {
   const account = await getAccount(id);
   const tag = `${CLIENT_EMAIL_TAG}${clientEmail}`;
   const keywords = Array.isArray(account?.keywords) ? account.keywords.map(String) : [];
-  const nextKeywords = Array.from(
-    new Set([
-      ...keywords.filter((k) => !String(k).toLowerCase().startsWith(CLIENT_EMAIL_TAG)),
-      "apexea-client",
-      tag,
-    ])
-  );
+  const nextKeywords = trimMetaApiKeywords([
+    ...keywords.filter((k) => !String(k).toLowerCase().startsWith(CLIENT_EMAIL_TAG)),
+    "apexea-client",
+    tag,
+  ]);
   const baseName = String(account?.name || `${account?.server || "MT5"} ${account?.login || ""}`)
     .replace(/\s*\|\s*apexea:[^\s|]+/gi, "")
     .trim();
