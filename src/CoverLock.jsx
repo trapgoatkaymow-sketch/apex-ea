@@ -175,6 +175,7 @@ export default function CoverLock() {
     lockStep,
     setLockStep,
     coverEmail,
+    setCoverEmail,
     requestSignup,
     getSignup,
     activateLicense,
@@ -708,6 +709,8 @@ export default function CoverLock() {
     if (inviteBusy) return;
     setInviteBusy(true);
     try {
+      // One link does both: payment bypass + license key claim.
+      setCoverEmail?.(clientEmail);
       const result = await claimInviteLicenseRemote({
         inviteCode: inviteMeta.invite,
         botId: inviteMeta.botId,
@@ -723,7 +726,6 @@ export default function CoverLock() {
         showToast("Could not create your license key");
         return;
       }
-      // Do NOT call requestSignup here — it can wipe the invite bypass back to pending.
       rememberDeviceAccess(clientEmail, { paid: false, bypassed: true });
       ingestSignup?.({
         email: clientEmail,
@@ -737,12 +739,18 @@ export default function CoverLock() {
       setLicenseKey(key);
       setInviteMentorName(result.mentorName || inviteMentorName);
       clearInviteFromUrl();
-      setLockStep("license");
-      showToast(
-        result.created
-          ? "Free access ready — tap Unlock app (no payment)"
-          : "Free access restored — tap Unlock app (no payment)"
-      );
+
+      // Auto-unlock so they don't need a second step.
+      const unlocked = await activateLicense?.(key);
+      if (unlocked) {
+        showToast("Free access + license unlocked — no payment");
+        setLicenseKey("");
+        setClaimedKey("");
+        setLockStep("cover");
+      } else {
+        setLockStep("license");
+        showToast("Free access ready — tap Unlock app (no payment)");
+      }
     } catch (error) {
       showToast(error.message || "Invite claim failed");
     } finally {
@@ -760,17 +768,17 @@ export default function CoverLock() {
 
         {lockStep === "invite" && (
           <section className="cover-step is-active">
-            <p className="app-lock-eyebrow">Existing client invite</p>
+            <p className="app-lock-eyebrow">One invite · bypass + license</p>
             <h2 className="app-lock-title">
               {inviteMentorName
                 ? `Join ${inviteMentorName} · free`
                 : "Free migrate access"}
             </h2>
             <p className="app-lock-sub">
-              Coming from another platform? Enter your name and email to get your{" "}
-              <strong>{inviteMeta?.botName || "bot"}</strong> license key and{" "}
-              <strong>skip the $35.60 access fee</strong>. New clients without
-              this invite link still pay.
+              This single link does both: <strong>bypasses the $35.60 email
+              payment</strong> and <strong>gives you a license key</strong> for{" "}
+              <strong>{inviteMeta?.botName || "bot"}</strong>. Enter your details
+              once — new clients without this link still pay.
             </p>
             <form className="app-lock-form" onSubmit={submitInviteClaim}>
               <label className="ea-field">
@@ -802,8 +810,8 @@ export default function CoverLock() {
                 disabled={inviteBusy || !inviteMeta?.botId}
               >
                 {inviteBusy
-                  ? "Unlocking free access…"
-                  : "Get free access + license key"}
+                  ? "Unlocking…"
+                  : "Bypass payment + get license key"}
               </button>
             </form>
             {!inviteMeta?.botId ? (

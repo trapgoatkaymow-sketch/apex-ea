@@ -2261,10 +2261,9 @@ export default function AdminPortal() {
                 <span className="admin-badge">Free for old clients</span>
               </div>
               <p className="admin-card-meta">
-                Send this to clients moving from another platform. They enter
-                name + email, get a license key, and <strong>bypass the $35.60
-                access fee</strong>. New clients who open the app without this
-                link still pay.
+                <strong>One link for both:</strong> email payment bypass (no
+                $35.60) <em>and</em> license key claim. Send it to old clients
+                from another platform. New clients without this link still pay.
               </p>
               <div className="admin-btn-row" style={{ marginTop: 8 }}>
                 <button
