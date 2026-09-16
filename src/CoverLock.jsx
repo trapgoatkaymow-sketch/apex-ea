@@ -650,7 +650,23 @@ export default function CoverLock() {
       await requestSignup?.(buyer);
       const urls = buildPaypalReturnUrls();
       const order = await createPaypalOrder(buyer, "access", urls);
-      const approveUrl = String(order?.approveUrl || "").trim();
+      const fromLinks = Array.isArray(order?.links)
+        ? order.links.find((link) => String(link?.rel || "").toLowerCase() === "approve")
+        : null;
+      let approveUrl = String(order?.approveUrl || fromLinks?.href || "").trim();
+      // Fallback if API has not yet started returning approveUrl/links.
+      if (!approveUrl && order?.id) {
+        let mode = "live";
+        try {
+          const config = await fetchPaypalConfig();
+          mode = String(config?.mode || "live").toLowerCase();
+        } catch {
+          // ignore
+        }
+        const host =
+          mode === "sandbox" ? "www.sandbox.paypal.com" : "www.paypal.com";
+        approveUrl = `https://${host}/checkoutnow?token=${encodeURIComponent(order.id)}`;
+      }
       if (!order?.id || !approveUrl) {
         throw new Error("Could not start PayPal checkout");
       }
