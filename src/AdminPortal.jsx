@@ -195,6 +195,8 @@ export default function AdminPortal() {
   const [commissionSearch, setCommissionSearch] = useState("");
   const [mentorMgmtSearch, setMentorMgmtSearch] = useState("");
   const [mentorBulkBusy, setMentorBulkBusy] = useState(false);
+  const [clientMgmtSearch, setClientMgmtSearch] = useState("");
+  const [clientBulkBusy, setClientBulkBusy] = useState(false);
   const [mentorKeySearch, setMentorKeySearch] = useState("");
   const [mentorKeyDrafts, setMentorKeyDrafts] = useState({});
   const [mentorKeyBusy, setMentorKeyBusy] = useState("");
@@ -352,6 +354,30 @@ export default function AdminPortal() {
   const mentorMgmtQuery = String(mentorMgmtSearch || "")
     .trim()
     .toLowerCase();
+
+  const clientMgmtQuery = String(clientMgmtSearch || "")
+    .trim()
+    .toLowerCase();
+
+  const filteredClients = useMemo(() => {
+    const list = [...(signups || [])].sort(
+      (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+    );
+    if (!clientMgmtQuery) return list;
+    return list.filter((s) =>
+      String(s?.email || "")
+        .toLowerCase()
+        .includes(clientMgmtQuery)
+    );
+  }, [signups, clientMgmtQuery]);
+
+  const filteredPendingClients = useMemo(
+    () =>
+      filteredClients.filter(
+        (s) => String(s?.status || "").toLowerCase() === "pending"
+      ),
+    [filteredClients]
+  );
 
   const filteredPendingMentors = useMemo(() => {
     if (!mentorMgmtQuery) return pendingMentors;
@@ -784,6 +810,36 @@ export default function AdminPortal() {
       );
     } finally {
       setMentorBulkBusy(false);
+    }
+  }
+
+  async function bulkApprovePendingClients() {
+    const list = filteredPendingClients;
+    if (!list.length) {
+      showToast(
+        clientMgmtQuery
+          ? "No pending clients match your search"
+          : "No pending clients to approve"
+      );
+      return;
+    }
+    if (clientBulkBusy) return;
+    setClientBulkBusy(true);
+    let ok = 0;
+    try {
+      for (const client of list) {
+        const success = await setSignupStatus(client.email, "approved", {
+          silent: true,
+        });
+        if (success !== false) ok += 1;
+      }
+      showToast(
+        ok === list.length
+          ? `Approved ${ok} client${ok === 1 ? "" : "s"}`
+          : `Approved ${ok} of ${list.length} clients`
+      );
+    } finally {
+      setClientBulkBusy(false);
     }
   }
 
@@ -1439,37 +1495,96 @@ export default function AdminPortal() {
           <section className="admin-page is-active">
             <h2 className="admin-h1">Client Management</h2>
             <p className="admin-sub">Manage client access and payment bypasses</p>
+
+            <div className="admin-toolbar admin-client-mgmt-toolbar">
+              <input
+                className="admin-input"
+                type="search"
+                value={clientMgmtSearch}
+                onChange={(e) => setClientMgmtSearch(e.target.value)}
+                placeholder="Search clients by email"
+                aria-label="Search clients by email"
+              />
+              <button
+                className="admin-btn admin-btn-solid admin-btn-sm"
+                type="button"
+                disabled={clientBulkBusy || filteredPendingClients.length === 0}
+                onClick={() => void bulkApprovePendingClients()}
+              >
+                {clientBulkBusy
+                  ? "Approving…"
+                  : `Bulk Approve${
+                      filteredPendingClients.length
+                        ? ` (${filteredPendingClients.length})`
+                        : ""
+                    }`}
+              </button>
+            </div>
+
             <div className="admin-card">
-              <p className="admin-card-meta">Total clients: {signups.length}</p>
+              <p className="admin-card-meta">
+                {clientMgmtQuery
+                  ? `Showing ${filteredClients.length} of ${signups.length} clients`
+                  : `Total clients: ${signups.length}`}
+                {filteredPendingClients.length
+                  ? ` · ${filteredPendingClients.length} pending`
+                  : ""}
+              </p>
               <div className="admin-table-head admin-table-head-2">
                 <span>Email</span>
                 <span>Status</span>
               </div>
               {signups.length === 0 ? (
                 <p className="admin-empty">No clients yet</p>
+              ) : filteredClients.length === 0 ? (
+                <p className="admin-empty">
+                  No clients match “{clientMgmtSearch.trim()}”
+                </p>
               ) : (
-                [...signups]
-                  .sort((a, b) => b.createdAt - a.createdAt)
-                  .map((s) => (
-                    <div className="admin-table-row admin-table-row-2" key={s.email}>
+                filteredClients.map((s) => {
+                  const status = String(s.status || "").toLowerCase();
+                  const isPending = status === "pending";
+                  return (
+                    <div
+                      className={`admin-table-row admin-table-row-2${
+                        isPending ? " has-actions" : ""
+                      }`}
+                      key={s.email}
+                    >
                       <span className="admin-name">{s.email}</span>
-                      <span
-                        className={`admin-badge ${
-                          s.status === "approved"
-                            ? "is-approved"
-                            : s.status === "declined"
-                              ? "is-declined"
-                              : "is-pending"
-                        }`}
-                      >
-                        {s.status === "approved"
-                          ? "Approved"
-                          : s.status === "declined"
-                            ? "Declined"
-                            : "Pending"}
-                      </span>
+                      <div className="admin-client-status-cell">
+                        <span
+                          className={`admin-badge ${
+                            status === "approved"
+                              ? "is-approved"
+                              : status === "declined"
+                                ? "is-declined"
+                                : "is-pending"
+                          }`}
+                        >
+                          {status === "approved"
+                            ? "Approved"
+                            : status === "declined"
+                              ? "Declined"
+                              : "Pending"}
+                        </span>
+                        {isPending ? (
+                          <div className="admin-row-actions">
+                            <button
+                              className="admin-btn admin-btn-solid admin-btn-sm"
+                              type="button"
+                              onClick={() =>
+                                void setSignupStatus(s.email, "approved")
+                              }
+                            >
+                              Approve
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                  ))
+                  );
+                })
               )}
             </div>
           </section>

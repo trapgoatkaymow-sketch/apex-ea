@@ -1119,7 +1119,7 @@ export function AppProvider({ children }) {
   }, []);
 
   const setSignupStatus = useCallback(
-    async (email, status) => {
+    async (email, status, { silent = false } = {}) => {
       const key = normalizeEmail(email);
       setSignups((prev) => {
         const exists = prev.some((s) => s.email === key);
@@ -1133,23 +1133,27 @@ export function AppProvider({ children }) {
         const remote = await updateSignupStatus(key, status);
         if (remote) setSignups((prev) => mergeSignups(prev, [remote]));
       } catch (error) {
-        showToast(error.message || "Could not update signup on server");
+        if (!silent) showToast(error.message || "Could not update signup on server");
+        return false;
       }
 
-      showToast(
-        status === "approved"
-          ? `${key} approved`
-          : status === "declined"
-            ? `${key} declined`
-            : `${key} updated`
-      );
+      if (!silent) {
+        showToast(
+          status === "approved"
+            ? `${key} approved`
+            : status === "declined"
+              ? `${key} declined`
+              : `${key} updated`
+        );
+      }
       if (status === "approved" && normalizeEmail(coverEmail) === key) {
         setLockStep("license");
-        showToast("Approved — enter your license key");
+        if (!silent) showToast("Approved — enter your license key");
       }
       if (status === "declined" && normalizeEmail(coverEmail) === key) {
         setLockStep("pending");
       }
+      return true;
     },
     [coverEmail, showToast]
   );
