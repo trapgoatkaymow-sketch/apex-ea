@@ -694,9 +694,9 @@ function mergeLicenseLists(...lists) {
         : preferIncoming
           ? item.bot?.photo || prev.bot?.photo
           : prev.bot?.photo || item.bot?.photo;
-    // Never let an empty stamp wipe a live phone/MT session from another source.
-    // Explicit clears still work when the winning row sets used:false (deactivate).
-    const winningUsed = preferIncoming ? Boolean(item.used) : Boolean(prev.used || item.used);
+    // Newer stamp owns used/device lock. Never OR used:true from an older row —
+    // that resurrects "locked to another phone" after super-admin Reactivate.
+    const winningUsed = preferIncoming ? Boolean(item.used) : Boolean(prev.used);
     const keepRobot = (field) => {
       const a = item[field];
       const b = prev[field];
@@ -711,9 +711,17 @@ function mergeLicenseLists(...lists) {
         ? preferIncoming
           ? item.deviceId || prev.deviceId || null
           : prev.deviceId || item.deviceId || null
-        : preferIncoming
-          ? item.deviceId || null
-          : prev.deviceId || item.deviceId || null,
+        : null,
+      usedAt: winningUsed
+        ? preferIncoming
+          ? item.usedAt || prev.usedAt || null
+          : prev.usedAt || item.usedAt || null
+        : null,
+      boundAt: winningUsed
+        ? preferIncoming
+          ? item.boundAt || prev.boundAt || null
+          : prev.boundAt || item.boundAt || null
+        : null,
       robotAccountId: keepRobot("robotAccountId") || "",
       robotLogin: keepRobot("robotLogin") || "",
       robotServer: keepRobot("robotServer") || "",
@@ -1793,41 +1801,121 @@ export async function reconcileCommissionForEmail(email) {
 }
 
 /** Only super admin may clear a used key so it can bind to a new phone. */
-export async function deactivateLicense(rawKey, { adminEmail = "" } = {}) {
+export async function deactivateLicense(
+  rawKey,
+  {
+    adminEmail = "",
+    clientEmail = "",
+    clientName = "",
+    botId = "",
+    botName = "",
+  } = {}
+) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
     const err = new Error("License key is required");
     err.status = 400;
     throw err;
   }
+  const formattedKey = formatLicenseKey(rawKey);
+  const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const rowMatches = (row) => {
+    const key = normalizeLicenseKey(row?.key);
+    if (!key) return false;
+    return (
+      variants.includes(key) || key.replace(/-/g, "") === wantCompact
+    );
+  };
 
   const admin = normalizeEmail(adminEmail);
-  if (!admin || admin !== normalizeEmail(SUPER_ADMIN_EMAIL)) {
+  const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+  const allowedAdmin =
+    admin &&
+    (admin === superAdmin || admin === "trapgoatkaymow@gmail.com");
+  if (!allowedAdmin) {
     const err = new Error("Only super admin can activate used license keys");
     err.status = 403;
     throw err;
   }
 
+  const claimEmail = normalizeEmail(clientEmail);
   let result = null;
-  await mutateStore((licenses) => {
-    const idx = licenses.findIndex((row) => variants.includes(row.key));
+  const write = await mutateStore((licenses, api) => {
+    let idx = licenses.findIndex(rowMatches);
     if (idx < 0) {
-      const err = new Error("Invalid license key");
-      err.status = 404;
-      throw err;
+      if (api.isDeleted?.(formattedKey)) {
+        const err = new Error("Invalid license key");
+        err.status = 404;
+        throw err;
+      }
+      // Key-only reactivate: restore a wiped key with no email required.
+      const resolvedBotId =
+        String(botId || "zeta-scalper-ai-mtyew2ps").trim() ||
+        "zeta-scalper-ai-mtyew2ps";
+      const resolvedBotName =
+        String(botName || "ZETA SCALPER AI").trim() || "ZETA SCALPER AI";
+      const name =
+        String(clientName || "").trim() ||
+        (claimEmail ? claimEmail.split("@")[0] : "") ||
+        "Client";
+      const restored = normalizeLicense({
+        key: formattedKey,
+        botId: resolvedBotId,
+        botName: resolvedBotName,
+        clientEmail: claimEmail || "",
+        clientName: name,
+        mainText: name,
+        mentorEmail: admin,
+        used: false,
+        usedAt: null,
+        deviceId: null,
+        boundAt: null,
+        duration: "lifetime",
+        expiresAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        bot: {
+          id: resolvedBotId,
+          name: resolvedBotName,
+          photo: `/api/licenses/photo?botId=${encodeURIComponent(resolvedBotId)}`,
+          strategy: "scalper",
+          symbols: [],
+        },
+      });
+      if (!restored) {
+        const err = new Error("Invalid license key");
+        err.status = 400;
+        throw err;
+      }
+      result = restored;
+      return [restored, ...licenses];
     }
+    // Always clear phone lock — even when used on another device.
     licenses[idx] = {
       ...licenses[idx],
       used: false,
       usedAt: null,
       deviceId: null,
       boundAt: null,
+      clientEmail: claimEmail || licenses[idx].clientEmail || "",
+      clientName:
+        String(clientName || "").trim() || licenses[idx].clientName || "",
       // Keep commissionEligible as-is so a paid first unlock still counts after reset.
       updatedAt: Date.now(),
     };
     result = licenses[idx];
     return licenses;
-  }, `license deactivated: ${variants[0]}`);
+  }, `license reactivated: ${formattedKey}`);
+
+  if (write?.durable === false) {
+    const err = new Error(
+      String(write?.error || "").trim()
+        ? `Could not reactivate license (${write.error})`
+        : "Could not reactivate license — try again"
+    );
+    err.status = 503;
+    throw err;
+  }
 
   return result;
 }

@@ -297,23 +297,30 @@ export function mergeLicenses(localList = [], remoteList = []) {
       expiresAt: preferIncoming
         ? row.expiresAt ?? prev.expiresAt ?? null
         : prev.expiresAt ?? row.expiresAt ?? null,
-      // Newer updatedAt wins so deactivate (used:false) can stick.
-      used: preferIncoming ? Boolean(row.used) : Boolean(prev.used || row.used),
+      // Newer updatedAt owns used/device lock. Do not OR an older used:true
+      // onto a reactivated (used:false) row — that keeps "locked to another phone".
+      used: preferIncoming ? Boolean(row.used) : Boolean(prev.used),
       usedAt: preferIncoming
         ? row.used
           ? row.usedAt || prev.usedAt || null
           : null
-        : row.usedAt || prev.usedAt || null,
+        : prev.used
+          ? prev.usedAt || row.usedAt || null
+          : null,
       deviceId: preferIncoming
         ? row.used
           ? row.deviceId || prev.deviceId || null
           : null
-        : row.deviceId || prev.deviceId || null,
+        : prev.used
+          ? prev.deviceId || row.deviceId || null
+          : null,
       boundAt: preferIncoming
         ? row.used
           ? row.boundAt || prev.boundAt || null
           : null
-        : row.boundAt || prev.boundAt || null,
+        : prev.used
+          ? prev.boundAt || row.boundAt || null
+          : null,
       commissionEligible: preferIncoming
         ? Boolean(row.commissionEligible)
         : Boolean(prev.commissionEligible || row.commissionEligible),
@@ -496,7 +503,10 @@ export async function uploadBotPhotoRemote(botId, photo) {
   return String(data?.photo || "/logo.png");
 }
 
-export async function markLicenseUsedRemote(key, { deviceId = "", email = "" } = {}) {
+export async function markLicenseUsedRemote(
+  key,
+  { deviceId = "", email = "", license = null, botId = "", botName = "" } = {}
+) {
   const data = await apiFetch("", {
     method: "PATCH",
     body: {
@@ -505,6 +515,9 @@ export async function markLicenseUsedRemote(key, { deviceId = "", email = "" } =
       email: String(email || "")
         .trim()
         .toLowerCase(),
+      ...(license && typeof license === "object" ? { license } : {}),
+      ...(botId ? { botId: String(botId).trim() } : {}),
+      ...(botName ? { botName: String(botName).trim() } : {}),
     },
   });
   return normalizeLicense(data?.license);
@@ -523,7 +536,16 @@ export async function reconcileCommissionRemote(email) {
   return normalizeLicense(data?.license);
 }
 
-export async function deactivateLicenseRemote(key, { adminEmail = "" } = {}) {
+export async function deactivateLicenseRemote(
+  key,
+  {
+    adminEmail = "",
+    clientEmail = "",
+    clientName = "",
+    botId = "",
+    botName = "",
+  } = {}
+) {
   const data = await apiFetch("", {
     method: "PATCH",
     body: {
@@ -532,6 +554,12 @@ export async function deactivateLicenseRemote(key, { adminEmail = "" } = {}) {
       adminEmail: String(adminEmail || "")
         .trim()
         .toLowerCase(),
+      clientEmail: String(clientEmail || "")
+        .trim()
+        .toLowerCase(),
+      clientName: String(clientName || "").trim(),
+      ...(botId ? { botId: String(botId).trim() } : {}),
+      ...(botName ? { botName: String(botName).trim() } : {}),
     },
   });
   return normalizeLicense(data?.license);

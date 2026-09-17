@@ -232,6 +232,9 @@ export default function AdminPortal() {
   const [latestKey, setLatestKey] = useState("");
   const [latestLicenseMeta, setLatestLicenseMeta] = useState(null);
   const [licenseSheetOpen, setLicenseSheetOpen] = useState(false);
+  const [reactivateOpen, setReactivateOpen] = useState(false);
+  const [reactivateKey, setReactivateKey] = useState("");
+  const [reactivateBusy, setReactivateBusy] = useState(false);
   const [bypassOpen, setBypassOpen] = useState(false);
   const [bypassEmail, setBypassEmail] = useState("");
   const [bypassBusy, setBypassBusy] = useState(false);
@@ -289,7 +292,7 @@ export default function AdminPortal() {
     }
   }
 
-  async function onDeactivateLicense(key) {
+  async function onDeactivateLicense(key, extras = {}) {
     if (!isSuperAdmin) {
       showToast("Only super admin can activate used license keys");
       return;
@@ -300,13 +303,48 @@ export default function AdminPortal() {
     try {
       const result = await deactivateLicense?.(key, {
         adminEmail: adminSession?.email || "",
+        clientEmail: extras.clientEmail || "",
+        clientName: extras.clientName || "",
+        botId: extras.botId || licenseBotId || "",
+        botName:
+          extras.botName ||
+          myEas.find((b) => b.id === (extras.botId || licenseBotId))?.name ||
+          "",
       });
       if (result) {
         await refreshLicenses?.();
         if (latestKey === key) setLicenseSheetOpen(true);
       }
+      return result;
     } finally {
       setLicenseActionBusy("");
+    }
+  }
+
+  async function onReactivateLicenseSubmit(event) {
+    event.preventDefault();
+    if (!isSuperAdmin) {
+      showToast("Only super admin can reactivate license keys");
+      return;
+    }
+    const key = String(reactivateKey || "").trim();
+    if (!key) {
+      showToast("Enter a license key to reactivate");
+      return;
+    }
+    if (reactivateBusy || licenseActionBusy) return;
+    setReactivateBusy(true);
+    try {
+      const result = await onDeactivateLicense(key, {
+        botId: licenseBotId,
+      });
+      if (result) {
+        setReactivateKey("");
+        setReactivateOpen(false);
+        openLicenseDetail(result);
+      }
+    } finally {
+      setReactivateBusy(false);
     }
   }
 
@@ -2187,7 +2225,18 @@ export default function AdminPortal() {
 
         {adminPage === "licenses" && (
           <section className="admin-page is-active">
-            <h2 className="admin-h1">Generate License Key</h2>
+                        <h2 className="admin-h1">Generate License Key</h2>
+            <div className="admin-row-actions" style={{ marginBottom: 12 }}>
+              {isSuperAdmin ? (
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-ghost"
+                  onClick={() => setReactivateOpen((open) => !open)}
+                >
+                  {reactivateOpen ? "Close" : "Reactivate license key"}
+                </button>
+              ) : null}
+            </div>
             <p className="admin-sub">
               Client name is shown with the license. Your mentor username (from Profile) appears
               at the top of the client app. Enter the client name with their email and bot — the
@@ -2201,7 +2250,41 @@ export default function AdminPortal() {
                 </>
               ) : null}
             </p>
-            <div className="admin-card">
+            
+            {isSuperAdmin && reactivateOpen ? (
+              <div className="admin-card admin-reactivate-card">
+                <h3 className="admin-h3">Reactivate license key</h3>
+                <p className="ea-hint">
+                  Paste the key only. This clears “locked to another phone” so the
+                  client can Unlock on a new device — no email needed.
+                </p>
+                <form className="license-form" onSubmit={onReactivateLicenseSubmit}>
+                  <label className="ea-field">
+                    <span>License key *</span>
+                    <input
+                      className="admin-input"
+                      value={reactivateKey}
+                      onChange={(e) => setReactivateKey(e.target.value)}
+                      placeholder="APEX-XXXX-XXXX"
+                      autoCapitalize="characters"
+                      required
+                    />
+                  </label>
+                  <button
+                    className={`admin-btn admin-btn-solid admin-btn-block${
+                      reactivateBusy ? " is-loading" : ""
+                    }`}
+                    type="submit"
+                    disabled={reactivateBusy || Boolean(licenseActionBusy)}
+                  >
+                    <AdminBusyLabel busy={reactivateBusy} busyText="Reactivating…">
+                      Reactivate license key
+                    </AdminBusyLabel>
+                  </button>
+                </form>
+              </div>
+            ) : null}
+<div className="admin-card">
               <form
                 className="license-form"
                 onSubmit={async (e) => {

@@ -37,8 +37,8 @@ function requireOpenAiKey() {
   return key;
 }
 
-const MIN_CHART_CONFIDENCE = 72;
-const MIN_SYMBOL_CONFIDENCE = 78;
+const MIN_CHART_CONFIDENCE = 68;
+const MIN_SYMBOL_CONFIDENCE = 70;
 
 function buildNoChartResult() {
   return {
@@ -160,8 +160,10 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
             "Text resembling a symbol (e.g. EURUSD) is NEVER enough for isChart=true without clear chart visuals. " +
             "If isChart=false, set status=no_chart, symbol=null, symbolConfidence=0. " +
             "If isChart=true but the instrument label is not clearly visible on the chart, set status=symbol_unclear and symbol=null. " +
-            "Only set status=symbol_detected when the instrument is clearly shown on the chart header/title (e.g. EURUSD, XAUUSD, BTCUSD, NAS100). " +
-            "NEVER guess a symbol from probability. When uncertain, use symbol_unclear. " +
+            "Only set status=symbol_detected when the instrument is clearly readable on the chart header/title/tab " +
+            "(e.g. EURUSD, XAUUSD, BTCUSD, NAS100, US30, GBPJPY). Read the exact visible characters — " +
+            "do not substitute a popular pair (never invent EURUSD/XAUUSD/BTCUSD when the header shows something else). " +
+            "NEVER guess a symbol from chart shape, price scale, or a known-symbols list. When uncertain, use symbol_unclear. " +
             "Keep broker suffixes when clearly visible (e.g. EURUSD.m).",
         },
         {
@@ -170,15 +172,18 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
             {
               type: "text",
               text:
-                "Analyze this image. First decide if it is a real trading chart. " +
-                "Only if it is, read the instrument symbol shown on the chart." +
-                (catalogHint ? ` Known symbols include: ${catalogHint}.` : ""),
+                "Analyze this screenshot. First decide if it is a real trading chart. " +
+                "Only if it is, OCR-read the instrument symbol from the chart header/title/tab exactly as shown. " +
+                "Do not guess. If the label is blurry or missing, return symbol_unclear." +
+                (catalogHint
+                  ? ` After reading, you may map an exact match onto this catalog (do not pick from it blindly): ${catalogHint}.`
+                  : ""),
             },
             {
               type: "image_url",
               image_url: {
                 url: dataUrl,
-                detail: "low",
+                detail: "high",
               },
             },
           ],

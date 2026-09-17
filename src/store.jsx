@@ -2098,7 +2098,19 @@ export function AppProvider({ children }) {
       }
 
       const deviceId = getOrCreateDeviceId();
-      const boundDevice = String(entry.deviceId || "").trim();
+      let boundDevice = String(entry.deviceId || "").trim();
+      // Always refresh from the server before the phone-lock check so a just
+      // reactivated key is not blocked by a stale localStorage used/deviceId.
+      try {
+        const fresh = await fetchLicense(rawKey);
+        if (fresh) {
+          entry = fresh;
+          setLicenseKeys((prev) => mergeLicenses(prev, [fresh]));
+          boundDevice = String(entry.deviceId || "").trim();
+        }
+      } catch {
+        // keep local
+      }
       if (entry.used && boundDevice && boundDevice !== deviceId) {
         showToast("This license is locked to another phone");
         return false;
@@ -2110,6 +2122,9 @@ export function AppProvider({ children }) {
         remote = await markLicenseUsedRemote(entry.key || key, {
           deviceId,
           email: accountEmail,
+          license: options?.license && matchKey(options.license) ? options.license : entry,
+          botId: entry.botId || entry.bot?.id || "",
+          botName: entry.botName || entry.bot?.name || "",
         });
       } catch (error) {
         showToast(error.message || "Could not lock license to this phone");

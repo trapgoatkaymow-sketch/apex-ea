@@ -4,14 +4,16 @@
  * Priority for reads:
  *  1) Vercel Blob (BLOB_READ_WRITE_TOKEN) — shared across all instances
  *  2) GitHub Contents API (SIGNUPS_GITHUB_TOKEN / FALLBACK)
- *  3) Env snapshot (e.g. LICENSES_SNAPSHOT_B64) — read-only seed
- *  4) /tmp + in-memory — per-instance only
+ *  3) GitHub raw CDN (when Contents API is rate-limited)
+ *  4) Env snapshot (e.g. LICENSES_SNAPSHOT_B64) — read-only seed
+ *  5) /tmp + in-memory — per-instance only
  *
- * Writes always update /tmp + memory; Blob/GitHub when credentials work.
+ * Writes: Blob → GitHub Contents API → isomorphic-git push (bypasses REST rate limits).
  */
 
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { FALLBACK_GITHUB_TOKEN } from "./signups/_githubToken.js";
 
 const BLOB_API = "https://blob.vercel-storage.com";
@@ -108,6 +110,80 @@ async function githubGet({ repo, branch, filePath }) {
   }
 }
 
+/** Raw CDN / media read — works when Contents API is rate-limited. */
+async function githubGetRaw({ repo, branch, filePath }) {
+  const token = githubToken();
+  const cleaned = String(filePath || "").replace(/^\//, "");
+  const bust = Date.now();
+  const urls = [
+    `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(
+      branch
+    )}/${cleaned}?ts=${bust}`,
+    `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(
+      branch
+    )}/${cleaned}?ts=${bust}`,
+  ];
+  for (const url of urls) {
+    try {
+      const headers = {
+        Accept: "application/json,text/plain,*/*",
+        "Cache-Control": "no-cache",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(url, { headers, cache: "no-store" });
+      if (res.status === 404) continue;
+      if (!res.ok) continue;
+      const raw = await res.text();
+      if (raw != null && String(raw).trim()) {
+        return { missing: false, raw, sha: null };
+      }
+    } catch {
+      // try next
+    }
+  }
+  return null;
+}
+
+/** Shallow clone read — correct but slower; used when CDN is stale. */
+async function githubGetViaGit({ repo, branch, filePath }) {
+  const token = githubToken();
+  if (!token) return null;
+  const relPath = String(filePath || "").replace(/^\//, "");
+  if (!relPath) return null;
+  let dir = null;
+  try {
+    const git = (await import("isomorphic-git")).default;
+    const http = (await import("isomorphic-git/http/node")).default;
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-r-"));
+    const url = `https://github.com/${repo}.git`;
+    const onAuth = () => ({ username: token, password: "x-oauth-basic" });
+    await git.clone({
+      fs,
+      http,
+      dir,
+      url,
+      ref: branch || "main",
+      singleBranch: true,
+      depth: 1,
+      onAuth,
+    });
+    const abs = path.join(dir, relPath);
+    if (!fs.existsSync(abs)) return { missing: true, raw: null, sha: null };
+    const raw = fs.readFileSync(abs, "utf8");
+    return { missing: false, raw, sha: null };
+  } catch {
+    return null;
+  } finally {
+    if (dir) {
+      try {
+        fs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
 async function githubPut({ repo, branch, filePath, raw, sha, message }) {
   const token = githubToken();
   if (!token) return { ok: false, reason: "no-github-token" };
@@ -142,6 +218,233 @@ async function githubPut({ repo, branch, filePath, raw, sha, message }) {
   } catch (error) {
     return { ok: false, reason: error?.message || "github put failed" };
   }
+}
+
+/**
+ * Merge two licenses.json documents by key so concurrent git pushes do not
+ * wipe each other's newly claimed keys. Prefer the newer row stamp.
+ * Reactivate/deactivate (newer used:false) must clear device locks — never
+ * OR used/deviceId with an older used:true row (that undoes Reactivate).
+ * Empty intended + reset message → overwrite (clear-all).
+ */
+function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
+  const isReset = /reset all license|clear all license/i.test(String(message || ""));
+  let remote;
+  let intended;
+  try {
+    remote = JSON.parse(String(remoteRaw || "{}"));
+    intended = JSON.parse(String(intendedRaw || "{}"));
+  } catch {
+    return String(intendedRaw ?? "");
+  }
+  const intendedList = Array.isArray(intended?.licenses) ? intended.licenses : null;
+  const remoteList = Array.isArray(remote?.licenses) ? remote.licenses : null;
+  if (!intendedList) return String(intendedRaw ?? "");
+  if (isReset && intendedList.length === 0) {
+    return (
+      JSON.stringify(
+        {
+          licenses: [],
+          deletedKeys: intended?.deletedKeys || {},
+        },
+        null,
+        2
+      ) + "\n"
+    );
+  }
+  if (!remoteList) return String(intendedRaw ?? "");
+
+  const map = new Map();
+  const stamp = (row) =>
+    Number(row?.updatedAt || row?.usedAt || row?.createdAt || 0) || 0;
+  const ingest = (row) => {
+    const key = String(row?.key || "")
+      .trim()
+      .toUpperCase();
+    if (!key) return;
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, { ...row, key: String(row.key || key) });
+      return;
+    }
+    const preferIncoming = stamp(row) >= stamp(prev);
+    const newer = preferIncoming ? row : prev;
+    const older = preferIncoming ? prev : row;
+    const winningUsed = Boolean(newer.used);
+    map.set(key, {
+      ...older,
+      ...newer,
+      key: String(newer.key || older.key || key),
+      // Newer stamp owns used/device lock. used:false clears the phone bind.
+      used: winningUsed,
+      deviceId: winningUsed
+        ? newer.deviceId || older.deviceId || null
+        : null,
+      boundAt: winningUsed ? newer.boundAt || older.boundAt || null : null,
+      usedAt: winningUsed ? newer.usedAt || older.usedAt || null : null,
+      robotAccountId: newer.robotAccountId || older.robotAccountId || "",
+      robotLogin: newer.robotLogin || older.robotLogin || "",
+      robotServer: newer.robotServer || older.robotServer || "",
+      robotCompany: newer.robotCompany || older.robotCompany || "",
+      robotPlatform: newer.robotPlatform || older.robotPlatform || "",
+      robotConnectedAt: newer.robotConnectedAt || older.robotConnectedAt || null,
+      updatedAt: Math.max(stamp(newer), stamp(older)),
+      bot: newer.bot || older.bot || null,
+    });
+  };
+  for (const row of remoteList) ingest(row);
+  for (const row of intendedList) ingest(row);
+
+  const deletedKeys = {
+    ...(remote?.deletedKeys && typeof remote.deletedKeys === "object"
+      ? remote.deletedKeys
+      : {}),
+    ...(intended?.deletedKeys && typeof intended.deletedKeys === "object"
+      ? intended.deletedKeys
+      : {}),
+  };
+  // Tombstones remove keys from the merged list.
+  const deletedSet = new Set(
+    Object.keys(deletedKeys).map((k) => String(k).trim().toUpperCase())
+  );
+  const licenses = Array.from(map.values())
+    .filter((row) => {
+      const key = String(row?.key || "")
+        .trim()
+        .toUpperCase();
+      return key && !deletedSet.has(key) && !deletedSet.has(key.replace(/-/g, ""));
+    })
+    .sort((a, b) => stamp(b) - stamp(a));
+
+  return JSON.stringify({ licenses, deletedKeys }, null, 2) + "\n";
+}
+
+/**
+ * Write via Git Smart HTTP (isomorphic-git). Bypasses Contents API rate limits
+ * that otherwise block license generation on Vercel.
+ *
+ * On non-fast-forward / ref lock races, re-clone and merge licenses.json so a
+ * concurrent claim cannot wipe another client's just-saved key.
+ */
+async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
+  const token = githubToken();
+  if (!token) return { ok: false, reason: "no-github-token" };
+  const relPath = String(filePath || "").replace(/^\//, "");
+  if (!relPath) return { ok: false, reason: "missing github path" };
+
+  const git = (await import("isomorphic-git")).default;
+  const http = (await import("isomorphic-git/http/node")).default;
+  const url = `https://github.com/${repo}.git`;
+  const onAuth = () => ({ username: token, password: "x-oauth-basic" });
+  const intendedBody = String(raw ?? "");
+  const commitMessage = message || `chore: update ${relPath}`;
+  let lastReason = "git push failed";
+  let lastStatus = 500;
+  const isLicensesFile = /licenses\.json$/i.test(relPath);
+
+  // store-licenses receives concurrent invite claims — merge + retry on NFF.
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    let dir = null;
+    try {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-"));
+      await git.clone({
+        fs,
+        http,
+        dir,
+        url,
+        ref: branch || "main",
+        singleBranch: true,
+        depth: 1,
+        onAuth,
+      });
+
+      const abs = path.join(dir, relPath);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      let body = intendedBody;
+      // After a conflict (or always when file exists), merge so we never push a
+      // stale full-document overwrite that drops keys from a parallel claim.
+      if (isLicensesFile && fs.existsSync(abs)) {
+        const remoteRaw = fs.readFileSync(abs, "utf8");
+        body = mergeLicensesDocuments(remoteRaw, intendedBody, commitMessage);
+      }
+      fs.writeFileSync(abs, body, "utf8");
+      await git.add({ fs, dir, filepath: relPath });
+      // Skip empty commits when merge equals tip (another writer already landed).
+      try {
+        const status = await git.status({ fs, dir, filepath: relPath });
+        if (status === "unmodified") {
+          return { ok: true, durable: "github-git", sha: null, merged: true };
+        }
+      } catch {
+        // continue to commit
+      }
+      let sha = null;
+      try {
+        sha = await git.commit({
+          fs,
+          dir,
+          message: commitMessage,
+          author: {
+            name: "Apex EA",
+            email: "noreply@apex-ea.com",
+          },
+        });
+      } catch (commitErr) {
+        const msg = String(commitErr?.message || commitErr || "");
+        if (/nothing to commit|no changes|same as/i.test(msg)) {
+          return { ok: true, durable: "github-git", sha: null, merged: true };
+        }
+        throw commitErr;
+      }
+      await git.push({
+        fs,
+        http,
+        dir,
+        remote: "origin",
+        ref: branch || "main",
+        onAuth,
+      });
+      return { ok: true, durable: "github-git", sha };
+    } catch (error) {
+      lastReason =
+        error?.data?.statusMessage ||
+        error?.message ||
+        "git push failed";
+      lastStatus = error?.data?.statusCode || 500;
+      const retryable =
+        lastStatus === 429 ||
+        lastStatus === 500 ||
+        lastStatus === 502 ||
+        lastStatus === 503 ||
+        /too many requests|rate limit|busy|non-fast-forward|rejected|cannot lock ref|not updated/i.test(
+          String(lastReason)
+        );
+      if (lastStatus === 401 || lastStatus === 403) {
+        return { ok: false, reason: lastReason, status: lastStatus };
+      }
+      if (!retryable && attempt >= 1) break;
+      // Back off on GitHub throttling / ref lock so invite claims can land.
+      const waitMs = Math.min(25000, 600 * 2 ** attempt + Math.floor(Math.random() * 400));
+      await new Promise((r) => setTimeout(r, waitMs));
+    } finally {
+      if (dir) {
+        try {
+          fs.rmSync(dir, { recursive: true, force: true });
+        } catch {
+          // ignore cleanup errors
+        }
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    reason: lastReason,
+    status: lastStatus,
+    conflict: /non-fast-forward|rejected|cannot lock ref|not updated/i.test(
+      String(lastReason)
+    ),
+  };
 }
 
 function readEnvSnapshot(envKey) {
@@ -209,6 +512,57 @@ export async function durableRead(opts = {}) {
     if (gh && !gh.missing && gh.raw != null) {
       return { raw: gh.raw, sha: gh.sha, source: "github" };
     }
+
+    const preferFresh = Boolean(opts.preferFresh);
+
+    // Fresh reads (claim/unlock) skip stale CDN and go straight to git.
+    if (preferFresh) {
+      const viaGit = await githubGetViaGit({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (viaGit && !viaGit.missing && viaGit.raw != null) {
+        return { raw: viaGit.raw, sha: null, source: "github-git" };
+      }
+    }
+
+    const raw = await githubGetRaw({
+      repo: githubRepo,
+      branch: githubBranch,
+      filePath: githubPath,
+    });
+    if (raw && !raw.missing && raw.raw != null) {
+      let looksEmpty = false;
+      try {
+        const parsed = JSON.parse(raw.raw || "{}");
+        looksEmpty =
+          Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
+      } catch {
+        looksEmpty = false;
+      }
+      if (!looksEmpty) {
+        return { raw: raw.raw, sha: null, source: "github-raw" };
+      }
+      const viaGit = await githubGetViaGit({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (viaGit && !viaGit.missing && viaGit.raw != null) {
+        return { raw: viaGit.raw, sha: null, source: "github-git" };
+      }
+      return { raw: raw.raw, sha: null, source: "github-raw" };
+    }
+
+    const viaGit = await githubGetViaGit({
+      repo: githubRepo,
+      branch: githubBranch,
+      filePath: githubPath,
+    });
+    if (viaGit && !viaGit.missing && viaGit.raw != null) {
+      return { raw: viaGit.raw, sha: null, source: "github-git" };
+    }
   }
 
   if (snapshotEnv) {
@@ -249,20 +603,67 @@ export async function durableWrite(opts = {}) {
   }
 
   if (githubPath) {
-    const put = await githubPut({
+    // Prefer Contents API when we have a sha (fast). Without a sha — or when
+    // the API is rate-limited — fall through to Git Smart HTTP push.
+    let put = { ok: false, reason: "skipped", status: 0 };
+    if (githubSha) {
+      put = await githubPut({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+        raw: body,
+        sha: githubSha,
+        message,
+      });
+      if (put.ok) {
+        return { ok: true, durable: true, source: "github", sha: put.sha };
+      }
+    } else {
+      // Try Contents create/update without sha once (new file); otherwise git.
+      put = await githubPut({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+        raw: body,
+        sha: null,
+        message,
+      });
+      if (put.ok) {
+        return { ok: true, durable: true, source: "github", sha: put.sha };
+      }
+    }
+
+    // Contents API rate-limited / missing sha / bad credentials — Git push.
+    const viaGit = await githubPutViaGit({
       repo: githubRepo,
       branch: githubBranch,
       filePath: githubPath,
       raw: body,
-      sha: githubSha,
       message,
     });
-    if (put.ok) {
-      return { ok: true, durable: true, source: "github", sha: put.sha };
+    if (viaGit.ok) {
+      return {
+        ok: true,
+        durable: true,
+        source: "github-git",
+        sha: viaGit.sha,
+      };
     }
-    if (put.status === 409 || put.status === 422) {
-      return { ok: false, durable: false, reason: put.reason, conflict: true };
+    if (put.status === 409 || put.status === 422 || viaGit.conflict) {
+      return {
+        ok: false,
+        durable: false,
+        reason: viaGit.reason || put.reason,
+        conflict: true,
+      };
     }
+    return {
+      ok: false,
+      durable: false,
+      reason: viaGit.reason || put.reason || "github write failed",
+      status: viaGit.status || put.status,
+      conflict: Boolean(viaGit.conflict),
+    };
   }
 
   return {

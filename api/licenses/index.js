@@ -148,10 +148,17 @@ export default async function handler(req, res) {
       const license = shouldDeactivate
         ? await deactivateLicense(body.key, {
             adminEmail: body.adminEmail || body.email || "",
+            clientEmail: body.clientEmail || "",
+            clientName: body.clientName || "",
+            botId: body.botId || "",
+            botName: body.botName || "",
           })
         : await markLicenseUsed(body.key, {
             deviceId: body.deviceId || "",
             email: body.email || body.clientEmail || "",
+            license: body.license || null,
+            botId: body.botId || "",
+            botName: body.botName || "",
           });
       sendJson(res, 200, { license });
       return;
