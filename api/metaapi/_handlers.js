@@ -298,18 +298,49 @@ export async function handleMentorTrade(req, res) {
       });
     }
 
-    // Fan out to every connected robot client for this mentor (MT5API sessions
-    // stored in the shared mt5-accounts registry — no MetaAPI).
+    // Targets come from (in order of preference):
+    // 1) clients[] sent by the mentor portal (same list the UI just loaded)
+    // 2) robot sessions stamped onto licenses (durable across serverless fns)
+    // 3) mt5-accounts registry (ephemeral /tmp — may be empty in mentor-trade)
+    const byEmail = new Map();
+
+    const pushTarget = (row) => {
+      const item = normalizeMt5Account(row);
+      if (!item?.email || !item?.accountId) return;
+      if (!clientEmails.has(item.email)) return;
+      const prev = byEmail.get(item.email);
+      if (!prev || (item.updatedAt || 0) >= (prev.updatedAt || 0)) {
+        byEmail.set(item.email, item);
+      }
+    };
+
+    const rawClients = Array.isArray(body.clients)
+      ? body.clients
+      : Array.isArray(body.accounts)
+        ? body.accounts
+        : [];
+    for (const row of rawClients) pushTarget(row);
+
+    for (const row of licenses) {
+      if (normalizeEmail(row.mentorEmail) !== mentor.email) continue;
+      if (!row.robotAccountId) continue;
+      pushTarget({
+        email: row.clientEmail,
+        accountId: row.robotAccountId,
+        login: row.robotLogin,
+        server: row.robotServer,
+        company: row.robotCompany,
+        platform: row.robotPlatform || "MT5",
+        connectedAt: row.robotConnectedAt,
+        updatedAt: row.updatedAt || row.robotConnectedAt,
+      });
+    }
+
     const registry = (await listMt5Accounts())
       .map((row) => normalizeMt5Account(row))
-      .filter(Boolean)
-      .filter((row) => clientEmails.has(row.email));
+      .filter(Boolean);
+    for (const row of registry) pushTarget(row);
 
-    const byEmail = new Map();
-    for (const row of registry) {
-      if (!row?.email || !row?.accountId) continue;
-      byEmail.set(row.email, row);
-    }
     const targets = Array.from(byEmail.values());
 
     if (!targets.length) {

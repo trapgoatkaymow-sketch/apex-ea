@@ -1,11 +1,6 @@
-import { listLicenses } from "../licenses/_lib.js";
+import { listLicenses, setLicenseRobotSession, clearLicenseRobotSession } from "../licenses/_lib.js";
 import { listMentors } from "../mentors/_lib.js";
 import { endOptions } from "../_cors.js";
-import {
-  clientEmailFromAccount,
-  listConnectedTradingAccounts,
-  tagAccountClientEmail,
-} from "../metaapi/_lib.js";
 import {
   listMt5Accounts,
   normalizeMt5Account,
@@ -45,10 +40,31 @@ async function assertApprovedMentor(email) {
   return mentor;
 }
 
+function accountFromLicense(row, clientName = "") {
+  const accountId = String(row?.robotAccountId || "").trim();
+  const email = normalizeEmail(row?.clientEmail);
+  if (!accountId || !email) return null;
+  return {
+    email,
+    accountId,
+    login: String(row.robotLogin || "").trim(),
+    server: String(row.robotServer || "").trim(),
+    company: String(row.robotCompany || "").trim(),
+    platform: String(row.robotPlatform || "MT5").trim().toUpperCase() || "MT5",
+    region: "",
+    connectedAt: Number(row.robotConnectedAt) || Date.now(),
+    updatedAt: Number(row.updatedAt || row.robotConnectedAt) || Date.now(),
+    clientName: clientName || String(row.clientName || row.mainText || "").trim(),
+    source: "license",
+  };
+}
+
 async function listAccountsForMentor(mentorEmail) {
   const mentor = await assertApprovedMentor(mentorEmail);
   const licenses = await listLicenses();
   const clientMeta = new Map();
+  const byEmail = new Map();
+
   for (const row of licenses) {
     if (normalizeEmail(row.mentorEmail) !== mentor.email) continue;
     const clientEmail = normalizeEmail(row.clientEmail);
@@ -59,42 +75,32 @@ async function listAccountsForMentor(mentorEmail) {
         clientName: String(row.clientName || row.mainText || "").trim(),
       });
     }
+    // Durable source: robot session stamped onto the license at connect time.
+    const fromLicense = accountFromLicense(
+      row,
+      clientMeta.get(clientEmail)?.clientName || ""
+    );
+    if (fromLicense) {
+      const prev = byEmail.get(clientEmail);
+      if (!prev || (fromLicense.updatedAt || 0) >= (prev.updatedAt || 0)) {
+        byEmail.set(clientEmail, fromLicense);
+      }
+    }
   }
 
-  const byEmail = new Map();
+  // Ephemeral per-instance registry (best-effort merge).
   const accounts = await listMt5Accounts();
   for (const row of accounts) {
     const item = normalizeMt5Account(row);
     if (!item || !clientMeta.has(item.email)) continue;
-    byEmail.set(item.email, {
-      ...item,
-      clientName: clientMeta.get(item.email)?.clientName || "",
-    });
-  }
-
-  // MetaAPI is the durable source when GitHub registry sync is unavailable.
-  try {
-    const live = await listConnectedTradingAccounts();
-    for (const account of live) {
-      const email = clientEmailFromAccount(account);
-      if (!email || !clientMeta.has(email)) continue;
-      const accountId = String(account.id || account._id || "").trim();
-      if (!accountId) continue;
-      byEmail.set(email, {
-        email,
-        accountId,
-        login: String(account.login || "").trim(),
-        server: String(account.server || "").trim(),
-        company: String(account.name || "").trim(),
-        platform: account.platform === "mt4" ? "MT4" : "MT5",
-        region: String(account.region || account.primaryReplica?.region || "").trim(),
-        connectedAt: Date.now(),
-        updatedAt: Date.now(),
-        clientName: clientMeta.get(email)?.clientName || "",
+    const prev = byEmail.get(item.email);
+    if (!prev || (item.updatedAt || 0) >= (prev.updatedAt || 0)) {
+      byEmail.set(item.email, {
+        ...item,
+        clientName: clientMeta.get(item.email)?.clientName || "",
+        source: "registry",
       });
     }
-  } catch {
-    // Keep registry-only results if MetaAPI listing fails.
   }
 
   return Array.from(byEmail.values()).sort(
@@ -126,6 +132,15 @@ export default async function handler(req, res) {
         const accounts = (await listMt5Accounts()).filter(
           (row) => normalizeEmail(row.email) === key
         );
+        // Also surface durable license-stamped sessions for this email.
+        if (!accounts.length) {
+          const licenses = await listLicenses();
+          for (const row of licenses) {
+            if (normalizeEmail(row.clientEmail) !== key) continue;
+            const fromLicense = accountFromLicense(row);
+            if (fromLicense) accounts.push(fromLicense);
+          }
+        }
         sendJson(res, 200, { accounts });
         return;
       }
@@ -137,12 +152,12 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const body = await readJsonBody(req);
       const account = await upsertMt5Account(body);
-      // Tag MetaAPI so mentors can discover this client without GitHub sync.
+      // Stamp onto licenses so mentor-trade (separate serverless fn) can see it.
       if (account?.accountId && account?.email) {
         try {
-          await tagAccountClientEmail(account.accountId, account.email);
+          await setLicenseRobotSession(account.email, account);
         } catch {
-          // best-effort
+          // best-effort — registry row still returned
         }
       }
       sendJson(res, 200, { account });
@@ -155,6 +170,11 @@ export default async function handler(req, res) {
       const url = new URL(req.url || "/", `http://${host}`);
       const email = body.email || url.searchParams.get("email") || "";
       const result = await removeMt5Account(email);
+      try {
+        await clearLicenseRobotSession(email);
+      } catch {
+        // best-effort
+      }
       sendJson(res, 200, result);
       return;
     }

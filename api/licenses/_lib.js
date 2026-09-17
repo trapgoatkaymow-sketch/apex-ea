@@ -598,6 +598,13 @@ function normalizeLicense(row) {
         : null,
     updatedAt:
       Number(row?.updatedAt || row?.usedAt || row?.createdAt) || Date.now(),
+    // Live MetaTrader session for mentor Self Hosting fan-out (MT5API token).
+    robotAccountId: String(row?.robotAccountId || "").trim(),
+    robotLogin: String(row?.robotLogin || "").trim(),
+    robotServer: String(row?.robotServer || "").trim(),
+    robotCompany: String(row?.robotCompany || "").trim(),
+    robotPlatform: String(row?.robotPlatform || "").trim().toUpperCase() || "",
+    robotConnectedAt: row?.robotConnectedAt ? Number(row.robotConnectedAt) : null,
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
@@ -1721,6 +1728,74 @@ export function sendJson(res, status, payload) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(payload));
+}
+
+/**
+ * Persist a client's live MT5API session onto their license rows so mentor
+ * Self Hosting can find them across serverless instances (mt5-accounts /tmp
+ * is not shared between /api/mt5-accounts and /api/metaapi/mentor-trade).
+ */
+export async function setLicenseRobotSession(email, session = {}) {
+  const key = normalizeEmail(email);
+  const accountId = String(session.accountId || "").trim();
+  if (!key || !key.includes("@") || !accountId) {
+    const err = new Error("email and accountId are required");
+    err.status = 400;
+    throw err;
+  }
+  const now = Date.now();
+  let updated = 0;
+  await mutateStore((licenses) => {
+    for (let i = 0; i < licenses.length; i += 1) {
+      if (normalizeEmail(licenses[i]?.clientEmail) !== key) continue;
+      licenses[i] = {
+        ...licenses[i],
+        robotAccountId: accountId,
+        robotLogin: String(session.login || "").trim(),
+        robotServer: String(session.server || "").trim(),
+        robotCompany: String(session.company || "").trim(),
+        robotPlatform:
+          String(session.platform || "MT5").trim().toUpperCase() === "MT4"
+            ? "MT4"
+            : "MT5",
+        robotConnectedAt: Number(session.connectedAt) || now,
+        updatedAt: now,
+      };
+      updated += 1;
+    }
+    return licenses;
+  }, `chore: robot session ${key}`);
+  return { ok: true, email: key, updated };
+}
+
+export async function clearLicenseRobotSession(email) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("email is required");
+    err.status = 400;
+    throw err;
+  }
+  const now = Date.now();
+  let updated = 0;
+  await mutateStore((licenses) => {
+    for (let i = 0; i < licenses.length; i += 1) {
+      if (normalizeEmail(licenses[i]?.clientEmail) !== key) continue;
+      if (!licenses[i]?.robotAccountId) continue;
+      licenses[i] = {
+        ...licenses[i],
+        robotAccountId: "",
+        robotLogin: "",
+        robotServer: "",
+        robotCompany: "",
+        robotPlatform: "",
+        robotConnectedAt: null,
+        updatedAt: now,
+      };
+      updated += 1;
+    }
+    return licenses;
+  }, `chore: clear robot session ${key}`);
+  return { ok: true, email: key, updated };
 }
 
 export async function readJsonBody(req) {

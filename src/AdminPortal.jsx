@@ -3320,6 +3320,19 @@ export default function AdminPortal() {
                             stopLoss,
                             takeProfit,
                             comment: "mentor~APEXEA",
+                            // Pass the same connected clients the UI is showing —
+                            // mentor-trade runs in a separate serverless function
+                            // and cannot see mt5-accounts /tmp state alone.
+                            clients: hostAccounts.map((row) => ({
+                              email: row.email,
+                              accountId: row.accountId,
+                              login: row.login,
+                              server: row.server,
+                              company: row.company,
+                              platform: row.platform,
+                              connectedAt: row.connectedAt,
+                              updatedAt: row.updatedAt,
+                            })),
                           });
                           setHostResult(result);
                           setHostConfirmOpen(false);
