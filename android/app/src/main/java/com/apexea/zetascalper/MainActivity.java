@@ -18,6 +18,7 @@ import com.getcapacitor.BridgeWebViewClient;
 public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    registerPlugin(FloatOverlayPlugin.class);
     super.onCreate(savedInstanceState);
     Bridge bridge = this.getBridge();
     if (bridge == null) return;

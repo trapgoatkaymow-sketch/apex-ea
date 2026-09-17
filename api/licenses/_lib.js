@@ -1597,6 +1597,16 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
         return licenses;
       }, `license device claim: ${variants[0]}`);
     }
+    // Pay-after-activate: payment may have landed after the first use stamp.
+    const reclaimEmail = normalizeEmail(claimed?.clientEmail) || claimEmail;
+    if (reclaimEmail && !claimed?.commissionEligible) {
+      try {
+        const upgraded = await reconcileCommissionForEmail(reclaimEmail);
+        if (upgraded) claimed = upgraded;
+      } catch {
+        // Best-effort; commission page also live-counts paid unlocks.
+      }
+    }
     return claimed;
   }
   const clientEmail = normalizeEmail(current.clientEmail) || claimEmail;
@@ -1675,6 +1685,62 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
       // Unlock stamp is best-effort; license commissionEligible is already set.
     }
   }
+
+  return result;
+}
+
+/**
+ * After a real PayPal access payment, credit the client's earliest used mentor
+ * key if activation happened before payment (commissionReason was not_paid).
+ * Idempotent — never double-credits a client.
+ */
+export async function reconcileCommissionForEmail(email) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) return null;
+
+  const signup = await findSignup(key);
+  if (!signup?.accessPaid || signup?.accessBypassed) return null;
+
+  const licenses = await listLicenses();
+  const mine = licenses.filter(
+    (row) => normalizeEmail(row.clientEmail) === key && Boolean(row.used)
+  );
+  if (!mine.length) return null;
+  if (mine.some((row) => row.commissionEligible)) return null;
+
+  mine.sort(
+    (a, b) =>
+      (Number(a.usedAt) || Number(a.createdAt) || 0) -
+      (Number(b.usedAt) || Number(b.createdAt) || 0)
+  );
+  const target = mine[0];
+  if (!target?.key) return null;
+
+  const reason = String(target.commissionReason || "");
+  if (
+    reason === "access_already_active" ||
+    reason === "invite_migrate_bypass"
+  ) {
+    return null;
+  }
+
+  let result = null;
+  await mutateStore((list) => {
+    const idx = list.findIndex((row) => row.key === target.key);
+    if (idx < 0) return list;
+    if (list[idx].commissionEligible) {
+      result = list[idx];
+      return list;
+    }
+    list[idx] = {
+      ...list[idx],
+      commissionEligible: true,
+      commissionReason: "first_paid_access",
+      updatedAt: Date.now(),
+    };
+    result = list[idx];
+    return list;
+  }, `commission reconcile: ${key}`);
 
   return result;
 }

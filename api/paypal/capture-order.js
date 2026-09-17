@@ -68,6 +68,14 @@ export default async function handler(req, res) {
     } else {
       // App-access lifetime payment — required for mentor commission eligibility.
       signup = await setSignupAccessPaid(email, true);
+      try {
+        const { reconcileCommissionForEmail } = await import(
+          "../licenses/_lib.js"
+        );
+        await reconcileCommissionForEmail(email);
+      } catch {
+        // Commission backfill is best-effort; payment already succeeded.
+      }
     }
 
     sendJson(res, 200, {

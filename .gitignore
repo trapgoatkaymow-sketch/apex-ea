@@ -8,7 +8,9 @@ android/keystore/*.jks
 android/keystore/*.keystore
 android/keystore/signing.properties
 android/local.properties
-*.apk
+# Ignore build APKs only — keep public/*.apk for sideload download on .com
+android/**/*.apk
+dist/**/*.apk
 dist
 .DS_Store
 .env
@@ -16,8 +18,5 @@ dist
 !.env.example
 *.local
 node_modules
-!public/apex-ea.apk
-!public/apex-ea-v*.apk
-!public/ZETA-SCALPER-AI.apk
 .vercel/
 .vite

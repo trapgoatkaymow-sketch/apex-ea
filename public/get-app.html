@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Download apex-ea Android app</title>
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0612;
+        --card: #16101f;
+        --text: #f4eefc;
+        --muted: #b7a8c9;
+        --accent: #b388ff;
+        --accent-2: #7c4dff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Outfit, system-ui, sans-serif;
+        background:
+          radial-gradient(ellipse at top, #2a1048 0%, transparent 55%),
+          var(--bg);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      main {
+        width: min(420px, 100%);
+        background: color-mix(in srgb, var(--card) 92%, black);
+        border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+        border-radius: 22px;
+        padding: 28px 22px 24px;
+        text-align: center;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      }
+      img.logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        object-fit: cover;
+        margin-bottom: 14px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.45rem;
+        letter-spacing: 0.02em;
+      }
+      p {
+        margin: 0 0 10px;
+        color: var(--muted);
+        line-height: 1.45;
+        font-size: 0.95rem;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        margin-top: 18px;
+        padding: 14px 16px;
+        border: 0;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.05rem;
+        text-decoration: none;
+      }
+      .btn.secondary {
+        margin-top: 10px;
+        background: transparent;
+        border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+        color: var(--text);
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .note {
+        margin-top: 16px;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img class="logo" src="/logo.png" alt="apex-ea" />
+      <h1>apex-ea for Android</h1>
+      <p>
+        Client trading app only (not the mentor portal). Same live backends as the
+        website — licenses, PayPal, Chart Scanner, MetaTrader.
+      </p>
+      <a class="btn" id="primary" href="/api/download-apk">
+        Download APK v2.18
+      </a>
+      <a class="btn secondary" href="/apex-ea-v2.18.apk" download="apex-ea-v2.18.apk">
+        Direct file link
+      </a>
+      <p class="note">
+        On Android: open this page in Chrome → tap Download → Allow from this source
+        if asked. File size is about 4.5&nbsp;MB.
+      </p>
+    </main>
+    <script>
+      // If the .apk URL ever HTML-falls-through, send users to the direct file again.
+      document.getElementById("primary").addEventListener("click", function () {
+        // Keep default navigation to the APK binary.
+      });
+    </script>
+  </body>
+</html>
