@@ -19,8 +19,9 @@ is baked into the APK.
 
 ## Download
 
-- **Latest APK (v2.18 — use this):** https://www.apex-ea.com/apex-ea-v2.18.apk
-- Short link: https://www.apex-ea.com/download
+- **Download page:** https://www.apex-ea.com/download
+- **API download (always forces the APK file):** https://www.apex-ea.com/api/download-apk
+- **Direct APK:** https://www.apex-ea.com/apex-ea-v2.18.apk
 - Always-current alias: https://www.apex-ea.com/apex-ea.apk
 - Legacy URL (same package): https://www.apex-ea.com/ZETA-SCALPER-AI.apk
 - Sideload files: `public/apex-ea-v2.18.apk`, `public/apex-ea.apk`
