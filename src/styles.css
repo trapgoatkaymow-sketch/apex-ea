@@ -3652,17 +3652,28 @@ html:has(.phone[data-interface="v2"]) body {
 .license-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .license-row {
   display: grid;
-  gap: 4px;
-  padding: 12px;
-  border-radius: 12px;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
   background: #fafafa;
+}
+
+.license-row.is-compact {
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.license-row-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
 .license-row strong,
@@ -3675,7 +3686,7 @@ html:has(.phone[data-interface="v2"]) body {
   background: transparent;
   text-align: left;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   color: #111827;
@@ -3688,13 +3699,52 @@ html:has(.phone[data-interface="v2"]) body {
   outline: none;
 }
 
-.license-row span {
-  font-size: 0.78rem;
+.license-row span,
+.license-row-meta {
+  font-size: 0.72rem;
+  line-height: 1.35;
   color: #6b7280;
 }
 
+.license-status-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid #d1d5db;
+  color: #4b5563;
+  background: #f3f4f6;
+}
+
+.license-status-pill.is-unused {
+  color: #065f46;
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.license-status-pill.is-connected {
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.license-status-pill.is-unconnected {
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.12);
+}
+
 .license-row.is-used {
-  opacity: 0.72;
+  opacity: 0.92;
+}
+
+.license-row.is-connected {
+  opacity: 1;
 }
 
 .license-row.is-expired {
@@ -3705,14 +3755,14 @@ html:has(.phone[data-interface="v2"]) body {
 .license-row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .admin-btn-sm {
-  padding: 8px 12px;
-  font-size: 0.82rem;
-  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  border-radius: 8px;
 }
 
 .admin-btn-ghost {
@@ -3947,24 +3997,49 @@ html:has(.phone[data-interface="v2"]) body {
   box-shadow: var(--ap-glow-cyan);
 }
 
-.admin-portal[data-theme="dark"] .admin-auth-card,
-.admin-portal[data-theme="dark"] .admin-stat-card,
-.admin-portal[data-theme="dark"] .admin-card,
-.admin-portal[data-theme="dark"] .admin-top-card,
-.admin-portal[data-theme="dark"] .admin-settings-row,
-.admin-portal[data-theme="dark"] .license-row,
-.admin-portal[data-theme="dark"] .ea-item,
-.admin-portal[data-theme="dark"] .self-host-result-card,
-.admin-portal[data-theme="dark"] .self-host-recent-card,
-.admin-portal[data-theme="dark"] .self-host-modal {
+.admin-portal[data-theme="dark"] .license-row {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 42%),
     var(--ap-bg-card);
   border: 1px solid var(--ap-line);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 12px 32px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(14px);
+    0 6px 18px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.admin-portal[data-theme="dark"] .license-row.is-compact {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+.admin-portal[data-theme="dark"] .license-row-key,
+.admin-portal[data-theme="dark"] .license-row strong {
+  color: #e8eefc;
+}
+
+.admin-portal[data-theme="dark"] .license-row-meta,
+.admin-portal[data-theme="dark"] .license-row span {
+  color: rgba(180, 198, 230, 0.78);
+}
+
+.admin-portal[data-theme="dark"] .license-status-pill.is-unused {
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.admin-portal[data-theme="dark"] .license-status-pill.is-connected {
+  color: #7dd3fc;
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(14, 165, 233, 0.14);
+}
+
+.admin-portal[data-theme="dark"] .license-status-pill.is-unconnected {
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(245, 158, 11, 0.14);
 }
 
 .admin-portal[data-theme="dark"] .admin-auth-card {
@@ -4040,9 +4115,9 @@ html:has(.phone[data-interface="v2"]) body {
 .admin-portal[data-theme="dark"] .admin-stat-card {
   position: relative;
   overflow: hidden;
-  border-radius: 18px;
-  padding: 16px 14px;
-  min-height: 108px;
+  border-radius: 16px;
+  padding: 12px 12px;
+  min-height: 88px;
 }
 
 .admin-portal[data-theme="dark"] .admin-stat-card::after {

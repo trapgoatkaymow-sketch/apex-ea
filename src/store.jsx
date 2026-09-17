@@ -880,14 +880,29 @@ export function AppProvider({ children }) {
   const refreshLicenses = useCallback(async () => {
     try {
       const remote = await fetchLicenses();
-      // Merge remote + local. Do NOT drop local-only keys just because GitHub
-      // lag / failed durable writes omitted them — that made freshly generated
-      // keys "disappear" after refresh. Only tombstones remove keys.
+      const remoteKeySet = new Set(
+        (Array.isArray(remote) ? remote : [])
+          .map((row) => normalizeLicenseKey(row?.key))
+          .filter(Boolean)
+      );
+      // Merge remote + local. Drop stale local-only unused keys that never made
+      // it to the shared store — they inflated mentor "556 keys" / quota math.
+      // Keep fresh local generates briefly, and keep used keys a bit longer.
       setLicenseKeys((prev) => {
         const keptLocal = (Array.isArray(prev) ? prev : []).filter(
           (row) => !isRememberedDeletedLicenseKey(row.key)
         );
-        return filterOutDeletedLicenses(mergeLicenses(keptLocal, remote));
+        const merged = filterOutDeletedLicenses(mergeLicenses(keptLocal, remote));
+        if (!remoteKeySet.size) return merged;
+        const now = Date.now();
+        return merged.filter((row) => {
+          const key = normalizeLicenseKey(row.key);
+          if (remoteKeySet.has(key)) return true;
+          const age = now - Number(row.createdAt || row.updatedAt || 0);
+          if (row.used && age < 24 * 60 * 60 * 1000) return true;
+          if (!row.used && age < 3 * 60 * 1000) return true;
+          return false;
+        });
       });
 
       // Mentor photo updates sync live onto local EAs/bots.
@@ -1732,6 +1747,22 @@ export function AppProvider({ children }) {
       if (!email || !email.includes("@")) {
         showToast("Enter the client email");
         return null;
+      }
+
+      // Same rule as bulk import — one live key per client+bot.
+      const existingForClient = (Array.isArray(licenseKeys) ? licenseKeys : []).find(
+        (row) =>
+          normalizeEmail(row.clientEmail) === email &&
+          String(row.botId || "") === String(botId) &&
+          !isRememberedDeletedLicenseKey(row.key)
+      );
+      if (existingForClient) {
+        showToast(
+          existingForClient.used
+            ? `This client already has a used key for ${bot?.name || "this bot"}`
+            : `This client already has an unused key: ${existingForClient.key}`
+        );
+        return existingForClient;
       }
 
       const ea = eas.find((item) => item.id === botId);

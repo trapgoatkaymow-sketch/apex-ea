@@ -234,6 +234,12 @@ export function normalizeLicense(row) {
         ? Number(row?.usedAt) || null
         : null,
     updatedAt: Number(row?.updatedAt || row?.usedAt || row?.createdAt) || Date.now(),
+    robotAccountId: String(row?.robotAccountId || "").trim(),
+    robotLogin: String(row?.robotLogin || "").trim(),
+    robotServer: String(row?.robotServer || "").trim(),
+    robotCompany: String(row?.robotCompany || "").trim(),
+    robotPlatform: String(row?.robotPlatform || "").trim().toUpperCase() || "",
+    robotConnectedAt: row?.robotConnectedAt ? Number(row.robotConnectedAt) : null,
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
@@ -297,6 +303,24 @@ export function mergeLicenses(localList = [], remoteList = []) {
       commissionReason: preferIncoming
         ? row.commissionReason || prev.commissionReason || ""
         : prev.commissionReason || row.commissionReason || "",
+      robotAccountId: preferIncoming
+        ? row.robotAccountId || prev.robotAccountId || ""
+        : prev.robotAccountId || row.robotAccountId || "",
+      robotLogin: preferIncoming
+        ? row.robotLogin || prev.robotLogin || ""
+        : prev.robotLogin || row.robotLogin || "",
+      robotServer: preferIncoming
+        ? row.robotServer || prev.robotServer || ""
+        : prev.robotServer || row.robotServer || "",
+      robotCompany: preferIncoming
+        ? row.robotCompany || prev.robotCompany || ""
+        : prev.robotCompany || row.robotCompany || "",
+      robotPlatform: preferIncoming
+        ? row.robotPlatform || prev.robotPlatform || ""
+        : prev.robotPlatform || row.robotPlatform || "",
+      robotConnectedAt: preferIncoming
+        ? row.robotConnectedAt || prev.robotConnectedAt || null
+        : prev.robotConnectedAt || row.robotConnectedAt || null,
       updatedAt: Math.max(prev.updatedAt || 0, row.updatedAt || 0),
       bot: preferLicenseBot(row.bot, prev.bot, row.updatedAt || 0, prev.updatedAt || 0),
       createdAt: Math.min(prev.createdAt || Date.now(), row.createdAt || Date.now()),

@@ -1232,14 +1232,12 @@ export default function AdminPortal() {
         return owner === mentorEmail || (mentorId && ownerId === mentorId);
       });
 
-  const eaIds = new Set(myEas.map((ea) => ea.id));
   const myLicenses = isSuperAdmin
     ? licenseKeys
     : licenseKeys.filter((row) => {
         const owner = String(row.mentorEmail || "").toLowerCase();
         const ownerId = String(row.mentorId || "");
-        if (owner === mentorEmail || (mentorId && ownerId === mentorId)) return true;
-        return eaIds.has(row.botId);
+        return owner === mentorEmail || (mentorId && ownerId === mentorId);
       });
 
   const sessionMentor = mentors.find(
@@ -1487,15 +1485,26 @@ export default function AdminPortal() {
       });
 
   const usedKeys = myLicenses.filter((k) => k.used);
-  const availableKeys = myLicenses.filter((k) => !k.used);
-  const activeBotIds = new Set(bots.filter((b) => b.active).map((b) => b.id));
-  const activeKeys = myLicenses.filter((k) => k.used && activeBotIds.has(k.botId));
-  const deactivatedKeys = myLicenses.filter(
-    (k) => k.used && !activeBotIds.has(k.botId)
+  const unusedKeys = myLicenses.filter((k) => !k.used);
+  // Connected = redeemed on a phone and/or live MT5 session stamped.
+  // Not the mentor browser's local `bots.active` list.
+  const isKeyConnected = (k) =>
+    Boolean(k?.used) &&
+    (Boolean(String(k?.deviceId || "").trim()) ||
+      Boolean(String(k?.robotAccountId || "").trim()));
+  const connectedKeys = myLicenses.filter((k) => isKeyConnected(k));
+  const unconnectedKeys = myLicenses.filter(
+    (k) => k.used && !isKeyConnected(k)
   );
   const recentKeys = [...myLicenses]
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
     .slice(0, 8);
+
+  function licenseStatusLabel(entry) {
+    if (!entry?.used) return "Unused";
+    if (isKeyConnected(entry)) return "Connected";
+    return "Used · not connected";
+  }
 
   function countSoldKeysForMentor(mentor) {
     const email = normalizeAdminEmail(mentor?.email);
@@ -1667,31 +1676,36 @@ export default function AdminPortal() {
                 </p>
                 <div className="admin-stat-stack">
                   <article className="admin-stat-card">
-                    <p className="admin-stat-label">Used license keys</p>
-                    <p className="admin-stat-value">{usedKeys.length}</p>
+                    <p className="admin-stat-label">Generated keys</p>
+                    <p className="admin-stat-value">{mentorKeysGenerated}</p>
+                    <p className="admin-card-meta">
+                      {unusedKeys.length} unused · {usedKeys.length} used
+                    </p>
                   </article>
                   <article className="admin-stat-card">
-                    <p className="admin-stat-label">Available</p>
+                    <p className="admin-stat-label">Quota left</p>
                     <p className="admin-stat-value is-ok">
                       {mentorKeysRemaining == null ? "∞" : mentorKeysRemaining}
                     </p>
                     <p className="admin-card-meta">
                       {mentorKeysRemaining == null
                         ? "Unlimited generation"
-                        : `${mentorKeysRemaining} of ${mentorKeyAllowance} keys left to generate`}
-                      {availableKeys.length
-                        ? ` · ${availableKeys.length} unused generated`
-                        : ""}
+                        : `${mentorKeysRemaining} of ${mentorKeyAllowance} left to generate`}
                     </p>
                   </article>
                   <article className="admin-stat-card">
-                    <p className="admin-stat-label">Active</p>
-                    <p className="admin-stat-value is-ok">{activeKeys.length}</p>
-                    <p className="admin-card-meta">Keys working on connected bots</p>
+                    <p className="admin-stat-label">Connected</p>
+                    <p className="admin-stat-value is-ok">{connectedKeys.length}</p>
+                    <p className="admin-card-meta">
+                      Used keys bound to a phone or MetaTrader
+                    </p>
                   </article>
                   <article className="admin-stat-card">
-                    <p className="admin-stat-label">Deactivated license keys</p>
-                    <p className="admin-stat-value is-warn">{deactivatedKeys.length}</p>
+                    <p className="admin-stat-label">Used · not connected</p>
+                    <p className="admin-stat-value is-warn">{unconnectedKeys.length}</p>
+                    <p className="admin-card-meta">
+                      Redeemed but no phone/MT session yet
+                    </p>
                   </article>
                   <article className="admin-stat-card">
                     <p className="admin-stat-label">Total EAs</p>
@@ -1707,12 +1721,17 @@ export default function AdminPortal() {
                     <p className="admin-empty">No license keys yet</p>
                   ) : (
                     recentKeys.map((entry) => (
-                      <div className="license-row" key={`${entry.key}-${entry.createdAt}`}>
+                      <div
+                        className={`license-row is-compact${entry.used ? " is-used" : ""}${
+                          isKeyConnected(entry) ? " is-connected" : ""
+                        }`}
+                        key={`${entry.key}-${entry.createdAt}`}
+                      >
                         <strong>{entry.key}</strong>
                         <span>
                           {entry.clientName ? `${entry.clientName} · ` : ""}
                           {entry.clientEmail || "no email"} · {entry.botName} ·{" "}
-                          {entry.used ? "Used" : "Available"}
+                          {licenseStatusLabel(entry)}
                         </span>
                       </div>
                     ))
@@ -2364,12 +2383,17 @@ export default function AdminPortal() {
               ) : null}
             </div>
 
-            <div className="admin-card" style={{ marginTop: 14 }}>
+            <div className="admin-card admin-keys-card" style={{ marginTop: 14 }}>
               <div className="admin-card-title-row">
                 <h3>Generated keys</h3>
                 <span className="admin-badge">{filteredLicenses.length}</span>
               </div>
-              <div className="admin-search-row" style={{ marginBottom: 12 }}>
+              <p className="admin-card-meta" style={{ marginBottom: 10 }}>
+                {unusedKeys.length} unused · {usedKeys.length} used ·{" "}
+                {connectedKeys.length} connected · {unconnectedKeys.length} not
+                connected
+              </p>
+              <div className="admin-search-row" style={{ marginBottom: 10 }}>
                 <input
                   className="admin-input"
                   type="search"
@@ -2384,60 +2408,73 @@ export default function AdminPortal() {
               ) : filteredLicenses.length === 0 ? (
                 <p className="admin-empty">No keys match “{licenseSearch.trim()}”</p>
               ) : (
-                [...filteredLicenses].reverse().map((entry) => (
-                  <div
-                    className={`license-row${entry.used ? " is-used" : ""}${
-                      isLicenseExpired(entry) ? " is-expired" : ""
-                    }`}
-                    key={`${entry.key}-${entry.createdAt}`}
-                  >
-                    <button
-                      className="license-row-key"
-                      type="button"
-                      onClick={() => openLicenseDetail(entry)}
+                <div className="license-list">
+                  {[...filteredLicenses].reverse().map((entry) => (
+                    <div
+                      className={`license-row is-compact${entry.used ? " is-used" : ""}${
+                        isKeyConnected(entry) ? " is-connected" : ""
+                      }${isLicenseExpired(entry) ? " is-expired" : ""}`}
+                      key={`${entry.key}-${entry.createdAt}`}
                     >
-                      {entry.key}
-                    </button>
-                    <span>
-                      {entry.clientName ? `${entry.clientName} · ` : ""}
-                      {entry.clientEmail || "no email"} · {entry.botName} ·{" "}
-                      {entry.used ? "Used" : "Available"} · {formatLicenseDuration(entry)} ·{" "}
-                      {formatLicenseExpiry(entry)}
-                    </span>
-                    <div className="license-row-actions">
-                      <button
-                        className="admin-btn admin-btn-outline admin-btn-sm"
-                        type="button"
-                        onClick={() => openLicenseDetail(entry)}
-                      >
-                        View
-                      </button>
-                      <button
-                        className="admin-btn admin-btn-outline admin-btn-sm"
-                        type="button"
-                        onClick={() => copyLicenseKey(entry.key)}
-                      >
-                        Copy
-                      </button>
-                      {isSuperAdmin ? (
+                      <div className="license-row-main">
                         <button
-                          className="admin-btn admin-btn-ghost admin-btn-sm"
+                          className="license-row-key"
                           type="button"
-                          onClick={() => void onDeactivateLicense(entry.key)}
+                          onClick={() => openLicenseDetail(entry)}
                         >
-                          {entry.used ? "Deactivate" : "Reset"}
+                          {entry.key}
                         </button>
-                      ) : null}
-                      <button
-                        className="admin-btn admin-btn-outline admin-btn-sm"
-                        type="button"
-                        onClick={() => void onDeleteLicense(entry.key)}
-                      >
-                        Delete
-                      </button>
+                        <span className="license-row-meta">
+                          {entry.clientName ? `${entry.clientName} · ` : ""}
+                          {entry.clientEmail || "no email"} · {entry.botName}
+                        </span>
+                        <span
+                          className={`license-status-pill${
+                            isKeyConnected(entry)
+                              ? " is-connected"
+                              : entry.used
+                                ? " is-unconnected"
+                                : " is-unused"
+                          }`}
+                        >
+                          {licenseStatusLabel(entry)}
+                        </span>
+                      </div>
+                      <div className="license-row-actions">
+                        <button
+                          className="admin-btn admin-btn-outline admin-btn-sm"
+                          type="button"
+                          onClick={() => openLicenseDetail(entry)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="admin-btn admin-btn-outline admin-btn-sm"
+                          type="button"
+                          onClick={() => copyLicenseKey(entry.key)}
+                        >
+                          Copy
+                        </button>
+                        {isSuperAdmin ? (
+                          <button
+                            className="admin-btn admin-btn-ghost admin-btn-sm"
+                            type="button"
+                            onClick={() => void onDeactivateLicense(entry.key)}
+                          >
+                            {entry.used ? "Deactivate" : "Reset"}
+                          </button>
+                        ) : null}
+                        <button
+                          className="admin-btn admin-btn-outline admin-btn-sm"
+                          type="button"
+                          onClick={() => void onDeleteLicense(entry.key)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </section>
