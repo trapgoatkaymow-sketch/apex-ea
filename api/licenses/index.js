@@ -1,6 +1,7 @@
 import { endOptions } from "../_cors.js";
 import {
   claimLicenseViaInvite,
+  clearAllLicenses,
   createLicense,
   createLicensesBulk,
   deactivateLicense,
@@ -13,8 +14,15 @@ import {
   readJsonBody,
   sendJson,
 } from "./_lib.js";
+import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
 export const config = { maxDuration: 60 };
+
+function normalizeEmail(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -96,6 +104,28 @@ export default async function handler(req, res) {
         sendJson(res, 200, { ok: true, license, email });
         return;
       }
+      if (
+        action === "clear-all" ||
+        action === "clearall" ||
+        action === "reset-all"
+      ) {
+        const admin = normalizeEmail(body.adminEmail || body.email || "");
+        const storeToken = String(process.env.LICENSES_STORE_TOKEN || "").trim();
+        const provided = String(body.token || body.secret || "").trim();
+        const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+        const authed =
+          (admin && (admin === superAdmin || admin === "trapgoatkaymow@gmail.com")) ||
+          (storeToken && provided && provided === storeToken);
+        if (!authed) {
+          sendJson(res, 403, {
+            error: "Only super admin can reset all license keys",
+          });
+          return;
+        }
+        const result = await clearAllLicenses();
+        sendJson(res, 200, result);
+        return;
+      }
       const license = await createLicense(body);
       sendJson(res, 200, { license });
       return;
@@ -144,7 +174,7 @@ export default async function handler(req, res) {
     sendJson(res, 405, { error: "Method not allowed" });
   } catch (error) {
     sendJson(res, error.status || 500, {
-      error: error.message || "License sync failed",
+      error: error.message || "License API failed",
       details: error.data || null,
     });
   }

@@ -870,6 +870,24 @@ async function readStore() {
     return readLocalStore();
   }
 
+  // Explicit empty durable document (fresh reset) — do not resurrect keys from
+  // the bundled seed /tmp copy, or portals cannot start from zero.
+  if (
+    Array.isArray(remote.licenses) &&
+    remote.licenses.length === 0 &&
+    (remoteSource === "blob" || remoteSource === "github")
+  ) {
+    memoryLicenses = [];
+    memoryDeletedKeys = normalizeDeletedKeys(remote.deletedKeys);
+    return {
+      sha: remote.sha ?? null,
+      licenses: [],
+      deletedKeys: memoryDeletedKeys,
+      remote: true,
+      source: remoteSource,
+    };
+  }
+
   const localFiles = readLocalFileLicenses();
   // Always merge durable + /tmp + bundled + memory so redeploys / stale snapshots
   // cannot make newly created keys look "Invalid".
@@ -1860,6 +1878,38 @@ export async function findLicensesByEmail(email) {
   if (!key) return [];
   const licenses = await listLicenses();
   return licenses.filter((row) => normalizeEmail(row.clientEmail) === key);
+}
+
+/** Wipe every license key so all portals start from zero. */
+export async function clearAllLicenses() {
+  let lastError;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const store = await readStore();
+      memoryLicenses = [];
+      memoryDeletedKeys = {};
+      const write = await writeStore(
+        [],
+        store.sha,
+        "chore: reset all license keys",
+        {}
+      );
+      memoryLicenses = [];
+      memoryDeletedKeys = {};
+      return {
+        ok: true,
+        cleared: true,
+        durable: write?.durable !== false,
+        source: write?.source || null,
+        count: 0,
+      };
+    } catch (error) {
+      lastError = error;
+      if (error.status === 409 || error.status === 422) continue;
+      throw error;
+    }
+  }
+  throw lastError || new Error("Could not clear license keys");
 }
 
 export function sendJson(res, status, payload) {
