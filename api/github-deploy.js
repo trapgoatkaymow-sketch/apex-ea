@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import zlib from "node:zlib";
 import { promisify } from "node:util";
+import { waitUntil } from "@vercel/functions";
 import { applyCorsHeaders, endOptions } from "./_cors.js";
 
 const gunzip = promisify(zlib.gunzip);
@@ -276,28 +277,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await deploySha({
-      vercelToken,
-      teamId,
-      githubToken,
-      sha,
-    });
-    if (!result.ok) {
-      sendJson(res, 502, {
-        error: "Vercel deploy failed",
-        status: result.status,
-        detail: result.json?.error || result.json,
-      });
-      return;
-    }
-    sendJson(res, 200, {
+    // GitHub webhooks time out around 10s; keep the HTTP response fast and
+    // finish the file upload deploy in the background.
+    waitUntil(
+      deploySha({
+        vercelToken,
+        teamId,
+        githubToken,
+        sha,
+      }).then((result) => {
+        if (!result.ok) {
+          console.error("github-deploy failed", result.status, result.json);
+        } else {
+          console.log("github-deploy ok", result.json?.id, result.json?.url);
+        }
+      }).catch((err) => {
+        console.error(
+          "github-deploy error",
+          err instanceof Error ? err.message : String(err)
+        );
+      })
+    );
+
+    sendJson(res, 202, {
       ok: true,
+      accepted: true,
       sha,
-      fileCount: undefined,
-      deploymentId: result.json.id,
-      url: result.json.url,
-      inspectorUrl: result.json.inspectorUrl,
-      readyState: result.json.readyState,
+      mode: "github-tarball-upload",
     });
   } catch (err) {
     sendJson(res, 500, {
