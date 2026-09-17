@@ -260,3 +260,19 @@ export function prefetchBotPhotos(bots = []) {
     resolveCachedBotPhoto(bot, "/logo.png").catch(() => {});
   }
 }
+
+/** Drop IndexedDB + memory photo cache to free Safari / Android WebView quota. */
+export function clearBotPhotoCache() {
+  for (const url of memoryUrls.values()) revokeIfBlob(url);
+  memoryUrls.clear();
+  inflight.clear();
+  warmed = false;
+  warmPromise = null;
+  if (typeof indexedDB === "undefined") return;
+  try {
+    indexedDB.deleteDatabase(DB_NAME);
+  } catch {
+    // ignore
+  }
+  dbPromise = null;
+}

@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { mediaUrl } from "./apiOrigin.js";
-import { prefetchBotPhotos } from "./botPhotoCache.js";
+import { clearBotPhotoCache, prefetchBotPhotos } from "./botPhotoCache.js";
 import {
   fetchSignups,
   mergeSignups,
@@ -354,14 +354,49 @@ function clearEaBackup() {
 function clearAppStoragePressure() {
   clearEaBackup();
   try {
+    clearBotPhotoCache();
+  } catch {
+    // ignore
+  }
+  try {
     // Drop known heavy keys that are not required for EA save.
     // Do NOT clear apexea-daily-scans-v1 — quotas must persist through the day.
+    const keep = new Set([
+      STORAGE_KEY,
+      "apexea-daily-scans-v1",
+      "apexea-device-id-v1",
+      "apexea-cover-email",
+    ]);
     localStorage.removeItem("apexea-app-v1-backup");
+    localStorage.removeItem(BACKUP_KEY);
     localStorage.removeItem("apexea-float-pos");
     localStorage.removeItem("apexea-float-pos-zeta");
     localStorage.removeItem("apexea-float-pos-v2");
     localStorage.removeItem("apexea-self-host-recent-v1");
     localStorage.removeItem("apexea-trade-management");
+    // Sweep other apexea scratch keys that can bloat Safari's ~5MB quota.
+    const doomed = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (!key || keep.has(key)) continue;
+      if (
+        key.startsWith("apexea-") &&
+        (key.includes("backup") ||
+          key.includes("cache") ||
+          key.includes("photo") ||
+          key.includes("float") ||
+          key.includes("draft"))
+      ) {
+        doomed.push(key);
+      }
+    }
+    doomed.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+    });
   } catch {
     // ignore
   }
@@ -634,7 +669,8 @@ export function AppProvider({ children }) {
                   : row
               )
             );
-            showToast("Storage was full — cleared local image cache so saves can continue");
+            // Recovered after clearing cache — photos reload from the API.
+            // Avoid alarming unlock / activate with a storage toast.
           } catch {
             try {
               clearEaBackup();
@@ -662,7 +698,6 @@ export function AppProvider({ children }) {
                     : row
                 )
               );
-              showToast("Storage was full — EA saved; re-upload the picture if needed");
             } catch {
               showToast(
                 "Could not save — storage is full. Clear site data for apex-ea.com and retry."
@@ -2022,7 +2057,7 @@ export function AppProvider({ children }) {
   );
 
   const activateLicense = useCallback(
-    async (rawKey) => {
+    async (rawKey, options = {}) => {
       const accountEmail = normalizeEmail(coverEmail);
       const signup = getSignup(accountEmail);
 
@@ -2117,12 +2152,16 @@ export function AppProvider({ children }) {
       }
 
       // Bind to this phone (same phone re-opens automatically).
+      const healLicense =
+        options && typeof options === "object" && matchKey(options.license)
+          ? options.license
+          : entry;
       let remote = null;
       try {
         remote = await markLicenseUsedRemote(entry.key || key, {
           deviceId,
           email: accountEmail,
-          license: options?.license && matchKey(options.license) ? options.license : entry,
+          license: healLicense,
           botId: entry.botId || entry.bot?.id || "",
           botName: entry.botName || entry.bot?.name || "",
         });
