@@ -1,50 +1,14 @@
 {
   "mentors": [
     {
-      "id": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "username": "Kamogelo",
-      "email": "trapgoatkaymow@gmail.com",
-      "contact": "0713524369",
-      "role": "mentor",
-      "status": "approved",
-      "createdAt": 1789213286447,
-      "banking": {
-        "accountName": "",
-        "bankName": "",
-        "accountNumber": "",
-        "branchCode": "",
-        "accountType": "",
-        "updatedAt": null
-      },
-      "licenseKeysAllowed": 1000,
-      "inviteCode": "EAE67ECA"
-    },
-    {
-      "id": "e7adfe27-f723-4a89-ac05-6565d9b0f411",
-      "username": "Pending Mentor",
-      "email": "pending.mentor.1789212420008@example.com",
-      "contact": "+27123456789",
-      "role": "mentor",
-      "status": "pending",
-      "createdAt": 1789212420184,
-      "banking": {
-        "accountName": "",
-        "bankName": "",
-        "accountNumber": "",
-        "branchCode": "",
-        "accountType": "",
-        "updatedAt": null
-      },
-      "licenseKeysAllowed": 1500,
-      "inviteCode": "E7ADFE27"
-    },
-    {
       "id": "super-admin",
       "username": "APEX EA",
       "email": "trapgoatkaymow22@icloud.com",
       "contact": "",
       "role": "superadmin",
       "status": "approved",
+      "passwordHash": "b087184ba486e0f980cc5b53631ef153b64a58c4cb23adfeab889ce74d6667f3",
+      "salt": "e2124b7fe93b5bdce806cef602589be3",
       "createdAt": 1789212420184,
       "banking": {
         "accountName": "",
@@ -55,7 +19,7 @@
         "updatedAt": null
       },
       "licenseKeysAllowed": null,
-      "inviteCode": "SUPERADM"
+      "licenseKeysUpdatedAt": null
     }
   ]
 }
