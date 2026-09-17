@@ -499,22 +499,13 @@ export async function durableRead(opts = {}) {
   } = opts;
 
   const blob = blobPath ? await blobGet(blobPath) : null;
-  if (blob && !blob.missing && blob.raw != null) {
-    // Empty licenses blob is often a stale wipe — fall through to GitHub
-    // (store-licenses) so Reactivate/Unlock do not see a blank roster.
-    let blobEmptyLicenses = false;
-    if (/licenses\.json$/i.test(String(githubPath || blobPath || ""))) {
-      try {
-        const parsed = JSON.parse(blob.raw || "{}");
-        blobEmptyLicenses =
-          Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
-      } catch {
-        blobEmptyLicenses = false;
-      }
-    }
-    if (!blobEmptyLicenses) {
-      return { raw: blob.raw, sha: blob.etag, source: "blob" };
-    }
+  // Licenses live on the store-licenses git branch. A stale Vercel Blob copy
+  // must not win over GitHub or Reactivate/Unlock keep seeing old phone locks.
+  const licensesViaGit = /licenses\.json$/i.test(
+    String(githubPath || blobPath || "")
+  );
+  if (blob && !blob.missing && blob.raw != null && !licensesViaGit) {
+    return { raw: blob.raw, sha: blob.etag, source: "blob" };
   }
 
   if (githubPath) {
@@ -611,7 +602,13 @@ export async function durableWrite(opts = {}) {
   const body = String(raw ?? "");
   for (const file of localPaths) writeLocalFile(file, body);
 
-  if (blobPath) {
+  const licensesViaGit = /licenses\.json$/i.test(
+    String(githubPath || blobPath || "")
+  );
+
+  // Licenses must land on GitHub (store-licenses). Writing Blob first and
+  // returning early left GitHub stale so Reactivate never stuck.
+  if (blobPath && !licensesViaGit) {
     const put = await blobPut(blobPath, body);
     if (put.ok) return { ok: true, durable: true, source: "blob" };
   }
