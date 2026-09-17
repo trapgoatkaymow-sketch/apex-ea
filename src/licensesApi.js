@@ -529,7 +529,16 @@ export async function reconcileCommissionRemote(email) {
   return normalizeLicense(data?.license);
 }
 
-export async function deactivateLicenseRemote(key, { adminEmail = "" } = {}) {
+export async function deactivateLicenseRemote(
+  key,
+  {
+    adminEmail = "",
+    clientEmail = "",
+    clientName = "",
+    botId = "",
+    botName = "",
+  } = {}
+) {
   const data = await apiFetch("", {
     method: "PATCH",
     body: {
@@ -538,6 +547,16 @@ export async function deactivateLicenseRemote(key, { adminEmail = "" } = {}) {
       adminEmail: String(adminEmail || "")
         .trim()
         .toLowerCase(),
+      ...(clientEmail
+        ? {
+            clientEmail: String(clientEmail || "")
+              .trim()
+              .toLowerCase(),
+          }
+        : {}),
+      ...(clientName ? { clientName: String(clientName).trim() } : {}),
+      ...(botId ? { botId: String(botId).trim() } : {}),
+      ...(botName ? { botName: String(botName).trim() } : {}),
     },
   });
   return normalizeLicense(data?.license);

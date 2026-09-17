@@ -2526,7 +2526,16 @@ export function AppProvider({ children }) {
   );
 
   const deactivateLicense = useCallback(
-    async (rawKey, { adminEmail = "" } = {}) => {
+    async (
+      rawKey,
+      {
+        adminEmail = "",
+        clientEmail = "",
+        clientName = "",
+        botId = "",
+        botName = "",
+      } = {}
+    ) => {
       const key = normalizeLicenseKey(rawKey);
       if (!key) {
         showToast("Missing license key");
@@ -2548,16 +2557,25 @@ export function AppProvider({ children }) {
         usedAt: null,
         deviceId: null,
         boundAt: null,
+        clientEmail:
+          normalizeEmail(clientEmail) || local?.clientEmail || "",
+        clientName: String(clientName || local?.clientName || "").trim(),
         updatedAt: Date.now(),
       };
       setLicenseKeys((prev) => mergeLicenses(prev, [cleared]));
       try {
-        const remote = await deactivateLicenseRemote(key, { adminEmail: actor });
+        const remote = await deactivateLicenseRemote(key, {
+          adminEmail: actor,
+          clientEmail,
+          clientName,
+          botId,
+          botName,
+        });
         if (remote) setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
-        showToast("License deactivated — available again");
+        showToast("License reactivated — available again");
         return remote || cleared;
       } catch (error) {
-        showToast(error.message || "Could not deactivate license");
+        showToast(error.message || "Could not reactivate license");
         return null;
       }
     },

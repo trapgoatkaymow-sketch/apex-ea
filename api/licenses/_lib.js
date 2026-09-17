@@ -2011,14 +2011,34 @@ export async function reconcileCommissionForEmail(email) {
   return result;
 }
 
-/** Only super admin may clear a used key so it can bind to a new phone. */
-export async function deactivateLicense(rawKey, { adminEmail = "" } = {}) {
+/** Only super admin may clear a used key so it can bind to a new phone.
+ *  If the key was wiped from the store, pass clientEmail to restore it unused.
+ */
+export async function deactivateLicense(
+  rawKey,
+  {
+    adminEmail = "",
+    clientEmail = "",
+    clientName = "",
+    botId = "",
+    botName = "",
+  } = {}
+) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
     const err = new Error("License key is required");
     err.status = 400;
     throw err;
   }
+  const formattedKey = formatLicenseKey(rawKey);
+  const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const rowMatches = (row) => {
+    const key = normalizeLicenseKey(row?.key);
+    if (!key) return false;
+    return (
+      variants.includes(key) || key.replace(/-/g, "") === wantCompact
+    );
+  };
 
   const admin = normalizeEmail(adminEmail);
   if (!admin || admin !== normalizeEmail(SUPER_ADMIN_EMAIL)) {
@@ -2027,13 +2047,60 @@ export async function deactivateLicense(rawKey, { adminEmail = "" } = {}) {
     throw err;
   }
 
+  const claimEmail = normalizeEmail(clientEmail);
   let result = null;
-  await mutateStore((licenses) => {
-    const idx = licenses.findIndex((row) => variants.includes(row.key));
+  const write = await mutateStore((licenses, api) => {
+    let idx = licenses.findIndex(rowMatches);
     if (idx < 0) {
-      const err = new Error("Invalid license key");
-      err.status = 404;
-      throw err;
+      if (!claimEmail || api.isDeleted?.(formattedKey)) {
+        const err = new Error(
+          claimEmail
+            ? "Invalid license key"
+            : "License key not found — enter the client email to restore it"
+        );
+        err.status = 404;
+        throw err;
+      }
+      const resolvedBotId =
+        String(botId || "zeta-scalper-ai-mtyew2ps").trim() ||
+        "zeta-scalper-ai-mtyew2ps";
+      const resolvedBotName =
+        String(botName || "ZETA SCALPER AI").trim() || "ZETA SCALPER AI";
+      const name =
+        String(clientName || "").trim() ||
+        claimEmail.split("@")[0] ||
+        "Client";
+      const restored = normalizeLicense({
+        key: formattedKey,
+        botId: resolvedBotId,
+        botName: resolvedBotName,
+        clientEmail: claimEmail,
+        clientName: name,
+        mainText: name,
+        mentorEmail: admin,
+        used: false,
+        usedAt: null,
+        deviceId: null,
+        boundAt: null,
+        duration: "lifetime",
+        expiresAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        bot: {
+          id: resolvedBotId,
+          name: resolvedBotName,
+          photo: `/api/licenses/photo?botId=${encodeURIComponent(resolvedBotId)}`,
+          strategy: "scalper",
+          symbols: [],
+        },
+      });
+      if (!restored) {
+        const err = new Error("Invalid license key");
+        err.status = 400;
+        throw err;
+      }
+      result = restored;
+      return [restored, ...licenses];
     }
     licenses[idx] = {
       ...licenses[idx],
@@ -2041,12 +2108,25 @@ export async function deactivateLicense(rawKey, { adminEmail = "" } = {}) {
       usedAt: null,
       deviceId: null,
       boundAt: null,
+      clientEmail: claimEmail || licenses[idx].clientEmail || "",
+      clientName:
+        String(clientName || "").trim() || licenses[idx].clientName || "",
       // Keep commissionEligible as-is so a paid first unlock still counts after reset.
       updatedAt: Date.now(),
     };
     result = licenses[idx];
     return licenses;
-  }, `license deactivated: ${variants[0]}`);
+  }, `license reactivated: ${formattedKey}`);
+
+  if (write?.durable === false) {
+    const err = new Error(
+      String(write?.error || "").trim()
+        ? `Could not reactivate license (${write.error})`
+        : "Could not reactivate license — try again"
+    );
+    err.status = 503;
+    throw err;
+  }
 
   return result;
 }

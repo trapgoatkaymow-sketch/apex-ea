@@ -184,6 +184,10 @@ export default async function handler(req, res) {
       const license = shouldDeactivate
         ? await deactivateLicense(body.key, {
             adminEmail: body.adminEmail || body.email || "",
+            clientEmail: body.clientEmail || body.licenseEmail || "",
+            clientName: body.clientName || "",
+            botId: body.botId || body.bot?.id || "",
+            botName: body.botName || body.bot?.name || "",
           })
         : await markLicenseUsed(body.key, {
             deviceId: body.deviceId || "",
