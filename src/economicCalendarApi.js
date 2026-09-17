@@ -40,11 +40,54 @@ export function formatEventDay(dateKey) {
   });
 }
 
+/** When the mentor posted/updated the signal direction (SAST clock). */
+export function formatSignalPostedAt(value, now = new Date()) {
+  const ms = Number(value);
+  if (!Number.isFinite(ms) || ms <= 0) return "";
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return "";
+  try {
+    const time = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Johannesburg",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date);
+    const day = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Johannesburg",
+      day: "numeric",
+      month: "short",
+    }).format(date);
+    const todayKey = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now);
+    const postedKey = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+    if (todayKey === postedKey) return `${time} SAST`;
+    return `${time} · ${day}`;
+  } catch {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+}
+
 function publicEvent(row = {}) {
   const id = String(row.id || "").trim();
   const date = normalizeEventDate(row.date || row.eventDate);
   const mentorEmail = normalizeEmail(row.mentorEmail);
   if (!id || !date || !mentorEmail) return null;
+  const createdAt = Number(row.createdAt) || Date.now();
+  const updatedAt = Number(row.updatedAt) || createdAt;
+  const postedAt =
+    Number(row.postedAt) ||
+    (String(row.directions || "").trim() ? updatedAt || createdAt : 0) ||
+    0;
   return {
     id,
     officialEventId: String(row.officialEventId || id || "").trim(),
@@ -52,8 +95,9 @@ function publicEvent(row = {}) {
     title: String(row.title || "").trim() || "Economic event",
     directions: String(row.directions || "").trim(),
     mentorEmail,
-    createdAt: Number(row.createdAt) || Date.now(),
-    updatedAt: Number(row.updatedAt) || Number(row.createdAt) || Date.now(),
+    createdAt,
+    updatedAt,
+    postedAt: postedAt || null,
   };
 }
 

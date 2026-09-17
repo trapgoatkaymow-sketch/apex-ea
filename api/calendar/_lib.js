@@ -250,6 +250,12 @@ export function publicEvent(row = {}) {
   const date = normalizeEventDate(row.date || row.eventDate);
   const mentorEmail = normalizeEmail(row.mentorEmail);
   if (!id || !date || !mentorEmail) return null;
+  const createdAt = Number(row.createdAt) || Date.now();
+  const updatedAt = Number(row.updatedAt) || createdAt;
+  const postedAt =
+    Number(row.postedAt) ||
+    (String(row.directions || "").trim() ? updatedAt || createdAt : 0) ||
+    0;
   return {
     id,
     officialEventId: String(row.officialEventId || id || "").trim(),
@@ -257,8 +263,9 @@ export function publicEvent(row = {}) {
     title: String(row.title || "").trim() || "Economic event",
     directions: String(row.directions || "").trim(),
     mentorEmail,
-    createdAt: Number(row.createdAt) || Date.now(),
-    updatedAt: Number(row.updatedAt) || Number(row.createdAt) || Date.now(),
+    createdAt,
+    updatedAt,
+    postedAt: postedAt || null,
   };
 }
 
@@ -472,6 +479,15 @@ export async function upsertEvent(input = {}) {
       );
     });
     const id = idx >= 0 ? kept[idx].id : preferredId;
+    const nowMs = Date.now();
+    const prev = idx >= 0 ? kept[idx] : null;
+    const prevDirections = String(prev?.directions || "").trim();
+    // Stamp postedAt the moment the mentor saves/updates a signal direction.
+    const postedAt = directions
+      ? directions !== prevDirections
+        ? nowMs
+        : Number(prev?.postedAt) || Number(prev?.updatedAt) || nowMs
+      : null;
     const row = {
       id,
       officialEventId,
@@ -479,8 +495,9 @@ export async function upsertEvent(input = {}) {
       title,
       directions,
       mentorEmail,
-      createdAt: idx >= 0 ? kept[idx].createdAt || Date.now() : Date.now(),
-      updatedAt: Date.now(),
+      createdAt: prev?.createdAt || nowMs,
+      updatedAt: nowMs,
+      postedAt,
     };
     saved = row;
     if (idx >= 0) {

@@ -8643,12 +8643,49 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 700;
 }
 
-.econ-cal-next-title {
+.econ-cal-next-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0 0 6px;
+}
+
+.econ-cal-next-title {
+  margin: 0;
   color: #fff;
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: 0.04em;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.econ-cal-posted {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 0 0 auto;
+  text-align: right;
+  max-width: 46%;
+}
+
+.econ-cal-posted-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent, #ff2d7a) 80%, #fff);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.econ-cal-posted-time {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .econ-cal-next-day {

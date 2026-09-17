@@ -325,18 +325,25 @@ export function findOfficialEvent({ id = "", date = "", title = "" } = {}) {
 }
 
 export function getMentorSignalForEvent(official, mentorEvents = [], now = new Date()) {
-  if (!official) return "";
+  const row = findMentorSignalEvent(official, mentorEvents, now);
+  return String(row?.directions || "").trim();
+}
+
+/** Full mentor signal row for the official event (includes postedAt). */
+export function findMentorSignalEvent(official, mentorEvents = [], now = new Date()) {
+  if (!official) return null;
   // Cleared the day after the event.
-  if (isSignalDirectionExpired(official, now)) return "";
+  if (isSignalDirectionExpired(official, now)) return null;
   const list = Array.isArray(mentorEvents) ? mentorEvents : [];
-  const exact = list.find(
-    (row) =>
-      String(row.officialEventId || "").trim() === official.id ||
-      String(row.id || "").trim() === official.id ||
-      (normalizeEventDate(row.date) === official.date &&
-        normalizeMacroTitle(row.title) === official.title)
+  return (
+    list.find(
+      (row) =>
+        String(row.officialEventId || "").trim() === official.id ||
+        String(row.id || "").trim() === official.id ||
+        (normalizeEventDate(row.date) === official.date &&
+          normalizeMacroTitle(row.title) === official.title)
+    ) || null
   );
-  return String(exact?.directions || "").trim();
 }
 
 export function matchMentorDirection(official, mentorEvents = [], now = new Date()) {

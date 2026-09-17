@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { formatEventDay } from "./economicCalendarApi.js";
+import { formatEventDay, formatSignalPostedAt } from "./economicCalendarApi.js";
 import {
   formatSignalExecuteHint,
-  getMentorSignalForEvent,
+  findMentorSignalEvent,
   getNextOfficialEvent,
   isSignalExecuteOpen,
   parseSignalTrade,
@@ -176,9 +176,23 @@ export default function EconomicCalendarButton({ variant = "zeta" }) {
   const nextEvent = useMemo(() => getNextOfficialEvent(now), [now]);
   const isToday = Boolean(nextEvent && nextEvent.date === today);
   // Show mentor signal for the current/next event until the day after (then it clears).
-  const signal = useMemo(
-    () => getMentorSignalForEvent(nextEvent, mentorEvents, now),
+  const signalEvent = useMemo(
+    () => findMentorSignalEvent(nextEvent, mentorEvents, now),
     [nextEvent, mentorEvents, now]
+  );
+  const signal = useMemo(
+    () => String(signalEvent?.directions || "").trim(),
+    [signalEvent]
+  );
+  const postedLabel = useMemo(
+    () =>
+      signal
+        ? formatSignalPostedAt(
+            signalEvent?.postedAt || signalEvent?.updatedAt || signalEvent?.createdAt,
+            now
+          )
+        : "",
+    [signal, signalEvent, now]
   );
   const parsed = useMemo(() => parseSignalTrade(signal), [signal]);
   const executeOpen = useMemo(
@@ -305,7 +319,15 @@ export default function EconomicCalendarButton({ variant = "zeta" }) {
                 ) : (
                   <>
                     <p className="econ-cal-next-label">Next event</p>
-                    <p className="econ-cal-next-title">{nextEvent.title}</p>
+                    <div className="econ-cal-next-title-row">
+                      <p className="econ-cal-next-title">{nextEvent.title}</p>
+                      {postedLabel ? (
+                        <div className="econ-cal-posted" aria-label={`Time posted ${postedLabel}`}>
+                          <span className="econ-cal-posted-label">Time posted</span>
+                          <strong className="econ-cal-posted-time">{postedLabel}</strong>
+                        </div>
+                      ) : null}
+                    </div>
                     <p className="econ-cal-next-day">{formatEventDay(nextEvent.date)}</p>
                     <p className="econ-cal-next-note">
                       {nextEvent.timeSa || nextEvent.timeEt} SAST
