@@ -5,6 +5,7 @@ import {
 } from "../signups/_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
+import { durableRead, durableWrite } from "../_durableJson.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -12,6 +13,7 @@ import { fileURLToPath } from "url";
 const REPO = process.env.SIGNUPS_GITHUB_REPO || "Kamogelo2703/gizmo";
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.LICENSES_FILE_PATH || "data/licenses.json";
+const BLOB_PATH = process.env.LICENSES_BLOB_PATH || "apexea/licenses.json";
 const API = `https://api.github.com/repos/${REPO}`;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -673,8 +675,32 @@ function mergeLicenseLists(...lists) {
         : preferIncoming
           ? item.bot?.photo || prev.bot?.photo
           : prev.bot?.photo || item.bot?.photo;
+    // Never let an empty stamp wipe a live phone/MT session from another source.
+    // Explicit clears still work when the winning row sets used:false (deactivate).
+    const winningUsed = preferIncoming ? Boolean(item.used) : Boolean(prev.used || item.used);
+    const keepRobot = (field) => {
+      const a = item[field];
+      const b = prev[field];
+      if (!winningUsed) return preferIncoming ? a || null : b || a || null;
+      if (preferIncoming) return a || b || (field === "robotConnectedAt" ? null : "");
+      return b || a || (field === "robotConnectedAt" ? null : "");
+    };
     map.set(item.key, {
       ...merged,
+      used: winningUsed,
+      deviceId: winningUsed
+        ? preferIncoming
+          ? item.deviceId || prev.deviceId || null
+          : prev.deviceId || item.deviceId || null
+        : preferIncoming
+          ? item.deviceId || null
+          : prev.deviceId || item.deviceId || null,
+      robotAccountId: keepRobot("robotAccountId") || "",
+      robotLogin: keepRobot("robotLogin") || "",
+      robotServer: keepRobot("robotServer") || "",
+      robotCompany: keepRobot("robotCompany") || "",
+      robotPlatform: keepRobot("robotPlatform") || "",
+      robotConnectedAt: keepRobot("robotConnectedAt"),
       updatedAt: Math.max(
         prev.updatedAt || 0,
         item.updatedAt || 0,
@@ -795,24 +821,39 @@ function writeLocalStore(licenses, deletedKeys = memoryDeletedKeys) {
 
 async function readStore() {
   let remote = null;
-  try {
-    const file = await ghFetch(
-      `${API}/contents/${FILE_PATH}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    remote = decodeContent(file);
-  } catch (error) {
-    if (error.status === 404) {
-      remote = { sha: null, licenses: [], deletedKeys: {} };
-    } else {
-      // Expired / missing GitHub token → use local/memory so create + activate still work.
-      return readLocalStore();
+  let remoteSource = "empty";
+
+  // Prefer Blob (shared across serverless) then GitHub, then env snapshot.
+  const durable = await durableRead({
+    blobPath: BLOB_PATH,
+    githubPath: FILE_PATH,
+    snapshotEnv: "LICENSES_SNAPSHOT_B64",
+    localPaths: [TMP_FILE, BUNDLED_FILE],
+  });
+  if (durable.raw != null) {
+    try {
+      const parsed = JSON.parse(durable.raw || "{}");
+      const licenses = Array.isArray(parsed?.licenses) ? parsed.licenses : [];
+      const deletedKeys = normalizeDeletedKeys(parsed?.deletedKeys);
+      remote = {
+        sha: durable.source === "github" ? durable.sha : null,
+        licenses: licenses.map(normalizeLicense).filter(Boolean),
+        deletedKeys,
+      };
+      remoteSource = durable.source;
+    } catch {
+      remote = null;
     }
   }
 
+  if (!remote) {
+    // Last resort: local/memory only.
+    return readLocalStore();
+  }
+
   const localFiles = readLocalFileLicenses();
-  // Always merge GitHub + /tmp + bundled + memory so redeploys / stale GitHub
-  // snapshots cannot make newly created keys look "Invalid".
+  // Always merge durable + /tmp + bundled + memory so redeploys / stale snapshots
+  // cannot make newly created keys look "Invalid".
   // Tombstones win: deleted keys stay deleted across every source.
   const deletedKeys = mergeDeletedKeyMaps(
     remote?.deletedKeys,
@@ -833,17 +874,18 @@ async function readStore() {
     sha: remote?.sha ?? null,
     licenses: memoryLicenses.map((row) => ({ ...row })),
     deletedKeys,
-    remote: true,
+    remote: remoteSource !== "local" && remoteSource !== "empty",
+    source: remoteSource,
   };
 }
 
 async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKeys) {
   const nextDeleted = normalizeDeletedKeys(deletedKeys);
   const normalized = withoutDeletedLicenses(mergeLicenseLists(licenses), nextDeleted);
-  // Always keep a local copy first so a failed GitHub write cannot drop keys.
+  // Always keep a local copy first so a failed remote write cannot drop keys.
   writeLocalStore(normalized, nextDeleted);
 
-  const content = Buffer.from(
+  const payload =
     JSON.stringify(
       {
         licenses: normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
@@ -851,35 +893,31 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
       },
       null,
       2
-    ) + "\n",
-    "utf8"
-  ).toString("base64");
+    ) + "\n";
 
-  const body = {
+  const durable = await durableWrite({
+    raw: payload,
+    blobPath: BLOB_PATH,
+    githubPath: FILE_PATH,
+    githubSha: sha && sha !== "local" ? sha : null,
     message,
-    content,
-    branch: BRANCH,
-  };
-  if (sha && sha !== "local") body.sha = sha;
+    localPaths: [TMP_FILE, BUNDLED_FILE],
+  });
 
-  try {
-    const result = await ghFetch(`${API}/contents/${FILE_PATH}`, {
-      method: "PUT",
-      body,
-    });
+  if (durable.durable) {
     memoryLicenses = normalized.map((row) => ({ ...row }));
     memoryDeletedKeys = nextDeleted;
-    return { ...(result || {}), durable: true };
-  } catch (error) {
-    // Local/memory copy already written — mark non-durable so callers can keep
-    // a client-side deny list until GitHub credentials work again.
-    console.warn("licenses github write failed", error.message || error);
-    return {
-      local: true,
-      durable: false,
-      error: error.message || "github write failed",
-    };
+    return { durable: true, source: durable.source, sha: durable.sha || sha };
   }
+
+  // Local/memory copy already written — mark non-durable so callers can keep
+  // a client-side deny list until Blob/GitHub credentials work again.
+  console.warn("licenses durable write failed", durable.reason || "unknown");
+  return {
+    local: true,
+    durable: false,
+    error: durable.reason || "durable write failed",
+  };
 }
 
 async function mutateStore(mutator, message) {
@@ -1748,6 +1786,8 @@ export async function setLicenseRobotSession(email, session = {}) {
   await mutateStore((licenses) => {
     for (let i = 0; i < licenses.length; i += 1) {
       if (normalizeEmail(licenses[i]?.clientEmail) !== key) continue;
+      // Only stamp used keys — unused inventory must not flip to "Connected".
+      if (!licenses[i]?.used) continue;
       licenses[i] = {
         ...licenses[i],
         robotAccountId: accountId,

@@ -147,6 +147,15 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           status?.disconnected === true;
         if (disconnected) {
           showToast("Broker session expired — reconnect MetaTrader");
+          setMt5Session(null);
+          const accountEmail = normalizeEmail(coverEmail);
+          if (accountEmail) {
+            try {
+              await removeMt5Account(accountEmail);
+            } catch {
+              /* best-effort */
+            }
+          }
           return;
         }
         await syncHostedAccount(session, coverEmail);

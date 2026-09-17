@@ -1,70 +1,23 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
 import { applyCorsHeaders } from "../_cors.js";
+import { durableRead, durableWrite } from "../_durableJson.js";
 
-const REPO = process.env.SIGNUPS_GITHUB_REPO || "Kamogelo2703/gizmo";
-const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.MT5_ACCOUNTS_FILE_PATH || "data/mt5-accounts.json";
-const API = `https://api.github.com/repos/${REPO}`;
+const BLOB_PATH =
+  process.env.MT5_ACCOUNTS_BLOB_PATH || "apexea/mt5-accounts.json";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/mt5-accounts.json");
 const TMP_FILE = path.join("/tmp", "apexea-mt5-accounts.json");
 
 let memoryAccounts = null;
+let lastRemoteSha = null;
 
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
-}
-
-function requireToken() {
-  const token =
-    process.env.SIGNUPS_GITHUB_TOKEN ||
-    process.env.GITHUB_TOKEN ||
-    process.env.GH_TOKEN ||
-    FALLBACK_GITHUB_TOKEN ||
-    "";
-  if (!token) {
-    const err = new Error("MT5 account store is not configured");
-    err.status = 500;
-    throw err;
-  }
-  return token;
-}
-
-async function ghFetch(url, { method = "GET", body, token, auth = true, cache } = {}) {
-  const headers = {
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
-  if (auth) headers.Authorization = `Bearer ${token || requireToken()}`;
-  if (body) headers["Content-Type"] = "application/json";
-
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    ...(cache ? { cache } : {}),
-  });
-  const text = await response.text();
-  let data = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
-  if (!response.ok) {
-    const message =
-      (data && (data.message || data.error)) || `GitHub error ${response.status}`;
-    const err = new Error(message);
-    err.status = response.status;
-    err.data = data;
-    throw err;
-  }
-  return data;
 }
 
 export function normalizeMt5Account(row = {}) {
@@ -95,6 +48,23 @@ function decodeAccountsJson(raw, sha = null) {
   } catch {
     return { sha, accounts: [] };
   }
+}
+
+function mergeAccountLists(...lists) {
+  const map = new Map();
+  for (const list of lists) {
+    for (const row of list || []) {
+      const item = normalizeMt5Account(row);
+      if (!item) continue;
+      const prev = map.get(item.email);
+      if (!prev || (item.updatedAt || 0) >= (prev.updatedAt || 0)) {
+        map.set(item.email, item);
+      }
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
+  );
 }
 
 function readLocalStore() {
@@ -132,41 +102,38 @@ function writeLocalStore(accounts) {
 }
 
 async function readStore() {
-  try {
-    const file = await ghFetch(
-      `${API}/contents/${FILE_PATH}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    const raw = Buffer.from(String(file.content || "").replace(/\n/g, ""), "base64").toString(
-      "utf8"
-    );
-    return decodeAccountsJson(raw, file.sha);
-  } catch (error) {
-    if (error.status === 404) return { sha: null, accounts: [], remote: true };
-    return { ...readLocalStore(), remote: false };
-  }
+  const remote = await durableRead({
+    blobPath: BLOB_PATH,
+    githubPath: FILE_PATH,
+    snapshotEnv: "MT5_ACCOUNTS_SNAPSHOT_B64",
+    localPaths: [TMP_FILE, LOCAL_FILE],
+  });
+  const decoded = decodeAccountsJson(remote.raw, remote.sha);
+  lastRemoteSha = remote.source === "github" ? remote.sha : lastRemoteSha;
+  const local = readLocalStore().accounts;
+  const merged = mergeAccountLists(decoded.accounts, local);
+  memoryAccounts = merged.map((a) => ({ ...a }));
+  return {
+    sha: remote.source === "github" ? remote.sha : null,
+    accounts: memoryAccounts.map((a) => ({ ...a })),
+    source: remote.source,
+  };
 }
 
 async function writeStore(accounts, sha, message) {
   const normalized = accounts.map(normalizeMt5Account).filter(Boolean);
-  const content = Buffer.from(
-    JSON.stringify({ accounts: normalized }, null, 2) + "\n",
-    "utf8"
-  ).toString("base64");
-  const body = { message, content, branch: BRANCH };
-  if (sha && sha !== "local") body.sha = sha;
-  try {
-    const result = await ghFetch(`${API}/contents/${FILE_PATH}`, {
-      method: "PUT",
-      body,
-    });
-    memoryAccounts = normalized;
-    return result;
-  } catch (error) {
-    // Always keep a local copy when GitHub auth fails (same as licenses/signups).
-    writeLocalStore(normalized);
-    return { local: true };
-  }
+  writeLocalStore(normalized);
+  const payload = `${JSON.stringify({ accounts: normalized }, null, 2)}\n`;
+  const result = await durableWrite({
+    raw: payload,
+    blobPath: BLOB_PATH,
+    githubPath: FILE_PATH,
+    githubSha: sha && sha !== "local" ? sha : lastRemoteSha,
+    message,
+    localPaths: [TMP_FILE, LOCAL_FILE],
+  });
+  if (result.sha) lastRemoteSha = result.sha;
+  return result;
 }
 
 async function mutateStore(mutator, message) {
@@ -175,7 +142,8 @@ async function mutateStore(mutator, message) {
     try {
       const store = await readStore();
       const next = mutator(store.accounts.map((a) => ({ ...a })));
-      await writeStore(next, store.sha, message);
+      const write = await writeStore(next, store.sha, message);
+      if (write.conflict) continue;
       return next.map(normalizeMt5Account).filter(Boolean);
     } catch (error) {
       lastError = error;
@@ -194,15 +162,7 @@ async function mutateStore(mutator, message) {
 
 export async function listMt5Accounts() {
   const store = await readStore();
-  const local = readLocalStore().accounts;
-  const map = new Map();
-  for (const row of [...local, ...(store.accounts || [])]) {
-    const item = normalizeMt5Account(row);
-    if (!item) continue;
-    const prev = map.get(item.email);
-    if (!prev || (item.updatedAt || 0) >= (prev.updatedAt || 0)) map.set(item.email, item);
-  }
-  return Array.from(map.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  return store.accounts;
 }
 
 export async function upsertMt5Account(payload = {}) {

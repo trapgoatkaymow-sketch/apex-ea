@@ -4438,6 +4438,13 @@ html:has(.phone[data-interface="v2"]) body {
   color: var(--ap-muted);
 }
 
+.admin-portal[data-theme="dark"] .self-host-trades-input {
+  background: rgba(8, 12, 22, 0.85);
+  border-color: rgba(0, 229, 255, 0.4);
+  color: var(--ap-text);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.12);
+}
+
 .admin-portal[data-theme="dark"] .self-host-side-btn.is-active.is-buy,
 .admin-portal[data-theme="dark"] .self-host-side-btn.is-active.is-sell {
   background: linear-gradient(90deg, rgba(0, 229, 255, 0.2), rgba(166, 107, 255, 0.18));

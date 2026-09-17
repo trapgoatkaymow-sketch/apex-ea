@@ -706,7 +706,9 @@ export default function AdminPortal() {
 
   useEffect(() => {
     if (!adminOpen || !adminSession || isSuperAdminSession(adminSession)) return;
-    if (adminPage !== "self-hosting") return;
+    // Keep robot registry warm on Dashboard + Self Hosting so Connected
+    // matches live MT sessions (not only when the Self Hosting tab is open).
+    if (adminPage !== "self-hosting" && adminPage !== "dashboard") return;
     setHostRecent(loadSelfHostRecent(adminSession.email));
     let cancelled = false;
     async function loadHosted() {
@@ -714,11 +716,42 @@ export default function AdminPortal() {
       try {
         const accounts = await listMentorHostedAccounts(adminSession.email);
         if (cancelled) return;
-        setHostAccounts(accounts);
+        // Also surface robot sessions stamped on local license rows — durable
+        // across refreshes even when /api/mt5-accounts /tmp is empty on this hit.
+        const fromLicenses = (Array.isArray(licenseKeys) ? licenseKeys : [])
+          .filter((row) => {
+            const mentor = normalizeAdminEmail(row.mentorEmail);
+            const mine = normalizeAdminEmail(adminSession.email);
+            return mentor && mine && mentor === mine && String(row.robotAccountId || "").trim();
+          })
+          .map((row) => ({
+            email: String(row.clientEmail || "").trim().toLowerCase(),
+            accountId: String(row.robotAccountId || "").trim(),
+            login: String(row.robotLogin || "").trim(),
+            server: String(row.robotServer || "").trim(),
+            company: String(row.robotCompany || "").trim(),
+            platform: String(row.robotPlatform || "MT5").trim() || "MT5",
+            connectedAt: Number(row.robotConnectedAt) || Date.now(),
+            updatedAt: Number(row.updatedAt || row.robotConnectedAt) || Date.now(),
+            source: "license-local",
+          }))
+          .filter((row) => row.email && row.accountId);
+        const byEmail = new Map();
+        for (const row of [...fromLicenses, ...(accounts || [])]) {
+          const email = String(row.email || "").trim().toLowerCase();
+          if (!email) continue;
+          const prev = byEmail.get(email);
+          if (!prev || (row.updatedAt || 0) >= (prev.updatedAt || 0)) {
+            byEmail.set(email, row);
+          }
+        }
+        setHostAccounts(Array.from(byEmail.values()));
       } catch (error) {
         if (!cancelled) {
           setHostAccounts([]);
-          showToast(error.message || "Could not load connected robot clients");
+          if (adminPage === "self-hosting") {
+            showToast(error.message || "Could not load connected robot clients");
+          }
         }
       } finally {
         if (!cancelled) setHostLoading(false);
@@ -730,7 +763,7 @@ export default function AdminPortal() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [adminOpen, adminSession, adminPage, showToast]);
+  }, [adminOpen, adminSession, adminPage, showToast, licenseKeys]);
 
   useEffect(() => {
     if (!adminOpen || !adminSession || isSuperAdminSession(adminSession)) return undefined;
@@ -1487,12 +1520,20 @@ export default function AdminPortal() {
 
   const usedKeys = myLicenses.filter((k) => k.used);
   const unusedKeys = myLicenses.filter((k) => !k.used);
-  // Connected = redeemed on a phone and/or live MT5 session stamped.
-  // Not the mentor browser's local `bots.active` list.
-  const isKeyConnected = (k) =>
-    Boolean(k?.used) &&
-    (Boolean(String(k?.deviceId || "").trim()) ||
-      Boolean(String(k?.robotAccountId || "").trim()));
+  // Connected = redeemed on a phone and/or live MT5 session stamped,
+  // or currently listed in the Self Hosting robot registry.
+  const hostEmailSet = new Set(
+    (Array.isArray(hostAccounts) ? hostAccounts : [])
+      .map((row) => String(row?.email || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const isKeyConnected = (k) => {
+    if (!k?.used) return false;
+    if (String(k?.deviceId || "").trim()) return true;
+    if (String(k?.robotAccountId || "").trim()) return true;
+    const email = String(k?.clientEmail || "").trim().toLowerCase();
+    return Boolean(email && hostEmailSet.has(email));
+  };
   const connectedKeys = myLicenses.filter((k) => isKeyConnected(k));
   const unconnectedKeys = myLicenses.filter(
     (k) => k.used && !isKeyConnected(k)

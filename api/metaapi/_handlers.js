@@ -1,6 +1,10 @@
-import { listLicenses } from "../licenses/_lib.js";
+import { clearLicenseRobotSession, listLicenses } from "../licenses/_lib.js";
 import { listMentors } from "../mentors/_lib.js";
-import { listMt5Accounts, normalizeMt5Account } from "../mt5-accounts/_lib.js";
+import {
+  listMt5Accounts,
+  normalizeMt5Account,
+  removeMt5Account,
+} from "../mt5-accounts/_lib.js";
 import { enqueueTradeEvent } from "../trade-events/_lib.js";
 import { endOptions } from "../_cors.js";
 import {
@@ -13,7 +17,6 @@ import {
   searchBrokers as mt5SearchBrokers,
   sendJson,
 } from "../mt5/_lib.js";
-import { removeMt5Account } from "../mt5-accounts/_lib.js";
 
 function normalizeEmail(email) {
   return String(email || "")
@@ -448,6 +451,18 @@ export async function handleMentorTrade(req, res) {
           error: msg,
           details: error.data || null,
         });
+        if (sessionDead && target.email) {
+          try {
+            await removeMt5Account(target.email);
+          } catch {
+            /* best-effort */
+          }
+          try {
+            await clearLicenseRobotSession(target.email);
+          } catch {
+            /* best-effort */
+          }
+        }
       }
     }
 

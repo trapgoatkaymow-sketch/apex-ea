@@ -297,22 +297,46 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
     throw err;
   }
 
+  const dead = {
+    accountId: id,
+    provider: "mt5api",
+    company: company || "",
+    state: "UNDEPLOYED",
+    connectionStatus: "DISCONNECTED",
+    disconnected: true,
+    pending: false,
+    balance: null,
+    equity: null,
+    profit: null,
+    currency: "USD",
+  };
+
   try {
-    await mt5Fetch(`/CheckConnect?id=${encodeURIComponent(id)}`, { timeoutMs: 15000 });
-  } catch (error) {
-    // Token dead / disconnected
-    return {
-      accountId: id,
-      provider: "mt5api",
-      company: company || "",
-      state: "UNDEPLOYED",
-      connectionStatus: "DISCONNECTED",
-      pending: false,
-      balance: null,
-      equity: null,
-      profit: null,
-      currency: "USD",
-    };
+    const live = await mt5Fetch(`/CheckConnect?id=${encodeURIComponent(id)}`, {
+      timeoutMs: 15000,
+    });
+    const raw =
+      typeof live === "string"
+        ? live.trim()
+        : live == null
+          ? ""
+          : typeof live === "object"
+            ? JSON.stringify(live)
+            : String(live);
+    const ok =
+      live === true ||
+      /^ok$/i.test(raw) ||
+      /^true$/i.test(raw) ||
+      (typeof live === "object" &&
+        live &&
+        !/^\[error\]/i.test(raw) &&
+        live.connected !== false &&
+        live.ok !== false);
+    if (!ok || /^\[error\]/i.test(raw) || live === false || raw === "false") {
+      return dead;
+    }
+  } catch {
+    return dead;
   }
 
   let summary = null;
