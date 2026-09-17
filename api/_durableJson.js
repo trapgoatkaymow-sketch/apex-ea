@@ -240,7 +240,7 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
   let lastStatus = 500;
 
   // main receives frequent signup commits — re-clone + retry on non-fast-forward.
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     let dir = null;
     try {
       dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-"));
@@ -283,9 +283,21 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
         error?.message ||
         "git push failed";
       lastStatus = error?.data?.statusCode || 500;
+      const retryable =
+        lastStatus === 429 ||
+        lastStatus === 500 ||
+        lastStatus === 502 ||
+        lastStatus === 503 ||
+        /too many requests|rate limit|busy|non-fast-forward|rejected/i.test(
+          String(lastReason)
+        );
       if (lastStatus === 401 || lastStatus === 403) {
         return { ok: false, reason: lastReason, status: lastStatus };
       }
+      if (!retryable && attempt >= 1) break;
+      // Back off on GitHub throttling so invite claims can land durably.
+      const waitMs = Math.min(20000, 800 * 2 ** attempt);
+      await new Promise((r) => setTimeout(r, waitMs));
     } finally {
       if (dir) {
         try {
@@ -366,36 +378,8 @@ export async function durableRead(opts = {}) {
       return { raw: gh.raw, sha: gh.sha, source: "github" };
     }
 
-    // Contents API often 403s under secondary rate limits — raw CDN still works.
-    const raw = await githubGetRaw({
-      repo: githubRepo,
-      branch: githubBranch,
-      filePath: githubPath,
-    });
-    if (raw && !raw.missing && raw.raw != null) {
-      // If CDN looks empty, confirm via shallow git clone (CDN can lag pushes).
-      let looksEmpty = false;
-      try {
-        const parsed = JSON.parse(raw.raw || "{}");
-        looksEmpty =
-          Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
-      } catch {
-        looksEmpty = false;
-      }
-      if (!looksEmpty) {
-        return { raw: raw.raw, sha: null, source: "github-raw" };
-      }
-      const viaGit = await githubGetViaGit({
-        repo: githubRepo,
-        branch: githubBranch,
-        filePath: githubPath,
-      });
-      if (viaGit && !viaGit.missing && viaGit.raw != null) {
-        return { raw: viaGit.raw, sha: null, source: "github-git" };
-      }
-      return { raw: raw.raw, sha: null, source: "github-raw" };
-    }
-
+    // Prefer git over raw CDN. CDN often returns a non-empty but stale document
+    // that is missing keys just pushed — clients then see "Invalid license key".
     const viaGit = await githubGetViaGit({
       repo: githubRepo,
       branch: githubBranch,
@@ -403,6 +387,15 @@ export async function durableRead(opts = {}) {
     });
     if (viaGit && !viaGit.missing && viaGit.raw != null) {
       return { raw: viaGit.raw, sha: null, source: "github-git" };
+    }
+
+    const raw = await githubGetRaw({
+      repo: githubRepo,
+      branch: githubBranch,
+      filePath: githubPath,
+    });
+    if (raw && !raw.missing && raw.raw != null) {
+      return { raw: raw.raw, sha: null, source: "github-raw" };
     }
   }
 
