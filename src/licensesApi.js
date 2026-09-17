@@ -496,7 +496,10 @@ export async function uploadBotPhotoRemote(botId, photo) {
   return String(data?.photo || "/logo.png");
 }
 
-export async function markLicenseUsedRemote(key, { deviceId = "", email = "" } = {}) {
+export async function markLicenseUsedRemote(
+  key,
+  { deviceId = "", email = "", license = null } = {}
+) {
   const data = await apiFetch("", {
     method: "PATCH",
     body: {
@@ -505,6 +508,7 @@ export async function markLicenseUsedRemote(key, { deviceId = "", email = "" } =
       email: String(email || "")
         .trim()
         .toLowerCase(),
+      ...(license && typeof license === "object" ? { license } : {}),
     },
   });
   return normalizeLicense(data?.license);

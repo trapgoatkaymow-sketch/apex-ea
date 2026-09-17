@@ -2110,11 +2110,14 @@ export function AppProvider({ children }) {
       }
 
       // Bind to this phone (same phone re-opens automatically).
+      // Pass the just-claimed row so Unlock can heal if a concurrent store
+      // write wiped the key between claim and markUsed.
       let remote = null;
       try {
         remote = await markLicenseUsedRemote(entry.key || key, {
           deviceId,
           email: accountEmail,
+          license: options?.license && matchKey(options.license) ? options.license : entry,
         });
       } catch (error) {
         showToast(error.message || "Could not lock license to this phone");

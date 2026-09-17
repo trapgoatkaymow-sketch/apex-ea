@@ -966,6 +966,7 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
   return {
     local: true,
     durable: false,
+    conflict: Boolean(durable.conflict),
     error: durable.reason || "durable write failed",
   };
 }
@@ -973,9 +974,10 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
 async function mutateStore(mutator, message) {
   let lastError;
   let lastWrite = null;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     try {
-      const store = await readStore();
+      // Fresh tip on retries — CDN/memory lag causes phantom "saved then Invalid" keys.
+      const store = await readStore({ preferFresh: attempt > 0 });
       const deletedKeys = { ...normalizeDeletedKeys(store.deletedKeys) };
       const api = {
         deletedKeys,
@@ -993,6 +995,22 @@ async function mutateStore(mutator, message) {
         api
       );
       lastWrite = await writeStore(next, store.sha, message, deletedKeys);
+      if (lastWrite?.durable === false) {
+        const detail = String(lastWrite?.error || "");
+        const retryable =
+          lastWrite?.conflict ||
+          /too many requests|rate limit|busy|non-fast-forward|rejected|cannot lock ref|not updated/i.test(
+            detail
+          );
+        if (retryable && attempt < 7) {
+          const waitMs = Math.min(
+            12000,
+            400 * 2 ** attempt + Math.floor(Math.random() * 300)
+          );
+          await new Promise((r) => setTimeout(r, waitMs));
+          continue;
+        }
+      }
       const licenses = withoutDeletedLicenses(mergeLicenseLists(next), deletedKeys);
       return {
         licenses,
@@ -1003,8 +1021,17 @@ async function mutateStore(mutator, message) {
       };
     } catch (error) {
       lastError = error;
-      if (error.status === 409 || error.status === 422) continue;
-      // Last resort: apply mutation purely in local memory.
+      if (error.status === 409 || error.status === 422) {
+        const waitMs = Math.min(8000, 300 * 2 ** attempt);
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+      // Last resort only after retries exhausted: local memory (claim rejects durable:false).
+      if (attempt < 7) {
+        const waitMs = Math.min(8000, 300 * 2 ** attempt);
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
       try {
         const local = readLocalStore();
         const deletedKeys = { ...normalizeDeletedKeys(local.deletedKeys) };
@@ -1028,11 +1055,21 @@ async function mutateStore(mutator, message) {
           licenses,
           deletedKeys: normalizeDeletedKeys(deletedKeys),
           durable: false,
+          error: lastError?.message || "durable write failed",
         };
       } catch {
         throw error;
       }
     }
+  }
+  if (lastWrite && lastWrite.durable === false) {
+    return {
+      licenses: Array.isArray(memoryLicenses) ? memoryLicenses : [],
+      deletedKeys: normalizeDeletedKeys(memoryDeletedKeys),
+      durable: false,
+      error: lastWrite?.error || "durable write failed",
+      source: lastWrite?.source || null,
+    };
   }
   throw lastError || new Error("Could not update licenses store");
 }
@@ -1626,8 +1663,14 @@ export async function claimLicenseViaInvite(payload = {}) {
  * Bind a license to the activating phone.
  * Same phone can re-open automatically. A different phone is always rejected —
  * only super admin can deactivate/reset a used key for a new phone.
+ *
+ * Optional `seed` (just-claimed license row): if a concurrent git write wiped the
+ * key between claim and Unlock, re-insert it durably then bind the device.
  */
-export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}) {
+export async function markLicenseUsed(
+  rawKey,
+  { deviceId = "", email = "", seed = null } = {}
+) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
     const err = new Error("License key is required");
@@ -1653,6 +1696,37 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     memoryLicenses = null;
     currentList = await listLicenses({ preferFresh: true });
     current = currentList.find((row) => variants.includes(row.key)) || null;
+  }
+  if (!current && seed && typeof seed === "object") {
+    const seeded = normalizeLicense({
+      ...seed,
+      key: seed.key || variants[0],
+      clientEmail: seed.clientEmail || claimEmail || "",
+      used: false,
+      deviceId: null,
+      boundAt: null,
+      usedAt: null,
+      updatedAt: Date.now(),
+    });
+    if (seeded && variants.includes(seeded.key)) {
+      const write = await mutateStore((licenses, api) => {
+        if (licenses.some((row) => variants.includes(row.key))) return licenses;
+        if (api.isDeleted?.(seeded.key)) return licenses;
+        return [seeded, ...licenses];
+      }, `license heal upsert: ${variants[0]}`);
+      if (write?.durable === false) {
+        const err = new Error(
+          String(write?.error || "").trim()
+            ? `Could not restore license key (${write.error}). Tap Unlock again.`
+            : "Could not restore license key. Tap Unlock again."
+        );
+        err.status = 503;
+        throw err;
+      }
+      memoryLicenses = null;
+      currentList = await listLicenses({ preferFresh: true });
+      current = currentList.find((row) => variants.includes(row.key)) || seeded;
+    }
   }
   if (!current) {
     const err = new Error("Invalid license key");

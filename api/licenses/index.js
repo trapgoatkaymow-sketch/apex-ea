@@ -188,6 +188,7 @@ export default async function handler(req, res) {
         : await markLicenseUsed(body.key, {
             deviceId: body.deviceId || "",
             email: body.email || body.clientEmail || "",
+            seed: body.license || body.seed || null,
           });
       sendJson(res, 200, { license });
       return;

@@ -221,8 +221,105 @@ async function githubPut({ repo, branch, filePath, raw, sha, message }) {
 }
 
 /**
+ * Merge two licenses.json documents by key so concurrent git pushes do not
+ * wipe each other's newly claimed keys. Prefer the newer row stamp; keep
+ * used/deviceId/robot fields when either side has them.
+ * Empty intended + reset message → overwrite (clear-all).
+ */
+function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
+  const isReset = /reset all license|clear all license/i.test(String(message || ""));
+  let remote;
+  let intended;
+  try {
+    remote = JSON.parse(String(remoteRaw || "{}"));
+    intended = JSON.parse(String(intendedRaw || "{}"));
+  } catch {
+    return String(intendedRaw ?? "");
+  }
+  const intendedList = Array.isArray(intended?.licenses) ? intended.licenses : null;
+  const remoteList = Array.isArray(remote?.licenses) ? remote.licenses : null;
+  if (!intendedList) return String(intendedRaw ?? "");
+  if (isReset && intendedList.length === 0) {
+    return (
+      JSON.stringify(
+        {
+          licenses: [],
+          deletedKeys: intended?.deletedKeys || {},
+        },
+        null,
+        2
+      ) + "\n"
+    );
+  }
+  if (!remoteList) return String(intendedRaw ?? "");
+
+  const map = new Map();
+  const stamp = (row) =>
+    Number(row?.updatedAt || row?.usedAt || row?.createdAt || 0) || 0;
+  const ingest = (row) => {
+    const key = String(row?.key || "")
+      .trim()
+      .toUpperCase();
+    if (!key) return;
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, { ...row, key: String(row.key || key) });
+      return;
+    }
+    const preferIncoming = stamp(row) >= stamp(prev);
+    const newer = preferIncoming ? row : prev;
+    const older = preferIncoming ? prev : row;
+    map.set(key, {
+      ...older,
+      ...newer,
+      key: String(newer.key || older.key || key),
+      used: Boolean(newer.used || older.used),
+      deviceId: newer.deviceId || older.deviceId || null,
+      boundAt: newer.boundAt || older.boundAt || null,
+      usedAt: newer.usedAt || older.usedAt || null,
+      robotAccountId: newer.robotAccountId || older.robotAccountId || "",
+      robotLogin: newer.robotLogin || older.robotLogin || "",
+      robotServer: newer.robotServer || older.robotServer || "",
+      robotCompany: newer.robotCompany || older.robotCompany || "",
+      robotPlatform: newer.robotPlatform || older.robotPlatform || "",
+      robotConnectedAt: newer.robotConnectedAt || older.robotConnectedAt || null,
+      updatedAt: Math.max(stamp(newer), stamp(older)),
+      bot: newer.bot || older.bot || null,
+    });
+  };
+  for (const row of remoteList) ingest(row);
+  for (const row of intendedList) ingest(row);
+
+  const deletedKeys = {
+    ...(remote?.deletedKeys && typeof remote.deletedKeys === "object"
+      ? remote.deletedKeys
+      : {}),
+    ...(intended?.deletedKeys && typeof intended.deletedKeys === "object"
+      ? intended.deletedKeys
+      : {}),
+  };
+  // Tombstones remove keys from the merged list.
+  const deletedSet = new Set(
+    Object.keys(deletedKeys).map((k) => String(k).trim().toUpperCase())
+  );
+  const licenses = Array.from(map.values())
+    .filter((row) => {
+      const key = String(row?.key || "")
+        .trim()
+        .toUpperCase();
+      return key && !deletedSet.has(key) && !deletedSet.has(key.replace(/-/g, ""));
+    })
+    .sort((a, b) => stamp(b) - stamp(a));
+
+  return JSON.stringify({ licenses, deletedKeys }, null, 2) + "\n";
+}
+
+/**
  * Write via Git Smart HTTP (isomorphic-git). Bypasses Contents API rate limits
  * that otherwise block license generation on Vercel.
+ *
+ * On non-fast-forward / ref lock races, re-clone and merge licenses.json so a
+ * concurrent claim cannot wipe another client's just-saved key.
  */
 async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
   const token = githubToken();
@@ -234,13 +331,14 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
   const http = (await import("isomorphic-git/http/node")).default;
   const url = `https://github.com/${repo}.git`;
   const onAuth = () => ({ username: token, password: "x-oauth-basic" });
-  const body = String(raw ?? "");
+  const intendedBody = String(raw ?? "");
   const commitMessage = message || `chore: update ${relPath}`;
   let lastReason = "git push failed";
   let lastStatus = 500;
+  const isLicensesFile = /licenses\.json$/i.test(relPath);
 
-  // main receives frequent signup commits — re-clone + retry on non-fast-forward.
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+  // store-licenses receives concurrent invite claims — merge + retry on NFF.
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     let dir = null;
     try {
       dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-"));
@@ -257,17 +355,42 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
 
       const abs = path.join(dir, relPath);
       fs.mkdirSync(path.dirname(abs), { recursive: true });
+      let body = intendedBody;
+      // After a conflict (or always when file exists), merge so we never push a
+      // stale full-document overwrite that drops keys from a parallel claim.
+      if (isLicensesFile && fs.existsSync(abs)) {
+        const remoteRaw = fs.readFileSync(abs, "utf8");
+        body = mergeLicensesDocuments(remoteRaw, intendedBody, commitMessage);
+      }
       fs.writeFileSync(abs, body, "utf8");
       await git.add({ fs, dir, filepath: relPath });
-      const sha = await git.commit({
-        fs,
-        dir,
-        message: commitMessage,
-        author: {
-          name: "Apex EA",
-          email: "noreply@apex-ea.com",
-        },
-      });
+      // Skip empty commits when merge equals tip (another writer already landed).
+      try {
+        const status = await git.status({ fs, dir, filepath: relPath });
+        if (status === "unmodified") {
+          return { ok: true, durable: "github-git", sha: null, merged: true };
+        }
+      } catch {
+        // continue to commit
+      }
+      let sha = null;
+      try {
+        sha = await git.commit({
+          fs,
+          dir,
+          message: commitMessage,
+          author: {
+            name: "Apex EA",
+            email: "noreply@apex-ea.com",
+          },
+        });
+      } catch (commitErr) {
+        const msg = String(commitErr?.message || commitErr || "");
+        if (/nothing to commit|no changes|same as/i.test(msg)) {
+          return { ok: true, durable: "github-git", sha: null, merged: true };
+        }
+        throw commitErr;
+      }
       await git.push({
         fs,
         http,
@@ -288,15 +411,15 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
         lastStatus === 500 ||
         lastStatus === 502 ||
         lastStatus === 503 ||
-        /too many requests|rate limit|busy|non-fast-forward|rejected/i.test(
+        /too many requests|rate limit|busy|non-fast-forward|rejected|cannot lock ref|not updated/i.test(
           String(lastReason)
         );
       if (lastStatus === 401 || lastStatus === 403) {
         return { ok: false, reason: lastReason, status: lastStatus };
       }
       if (!retryable && attempt >= 1) break;
-      // Back off on GitHub throttling so invite claims can land durably.
-      const waitMs = Math.min(20000, 800 * 2 ** attempt);
+      // Back off on GitHub throttling / ref lock so invite claims can land.
+      const waitMs = Math.min(25000, 600 * 2 ** attempt + Math.floor(Math.random() * 400));
       await new Promise((r) => setTimeout(r, waitMs));
     } finally {
       if (dir) {
@@ -309,7 +432,14 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
     }
   }
 
-  return { ok: false, reason: lastReason, status: lastStatus };
+  return {
+    ok: false,
+    reason: lastReason,
+    status: lastStatus,
+    conflict: /non-fast-forward|rejected|cannot lock ref|not updated/i.test(
+      String(lastReason)
+    ),
+  };
 }
 
 function readEnvSnapshot(envKey) {
@@ -514,7 +644,7 @@ export async function durableWrite(opts = {}) {
         sha: viaGit.sha,
       };
     }
-    if (put.status === 409 || put.status === 422) {
+    if (put.status === 409 || put.status === 422 || viaGit.conflict) {
       return {
         ok: false,
         durable: false,
@@ -527,6 +657,7 @@ export async function durableWrite(opts = {}) {
       durable: false,
       reason: viaGit.reason || put.reason || "github write failed",
       status: viaGit.status || put.status,
+      conflict: Boolean(viaGit.conflict),
     };
   }
 
