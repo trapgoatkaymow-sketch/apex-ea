@@ -1,13 +1,27 @@
 import crypto from "node:crypto";
+import zlib from "node:zlib";
+import { promisify } from "node:util";
 import { applyCorsHeaders, endOptions } from "./_cors.js";
+
+const gunzip = promisify(zlib.gunzip);
 
 export const config = {
   api: { bodyParser: false },
-  maxDuration: 60,
+  maxDuration: 300,
 };
 
-const REPO_ID = 1374093656;
+const REPO = "trapgoatkaymow-sketch/apex-ea";
 const PROJECT_NAME = "gizmo";
+const SKIP_DIRS = new Set([
+  ".git",
+  "node_modules",
+  ".vercel",
+  "android",
+  "dist",
+  "build",
+  ".cursor",
+  "__pycache__",
+]);
 
 function sendJson(res, status, body) {
   applyCorsHeaders(res);
@@ -33,19 +47,91 @@ function verifySignature(rawBody, signatureHeader, secret) {
   return crypto.timingSafeEqual(a, b);
 }
 
-async function createProductionDeploy({ token, teamId, sha, ref }) {
-  const body = {
-    name: PROJECT_NAME,
-    project: PROJECT_NAME,
-    gitSource: {
-      type: "github",
-      repoId: REPO_ID,
-      ref: ref || "main",
-      ...(sha ? { sha } : {}),
+async function fetchGithubTarball(token, sha) {
+  const url = `https://api.github.com/repos/${REPO}/tarball/${encodeURIComponent(sha)}`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "apex-ea-deploy-hook",
     },
-    target: "production",
-  };
+    redirect: "follow",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`GitHub tarball ${res.status}: ${text.slice(0, 200)}`);
+  }
+  const gz = Buffer.from(await res.arrayBuffer());
+  // GitHub returns gzip-compressed tar
+  if (gz.length >= 2 && gz[0] === 0x1f && gz[1] === 0x8b) {
+    return gunzip(gz);
+  }
+  return gz;
+}
 
+function readTarString(buf, start, len) {
+  return buf.subarray(start, start + len).toString("utf8").replace(/\0.*$/, "").trim();
+}
+
+/** Minimal ustar tar parser for GitHub tarballs. */
+function parseTar(buffer) {
+  const files = [];
+  let offset = 0;
+  while (offset + 512 <= buffer.length) {
+    const header = buffer.subarray(offset, offset + 512);
+    if (header.every((b) => b === 0)) break;
+    const name = readTarString(header, 0, 100);
+    const prefix = readTarString(header, 345, 155);
+    const sizeOctal = readTarString(header, 124, 12);
+    const typeFlag = String.fromCharCode(header[156] || 0);
+    const size = parseInt(sizeOctal || "0", 8) || 0;
+    offset += 512;
+    const content = buffer.subarray(offset, offset + size);
+    offset += Math.ceil(size / 512) * 512;
+    if (!name || typeFlag === "5") continue;
+    if (typeFlag && typeFlag !== "0" && typeFlag !== "\0") continue;
+    const full = prefix ? `${prefix}/${name}` : name;
+    files.push({ name: full, content: Buffer.from(content) });
+  }
+  return files;
+}
+
+function shouldInclude(relPath) {
+  const parts = relPath.split("/");
+  if (parts.some((p) => SKIP_DIRS.has(p))) return false;
+  if (relPath.startsWith(".env") && relPath !== ".env.example") return false;
+  const lower = relPath.toLowerCase();
+  if (
+    lower.endsWith(".apk") ||
+    lower.endsWith(".mp4") ||
+    lower.endsWith(".bundle")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+async function uploadFile(token, teamId, sha1, bytes) {
+  const res = await fetch(
+    `https://api.vercel.com/v2/files?teamId=${encodeURIComponent(teamId)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/octet-stream",
+        "x-vercel-digest": sha1,
+        "Content-Length": String(bytes.length),
+      },
+      body: bytes,
+    }
+  );
+  if (!res.ok && res.status !== 409) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Upload failed ${res.status}: ${text.slice(0, 200)}`);
+  }
+}
+
+async function createFileDeployment({ token, teamId, fileEntries, sha }) {
   const res = await fetch(
     `https://api.vercel.com/v13/deployments?teamId=${encodeURIComponent(teamId)}&forceNew=1`,
     {
@@ -54,11 +140,65 @@ async function createProductionDeploy({ token, teamId, sha, ref }) {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        name: PROJECT_NAME,
+        project: PROJECT_NAME,
+        target: "production",
+        files: fileEntries,
+        meta: {
+          githubCommitSha: sha,
+          githubCommitRef: "main",
+          githubOrg: "trapgoatkaymow-sketch",
+          githubRepo: "apex-ea",
+          deploySource: "github-deploy-webhook",
+        },
+      }),
     }
   );
   const json = await res.json().catch(() => ({}));
   return { ok: res.ok, status: res.status, json };
+}
+
+async function deploySha({ vercelToken, teamId, githubToken, sha }) {
+  const tarball = await fetchGithubTarball(githubToken, sha);
+  const tarFiles = parseTar(tarball);
+  const uploads = [];
+
+  for (const f of tarFiles) {
+    // GitHub tarball paths: <repo>-<sha>/<path>
+    const parts = f.name.split("/");
+    if (parts.length < 2) continue;
+    const rel = parts.slice(1).join("/");
+    if (!rel || !shouldInclude(rel)) continue;
+    if (f.content.length > 8_000_000) continue;
+    const sha1 = crypto.createHash("sha1").update(f.content).digest("hex");
+    uploads.push({
+      file: rel,
+      sha: sha1,
+      size: f.content.length,
+      content: f.content,
+    });
+  }
+
+  if (!uploads.length) {
+    throw new Error("No uploadable files found in GitHub tarball");
+  }
+
+  const batchSize = 12;
+  for (let i = 0; i < uploads.length; i += batchSize) {
+    const batch = uploads.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map((u) => uploadFile(vercelToken, teamId, u.sha, u.content))
+    );
+  }
+
+  const fileEntries = uploads.map(({ file, sha, size }) => ({ file, sha, size }));
+  return createFileDeployment({
+    token: vercelToken,
+    teamId,
+    fileEntries,
+    sha,
+  });
 }
 
 export default async function handler(req, res) {
@@ -71,10 +211,12 @@ export default async function handler(req, res) {
     sendJson(res, 200, {
       ok: true,
       service: "github-deploy",
+      mode: "github-tarball-upload",
       configured: Boolean(
         process.env.GITHUB_WEBHOOK_SECRET &&
           process.env.VERCEL_DEPLOY_TOKEN &&
-          process.env.VERCEL_DEPLOY_TEAM_ID
+          process.env.VERCEL_DEPLOY_TEAM_ID &&
+          process.env.GITHUB_DEPLOY_TOKEN
       ),
     });
     return;
@@ -86,10 +228,11 @@ export default async function handler(req, res) {
   }
 
   const secret = String(process.env.GITHUB_WEBHOOK_SECRET || "").trim();
-  const token = String(process.env.VERCEL_DEPLOY_TOKEN || "").trim();
+  const vercelToken = String(process.env.VERCEL_DEPLOY_TOKEN || "").trim();
   const teamId = String(process.env.VERCEL_DEPLOY_TEAM_ID || "").trim();
+  const githubToken = String(process.env.GITHUB_DEPLOY_TOKEN || "").trim();
 
-  if (!secret || !token || !teamId) {
+  if (!secret || !vercelToken || !teamId || !githubToken) {
     sendJson(res, 503, { error: "Deploy webhook not configured" });
     return;
   }
@@ -126,28 +269,40 @@ export default async function handler(req, res) {
     return;
   }
 
-  const sha = payload.after || payload.head_commit?.id || "";
-  const result = await createProductionDeploy({
-    token,
-    teamId,
-    sha,
-    ref: "main",
-  });
-
-  if (!result.ok) {
-    sendJson(res, 502, {
-      error: "Vercel deploy failed",
-      status: result.status,
-      detail: result.json?.error || result.json,
-    });
+  const sha = String(payload.after || payload.head_commit?.id || "").trim();
+  if (!sha || /^0+$/.test(sha)) {
+    sendJson(res, 200, { ok: true, ignored: "deleted-branch" });
     return;
   }
 
-  sendJson(res, 200, {
-    ok: true,
-    deploymentId: result.json.id,
-    url: result.json.url,
-    inspectorUrl: result.json.inspectorUrl,
-    readyState: result.json.readyState,
-  });
+  try {
+    const result = await deploySha({
+      vercelToken,
+      teamId,
+      githubToken,
+      sha,
+    });
+    if (!result.ok) {
+      sendJson(res, 502, {
+        error: "Vercel deploy failed",
+        status: result.status,
+        detail: result.json?.error || result.json,
+      });
+      return;
+    }
+    sendJson(res, 200, {
+      ok: true,
+      sha,
+      fileCount: undefined,
+      deploymentId: result.json.id,
+      url: result.json.url,
+      inspectorUrl: result.json.inspectorUrl,
+      readyState: result.json.readyState,
+    });
+  } catch (err) {
+    sendJson(res, 500, {
+      error: "Deploy failed",
+      detail: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
