@@ -493,6 +493,19 @@ export async function markLicenseUsedRemote(key, { deviceId = "", email = "" } =
   return normalizeLicense(data?.license);
 }
 
+/** Stamp commissionEligible after pay-after-activate (idempotent). */
+export async function reconcileCommissionRemote(email) {
+  const key = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!key.includes("@")) return null;
+  const data = await apiFetch("", {
+    method: "POST",
+    body: { action: "reconcile-commission", email: key },
+  });
+  return normalizeLicense(data?.license);
+}
+
 export async function deactivateLicenseRemote(key, { adminEmail = "" } = {}) {
   const data = await apiFetch("", {
     method: "PATCH",

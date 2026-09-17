@@ -4,6 +4,7 @@ import {
   readJsonBody,
   sendJson,
   setSignupAccessPaid,
+  setSignupAppAccessUnlocked,
   setSignupPremiumScanner,
   setSignupStatus,
   upsertSignup,
@@ -27,7 +28,10 @@ async function entitleIfLicenseOwner(email, signup) {
     const { findLicensesByEmail } = await import("../licenses/_lib.js");
     const owned = await findLicensesByEmail(key);
     if (!owned?.length) return signup;
-    return (await setSignupAccessPaid(key, true)) || signup;
+    // Reinstall with an existing license: unlock app access without marking
+    // PayPal accessPaid (keeps mentor commission accurate).
+    await setSignupStatus(key, "approved");
+    return (await setSignupAppAccessUnlocked(key)) || signup;
   } catch {
     return signup;
   }
@@ -71,6 +75,14 @@ export default async function handler(req, res) {
         body.action === "markPaid"
       ) {
         const signup = await setSignupAccessPaid(body.email, true);
+        try {
+          const { reconcileCommissionForEmail } = await import(
+            "../licenses/_lib.js"
+          );
+          await reconcileCommissionForEmail(body.email);
+        } catch {
+          // Best-effort backfill after payment mark.
+        }
         sendJson(res, 200, { signup, accessPaid: true });
         return;
       }
