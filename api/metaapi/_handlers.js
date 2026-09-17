@@ -341,6 +341,32 @@ export async function handleMentorTrade(req, res) {
       .filter(Boolean);
     for (const row of registry) pushTarget(row);
 
+    // Cross-function fallback: ask /api/mt5-accounts (may hold warm /tmp or
+    // license-stamped sessions this mentor-trade instance cannot see locally).
+    if (!byEmail.size) {
+      try {
+        const host =
+          process.env.VERCEL_URL ||
+          process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+          "www.apex-ea.com";
+        const base = String(host).startsWith("http")
+          ? String(host)
+          : `https://${host}`;
+        const res = await fetch(
+          `${base}/api/mt5-accounts?mentorEmail=${encodeURIComponent(mentor.email)}`,
+          { headers: { Accept: "application/json" }, cache: "no-store" }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          for (const row of Array.isArray(data?.accounts) ? data.accounts : []) {
+            pushTarget(row);
+          }
+        }
+      } catch {
+        // ignore — fall through to empty-target error
+      }
+    }
+
     const targets = Array.from(byEmail.values());
 
     if (!targets.length) {
