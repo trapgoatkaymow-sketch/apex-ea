@@ -4,6 +4,15 @@ import {
   registerMentorAccount,
 } from "./mentorsApi.js";
 
+function AdminBusyLabel({ busy, children, busyText }) {
+  return (
+    <>
+      {busy ? <span className="admin-btn-spinner" aria-hidden="true" /> : null}
+      <span>{busy ? busyText || children : children}</span>
+    </>
+  );
+}
+
 export default function AdminAuth({ onAuthenticated, showToast }) {
   const [mode, setMode] = useState("signin");
   const [busy, setBusy] = useState(false);
@@ -146,11 +155,13 @@ export default function AdminAuth({ onAuthenticated, showToast }) {
             </label>
 
             <button
-              className="admin-btn admin-btn-solid admin-btn-block"
+              className={`admin-btn admin-btn-solid admin-btn-block${busy ? " is-loading" : ""}`}
               type="submit"
               disabled={busy}
             >
-              {busy ? "Creating…" : "Register"}
+              <AdminBusyLabel busy={busy} busyText="Creating…">
+                Register
+              </AdminBusyLabel>
             </button>
           </form>
 
@@ -213,11 +224,13 @@ export default function AdminAuth({ onAuthenticated, showToast }) {
           </div>
 
           <button
-            className="admin-btn admin-btn-solid admin-btn-block"
+            className={`admin-btn admin-btn-solid admin-btn-block${busy ? " is-loading" : ""}`}
             type="submit"
             disabled={busy}
           >
-            {busy ? "Signing in…" : "Sign in"}
+            <AdminBusyLabel busy={busy} busyText="Signing in…">
+              Sign in
+            </AdminBusyLabel>
           </button>
         </form>
 

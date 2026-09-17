@@ -136,15 +136,18 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     if (!session?.accountId) return undefined;
     let cancelled = false;
     async function heartbeat() {
+      // While the broker network is offline, keep the local session armed.
+      if (apiHealth?.online === false) return;
       try {
         const status = await getAccountStatus(session.accountId, {
           company: session.company || "",
         });
         if (cancelled) return;
+        if (status?.transient) return;
         const disconnected =
+          status?.disconnected === true ||
           String(status?.connectionStatus || "").toUpperCase().includes("DISCONNECT") ||
-          String(status?.state || "").toUpperCase() === "UNDEPLOYED" ||
-          status?.disconnected === true;
+          String(status?.state || "").toUpperCase() === "UNDEPLOYED";
         if (disconnected) {
           showToast("Broker session expired — reconnect MetaTrader");
           setMt5Session(null);
@@ -160,7 +163,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         }
         await syncHostedAccount(session, coverEmail);
       } catch {
-        // ignore transient heartbeat failures
+        // ignore transient heartbeat failures — keep local session
       }
     }
     void heartbeat();
@@ -170,7 +173,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
       clearInterval(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- heartbeat tied to live session
-  }, [session?.accountId, session?.company, coverEmail]);
+  }, [session?.accountId, session?.company, coverEmail, apiHealth?.online]);
 
   // Broker API on/off — poll so clients see when 66.23.225.158 is down.
   useEffect(() => {
@@ -190,7 +193,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           status: "offline",
           checkedAt: Date.now(),
           message:
-            "Broker connection service is temporarily unavailable. This is not your login — the network is offline. Please wait a few minutes and try again.",
+            "Broker connection service is temporarily unavailable. This is not your login — the network is offline. Your account stays connected; please wait a few minutes and try again.",
         });
       } finally {
         if (!cancelled) setApiChecking(false);
@@ -220,14 +223,21 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     let cancelled = false;
 
     async function reconcile() {
+      // API offline → keep session; metrics stay as last known / dashes.
+      if (apiHealth?.online === false) return;
       try {
         const status = await getAccountStatus(session.accountId, {
           company: session.company || "",
         });
         if (cancelled) return;
+        if (status?.transient) return;
         const state = String(status?.state || "").toUpperCase();
         const connection = String(status?.connectionStatus || "").toUpperCase();
-        if (state === "UNDEPLOYED" || connection.includes("DISCONNECTED")) {
+        if (
+          status?.disconnected === true ||
+          state === "UNDEPLOYED" ||
+          connection.includes("DISCONNECTED")
+        ) {
           setMt5Session(null);
           setAccountMetrics(null);
           const accountEmail = normalizeEmail(coverEmail);
@@ -274,8 +284,8 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
       cancelled = true;
       clearInterval(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when account changes
-  }, [session?.accountId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when account / network changes
+  }, [session?.accountId, apiHealth?.online]);
 
   useEffect(() => {
     const q = query.trim();
@@ -597,7 +607,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         {apiOffline ? (
           <p className="mt-api-status-msg">
             {apiHealth?.message ||
-              "Broker connection service is temporarily unavailable. This is not your fault — please wait a few minutes and try again."}
+              "Broker connection service is temporarily unavailable. This is not your login — the network is offline. Your account stays connected; wait a few minutes and try again."}
           </p>
         ) : null}
       </div>

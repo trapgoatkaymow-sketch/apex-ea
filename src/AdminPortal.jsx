@@ -48,6 +48,16 @@ const ADMIN_SESSION_KEY = "apexea-admin-session";
 const PORTAL_THEME_KEY = "apexea-portal-theme";
 const SELF_HOST_RECENT_KEY = "apexea-self-host-recent-v1";
 
+/** Small spinner + label for portal action buttons. */
+function AdminBusyLabel({ busy, children, busyText }) {
+  return (
+    <>
+      {busy ? <span className="admin-btn-spinner" aria-hidden="true" /> : null}
+      <span>{busy ? busyText || children : children}</span>
+    </>
+  );
+}
+
 function readPortalTheme() {
   try {
     const theme = localStorage.getItem(PORTAL_THEME_KEY);
@@ -195,6 +205,13 @@ export default function AdminPortal() {
   const [licenseDuration, setLicenseDuration] = useState("1m");
   const [licenseSearch, setLicenseSearch] = useState("");
   const [licenseBulkBusy, setLicenseBulkBusy] = useState(false);
+  const [licenseGenBusy, setLicenseGenBusy] = useState(false);
+  const [licenseActionBusy, setLicenseActionBusy] = useState("");
+  const [eaBusy, setEaBusy] = useState(false);
+  const [eaDeleteBusy, setEaDeleteBusy] = useState("");
+  const [signupActionBusy, setSignupActionBusy] = useState("");
+  const [mentorActionBusy, setMentorActionBusy] = useState("");
+  const [refreshBusy, setRefreshBusy] = useState("");
   const [licenseBulkSummary, setLicenseBulkSummary] = useState(null);
   const [inviteLinkPreview, setInviteLinkPreview] = useState("");
   const [commissionSearch, setCommissionSearch] = useState("");
@@ -502,12 +519,19 @@ export default function AdminPortal() {
       showToast("Only super admin can activate used license keys");
       return;
     }
-    const result = await deactivateLicense?.(key, {
-      adminEmail: adminSession?.email || "",
-    });
-    if (result) {
-      await refreshLicenses?.();
-      if (latestKey === key) setLicenseSheetOpen(true);
+    const actionKey = `deactivate:${key}`;
+    if (licenseActionBusy) return;
+    setLicenseActionBusy(actionKey);
+    try {
+      const result = await deactivateLicense?.(key, {
+        adminEmail: adminSession?.email || "",
+      });
+      if (result) {
+        await refreshLicenses?.();
+        if (latestKey === key) setLicenseSheetOpen(true);
+      }
+    } finally {
+      setLicenseActionBusy("");
     }
   }
 
@@ -516,11 +540,18 @@ export default function AdminPortal() {
     if (!label) return;
     const ok = window.confirm(`Delete license ${label}? This cannot be undone.`);
     if (!ok) return;
-    const deleted = await deleteLicense?.(key);
-    if (deleted && latestKey === key) {
-      setLatestKey("");
-      setLatestLicenseMeta(null);
-      setLicenseSheetOpen(false);
+    const actionKey = `delete:${key}`;
+    if (licenseActionBusy) return;
+    setLicenseActionBusy(actionKey);
+    try {
+      const deleted = await deleteLicense?.(key);
+      if (deleted && latestKey === key) {
+        setLatestKey("");
+        setLatestLicenseMeta(null);
+        setLicenseSheetOpen(false);
+      }
+    } finally {
+      setLicenseActionBusy("");
     }
   }
 
@@ -875,6 +906,8 @@ export default function AdminPortal() {
   }, [mentors, adminSession?.email, adminSession?.username]);
 
   async function refreshMentorsList() {
+    if (refreshBusy === "mentors") return;
+    setRefreshBusy("mentors");
     try {
       const list = await fetchMentors();
       setMentors((prev) => {
@@ -900,6 +933,8 @@ export default function AdminPortal() {
       showToast("Mentors refreshed");
     } catch (error) {
       showToast(error.message || "Could not refresh mentors");
+    } finally {
+      setRefreshBusy("");
     }
   }
 
@@ -1031,7 +1066,26 @@ export default function AdminPortal() {
     showToast("Signed out");
   }
 
+  async function runSignupStatus(email, status, { silent = false } = {}) {
+    const actionKey = `${String(email || "").trim().toLowerCase()}:${status}`;
+    if (!silent) {
+      if (signupActionBusy) return false;
+      setSignupActionBusy(actionKey);
+    }
+    try {
+      const result = await setSignupStatus(email, status, { silent });
+      return result;
+    } finally {
+      if (!silent) setSignupActionBusy("");
+    }
+  }
+
   async function changeMentorStatus(email, status, { silent = false } = {}) {
+    const actionKey = `${normalizeAdminEmail(email)}:${status}`;
+    if (!silent) {
+      if (mentorActionBusy) return false;
+      setMentorActionBusy(actionKey);
+    }
     try {
       const updated = await updateMentorStatus(email, status);
       setMentors((prev) => {
@@ -1044,6 +1098,8 @@ export default function AdminPortal() {
     } catch (error) {
       if (!silent) showToast(error.message || "Could not update mentor");
       return false;
+    } finally {
+      if (!silent) setMentorActionBusy("");
     }
   }
 
@@ -1220,6 +1276,7 @@ export default function AdminPortal() {
 
   async function submitEa(event) {
     event.preventDefault();
+    if (eaBusy) return;
     let symbols = [...draftSymbols];
     if (customSymbol.trim()) {
       const symbol = normalizeSymbol(customSymbol);
@@ -1241,18 +1298,23 @@ export default function AdminPortal() {
       showToast("Add at least one symbol");
       return;
     }
-    const ok = await upsertEa({
-      id: editingEaId || undefined,
-      name: name.trim(),
-      strategy,
-      photo,
-      symbols,
-      ownerEmail: adminSession?.email || "",
-      ownerId: adminSession?.id || "",
-    });
-    if (!ok) return;
-    resetForm();
-    setAdminPage("manage-ea");
+    setEaBusy(true);
+    try {
+      const ok = await upsertEa({
+        id: editingEaId || undefined,
+        name: name.trim(),
+        strategy,
+        photo,
+        symbols,
+        ownerEmail: adminSession?.email || "",
+        ownerId: adminSession?.id || "",
+      });
+      if (!ok) return;
+      resetForm();
+      setAdminPage("manage-ea");
+    } finally {
+      setEaBusy(false);
+    }
   }
 
   const isSuperAdmin = isSuperAdminSession(adminSession);
@@ -1829,18 +1891,18 @@ export default function AdminPortal() {
                 aria-label="Search clients by email"
               />
               <button
-                className="admin-btn admin-btn-solid admin-btn-sm"
+                className={`admin-btn admin-btn-solid admin-btn-sm${clientBulkBusy ? " is-loading" : ""}`}
                 type="button"
                 disabled={clientBulkBusy || filteredPendingClients.length === 0}
                 onClick={() => void bulkApprovePendingClients()}
               >
-                {clientBulkBusy
-                  ? "Approving…"
-                  : `Bulk Approve${
-                      filteredPendingClients.length
-                        ? ` (${filteredPendingClients.length})`
-                        : ""
-                    }`}
+                <AdminBusyLabel busy={clientBulkBusy} busyText="Approving…">
+                  {`Bulk Approve${
+                    filteredPendingClients.length
+                      ? ` (${filteredPendingClients.length})`
+                      : ""
+                  }`}
+                </AdminBusyLabel>
               </button>
             </div>
 
@@ -1894,13 +1956,27 @@ export default function AdminPortal() {
                         {isPending ? (
                           <div className="admin-row-actions">
                             <button
-                              className="admin-btn admin-btn-solid admin-btn-sm"
+                              className={`admin-btn admin-btn-solid admin-btn-sm${
+                                signupActionBusy ===
+                                `${String(s.email || "").trim().toLowerCase()}:approved`
+                                  ? " is-loading"
+                                  : ""
+                              }`}
                               type="button"
+                              disabled={Boolean(signupActionBusy)}
                               onClick={() =>
-                                void setSignupStatus(s.email, "approved")
+                                void runSignupStatus(s.email, "approved")
                               }
                             >
-                              Approve
+                              <AdminBusyLabel
+                                busy={
+                                  signupActionBusy ===
+                                  `${String(s.email || "").trim().toLowerCase()}:approved`
+                                }
+                                busyText="Approving…"
+                              >
+                                Approve
+                              </AdminBusyLabel>
                             </button>
                           </div>
                         ) : null}
@@ -1925,12 +2001,21 @@ export default function AdminPortal() {
                 <span className="admin-badge">{pending.length}</span>
               </div>
               <button
-                className="admin-btn admin-btn-sm"
+                className={`admin-btn admin-btn-sm${refreshBusy === "signups" ? " is-loading" : ""}`}
                 type="button"
                 style={{ marginBottom: 10 }}
-                onClick={() => refreshSignups?.().then(() => showToast("Pending list refreshed"))}
+                disabled={refreshBusy === "signups"}
+                onClick={() => {
+                  if (refreshBusy === "signups") return;
+                  setRefreshBusy("signups");
+                  Promise.resolve(refreshSignups?.())
+                    .then(() => showToast("Pending list refreshed"))
+                    .finally(() => setRefreshBusy(""));
+                }}
               >
-                Refresh pending
+                <AdminBusyLabel busy={refreshBusy === "signups"} busyText="Refreshing…">
+                  Refresh pending
+                </AdminBusyLabel>
               </button>
               <div className="admin-activate-list">
                 {pending.length === 0 ? (
@@ -1942,18 +2027,46 @@ export default function AdminPortal() {
                       <span className="admin-badge is-pending">Pending</span>
                       <div className="admin-row-actions">
                         <button
-                          className="admin-btn admin-btn-solid admin-btn-sm"
+                          className={`admin-btn admin-btn-solid admin-btn-sm${
+                            signupActionBusy ===
+                            `${String(s.email || "").trim().toLowerCase()}:approved`
+                              ? " is-loading"
+                              : ""
+                          }`}
                           type="button"
-                          onClick={() => setSignupStatus(s.email, "approved")}
+                          disabled={Boolean(signupActionBusy)}
+                          onClick={() => void runSignupStatus(s.email, "approved")}
                         >
-                          Approve
+                          <AdminBusyLabel
+                            busy={
+                              signupActionBusy ===
+                              `${String(s.email || "").trim().toLowerCase()}:approved`
+                            }
+                            busyText="Approving…"
+                          >
+                            Approve
+                          </AdminBusyLabel>
                         </button>
                         <button
-                          className="admin-btn admin-btn-danger admin-btn-sm"
+                          className={`admin-btn admin-btn-danger admin-btn-sm${
+                            signupActionBusy ===
+                            `${String(s.email || "").trim().toLowerCase()}:declined`
+                              ? " is-loading"
+                              : ""
+                          }`}
                           type="button"
-                          onClick={() => setSignupStatus(s.email, "declined")}
+                          disabled={Boolean(signupActionBusy)}
+                          onClick={() => void runSignupStatus(s.email, "declined")}
                         >
-                          Decline
+                          <AdminBusyLabel
+                            busy={
+                              signupActionBusy ===
+                              `${String(s.email || "").trim().toLowerCase()}:declined`
+                            }
+                            busyText="Declining…"
+                          >
+                            Decline
+                          </AdminBusyLabel>
                         </button>
                       </div>
                     </div>
@@ -2107,14 +2220,24 @@ export default function AdminPortal() {
                     )}
                   </div>
                 </div>
-                <button className="admin-btn admin-btn-solid admin-btn-block" type="submit">
-                  {editingEaId ? "Save profile" : "Create EA"}
+                <button
+                  className={`admin-btn admin-btn-solid admin-btn-block${eaBusy ? " is-loading" : ""}`}
+                  type="submit"
+                  disabled={eaBusy}
+                >
+                  <AdminBusyLabel
+                    busy={eaBusy}
+                    busyText={editingEaId ? "Saving…" : "Creating…"}
+                  >
+                    {editingEaId ? "Save profile" : "Create EA"}
+                  </AdminBusyLabel>
                 </button>
                 {editingEaId ? (
                   <button
                     className="admin-btn admin-btn-outline admin-btn-block"
                     type="button"
                     style={{ marginTop: 8 }}
+                    disabled={eaBusy}
                     onClick={resetForm}
                   >
                     Cancel edit
@@ -2165,15 +2288,36 @@ export default function AdminPortal() {
                         <span className={`admin-badge${isLive ? " is-approved" : ""}`}>
                           {isLive ? "Live" : "Inactive"}
                         </span>
-                        <button className="ea-edit-btn" type="button" onClick={() => startEdit(ea)}>
+                        <button
+                          className="ea-edit-btn"
+                          type="button"
+                          disabled={Boolean(eaBusy || eaDeleteBusy)}
+                          onClick={() => startEdit(ea)}
+                        >
                           Edit profile
                         </button>
                         <button
-                          className="ea-delete-btn"
+                          className={`ea-delete-btn${eaDeleteBusy === ea.id ? " is-loading" : ""}`}
                           type="button"
-                          onClick={() => deleteEa(ea.id)}
+                          disabled={Boolean(eaBusy || eaDeleteBusy)}
+                          onClick={async () => {
+                            if (eaDeleteBusy) return;
+                            setEaDeleteBusy(ea.id);
+                            try {
+                              await deleteEa(ea.id);
+                            } finally {
+                              setEaDeleteBusy("");
+                            }
+                          }}
                         >
-                          Delete
+                          {eaDeleteBusy === ea.id ? (
+                            <>
+                              <span className="admin-btn-spinner" aria-hidden="true" />
+                              <span>Deleting…</span>
+                            </>
+                          ) : (
+                            "Delete"
+                          )}
                         </button>
                       </div>
                     </div>
@@ -2206,48 +2350,54 @@ export default function AdminPortal() {
                 className="license-form"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  const ea = myEas.find((b) => b.id === licenseBotId);
-                  const ownerEmail =
-                    String(ea?.ownerEmail || "").trim().toLowerCase() ||
-                    String(adminSession.email || "").trim().toLowerCase();
-                  const ownerMentor = mentors.find(
-                    (m) =>
-                      String(m.email || "")
-                        .trim()
-                        .toLowerCase() === ownerEmail
-                  );
-                  const mentorName =
-                    String(ownerMentor?.username || "").trim() ||
-                    String(adminSession.username || "").trim();
-                  const mentorId =
-                    String(ownerMentor?.id || ea?.ownerId || adminSession.id || "").trim();
-                  const key = await generateLicense(licenseBotId, {
-                    clientName: licenseClientName,
-                    mainText: licenseClientName,
-                    clientEmail: licenseClientEmail,
-                    duration: licenseDuration,
-                    mentorEmail: ownerEmail,
-                    mentorId,
-                    mentorName,
-                  });
-                  if (key) {
-                    const timing = resolveLicenseExpiry(licenseDuration);
-                    openLicenseDetail({
-                      key,
-                      clientName: licenseClientName.trim(),
-                      clientEmail: String(licenseClientEmail || "")
-                        .trim()
-                        .toLowerCase(),
-                      botName: ea?.name || "",
-                      used: false,
-                      duration: timing.duration,
-                      expiresAt: timing.expiresAt,
-                      createdAt: Date.now(),
-                      mentorName,
+                  if (licenseGenBusy) return;
+                  setLicenseGenBusy(true);
+                  try {
+                    const ea = myEas.find((b) => b.id === licenseBotId);
+                    const ownerEmail =
+                      String(ea?.ownerEmail || "").trim().toLowerCase() ||
+                      String(adminSession.email || "").trim().toLowerCase();
+                    const ownerMentor = mentors.find(
+                      (m) =>
+                        String(m.email || "")
+                          .trim()
+                          .toLowerCase() === ownerEmail
+                    );
+                    const mentorName =
+                      String(ownerMentor?.username || "").trim() ||
+                      String(adminSession.username || "").trim();
+                    const mentorId =
+                      String(ownerMentor?.id || ea?.ownerId || adminSession.id || "").trim();
+                    const key = await generateLicense(licenseBotId, {
+                      clientName: licenseClientName,
+                      mainText: licenseClientName,
+                      clientEmail: licenseClientEmail,
+                      duration: licenseDuration,
                       mentorEmail: ownerEmail,
+                      mentorId,
+                      mentorName,
                     });
+                    if (key) {
+                      const timing = resolveLicenseExpiry(licenseDuration);
+                      openLicenseDetail({
+                        key,
+                        clientName: licenseClientName.trim(),
+                        clientEmail: String(licenseClientEmail || "")
+                          .trim()
+                          .toLowerCase(),
+                        botName: ea?.name || "",
+                        used: false,
+                        duration: timing.duration,
+                        expiresAt: timing.expiresAt,
+                        createdAt: Date.now(),
+                        mentorName,
+                        mentorEmail: ownerEmail,
+                      });
+                    }
+                    await refreshLicenses?.();
+                  } finally {
+                    setLicenseGenBusy(false);
                   }
-                  await refreshLicenses?.();
                 }}
               >
                 <label className="ea-field">
@@ -2313,8 +2463,14 @@ export default function AdminPortal() {
                     ))}
                   </select>
                 </label>
-                <button className="admin-btn admin-btn-solid admin-btn-block" type="submit">
-                  Generate License Key
+                <button
+                  className={`admin-btn admin-btn-solid admin-btn-block${licenseGenBusy ? " is-loading" : ""}`}
+                  type="submit"
+                  disabled={licenseGenBusy || myEas.length === 0}
+                >
+                  <AdminBusyLabel busy={licenseGenBusy} busyText="Generating…">
+                    Generate License Key
+                  </AdminBusyLabel>
                 </button>
               </form>
               {latestKey ? (
@@ -2437,8 +2593,9 @@ export default function AdminPortal() {
                 ) : null}
               </div>
               {licenseBulkBusy ? (
-                <p className="ea-hint" style={{ marginTop: 10 }}>
-                  Importing keys… keep this page open.
+                <p className="ea-hint admin-busy-inline" style={{ marginTop: 10 }}>
+                  <span className="admin-btn-spinner" aria-hidden="true" />
+                  <span>Importing keys… keep this page open.</span>
                 </p>
               ) : null}
               {licenseBulkSummary ? (
@@ -2529,19 +2686,39 @@ export default function AdminPortal() {
                         </button>
                         {isSuperAdmin ? (
                           <button
-                            className="admin-btn admin-btn-ghost admin-btn-sm"
+                            className={`admin-btn admin-btn-ghost admin-btn-sm${
+                              licenseActionBusy === `deactivate:${entry.key}`
+                                ? " is-loading"
+                                : ""
+                            }`}
                             type="button"
+                            disabled={Boolean(licenseActionBusy)}
                             onClick={() => void onDeactivateLicense(entry.key)}
                           >
-                            {entry.used ? "Deactivate" : "Reset"}
+                            <AdminBusyLabel
+                              busy={licenseActionBusy === `deactivate:${entry.key}`}
+                              busyText={entry.used ? "Deactivating…" : "Resetting…"}
+                            >
+                              {entry.used ? "Deactivate" : "Reset"}
+                            </AdminBusyLabel>
                           </button>
                         ) : null}
                         <button
-                          className="admin-btn admin-btn-outline admin-btn-sm"
+                          className={`admin-btn admin-btn-outline admin-btn-sm${
+                            licenseActionBusy === `delete:${entry.key}`
+                              ? " is-loading"
+                              : ""
+                          }`}
                           type="button"
+                          disabled={Boolean(licenseActionBusy)}
                           onClick={() => void onDeleteLicense(entry.key)}
                         >
-                          Delete
+                          <AdminBusyLabel
+                            busy={licenseActionBusy === `delete:${entry.key}`}
+                            busyText="Deleting…"
+                          >
+                            Delete
+                          </AdminBusyLabel>
                         </button>
                       </div>
                     </div>
@@ -2642,11 +2819,13 @@ export default function AdminPortal() {
                     Role: Mentor · EAs: {myEas.length} · License keys: {myLicenses.length}
                   </p>
                   <button
-                    className="admin-btn admin-btn-solid admin-btn-block"
+                    className={`admin-btn admin-btn-solid admin-btn-block${profileBusy ? " is-loading" : ""}`}
                     type="submit"
                     disabled={profileBusy}
                   >
-                    {profileBusy ? "Saving…" : "Save profile"}
+                    <AdminBusyLabel busy={profileBusy} busyText="Saving…">
+                      Save profile
+                    </AdminBusyLabel>
                   </button>
                 </form>
               ) : (
@@ -2823,13 +3002,15 @@ export default function AdminPortal() {
                           />
                         </label>
                         <button
-                          className="admin-btn admin-btn-solid"
+                          className={`admin-btn admin-btn-solid${setBusy ? " is-loading" : ""}`}
                           type="button"
                           style={{ alignSelf: "flex-end" }}
                           disabled={setBusy || addBusy}
                           onClick={() => void saveMentorKeyTotal(email)}
                         >
-                          {setBusy ? "Saving…" : "Save total"}
+                          <AdminBusyLabel busy={setBusy} busyText="Saving…">
+                            Save total
+                          </AdminBusyLabel>
                         </button>
                       </div>
                       <div className="admin-search-row" style={{ marginTop: 10, gap: 8 }}>
@@ -2848,13 +3029,15 @@ export default function AdminPortal() {
                           />
                         </label>
                         <button
-                          className="admin-btn admin-btn-outline"
+                          className={`admin-btn admin-btn-outline${addBusy ? " is-loading" : ""}`}
                           type="button"
                           style={{ alignSelf: "flex-end" }}
                           disabled={setBusy || addBusy}
                           onClick={() => void addMentorKeys(email)}
                         >
-                          {addBusy ? "Adding…" : "Add keys"}
+                          <AdminBusyLabel busy={addBusy} busyText="Adding…">
+                            Add keys
+                          </AdminBusyLabel>
                         </button>
                       </div>
                     </article>
@@ -2988,13 +3171,15 @@ export default function AdminPortal() {
                 />
               </label>
               <button
-                className="admin-btn admin-btn-solid admin-btn-block"
+                className={`admin-btn admin-btn-solid admin-btn-block${bankingBusy ? " is-loading" : ""}`}
                 type="button"
                 disabled={bankingBusy}
                 onClick={saveMentorBanking}
                 style={{ marginTop: 12 }}
               >
-                {bankingBusy ? "Saving…" : "Save banking details"}
+                <AdminBusyLabel busy={bankingBusy} busyText="Saving…">
+                  Save banking details
+                </AdminBusyLabel>
               </button>
             </div>
           </section>
@@ -3097,17 +3282,20 @@ export default function AdminPortal() {
                         message anytime before the event. Directions auto-remove the day after.
                       </p>
                       <button
-                        className="admin-btn admin-btn-solid admin-btn-block"
+                        className={`admin-btn admin-btn-solid admin-btn-block${calendarBusy ? " is-loading" : ""}`}
                         type="submit"
                         disabled={calendarBusy || !selected || locked}
                       >
-                        {calendarBusy
-                          ? "Saving…"
-                          : locked
+                        <AdminBusyLabel
+                          busy={calendarBusy}
+                          busyText="Saving…"
+                        >
+                          {locked
                             ? "Editing locked (event started)"
                             : calendarDirections.trim()
                               ? "Save signal direction"
                               : "Add signal direction"}
+                        </AdminBusyLabel>
                       </button>
                     </form>
                   </div>
@@ -3154,14 +3342,16 @@ export default function AdminPortal() {
                                   {isSignalDirectionEditable(official) ? "Edit" : "Locked"}
                                 </button>
                                 <button
-                                  className="admin-btn admin-btn-ghost admin-btn-sm"
+                                  className={`admin-btn admin-btn-ghost admin-btn-sm${calendarBusy ? " is-loading" : ""}`}
                                   type="button"
                                   disabled={
                                     calendarBusy || !isSignalDirectionEditable(official)
                                   }
                                   onClick={() => void onDeleteCalendarEvent(event.id)}
                                 >
-                                  Delete
+                                  <AdminBusyLabel busy={calendarBusy} busyText="Deleting…">
+                                    Delete
+                                  </AdminBusyLabel>
                                 </button>
                               </div>
                             </div>
@@ -3312,11 +3502,13 @@ export default function AdminPortal() {
                 </div>
 
                 <button
-                  className="admin-btn admin-btn-solid admin-btn-block self-host-execute"
+                  className={`admin-btn admin-btn-solid admin-btn-block self-host-execute${hostBusy ? " is-loading" : ""}`}
                   type="submit"
                   disabled={hostBusy || !hostAccounts.length}
                 >
-                  EXECUTE TRADE
+                  <AdminBusyLabel busy={hostBusy} busyText="WORKING…">
+                    EXECUTE TRADE
+                  </AdminBusyLabel>
                 </button>
               </form>
             </div>
@@ -3441,7 +3633,7 @@ export default function AdminPortal() {
                     </button>
                     <button
                       type="button"
-                      className="admin-btn admin-btn-solid"
+                      className={`admin-btn admin-btn-solid${hostBusy ? " is-loading" : ""}`}
                       disabled={hostBusy}
                       onClick={async () => {
                         if (hostBusy) return;
@@ -3519,7 +3711,9 @@ export default function AdminPortal() {
                         }
                       }}
                     >
-                      {hostBusy ? "EXECUTING…" : "EXECUTE TRADE"}
+                      <AdminBusyLabel busy={hostBusy} busyText="EXECUTING…">
+                        EXECUTE TRADE
+                      </AdminBusyLabel>
                     </button>
                   </div>
                 </div>
@@ -3646,18 +3840,18 @@ export default function AdminPortal() {
                 aria-label="Search mentors by name or email"
               />
               <button
-                className="admin-btn admin-btn-solid admin-btn-sm"
+                className={`admin-btn admin-btn-solid admin-btn-sm${mentorBulkBusy ? " is-loading" : ""}`}
                 type="button"
                 disabled={mentorBulkBusy || filteredPendingMentors.length === 0}
                 onClick={bulkApprovePendingMentors}
               >
-                {mentorBulkBusy
-                  ? "Approving…"
-                  : `Bulk Approve${
-                      filteredPendingMentors.length
-                        ? ` (${filteredPendingMentors.length})`
-                        : ""
-                    }`}
+                <AdminBusyLabel busy={mentorBulkBusy} busyText="Approving…">
+                  {`Bulk Approve${
+                    filteredPendingMentors.length
+                      ? ` (${filteredPendingMentors.length})`
+                      : ""
+                  }`}
+                </AdminBusyLabel>
               </button>
             </div>
 
@@ -3688,7 +3882,7 @@ export default function AdminPortal() {
                 </label>
                 <div className="admin-bypass-actions">
                   <button
-                    className="admin-btn admin-btn-solid admin-btn-block"
+                    className={`admin-btn admin-btn-solid admin-btn-block${bypassBusy ? " is-loading" : ""}`}
                     type="button"
                     disabled={bypassBusy}
                     onClick={async () => {
@@ -3700,10 +3894,12 @@ export default function AdminPortal() {
                       }
                     }}
                   >
-                    App access bypass
+                    <AdminBusyLabel busy={bypassBusy} busyText="Bypassing…">
+                      App access bypass
+                    </AdminBusyLabel>
                   </button>
                   <button
-                    className="admin-btn admin-btn-outline admin-btn-block"
+                    className={`admin-btn admin-btn-outline admin-btn-block${bypassBusy ? " is-loading" : ""}`}
                     type="button"
                     disabled={bypassBusy}
                     onClick={async () => {
@@ -3715,7 +3911,9 @@ export default function AdminPortal() {
                       }
                     }}
                   >
-                    Premium scanner bypass
+                    <AdminBusyLabel busy={bypassBusy} busyText="Bypassing…">
+                      Premium scanner bypass
+                    </AdminBusyLabel>
                   </button>
                 </div>
               </div>
@@ -3731,12 +3929,15 @@ export default function AdminPortal() {
                 </span>
               </div>
               <button
-                className="admin-btn admin-btn-sm"
+                className={`admin-btn admin-btn-sm${refreshBusy === "mentors" ? " is-loading" : ""}`}
                 type="button"
                 style={{ marginBottom: 10 }}
+                disabled={refreshBusy === "mentors"}
                 onClick={refreshMentorsList}
               >
-                Refresh pending
+                <AdminBusyLabel busy={refreshBusy === "mentors"} busyText="Refreshing…">
+                  Refresh pending
+                </AdminBusyLabel>
               </button>
               {pendingMentors.length === 0 ? (
                 <p className="admin-empty">No pending mentors</p>
@@ -3754,18 +3955,46 @@ export default function AdminPortal() {
                     </div>
                     <div className="admin-row-actions">
                       <button
-                        className="admin-btn admin-btn-solid admin-btn-sm"
+                        className={`admin-btn admin-btn-solid admin-btn-sm${
+                          mentorActionBusy ===
+                          `${normalizeAdminEmail(mentor.email)}:approved`
+                            ? " is-loading"
+                            : ""
+                        }`}
                         type="button"
+                        disabled={Boolean(mentorActionBusy)}
                         onClick={() => changeMentorStatus(mentor.email, "approved")}
                       >
-                        Approve
+                        <AdminBusyLabel
+                          busy={
+                            mentorActionBusy ===
+                            `${normalizeAdminEmail(mentor.email)}:approved`
+                          }
+                          busyText="Approving…"
+                        >
+                          Approve
+                        </AdminBusyLabel>
                       </button>
                       <button
-                        className="admin-btn admin-btn-danger admin-btn-sm"
+                        className={`admin-btn admin-btn-danger admin-btn-sm${
+                          mentorActionBusy ===
+                          `${normalizeAdminEmail(mentor.email)}:declined`
+                            ? " is-loading"
+                            : ""
+                        }`}
                         type="button"
+                        disabled={Boolean(mentorActionBusy)}
                         onClick={() => changeMentorStatus(mentor.email, "declined")}
                       >
-                        Decline
+                        <AdminBusyLabel
+                          busy={
+                            mentorActionBusy ===
+                            `${normalizeAdminEmail(mentor.email)}:declined`
+                          }
+                          busyText="Declining…"
+                        >
+                          Decline
+                        </AdminBusyLabel>
                       </button>
                     </div>
                   </div>
@@ -3828,23 +4057,46 @@ export default function AdminPortal() {
                                 style={{ minWidth: 120, maxWidth: 160 }}
                               />
                               <button
-                                className="admin-btn admin-btn-outline admin-btn-sm"
+                                className={`admin-btn admin-btn-outline admin-btn-sm${
+                                  mentorPasswordBusy === normalizeAdminEmail(mentor.email)
+                                    ? " is-loading"
+                                    : ""
+                                }`}
                                 type="button"
                                 disabled={mentorPasswordBusy === normalizeAdminEmail(mentor.email)}
                                 onClick={() => void setMentorPasswordFor(mentor.email)}
                               >
-                                {mentorPasswordBusy === normalizeAdminEmail(mentor.email)
-                                  ? "Saving…"
-                                  : "Set password"}
+                                <AdminBusyLabel
+                                  busy={
+                                    mentorPasswordBusy === normalizeAdminEmail(mentor.email)
+                                  }
+                                  busyText="Saving…"
+                                >
+                                  Set password
+                                </AdminBusyLabel>
                               </button>
                             </div>
                           ) : null}
                           <button
-                            className="admin-btn admin-btn-danger admin-btn-sm"
+                            className={`admin-btn admin-btn-danger admin-btn-sm${
+                              mentorActionBusy ===
+                              `${normalizeAdminEmail(mentor.email)}:declined`
+                                ? " is-loading"
+                                : ""
+                            }`}
                             type="button"
+                            disabled={Boolean(mentorActionBusy)}
                             onClick={() => changeMentorStatus(mentor.email, "declined")}
                           >
-                            Decline
+                            <AdminBusyLabel
+                              busy={
+                                mentorActionBusy ===
+                                `${normalizeAdminEmail(mentor.email)}:declined`
+                              }
+                              busyText="Declining…"
+                            >
+                              Decline
+                            </AdminBusyLabel>
                           </button>
                         </>
                       )}
@@ -3878,11 +4130,25 @@ export default function AdminPortal() {
                     </div>
                     <div className="admin-row-actions">
                       <button
-                        className="admin-btn admin-btn-solid admin-btn-sm"
+                        className={`admin-btn admin-btn-solid admin-btn-sm${
+                          mentorActionBusy ===
+                          `${normalizeAdminEmail(mentor.email)}:approved`
+                            ? " is-loading"
+                            : ""
+                        }`}
                         type="button"
+                        disabled={Boolean(mentorActionBusy)}
                         onClick={() => changeMentorStatus(mentor.email, "approved")}
                       >
-                        Approve
+                        <AdminBusyLabel
+                          busy={
+                            mentorActionBusy ===
+                            `${normalizeAdminEmail(mentor.email)}:approved`
+                          }
+                          busyText="Approving…"
+                        >
+                          Approve
+                        </AdminBusyLabel>
                       </button>
                     </div>
                   </div>
@@ -3991,19 +4257,37 @@ export default function AdminPortal() {
             </button>
             {isSuperAdmin ? (
               <button
-                className="admin-btn admin-btn-outline admin-btn-block"
+                className={`admin-btn admin-btn-outline admin-btn-block${
+                  licenseActionBusy === `deactivate:${latestKey}` ? " is-loading" : ""
+                }`}
                 type="button"
+                disabled={Boolean(licenseActionBusy)}
                 onClick={() => void onDeactivateLicense(latestKey)}
               >
-                {latestLicenseMeta?.status === "Used" ? "Deactivate key" : "Reset key"}
+                <AdminBusyLabel
+                  busy={licenseActionBusy === `deactivate:${latestKey}`}
+                  busyText={
+                    latestLicenseMeta?.status === "Used" ? "Deactivating…" : "Resetting…"
+                  }
+                >
+                  {latestLicenseMeta?.status === "Used" ? "Deactivate key" : "Reset key"}
+                </AdminBusyLabel>
               </button>
             ) : null}
             <button
-              className="admin-btn admin-btn-ghost admin-btn-block"
+              className={`admin-btn admin-btn-ghost admin-btn-block${
+                licenseActionBusy === `delete:${latestKey}` ? " is-loading" : ""
+              }`}
               type="button"
+              disabled={Boolean(licenseActionBusy)}
               onClick={() => void onDeleteLicense(latestKey)}
             >
-              Delete key
+              <AdminBusyLabel
+                busy={licenseActionBusy === `delete:${latestKey}`}
+                busyText="Deleting…"
+              >
+                Delete key
+              </AdminBusyLabel>
             </button>
           </aside>
         </div>

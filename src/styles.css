@@ -2632,6 +2632,39 @@ html:has(.phone[data-interface="v2"]) body {
   white-space: nowrap;
 }
 
+.admin-btn.is-loading,
+.admin-btn:disabled.is-loading {
+  cursor: wait;
+  opacity: 0.88;
+}
+
+.admin-btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: admin-btn-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+.admin-btn-sm .admin-btn-spinner {
+  width: 12px;
+  height: 12px;
+}
+
+.admin-busy-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes admin-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .admin-btn-sm {
   padding: 8px 12px;
   font-size: 0.84rem;
@@ -3306,6 +3339,16 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ea-delete-btn.is-loading,
+.ea-delete-btn:disabled {
+  cursor: wait;
+  opacity: 0.88;
 }
 
 .ea-meta {

@@ -311,6 +311,23 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
     currency: "USD",
   };
 
+  // When the broker host is unreachable, do NOT mark the account disconnected —
+  // clients must keep their local session until the API recovers.
+  const transient = {
+    accountId: id,
+    provider: "mt5api",
+    company: company || "",
+    state: "DEPLOYED",
+    connectionStatus: "UNKNOWN",
+    disconnected: false,
+    transient: true,
+    pending: true,
+    balance: null,
+    equity: null,
+    profit: null,
+    currency: "USD",
+  };
+
   try {
     const live = await mt5Fetch(`/CheckConnect?id=${encodeURIComponent(id)}`, {
       timeoutMs: 15000,
@@ -333,10 +350,18 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
         live.connected !== false &&
         live.ok !== false);
     if (!ok || /^\[error\]/i.test(raw) || live === false || raw === "false") {
+      // Broker host flaky / gateway errors — keep the session sticky.
+      if (
+        /timeout|unreachable|network|econn|temporar|offline|502|503|504|gateway/i.test(
+          raw
+        )
+      ) {
+        return transient;
+      }
       return dead;
     }
   } catch {
-    return dead;
+    return transient;
   }
 
   let summary = null;
