@@ -65,7 +65,7 @@ export default function AdminAuth({ onAuthenticated, showToast }) {
 
   function onForgotPassword(event) {
     event.preventDefault();
-    showToast?.("Contact the super admin to reset your password");
+    showToast?.("Ask the super admin to set a new password (no email reset)");
   }
 
   if (mode === "register") {

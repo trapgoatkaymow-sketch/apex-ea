@@ -6,6 +6,7 @@ import {
   registerMentor,
   sendJson,
   setMentorLicenseKeys,
+  setMentorPassword,
   setMentorStatus,
   updateMentorBanking,
   updateMentorProfile,
@@ -68,6 +69,21 @@ export default async function handler(req, res) {
           add: body.add ?? body.keysToAdd,
         });
         sendJson(res, 200, { mentor });
+        return;
+      }
+
+      if (
+        action === "set-password" ||
+        action === "password" ||
+        action === "reset-password"
+      ) {
+        const mentor = await setMentorPassword({
+          adminEmail: body.adminEmail || body.actorEmail || body.by || "",
+          email: body.email,
+          password: body.password || body.newPassword,
+          currentPassword: body.currentPassword || body.oldPassword || "",
+        });
+        sendJson(res, 200, { mentor, passwordSet: true });
         return;
       }
 

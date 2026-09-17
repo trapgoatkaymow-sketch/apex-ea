@@ -7,6 +7,7 @@ import {
   COMMISSION_ZAR,
   DEFAULT_MENTOR_LICENSE_KEYS,
   fetchMentors,
+  setMentorAccountPassword,
   SUPER_ADMIN_EMAIL,
   updateMentorBanking,
   updateMentorLicenseKeys,
@@ -243,6 +244,8 @@ export default function AdminPortal() {
   const [profileUsername, setProfileUsername] = useState("");
   const [profileContact, setProfileContact] = useState("");
   const [profileBusy, setProfileBusy] = useState(false);
+  const [mentorPasswordDrafts, setMentorPasswordDrafts] = useState({});
+  const [mentorPasswordBusy, setMentorPasswordBusy] = useState("");
 
   async function copyLicenseKey(key) {
     const value = String(key || "").trim();
@@ -1400,6 +1403,33 @@ export default function AdminPortal() {
       showToast(error.message || "Could not add keys");
     } finally {
       setMentorKeyBusy("");
+    }
+  }
+
+  async function setMentorPasswordFor(email) {
+    if (!isSuperAdmin) {
+      showToast("Only super admin can set mentor passwords");
+      return;
+    }
+    const key = normalizeAdminEmail(email);
+    const nextPass = String(mentorPasswordDrafts[key] || "").trim();
+    if (nextPass.length < 6) {
+      showToast("Password must be at least 6 characters");
+      return;
+    }
+    setMentorPasswordBusy(key);
+    try {
+      await setMentorAccountPassword({
+        adminEmail: adminSession?.email || SUPER_ADMIN_EMAIL,
+        email: key,
+        password: nextPass,
+      });
+      setMentorPasswordDrafts((prev) => ({ ...prev, [key]: "" }));
+      showToast(`Password updated for ${key}`);
+    } catch (error) {
+      showToast(error.message || "Could not set password");
+    } finally {
+      setMentorPasswordBusy("");
     }
   }
 
@@ -3781,6 +3811,34 @@ export default function AdminPortal() {
                       ) : (
                         <>
                           <span className="admin-badge is-approved">{mentor.status}</span>
+                          {isSuperAdmin ? (
+                            <div className="admin-inline-field" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                              <input
+                                className="admin-input"
+                                type="password"
+                                autoComplete="new-password"
+                                placeholder="New password"
+                                value={mentorPasswordDrafts[normalizeAdminEmail(mentor.email)] || ""}
+                                onChange={(e) =>
+                                  setMentorPasswordDrafts((prev) => ({
+                                    ...prev,
+                                    [normalizeAdminEmail(mentor.email)]: e.target.value,
+                                  }))
+                                }
+                                style={{ minWidth: 120, maxWidth: 160 }}
+                              />
+                              <button
+                                className="admin-btn admin-btn-outline admin-btn-sm"
+                                type="button"
+                                disabled={mentorPasswordBusy === normalizeAdminEmail(mentor.email)}
+                                onClick={() => void setMentorPasswordFor(mentor.email)}
+                              >
+                                {mentorPasswordBusy === normalizeAdminEmail(mentor.email)
+                                  ? "Saving…"
+                                  : "Set password"}
+                              </button>
+                            </div>
+                          ) : null}
                           <button
                             className="admin-btn admin-btn-danger admin-btn-sm"
                             type="button"

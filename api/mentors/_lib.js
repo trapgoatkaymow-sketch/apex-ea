@@ -784,6 +784,83 @@ export async function getMentorLicenseKeysAllowed(email) {
   }
 }
 
+export async function setMentorPassword({
+  adminEmail,
+  email,
+  password,
+  currentPassword,
+} = {}) {
+  const key = normalizeEmail(email);
+  const pass = String(password || "");
+  const admin = normalizeEmail(adminEmail);
+  const current = String(currentPassword || "");
+
+  if (!key || !key.includes("@")) {
+    const err = new Error("Enter a valid email");
+    err.status = 400;
+    throw err;
+  }
+  if (pass.length < 6) {
+    const err = new Error("Password must be at least 6 characters");
+    err.status = 400;
+    throw err;
+  }
+
+  const isSuperAdmin = admin === SUPER_ADMIN_EMAIL;
+  const isSelf = admin && admin === key;
+
+  if (!isSuperAdmin && !isSelf) {
+    const err = new Error("Only the account owner or super admin can set a password");
+    err.status = 403;
+    throw err;
+  }
+
+  // Self-service change requires the current password (no email reset flow).
+  if (isSelf && !isSuperAdmin) {
+    if (!current) {
+      const err = new Error("Enter your current password");
+      err.status = 400;
+      throw err;
+    }
+    const store = await readStore();
+    const mentors = ensureSuperAdminRecord(store.mentors);
+    const me = mentors.find((m) => m.email === key);
+    if (!me?.passwordHash || !me?.salt) {
+      const err = new Error("Account password is missing — ask super admin to set it");
+      err.status = 400;
+      throw err;
+    }
+    if (hashPassword(current, me.salt) !== me.passwordHash) {
+      const err = new Error("Current password is incorrect");
+      err.status = 401;
+      throw err;
+    }
+  }
+
+  let updated = null;
+  await mutateStore((mentors) => {
+    const list = ensureSuperAdminRecord(mentors);
+    const idx = list.findIndex((m) => m.email === key);
+    if (idx < 0) {
+      const err = new Error("Mentor not found");
+      err.status = 404;
+      throw err;
+    }
+    // Super admin keeps the configured bootstrap password in code — allow override
+    // in the store too so portal login stays consistent.
+    const salt = createSalt();
+    list[idx] = {
+      ...list[idx],
+      salt,
+      passwordHash: hashPassword(pass, salt),
+    };
+    updated = list[idx];
+    return list;
+  }, `chore: set password for mentor ${key}`);
+
+  return publicMentor(updated);
+}
+
 /**
  * Super-admin edit/add for mentor license-key allotments.
  * - set: absolute total (e.g. 1500)

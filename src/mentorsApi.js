@@ -553,6 +553,34 @@ export async function updateMentorLicenseKeys(email, { set, add } = {}) {
   return publicLocal(mentors[idx]);
 }
 
+/** Super admin (or self with current password) can set a new password — no email. */
+export async function setMentorAccountPassword({
+  adminEmail,
+  email,
+  password,
+  currentPassword,
+} = {}) {
+  const key = normalizeEmail(email);
+  const actor = normalizeEmail(adminEmail);
+  const pass = String(password || "");
+  if (!key.includes("@")) throw new Error("Enter a valid email");
+  if (pass.length < 6) throw new Error("Password must be at least 6 characters");
+
+  const data = await apiFetch("", {
+    method: "POST",
+    body: {
+      action: "set-password",
+      adminEmail: actor,
+      email: key,
+      password: pass,
+      currentPassword: currentPassword || "",
+    },
+  });
+  const mentor = data?.mentor || null;
+  if (mentor) cacheMentorLocally({ ...mentor, password: pass });
+  return publicLocal(mentor);
+}
+
 export const COMMISSION_USD = 3.08;
 export const COMMISSION_ZAR = 50;
 /** Mentor commission as % of the lifetime subscription price ($35.60). */
