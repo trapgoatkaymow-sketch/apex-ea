@@ -6,6 +6,7 @@
   --pink-soft: #ff4b93;
   --pink-deep: #d90063;
   --pink-dark: #8a003f;
+  --accent: #ff2d7a;
   --accent-glow: #220014;
   --pink-rgb: 255, 45, 122;
   --pink-hot-rgb: 255, 17, 119;
@@ -8520,9 +8521,9 @@ html:has(.phone[data-interface="v2"]) body {
   transform: none;
   max-width: 96px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--accent, #ff2d7a) 55%, #fff 10%);
+  border: 1px solid color-mix(in srgb, var(--pink) 55%, #fff 10%);
   border-radius: 12px;
-  background: color-mix(in srgb, #0a0a0f 78%, var(--accent, #ff2d7a) 12%);
+  background: color-mix(in srgb, #0a0a0f 78%, var(--pink) 12%);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -8576,8 +8577,8 @@ html:has(.phone[data-interface="v2"]) body {
   bottom: auto;
   transform: translateY(-50%);
   max-width: 96px;
-  background: color-mix(in srgb, #000 72%, var(--accent, #ff2d7a) 14%);
-  border-color: rgba(255, 80, 140, 0.85);
+  background: color-mix(in srgb, #000 72%, var(--pink) 14%);
+  border-color: color-mix(in srgb, var(--pink) 85%, #fff 10%);
 }
 
 .econ-cal-btn-v2:active {
