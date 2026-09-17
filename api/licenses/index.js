@@ -189,6 +189,8 @@ export default async function handler(req, res) {
             deviceId: body.deviceId || "",
             email: body.email || body.clientEmail || "",
             seed: body.license || body.seed || null,
+            botId: body.botId || body.bot?.id || "",
+            botName: body.botName || body.bot?.name || "",
           });
       sendJson(res, 200, { license });
       return;

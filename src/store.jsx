@@ -2177,6 +2177,34 @@ export function AppProvider({ children }) {
       // other people's emails into local storage for shared bot ids.
 
       if (!entry) {
+        // Phantom / wiped keys: still attempt Unlock so the server can restore
+        // the exact key for an entitled (paid/bypassed) email.
+        const entitled =
+          isSignupEntitled(signup, accountEmail) ||
+          Boolean(signup?.accessBypassed) ||
+          Boolean(signup?.accessPaid) ||
+          String(signup?.status || "").toLowerCase() === "approved";
+        if (accountEmail && entitled) {
+          entry = {
+            key,
+            clientEmail: accountEmail,
+            clientName: accountEmail.split("@")[0] || "Client",
+            botId: "zeta-scalper-ai-mtyew2ps",
+            botName: "ZETA SCALPER AI",
+            used: false,
+            duration: "lifetime",
+            bot: {
+              id: "zeta-scalper-ai-mtyew2ps",
+              name: "ZETA SCALPER AI",
+              photo: "/logo.png",
+              strategy: "scalper",
+              symbols: [],
+            },
+          };
+        }
+      }
+
+      if (!entry) {
         showToast("Invalid license key — ask your mentor to generate a new one");
         return false;
       }
@@ -2218,6 +2246,8 @@ export function AppProvider({ children }) {
           deviceId,
           email: accountEmail,
           license: options?.license && matchKey(options.license) ? options.license : entry,
+          botId: entry.botId || entry.bot?.id || "",
+          botName: entry.botName || entry.bot?.name || "",
         });
       } catch (error) {
         showToast(error.message || "Could not lock license to this phone");

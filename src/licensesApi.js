@@ -498,7 +498,7 @@ export async function uploadBotPhotoRemote(botId, photo) {
 
 export async function markLicenseUsedRemote(
   key,
-  { deviceId = "", email = "", license = null } = {}
+  { deviceId = "", email = "", license = null, botId = "", botName = "" } = {}
 ) {
   const data = await apiFetch("", {
     method: "PATCH",
@@ -509,6 +509,8 @@ export async function markLicenseUsedRemote(
         .trim()
         .toLowerCase(),
       ...(license && typeof license === "object" ? { license } : {}),
+      ...(botId ? { botId: String(botId).trim() } : {}),
+      ...(botName ? { botName: String(botName).trim() } : {}),
     },
   });
   return normalizeLicense(data?.license);

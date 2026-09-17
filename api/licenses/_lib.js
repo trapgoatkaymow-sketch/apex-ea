@@ -1666,10 +1666,12 @@ export async function claimLicenseViaInvite(payload = {}) {
  *
  * Optional `seed` (just-claimed license row): if a concurrent git write wiped the
  * key between claim and Unlock, re-insert it durably then bind the device.
+ * Entitled emails (paid / bypassed / approved) can also restore a missing key
+ * so phantom "Invalid license key" unlocks work again.
  */
 export async function markLicenseUsed(
   rawKey,
-  { deviceId = "", email = "", seed = null } = {}
+  { deviceId = "", email = "", seed = null, botId = "", botName = "" } = {}
 ) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
@@ -1677,6 +1679,16 @@ export async function markLicenseUsed(
     err.status = 400;
     throw err;
   }
+  const formattedKey = formatLicenseKey(rawKey);
+  const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const rowMatches = (row) => {
+    const key = normalizeLicenseKey(row?.key);
+    if (!key) return false;
+    return (
+      variants.includes(key) ||
+      key.replace(/-/g, "") === wantCompact
+    );
+  };
 
   const claimDevice = String(deviceId || "").trim();
   if (!claimDevice) {
@@ -1689,43 +1701,124 @@ export async function markLicenseUsed(
 
   // Peek current license + signup before mutate so commission rules use paid/first-access.
   let currentList = await listLicenses();
-  let current =
-    currentList.find((row) => variants.includes(row.key)) || null;
+  let current = currentList.find(rowMatches) || null;
   if (!current) {
     // Just-claimed keys may not be on CDN yet — refresh from git once.
     memoryLicenses = null;
     currentList = await listLicenses({ preferFresh: true });
-    current = currentList.find((row) => variants.includes(row.key)) || null;
+    current = currentList.find(rowMatches) || null;
   }
-  if (!current && seed && typeof seed === "object") {
-    const seeded = normalizeLicense({
-      ...seed,
-      key: seed.key || variants[0],
-      clientEmail: seed.clientEmail || claimEmail || "",
-      used: false,
-      deviceId: null,
-      boundAt: null,
-      usedAt: null,
-      updatedAt: Date.now(),
-    });
-    if (seeded && variants.includes(seeded.key)) {
-      const write = await mutateStore((licenses, api) => {
-        if (licenses.some((row) => variants.includes(row.key))) return licenses;
-        if (api.isDeleted?.(seeded.key)) return licenses;
-        return [seeded, ...licenses];
-      }, `license heal upsert: ${variants[0]}`);
-      if (write?.durable === false) {
-        const err = new Error(
-          String(write?.error || "").trim()
-            ? `Could not restore license key (${write.error}). Tap Unlock again.`
-            : "Could not restore license key. Tap Unlock again."
-        );
-        err.status = 503;
-        throw err;
+
+  if (!current) {
+    // Rebuild a wiped / phantom key for entitled clients so Unlock works.
+    const seedRow = seed && typeof seed === "object" ? seed : null;
+    let entitled = Boolean(seedRow);
+    let signup = null;
+    if (claimEmail) {
+      try {
+        signup = await findSignup(claimEmail);
+      } catch {
+        signup = null;
       }
-      memoryLicenses = null;
-      currentList = await listLicenses({ preferFresh: true });
-      current = currentList.find((row) => variants.includes(row.key)) || seeded;
+      if (
+        signup &&
+        (signup.accessBypassed ||
+          signup.accessPaid ||
+          String(signup.status || "").toLowerCase() === "approved")
+      ) {
+        entitled = true;
+      }
+    }
+
+    if (entitled && !isKeyDeleted(formattedKey, memoryDeletedKeys)) {
+      const mentorEmail = normalizeEmail(
+        seedRow?.mentorEmail || "trapgoatkaymow@gmail.com"
+      );
+      let mentorId = String(seedRow?.mentorId || "").trim();
+      let mentorName = String(seedRow?.mentorName || "").trim();
+      try {
+        if (!mentorId || !mentorName) {
+          const { findMentorByInviteCode } = await import("../mentors/_lib.js");
+          const mentor = await findMentorByInviteCode("EAE67ECA").catch(
+            () => null
+          );
+          if (mentor) {
+            mentorId = mentorId || String(mentor.id || "").trim();
+            mentorName =
+              mentorName || String(mentor.username || "").trim();
+          }
+        }
+      } catch {
+        // keep defaults
+      }
+
+      const resolvedBotId =
+        String(
+          seedRow?.botId ||
+            seedRow?.bot?.id ||
+            botId ||
+            "zeta-scalper-ai-mtyew2ps"
+        ).trim() || "zeta-scalper-ai-mtyew2ps";
+      const resolvedBotName =
+        String(
+          seedRow?.botName ||
+            seedRow?.bot?.name ||
+            botName ||
+            "ZETA SCALPER AI"
+        ).trim() || "ZETA SCALPER AI";
+      const clientName = String(
+        seedRow?.clientName || seedRow?.mainText || claimEmail.split("@")[0] || "Client"
+      ).trim();
+
+      const seeded = normalizeLicense({
+        ...(seedRow || {}),
+        key: formattedKey,
+        botId: resolvedBotId,
+        botName: resolvedBotName,
+        clientEmail: claimEmail || normalizeEmail(seedRow?.clientEmail) || "",
+        clientName,
+        mainText: clientName,
+        mentorEmail,
+        mentorId,
+        mentorName,
+        used: false,
+        deviceId: null,
+        boundAt: null,
+        usedAt: null,
+        duration: seedRow?.duration || "lifetime",
+        expiresAt: seedRow?.expiresAt ?? null,
+        createdAt: Number(seedRow?.createdAt) || Date.now(),
+        updatedAt: Date.now(),
+        bot: {
+          id: resolvedBotId,
+          name: resolvedBotName,
+          photo:
+            seedRow?.bot?.photo ||
+            `/api/licenses/photo?botId=${encodeURIComponent(resolvedBotId)}`,
+          strategy: seedRow?.bot?.strategy || "scalper",
+          symbols: Array.isArray(seedRow?.bot?.symbols) ? seedRow.bot.symbols : [],
+        },
+      });
+
+      if (seeded && rowMatches(seeded) && seeded.clientEmail) {
+        const write = await mutateStore((licenses, api) => {
+          if (licenses.some(rowMatches)) return licenses;
+          if (api.isDeleted?.(seeded.key)) return licenses;
+          return [seeded, ...licenses];
+        }, `license heal upsert: ${formattedKey}`);
+        if (write?.durable === false) {
+          const err = new Error(
+            String(write?.error || "").trim()
+              ? `Could not restore license key (${write.error}). Tap Unlock again.`
+              : "Could not restore license key. Tap Unlock again."
+          );
+          err.status = 503;
+          throw err;
+        }
+        memoryLicenses = null;
+        currentList = await listLicenses({ preferFresh: true });
+        current = currentList.find(rowMatches) || seeded;
+      }
     }
   }
   if (!current) {
@@ -1748,7 +1841,7 @@ export async function markLicenseUsed(
     let claimed = current;
     if (!boundDevice) {
       await mutateStore((licenses) => {
-        const idx = licenses.findIndex((row) => variants.includes(row.key));
+        const idx = licenses.findIndex(rowMatches);
         if (idx < 0) return licenses;
         const row = licenses[idx];
         const next = {
@@ -1803,7 +1896,12 @@ export async function markLicenseUsed(
   let result = null;
   const now = Date.now();
   await mutateStore((licenses) => {
-    const idx = licenses.findIndex((row) => variants.includes(row.key));
+    let idx = licenses.findIndex(rowMatches);
+    // Heal row may not be visible on this read yet — re-insert then bind.
+    if (idx < 0 && current && rowMatches(current)) {
+      licenses.unshift({ ...current, used: false, deviceId: null, usedAt: null, boundAt: null });
+      idx = 0;
+    }
     if (idx < 0) {
       const err = new Error("Invalid license key");
       err.status = 404;
