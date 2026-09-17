@@ -313,9 +313,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     if (remaining !== scansLeft) setScansLeft(remaining);
     if (remaining <= 0) {
       showToast(
-        variant === "v2"
-          ? "No scans left today (20 / day)"
-          : "No scans left today (9 / day)"
+        `No scans left today (${scanQuota(variant)} / day)`
       );
       return;
     }

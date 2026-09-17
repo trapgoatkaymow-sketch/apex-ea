@@ -1,5 +1,5 @@
 /** Daily scan quotas — Interface 1 (Zeta) vs Interface 2 (V2). */
-export const SCAN_QUOTA_ZETA = 9;
+export const SCAN_QUOTA_ZETA = 10;
 export const SCAN_QUOTA_V2 = 20;
 const SCANS_STORE_KEY = "apexea-daily-scans-v1";
 
