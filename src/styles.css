@@ -5769,8 +5769,39 @@ html:has(.phone[data-interface="v2"]) body {
   text-transform: uppercase;
 }
 
+.v2-tab {
+  position: relative;
+}
+
 .v2-tab.is-active {
   color: var(--pink);
+}
+
+.v2-tab.is-active span {
+  color: var(--pink);
+  font-weight: 800;
+}
+
+.v2-tab.is-active svg {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--pink-hot) 0%, var(--pink) 100%);
+  box-shadow: 0 8px 16px rgba(var(--pink-rgb), 0.35);
+}
+
+.v2-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 2px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--pink);
+  box-shadow: 0 0 10px rgba(var(--pink-rgb), 0.85);
 }
 
 .v2-screen-top {
@@ -7478,7 +7509,7 @@ html:has(.phone[data-interface="v2"]) body {
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) {
   background-color: #050508 !important;
   background-image:
-    radial-gradient(90% 55% at 50% 0%, rgba(255, 0, 60, 0.18), transparent 55%),
+    radial-gradient(90% 55% at 50% 0%, rgba(var(--pink-hot-rgb), 0.18), transparent 55%),
     radial-gradient(80% 50% at 50% 100%, rgba(120, 10, 30, 0.45), transparent 60%) !important;
 }
 
@@ -7489,15 +7520,15 @@ html:has(.phone[data-interface="v2"]) body {
 
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-stage {
   background:
-    radial-gradient(120% 70% at 50% 0%, rgba(255, 0, 60, 0.14), transparent 55%),
+    radial-gradient(120% 70% at 50% 0%, rgba(var(--pink-hot-rgb), 0.14), transparent 55%),
     radial-gradient(90% 55% at 50% 100%, rgba(80, 0, 20, 0.35), transparent 60%),
     linear-gradient(180deg, #0a0a0e 0%, #050508 55%, #08060a 100%);
   padding: 6px 14px 10px;
 }
 
 .view-scanner.cs-v2 {
-  --cs-v2-neon: #ff003c;
-  --cs-v2-pink: #ff2d7a;
+  --cs-v2-neon: var(--pink-hot);
+  --cs-v2-pink: var(--pink);
   --cs-v2-ink: #ffffff;
   --cs-v2-muted: rgba(255, 255, 255, 0.5);
   --cs-v2-card: rgba(255, 255, 255, 0.045);
@@ -7517,7 +7548,7 @@ html:has(.phone[data-interface="v2"]) body {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(70% 90% at 50% 100%, rgba(255, 0, 60, 0.28), transparent 70%),
+    radial-gradient(70% 90% at 50% 100%, rgba(var(--pink-hot-rgb), 0.28), transparent 70%),
     linear-gradient(180deg, transparent, rgba(20, 0, 8, 0.55));
   clip-path: polygon(0 35%, 8% 55%, 18% 48%, 28% 70%, 42% 52%, 55% 78%, 68% 58%, 80% 82%, 92% 60%, 100% 75%, 100% 100%, 0 100%);
   opacity: 0.85;
@@ -7545,7 +7576,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 800;
   background: none;
   -webkit-text-fill-color: unset;
-  text-shadow: 0 0 18px rgba(255, 0, 60, 0.45);
+  text-shadow: 0 0 18px rgba(var(--pink-hot-rgb), 0.45);
 }
 
 .view-scanner.cs-v2 .cs-title {
@@ -7610,8 +7641,8 @@ html:has(.phone[data-interface="v2"]) body {
   min-height: 34px;
   padding: 0 14px 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 45, 122, 0.55);
-  background: linear-gradient(135deg, rgba(255, 0, 60, 0.42), rgba(255, 45, 122, 0.28));
+  border: 1px solid rgba(var(--pink-rgb), 0.55);
+  background: linear-gradient(135deg, rgba(var(--pink-hot-rgb), 0.42), rgba(var(--pink-rgb), 0.28));
   color: #fff;
   font-family: var(--font-body);
   font-size: 0.62rem;
@@ -7619,7 +7650,7 @@ html:has(.phone[data-interface="v2"]) body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   box-shadow:
-    0 10px 22px rgba(255, 0, 60, 0.28),
+    0 10px 22px rgba(var(--pink-hot-rgb), 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
@@ -7656,7 +7687,7 @@ html:has(.phone[data-interface="v2"]) body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #ff3b4a;
+  background: var(--pink-hot);
   box-shadow: 0 0 8px rgba(255, 59, 74, 0.55);
 }
 
@@ -7674,7 +7705,7 @@ html:has(.phone[data-interface="v2"]) body {
   border-radius: 24px;
   gap: 12px;
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(255, 0, 60, 0.16), transparent 55%),
+    radial-gradient(120% 90% at 50% 0%, rgba(var(--pink-hot-rgb), 0.16), transparent 55%),
     linear-gradient(180deg, rgba(14, 10, 18, 0.92), rgba(6, 6, 10, 0.96));
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
@@ -7684,11 +7715,11 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-stage.is-running {
-  border-color: rgba(255, 45, 122, 0.45);
+  border-color: rgba(var(--pink-rgb), 0.45);
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.28),
-    0 0 0 1px rgba(255, 45, 122, 0.18),
-    0 0 36px rgba(255, 0, 60, 0.18);
+    0 0 0 1px rgba(var(--pink-rgb), 0.18),
+    0 0 36px rgba(var(--pink-hot-rgb), 0.18);
 }
 
 .view-scanner.cs-v2 .cs-stage-main {
@@ -7710,7 +7741,7 @@ html:has(.phone[data-interface="v2"]) body {
   min-height: 200px;
   border-radius: 20px;
   background:
-    radial-gradient(circle at 50% 42%, rgba(255, 0, 60, 0.12), transparent 55%),
+    radial-gradient(circle at 50% 42%, rgba(var(--pink-hot-rgb), 0.12), transparent 55%),
     #05060a;
   border: 1px solid rgba(255, 255, 255, 0.06);
   /* Empty-state robot glow must not get squared off at the bottom. */
@@ -7762,7 +7793,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 /* Unique Interface 2 empty-state: hexagonal scan lock (not the circular bobble). */
 .view-scanner.cs-v2 .cs-v2-portal {
-  --cs-v2-portal: #ff1a4d;
+  --cs-v2-portal: var(--pink-hot);
   position: relative;
   width: clamp(168px, 48vw, 210px);
   height: clamp(168px, 48vw, 210px);
@@ -7778,8 +7809,8 @@ html:has(.phone[data-interface="v2"]) body {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgba(255, 26, 77, 0.0) 40deg,
-    rgba(255, 26, 77, 0.35) 78deg,
+    rgba(var(--pink-hot-rgb), 0.0) 40deg,
+    rgba(var(--pink-hot-rgb), 0.35) 78deg,
     transparent 110deg,
     transparent 360deg
   );
@@ -7795,8 +7826,8 @@ html:has(.phone[data-interface="v2"]) body {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1px dashed rgba(255, 26, 77, 0.55);
-  box-shadow: 0 0 18px rgba(255, 26, 77, 0.25);
+  border: 1px dashed rgba(var(--pink-hot-rgb), 0.55);
+  box-shadow: 0 0 18px rgba(var(--pink-hot-rgb), 0.25);
   pointer-events: none;
   z-index: 1;
 }
@@ -7809,8 +7840,8 @@ html:has(.phone[data-interface="v2"]) body {
   inset: 8%;
   border-style: solid;
   border-color: rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 26, 77, 0.85);
-  border-right-color: rgba(255, 26, 77, 0.35);
+  border-top-color: rgba(var(--pink-hot-rgb), 0.85);
+  border-right-color: rgba(var(--pink-hot-rgb), 0.35);
   animation: cs-v2-spin 9s linear infinite reverse;
 }
 
@@ -7823,11 +7854,11 @@ html:has(.phone[data-interface="v2"]) body {
   place-items: center;
   clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
   background:
-    linear-gradient(145deg, rgba(255, 26, 77, 0.35), rgba(8, 4, 10, 0.95) 45%, #050308);
+    linear-gradient(145deg, rgba(var(--pink-hot-rgb), 0.35), rgba(8, 4, 10, 0.95) 45%, #050308);
   box-shadow:
-    0 0 0 1px rgba(255, 26, 77, 0.75),
-    0 0 28px rgba(255, 26, 77, 0.45),
-    inset 0 0 22px rgba(255, 26, 77, 0.2);
+    0 0 0 1px rgba(var(--pink-hot-rgb), 0.75),
+    0 0 28px rgba(var(--pink-hot-rgb), 0.45),
+    inset 0 0 22px rgba(var(--pink-hot-rgb), 0.2);
   overflow: hidden;
 }
 
@@ -7844,8 +7875,8 @@ html:has(.phone[data-interface="v2"]) body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(rgba(255, 26, 77, 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 26, 77, 0.18) 1px, transparent 1px);
+    linear-gradient(rgba(var(--pink-hot-rgb), 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--pink-hot-rgb), 0.18) 1px, transparent 1px);
   background-size: 14px 14px;
   mix-blend-mode: screen;
   opacity: 0.45;
@@ -7857,17 +7888,17 @@ html:has(.phone[data-interface="v2"]) body {
   inset: 18%;
   pointer-events: none;
   background:
-    linear-gradient(#ff1a4d, #ff1a4d) center / 100% 1px no-repeat,
-    linear-gradient(#ff1a4d, #ff1a4d) center / 1px 100% no-repeat;
+    linear-gradient(var(--pink-hot), var(--pink-hot)) center / 100% 1px no-repeat,
+    linear-gradient(var(--pink-hot), var(--pink-hot)) center / 1px 100% no-repeat;
   opacity: 0.7;
-  filter: drop-shadow(0 0 6px rgba(255, 26, 77, 0.8));
+  filter: drop-shadow(0 0 6px rgba(var(--pink-hot-rgb), 0.8));
 }
 
 .view-scanner.cs-v2 .cs-v2-portal-tick {
   position: absolute;
   z-index: 3;
-  background: #ff1a4d;
-  box-shadow: 0 0 8px rgba(255, 26, 77, 0.9);
+  background: var(--pink-hot);
+  box-shadow: 0 0 8px rgba(var(--pink-hot-rgb), 0.9);
   pointer-events: none;
 }
 
@@ -7903,7 +7934,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 800;
   letter-spacing: 0.22em;
   color: rgba(255, 255, 255, 0.72);
-  text-shadow: 0 0 12px rgba(255, 26, 77, 0.55);
+  text-shadow: 0 0 12px rgba(var(--pink-hot-rgb), 0.55);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -7988,16 +8019,16 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-capture-btn.is-primary {
-  border-color: rgba(255, 45, 122, 0.55);
-  background: linear-gradient(180deg, rgba(255, 0, 60, 0.22), rgba(255, 255, 255, 0.04));
+  border-color: rgba(var(--pink-rgb), 0.55);
+  background: linear-gradient(180deg, rgba(var(--pink-hot-rgb), 0.22), rgba(255, 255, 255, 0.04));
   box-shadow:
-    0 10px 28px rgba(255, 0, 60, 0.28),
-    inset 0 0 0 1px rgba(255, 45, 122, 0.18);
+    0 10px 28px rgba(var(--pink-hot-rgb), 0.28),
+    inset 0 0 0 1px rgba(var(--pink-rgb), 0.18);
 }
 
 .view-scanner.cs-v2 .cs-capture-btn.is-primary .cs-capture-icon,
 .view-scanner.cs-v2 .cs-capture-btn.is-primary .cs-capture-chevron {
-  color: #ff2d7a;
+  color: var(--pink);
 }
 
 .view-scanner.cs-v2 .cs-capture-btn.is-ghost {
@@ -8040,13 +8071,13 @@ html:has(.phone[data-interface="v2"]) body {
   0%,
   100% {
     box-shadow:
-      0 10px 28px rgba(255, 0, 60, 0.28),
-      inset 0 0 0 1px rgba(255, 45, 122, 0.18);
+      0 10px 28px rgba(var(--pink-hot-rgb), 0.28),
+      inset 0 0 0 1px rgba(var(--pink-rgb), 0.18);
   }
   50% {
     box-shadow:
-      0 14px 34px rgba(255, 0, 60, 0.5),
-      inset 0 0 0 1px rgba(255, 45, 122, 0.35);
+      0 14px 34px rgba(var(--pink-hot-rgb), 0.5),
+      inset 0 0 0 1px rgba(var(--pink-rgb), 0.35);
   }
 }
 
@@ -8062,9 +8093,9 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-engine.is-open {
   background:
-    radial-gradient(120% 100% at 0% 0%, rgba(255, 0, 60, 0.14), transparent 55%),
+    radial-gradient(120% 100% at 0% 0%, rgba(var(--pink-hot-rgb), 0.14), transparent 55%),
     rgba(12, 10, 18, 0.92);
-  border-color: rgba(255, 45, 122, 0.28);
+  border-color: rgba(var(--pink-rgb), 0.28);
   box-shadow: none;
 }
 
@@ -8088,9 +8119,9 @@ html:has(.phone[data-interface="v2"]) body {
   border-radius: 12px;
   display: grid;
   place-items: center;
-  color: #ff2d7a;
-  background: rgba(255, 0, 60, 0.14);
-  border: 1px solid rgba(255, 45, 122, 0.35);
+  color: var(--pink);
+  background: rgba(var(--pink-hot-rgb), 0.14);
+  border: 1px solid rgba(var(--pink-rgb), 0.35);
   flex-shrink: 0;
   box-shadow: none;
 }
@@ -8107,7 +8138,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #ff6aa8;
+  color: var(--pink-soft);
 }
 
 .view-scanner.cs-v2 .cs-engine-status {
@@ -8121,8 +8152,8 @@ html:has(.phone[data-interface="v2"]) body {
   font-family: var(--font-body);
   font-size: 0.95rem;
   font-weight: 800;
-  color: #ff2d7a;
-  text-shadow: 0 0 12px rgba(255, 45, 122, 0.55);
+  color: var(--pink);
+  text-shadow: 0 0 12px rgba(var(--pink-rgb), 0.55);
 }
 
 .view-scanner.cs-v2 .cs-engine-track {
@@ -8136,8 +8167,8 @@ html:has(.phone[data-interface="v2"]) body {
 .view-scanner.cs-v2 .cs-engine-fill {
   min-width: 8px;
   height: 100%;
-  background: linear-gradient(90deg, #ff003c, #ff2d7a);
-  box-shadow: 0 0 10px rgba(255, 0, 60, 0.55);
+  background: linear-gradient(90deg, var(--pink-hot), var(--pink));
+  box-shadow: 0 0 10px rgba(var(--pink-hot-rgb), 0.55);
   border-radius: 999px;
 }
 
@@ -8176,8 +8207,8 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-field.is-from-scanner .cs-symbol-auto {
-  border-color: rgba(255, 45, 122, 0.45);
-  box-shadow: 0 0 0 3px rgba(255, 0, 60, 0.12);
+  border-color: rgba(var(--pink-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--pink-hot-rgb), 0.12);
 }
 
 .view-scanner.cs-v2 .cs-stepper {
@@ -8186,16 +8217,16 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-stepper button {
   background: rgba(255, 255, 255, 0.06);
-  color: #ff2d7a;
-  border: 1.5px solid rgba(255, 45, 122, 0.35);
+  color: var(--pink);
+  border: 1.5px solid rgba(var(--pink-rgb), 0.35);
   border-radius: 12px;
 }
 
 .view-scanner.cs-v2 .cs-stepper button:last-child {
-  background: linear-gradient(135deg, rgba(255, 0, 60, 0.85), rgba(255, 45, 122, 0.75));
+  background: linear-gradient(135deg, rgba(var(--pink-hot-rgb), 0.85), rgba(var(--pink-rgb), 0.75));
   color: #fff;
   border: 0;
-  box-shadow: 0 8px 16px rgba(255, 0, 60, 0.28);
+  box-shadow: 0 8px 16px rgba(var(--pink-hot-rgb), 0.28);
 }
 
 .view-scanner.cs-v2 .cs-tp-config {
@@ -8221,7 +8252,7 @@ html:has(.phone[data-interface="v2"]) body {
 .view-scanner.cs-v2 .cs-tp-config-icon {
   width: 18px;
   height: 18px;
-  color: #ff2d7a;
+  color: var(--pink);
   display: grid;
   place-items: center;
 }
@@ -8243,7 +8274,7 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-tp-ratio strong {
-  color: #ff2d7a;
+  color: var(--pink);
   font-size: 1.15rem;
 }
 
@@ -8259,7 +8290,7 @@ html:has(.phone[data-interface="v2"]) body {
   height: 18px;
   margin: 0;
   border-radius: 5px;
-  border: 1.5px solid rgba(255, 45, 122, 0.45);
+  border: 1.5px solid rgba(var(--pink-rgb), 0.45);
   background: rgba(0, 0, 0, 0.35);
   display: grid;
   place-items: center;
@@ -8268,9 +8299,9 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-tp-toggle input:checked {
-  background: linear-gradient(135deg, #ff003c, #ff2d7a);
+  background: linear-gradient(135deg, var(--pink-hot), var(--pink));
   border-color: transparent;
-  box-shadow: 0 4px 10px rgba(255, 0, 60, 0.3);
+  box-shadow: 0 4px 10px rgba(var(--pink-hot-rgb), 0.3);
 }
 
 .view-scanner.cs-v2 .cs-tp-toggle input:checked::after {
@@ -8290,9 +8321,9 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #ff003c, #ff2d7a);
+  background: linear-gradient(135deg, var(--pink-hot), var(--pink));
   color: #fff;
-  box-shadow: 0 14px 28px rgba(255, 0, 60, 0.35);
+  box-shadow: 0 14px 28px rgba(var(--pink-hot-rgb), 0.35);
 }
 
 .view-scanner.cs-v2 .cs-run-btn:disabled {
@@ -8302,7 +8333,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-result {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 45, 122, 0.22);
+  border: 1px solid rgba(var(--pink-rgb), 0.22);
   color: #fff;
 }
 
@@ -8325,7 +8356,7 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-connect-link {
-  color: #ff2d7a;
+  color: var(--pink);
 }
 
 .view-scanner.cs-v2 .cs-detection-status {
@@ -8356,11 +8387,11 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-tab.is-active {
-  color: #ff2d7a;
+  color: var(--pink);
 }
 
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-tab.is-active span {
-  color: #ff2d7a;
+  color: var(--pink);
   font-weight: 800;
 }
 
@@ -8370,9 +8401,9 @@ html:has(.phone[data-interface="v2"]) body {
   padding: 5px;
   border-radius: 10px;
   color: #fff;
-  background: linear-gradient(135deg, #ff003c 0%, #ff2d7a 100%);
+  background: linear-gradient(135deg, var(--pink-hot) 0%, var(--pink) 100%);
   filter: none;
-  box-shadow: 0 8px 16px rgba(255, 0, 60, 0.35);
+  box-shadow: 0 8px 16px rgba(var(--pink-rgb), 0.35);
 }
 
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-tab.is-active::after {
@@ -8383,8 +8414,8 @@ html:has(.phone[data-interface="v2"]) body {
   bottom: 2px;
   height: 3px;
   border-radius: 999px;
-  background: #ff2d7a;
-  box-shadow: 0 0 10px rgba(255, 45, 122, 0.85);
+  background: var(--pink);
+  box-shadow: 0 0 10px rgba(var(--pink-rgb), 0.85);
 }
 
 @media (max-height: 760px) {
