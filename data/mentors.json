@@ -7,11 +7,17 @@
       "contact": "0713524369",
       "role": "mentor",
       "status": "approved",
-      "passwordHash": "e00d6896f602f9f3dfa5a53a5a4eea18424e3d910e1231f05e61cd1858d60cc0",
-      "salt": "b70837cff675554ba58d13b4864fd511",
       "createdAt": 1789213286447,
+      "banking": {
+        "accountName": "",
+        "bankName": "",
+        "accountNumber": "",
+        "branchCode": "",
+        "accountType": "",
+        "updatedAt": null
+      },
       "licenseKeysAllowed": 1000,
-      "licenseKeysUpdatedAt": 1789412095181
+      "inviteCode": "EAE67ECA"
     },
     {
       "id": "e7adfe27-f723-4a89-ac05-6565d9b0f411",
@@ -20,9 +26,17 @@
       "contact": "+27123456789",
       "role": "mentor",
       "status": "pending",
-      "passwordHash": "5de477b58657cd84e6da04873b9eeb98f72b5ae95e1bc4990a1841a015dedb57",
-      "salt": "f2956a3549168f3ff205365fb81a1a93",
-      "createdAt": 1789212420184
+      "createdAt": 1789212420184,
+      "banking": {
+        "accountName": "",
+        "bankName": "",
+        "accountNumber": "",
+        "branchCode": "",
+        "accountType": "",
+        "updatedAt": null
+      },
+      "licenseKeysAllowed": 1500,
+      "inviteCode": "E7ADFE27"
     },
     {
       "id": "super-admin",
@@ -31,9 +45,17 @@
       "contact": "",
       "role": "superadmin",
       "status": "approved",
-      "passwordHash": "0b6343036fa2ac8bbd43802de8beaf58ad66fae68f5511935788e588c88034fc",
-      "salt": "44280e01673c89fe5391b04c1c44b95f",
-      "createdAt": 1789212420184
+      "createdAt": 1789212420184,
+      "banking": {
+        "accountName": "",
+        "bankName": "",
+        "accountNumber": "",
+        "branchCode": "",
+        "accountType": "",
+        "updatedAt": null
+      },
+      "licenseKeysAllowed": null,
+      "inviteCode": "SUPERADM"
     }
   ]
 }
