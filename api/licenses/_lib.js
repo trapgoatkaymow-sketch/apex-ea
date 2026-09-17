@@ -698,9 +698,9 @@ function mergeLicenseLists(...lists) {
         : preferIncoming
           ? item.bot?.photo || prev.bot?.photo
           : prev.bot?.photo || item.bot?.photo;
-    // Never let an empty stamp wipe a live phone/MT session from another source.
-    // Explicit clears still work when the winning row sets used:false (deactivate).
-    const winningUsed = preferIncoming ? Boolean(item.used) : Boolean(prev.used || item.used);
+    // Newer stamp owns used/device lock. Never OR used:true from an older row —
+    // that resurrects "locked to another phone" after super-admin Reactivate.
+    const winningUsed = preferIncoming ? Boolean(item.used) : Boolean(prev.used);
     const keepRobot = (field) => {
       const a = item[field];
       const b = prev[field];
@@ -715,9 +715,17 @@ function mergeLicenseLists(...lists) {
         ? preferIncoming
           ? item.deviceId || prev.deviceId || null
           : prev.deviceId || item.deviceId || null
-        : preferIncoming
-          ? item.deviceId || null
-          : prev.deviceId || item.deviceId || null,
+        : null,
+      usedAt: winningUsed
+        ? preferIncoming
+          ? item.usedAt || prev.usedAt || null
+          : prev.usedAt || item.usedAt || null
+        : null,
+      boundAt: winningUsed
+        ? preferIncoming
+          ? item.boundAt || prev.boundAt || null
+          : prev.boundAt || item.boundAt || null
+        : null,
       robotAccountId: keepRobot("robotAccountId") || "",
       robotLogin: keepRobot("robotLogin") || "",
       robotServer: keepRobot("robotServer") || "",

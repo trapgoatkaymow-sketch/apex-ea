@@ -238,8 +238,6 @@ export default function AdminPortal() {
   const [licenseSheetOpen, setLicenseSheetOpen] = useState(false);
   const [reactivateOpen, setReactivateOpen] = useState(false);
   const [reactivateKey, setReactivateKey] = useState("");
-  const [reactivateEmail, setReactivateEmail] = useState("");
-  const [reactivateName, setReactivateName] = useState("");
   const [reactivateBusy, setReactivateBusy] = useState(false);
   const [bypassOpen, setBypassOpen] = useState(false);
   const [bypassEmail, setBypassEmail] = useState("");

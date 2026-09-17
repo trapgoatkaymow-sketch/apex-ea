@@ -297,23 +297,30 @@ export function mergeLicenses(localList = [], remoteList = []) {
       expiresAt: preferIncoming
         ? row.expiresAt ?? prev.expiresAt ?? null
         : prev.expiresAt ?? row.expiresAt ?? null,
-      // Newer updatedAt wins so deactivate (used:false) can stick.
-      used: preferIncoming ? Boolean(row.used) : Boolean(prev.used || row.used),
+      // Newer updatedAt owns used/device lock. Do not OR an older used:true
+      // onto a reactivated (used:false) row — that keeps "locked to another phone".
+      used: preferIncoming ? Boolean(row.used) : Boolean(prev.used),
       usedAt: preferIncoming
         ? row.used
           ? row.usedAt || prev.usedAt || null
           : null
-        : row.usedAt || prev.usedAt || null,
+        : prev.used
+          ? prev.usedAt || row.usedAt || null
+          : null,
       deviceId: preferIncoming
         ? row.used
           ? row.deviceId || prev.deviceId || null
           : null
-        : row.deviceId || prev.deviceId || null,
+        : prev.used
+          ? prev.deviceId || row.deviceId || null
+          : null,
       boundAt: preferIncoming
         ? row.used
           ? row.boundAt || prev.boundAt || null
           : null
-        : row.boundAt || prev.boundAt || null,
+        : prev.used
+          ? prev.boundAt || row.boundAt || null
+          : null,
       commissionEligible: preferIncoming
         ? Boolean(row.commissionEligible)
         : Boolean(prev.commissionEligible || row.commissionEligible),

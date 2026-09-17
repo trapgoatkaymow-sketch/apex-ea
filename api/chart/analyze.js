@@ -154,8 +154,8 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
 
   if (!isChart) return buildNoChartResult();
 
-  let symbol = resolveCatalogSymbol(parsed?.symbol || "", catalog);
-  if (!symbol) symbol = resolveCatalogSymbol(hintSymbol, catalog);
+  let symbol = resolveCatalogSymbol(hintSymbol, catalog);
+  if (!symbol) symbol = resolveCatalogSymbol(parsed?.symbol || "", catalog);
 
   const levels = ensureMultiTpLevels({
     side: parsed?.side || parsed?.direction,
@@ -271,7 +271,9 @@ export async function analyzeChartSetupWithOpenAI({
             "Read entry and stop from chart structure (support/resistance, swings). " +
             "BUY must satisfy: stopLoss < entry < takeProfit1 < takeProfit2 < takeProfit3. " +
             "SELL must satisfy: stopLoss > entry > takeProfit1 > takeProfit2 > takeProfit3. " +
-            "Read the instrument from the chart header when visible. " +
+            "Read the instrument from the chart header/title/tab when visible — OCR the exact characters. " +
+            "NEVER invent a popular pair (EURUSD/XAUUSD/BTCUSD) when the header shows a different symbol. " +
+            "If a symbol hint is provided and it matches the chart, keep it; otherwise prefer the visible header text. " +
             "If the setup is imperfect, still choose the strongest available BUY or SELL and compute reasonable multi-TP levels. " +
             "Do not omit Entry, SL, TP1, TP2, or TP3 for a valid chart.",
         },
@@ -281,15 +283,20 @@ export async function analyzeChartSetupWithOpenAI({
             {
               type: "text",
               text:
-                "Validate whether this is a trading chart. If yes, generate a complete trade setup with Entry, SL, TP1, TP2, and TP3." +
-                (hintSymbol ? ` Detected symbol hint: ${normalizeSymbol(hintSymbol)}.` : "") +
-                (catalogHint ? ` Known symbols: ${catalogHint}.` : ""),
+                "Validate whether this is a trading chart. If yes, generate a complete trade setup with Entry, SL, TP1, TP2, and TP3. " +
+                "Read the symbol from the chart header exactly — do not guess from the catalog." +
+                (hintSymbol
+                  ? ` Prefer this already-detected symbol if it matches the chart: ${normalizeSymbol(hintSymbol)}.`
+                  : "") +
+                (catalogHint
+                  ? ` Catalog for exact-match mapping only: ${catalogHint}.`
+                  : ""),
             },
             {
               type: "image_url",
               image_url: {
                 url: dataUrl,
-                detail: "low",
+                detail: "high",
               },
             },
           ],

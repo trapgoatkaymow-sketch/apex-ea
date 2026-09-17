@@ -222,8 +222,9 @@ async function githubPut({ repo, branch, filePath, raw, sha, message }) {
 
 /**
  * Merge two licenses.json documents by key so concurrent git pushes do not
- * wipe each other's newly claimed keys. Prefer the newer row stamp; keep
- * used/deviceId/robot fields when either side has them.
+ * wipe each other's newly claimed keys. Prefer the newer row stamp.
+ * Reactivate/deactivate (newer used:false) must clear device locks — never
+ * OR used/deviceId with an older used:true row (that undoes Reactivate).
  * Empty intended + reset message → overwrite (clear-all).
  */
 function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
@@ -269,14 +270,18 @@ function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
     const preferIncoming = stamp(row) >= stamp(prev);
     const newer = preferIncoming ? row : prev;
     const older = preferIncoming ? prev : row;
+    const winningUsed = Boolean(newer.used);
     map.set(key, {
       ...older,
       ...newer,
       key: String(newer.key || older.key || key),
-      used: Boolean(newer.used || older.used),
-      deviceId: newer.deviceId || older.deviceId || null,
-      boundAt: newer.boundAt || older.boundAt || null,
-      usedAt: newer.usedAt || older.usedAt || null,
+      // Newer stamp owns used/device lock. used:false clears the phone bind.
+      used: winningUsed,
+      deviceId: winningUsed
+        ? newer.deviceId || older.deviceId || null
+        : null,
+      boundAt: winningUsed ? newer.boundAt || older.boundAt || null : null,
+      usedAt: winningUsed ? newer.usedAt || older.usedAt || null : null,
       robotAccountId: newer.robotAccountId || older.robotAccountId || "",
       robotLogin: newer.robotLogin || older.robotLogin || "",
       robotServer: newer.robotServer || older.robotServer || "",

@@ -152,19 +152,35 @@ function ensureCompleteSetup(partial = {}) {
   };
 }
 
-async function shrinkChartImage(dataUrl, { maxW = 1024, quality = 0.72 } = {}) {
+async function shrinkChartImage(
+  dataUrl,
+  { maxW = 1600, quality = 0.88, maxBytes = 1_800_000 } = {}
+) {
   try {
     const img = await loadImage(dataUrl);
     const scale = Math.min(1, maxW / Math.max(1, img.width));
-    const width = Math.max(1, Math.round(img.width * scale));
-    const height = Math.max(1, Math.round(img.height * scale));
+    let width = Math.max(1, Math.round(img.width * scale));
+    let height = Math.max(1, Math.round(img.height * scale));
     const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (!ctx) return dataUrl;
-    ctx.drawImage(img, 0, 0, width, height);
-    return canvas.toDataURL("image/jpeg", quality);
+
+    let q = quality;
+    let out = dataUrl;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      out = canvas.toDataURL("image/jpeg", q);
+      if (out.length <= maxBytes) return out;
+      // Still too large for the API — step down quality, then width.
+      if (q > 0.72) q = Math.max(0.72, q - 0.08);
+      else {
+        width = Math.max(720, Math.round(width * 0.85));
+        height = Math.max(1, Math.round((img.height * width) / Math.max(1, img.width)));
+      }
+    }
+    return out;
   } catch {
     return dataUrl;
   }
@@ -186,7 +202,12 @@ function emptyDetection(overrides = {}) {
 }
 
 async function detectSymbolWithOpenAI(dataUrl, { catalog = [] } = {}) {
-  const image = await shrinkChartImage(dataUrl);
+  // Keep more resolution so the chart header/symbol stays readable for Vision.
+  const image = await shrinkChartImage(dataUrl, {
+    maxW: 1800,
+    quality: 0.9,
+    maxBytes: 2_200_000,
+  });
   const response = await fetch(apiUrl("/api/chart/symbol"), {
     method: "POST",
     headers: {
@@ -252,7 +273,11 @@ async function analyzeSetupWithOpenAI(
   dataUrl,
   { catalog = [], hintSymbol = "" } = {}
 ) {
-  const image = await shrinkChartImage(dataUrl);
+  const image = await shrinkChartImage(dataUrl, {
+    maxW: 1600,
+    quality: 0.88,
+    maxBytes: 2_200_000,
+  });
   const response = await fetch(apiUrl("/api/chart/analyze"), {
     method: "POST",
     headers: {
@@ -355,11 +380,15 @@ export async function analyzeChartImage(
 
   if (setup?.status === CHART_DETECTION_STATUS.SETUP_READY || setup?.isChart) {
     const complete = ensureCompleteSetup(setup);
+    // Prefer the symbol already detected from the screenshot over a fresh
+    // analyze pass that may hallucinate a popular pair.
     let symbol = preferDetectedSymbol
-      ? String(complete.symbol || hintSymbol || "")
+      ? String(hintSymbol || complete.symbol || "")
           .trim()
           .toUpperCase()
-      : "";
+      : String(complete.symbol || hintSymbol || "")
+          .trim()
+          .toUpperCase();
     if (!symbol) {
       const detection = await detectSymbolFromChart(dataUrl, { catalog });
       if (detection.status === CHART_DETECTION_STATUS.NO_CHART) {
