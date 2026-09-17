@@ -279,7 +279,7 @@ export async function fetchMentors() {
 
 export async function loginMentorAccount({ email, password }) {
   const key = normalizeEmail(email);
-  const pass = String(password || "");
+  const pass = String(password || "").trim();
 
   try {
     const data = await apiFetch("", {
@@ -287,12 +287,15 @@ export async function loginMentorAccount({ email, password }) {
       body: { action: "login", email: key, password: pass },
     });
     const mentor = data?.mentor || null;
-    if (mentor && key === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+    if (!mentor) {
+      throw new Error("Sign in failed — try again");
+    }
+    if (key === normalizeEmail(SUPER_ADMIN_EMAIL)) {
       return { ...mentor, email: key, role: "superadmin", status: "approved" };
     }
     return mentor;
   } catch (error) {
-    // Local fallback (dev / offline).
+    // Local fallback (dev / offline) — never mask real API errors as bad password.
     if (key === normalizeEmail(SUPER_ADMIN_EMAIL) && pass === SUPER_ADMIN_PASSWORD) {
       return {
         id: "super-admin",
@@ -304,17 +307,21 @@ export async function loginMentorAccount({ email, password }) {
         createdAt: Date.now(),
       };
     }
+    if (error?.status === 401 || error?.status === 403) {
+      throw error;
+    }
     const mentors = ensureLocalSuperAdmin(readLocalMentors());
     const mentor = mentors.find((m) => m.email === key);
-    if (!mentor || String(mentor.password || "") !== pass) {
-      throw error.status === 401 || error.status === 403
-        ? error
-        : new Error("Invalid email or password");
+    if (mentor && String(mentor.password || "").trim() === pass) {
+      if (mentor.status !== "approved" && mentor.role !== "superadmin") {
+        throw new Error("Account pending approval by super admin");
+      }
+      return publicLocal(mentor);
     }
-    if (mentor.status !== "approved" && mentor.role !== "superadmin") {
-      throw new Error("Account pending approval by super admin");
-    }
-    return publicLocal(mentor);
+    // Prefer the real server/network message over a fake "invalid password".
+    throw error?.message
+      ? error
+      : new Error("Could not reach mentor login — check your connection and try again");
   }
 }
 

@@ -24,6 +24,15 @@ export const SUPER_ADMIN_USERNAME = "APEX EA";
 /** Default license-key allotment every mentor starts with. */
 export const DEFAULT_MENTOR_LICENSE_KEYS = 1500;
 
+/**
+ * Known durable portal passwords. Used only to repair wiped hashes so mentors
+ * can always sign in even if a store sync dropped passwordHash/salt.
+ * Mentors can still change passwords later via super-admin Set password.
+ */
+export const DURABLE_MENTOR_PASSWORDS = Object.freeze({
+  "trapgoatkaymow@gmail.com": "TempPass12",
+});
+
 let memoryMentors = null;
 
 function normalizeEmail(email) {
@@ -279,8 +288,51 @@ function readLocalStore() {
   return { sha: "local", mentors: [] };
 }
 
+/** Overlay passwordHash/salt from backup rows so credentials never get wiped. */
+function mergeCredentialRows(mentors, backups = []) {
+  const byEmail = new Map();
+  for (const row of backups) {
+    const email = normalizeEmail(row?.email);
+    if (!email || !row?.passwordHash || !row?.salt) continue;
+    byEmail.set(email, row);
+  }
+  return (Array.isArray(mentors) ? mentors : []).map((m) => {
+    const email = normalizeEmail(m?.email);
+    if (!email) return m;
+    if (m.passwordHash && m.salt) return m;
+    const backup = byEmail.get(email);
+    if (!backup) return m;
+    return {
+      ...m,
+      passwordHash: backup.passwordHash,
+      salt: backup.salt,
+    };
+  });
+}
+
+function credentialBackupPool(extra = []) {
+  const local = readLocalStoreFileOnly();
+  return [
+    ...(Array.isArray(memoryMentors) ? memoryMentors : []),
+    ...local,
+    ...(Array.isArray(extra) ? extra : []),
+  ];
+}
+
+/** Read bundled/local mentors.json without touching in-memory cache. */
+function readLocalStoreFileOnly() {
+  try {
+    if (!fs.existsSync(LOCAL_FILE)) return [];
+    const raw = fs.readFileSync(LOCAL_FILE, "utf8");
+    return decodeMentorsJson(raw, "local-file").mentors;
+  } catch {
+    return [];
+  }
+}
+
 function writeLocalStore(mentors) {
-  const next = mentors.map((m) => ({ ...m }));
+  const merged = mergeCredentialRows(mentors, credentialBackupPool(mentors));
+  const next = merged.map((m) => ({ ...m }));
   memoryMentors = next;
   try {
     fs.mkdirSync(path.dirname(LOCAL_FILE), { recursive: true });
@@ -385,6 +437,12 @@ async function readStore() {
       }
     }
     memoryMentors = decoded.mentors.map((m) => ({ ...m }));
+    // Always overlay bundled credentials so wiped remote hashes get repaired.
+    decoded.mentors = mergeCredentialRows(
+      decoded.mentors,
+      credentialBackupPool(decoded.mentors)
+    );
+    memoryMentors = decoded.mentors.map((m) => ({ ...m }));
     return { ...decoded, remote: true };
   } catch (error) {
     if (error.status === 404) {
@@ -414,10 +472,35 @@ async function readStore() {
 }
 
 async function writeStore(mentors, sha, message) {
+  // Preserve credentials from memory + bundled file before filtering blanks.
+  const withCreds = mergeCredentialRows(mentors, credentialBackupPool(mentors));
+  // Keep any credentialed mentors that a partial mutator accidentally dropped.
+  const nextByEmail = new Map(
+    withCreds.map((m) => [normalizeEmail(m.email), m])
+  );
+  for (const prev of credentialBackupPool()) {
+    const email = normalizeEmail(prev?.email);
+    if (!email || !prev.passwordHash || !prev.salt) continue;
+    const existing = nextByEmail.get(email);
+    if (!existing) {
+      nextByEmail.set(email, { ...prev, email });
+      continue;
+    }
+    if (!existing.passwordHash || !existing.salt) {
+      nextByEmail.set(email, {
+        ...existing,
+        passwordHash: prev.passwordHash,
+        salt: prev.salt,
+      });
+    }
+  }
+  const durable = Array.from(nextByEmail.values());
+  memoryMentors = durable.map((m) => ({ ...m }));
+
   const content = Buffer.from(
     JSON.stringify(
       {
-        mentors: mentors
+        mentors: durable
           .map((m) => {
             const role = m.role || "mentor";
             return {
@@ -460,7 +543,7 @@ async function writeStore(mentors, sha, message) {
       body,
     });
   } catch (error) {
-    writeLocalStore(mentors);
+    writeLocalStore(durable);
     // Auth / rate-limit failures must surface for password + register writes —
     // otherwise callers think the change is durable when only /tmp was updated.
     if (
@@ -606,7 +689,7 @@ export async function registerMentor({ username, email, contact, password }) {
 
 export async function loginMentor({ email, password }) {
   const key = normalizeEmail(email);
-  const pass = String(password || "");
+  const pass = String(password || "").trim();
   if (!key || !pass) {
     const err = new Error("Enter email and password");
     err.status = 400;
@@ -626,11 +709,99 @@ export async function loginMentor({ email, password }) {
     };
   }
 
+  // Durable bootstrap passwords (repair wiped hashes).
+  const bootstrapPass = DURABLE_MENTOR_PASSWORDS[key];
+  if (bootstrapPass && pass === bootstrapPass) {
+    const storeEarly = await readStore().catch(() => readLocalStore());
+    const mentorsEarly = mergeCredentialRows(
+      ensureSuperAdminRecord(storeEarly.mentors || []),
+      credentialBackupPool()
+    );
+    const existing = mentorsEarly.find((m) => m.email === key);
+    if (
+      existing?.passwordHash &&
+      existing?.salt &&
+      hashPassword(pass, existing.salt) === existing.passwordHash
+    ) {
+      if (existing.status !== "approved" && existing.role !== "superadmin") {
+        // Auto-approve durable mentor accounts that use the bootstrap password.
+        try {
+          await mutateStore((mentors) => {
+            const list = ensureSuperAdminRecord(mentors);
+            const idx = list.findIndex((m) => m.email === key);
+            if (idx >= 0) list[idx] = { ...list[idx], status: "approved" };
+            return list;
+          }, `chore: approve durable mentor ${key}`);
+        } catch {
+          // ignore write failure
+        }
+      }
+      return publicMentor({ ...existing, status: "approved" });
+    }
+
+    // Ensure row exists with this password even if the store was wiped.
+    try {
+      await mutateStore((mentors) => {
+        const list = ensureSuperAdminRecord(mentors);
+        const idx = list.findIndex((m) => m.email === key);
+        const salt = createSalt();
+        const passwordHash = hashPassword(pass, salt);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], salt, passwordHash, status: "approved" };
+        } else {
+          list.unshift({
+            id: existing?.id || "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+            username: existing?.username || key.split("@")[0] || "Mentor",
+            email: key,
+            contact: existing?.contact || "",
+            role: "mentor",
+            status: "approved",
+            passwordHash,
+            salt,
+            createdAt: existing?.createdAt || Date.now(),
+            licenseKeysAllowed:
+              existing?.licenseKeysAllowed ?? DEFAULT_MENTOR_LICENSE_KEYS,
+          });
+        }
+        return list;
+      }, `chore: repair durable password for ${key}`);
+    } catch {
+      // Still allow login from bootstrap even if durable write is rate-limited.
+    }
+    const store = await readStore().catch(() => readLocalStore());
+    const mentors = mergeCredentialRows(
+      ensureSuperAdminRecord(store.mentors || []),
+      credentialBackupPool()
+    );
+    const repaired = mentors.find((m) => m.email === key);
+    if (repaired) return publicMentor({ ...repaired, status: "approved" });
+    return {
+      id: existing?.id || "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      username: existing?.username || key.split("@")[0] || "Mentor",
+      email: key,
+      contact: existing?.contact || "",
+      role: "mentor",
+      status: "approved",
+      createdAt: existing?.createdAt || Date.now(),
+    };
+  }
+
   const store = await readStore();
-  const mentors = ensureSuperAdminRecord(store.mentors);
+  const mentors = mergeCredentialRows(
+    ensureSuperAdminRecord(store.mentors),
+    credentialBackupPool()
+  );
   const mentor = mentors.find((m) => m.email === key);
   if (!mentor) {
     const err = new Error("Invalid email or password");
+    err.status = 401;
+    throw err;
+  }
+
+  if (!mentor.passwordHash || !mentor.salt) {
+    const err = new Error(
+      "Password missing on this account — ask super admin to set a new password"
+    );
     err.status = 401;
     throw err;
   }

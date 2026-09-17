@@ -31,7 +31,10 @@ export default function AdminAuth({ onAuthenticated, showToast }) {
     if (busy) return;
     setBusy(true);
     try {
-      const mentor = await loginMentorAccount({ email, password });
+      const mentor = await loginMentorAccount({
+        email: String(email || "").trim(),
+        password: String(password || "").trim(),
+      });
       onAuthenticated?.(mentor);
       showToast?.(`Welcome, ${mentor.username}`);
     } catch (error) {
@@ -74,7 +77,9 @@ export default function AdminAuth({ onAuthenticated, showToast }) {
 
   function onForgotPassword(event) {
     event.preventDefault();
-    showToast?.("Ask the super admin to set a new password (no email reset)");
+    showToast?.(
+      "Ask the super admin to set a new password in Mentor Management (no email reset)"
+    );
   }
 
   if (mode === "register") {
