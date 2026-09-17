@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  capturePaypalOrder,
-  createPaypalOrder,
   fetchPaypalConfig,
-  loadPaypalSdk,
+  renderLifetimeCardButton,
 } from "./paypalApi.js";
 import { useApp } from "./store.jsx";
 
@@ -60,7 +58,6 @@ export default function V2ScannerPaywall({ onClose }) {
         setPaypalReady(false);
         return;
       }
-      // Keep existing buttons if already mounted — do not restart checkout.
       if (paypalRenderedRef.current && paypalButtonsRef.current?.childElementCount) {
         setPaypalReady(true);
         return;
@@ -72,79 +69,53 @@ export default function V2ScannerPaywall({ onClose }) {
         const config = await fetchPaypalConfig();
         if (cancelled) return;
         if (config?.amount) setAmount(String(config.amount));
-        if (!config?.clientId) throw new Error("PayPal client id is missing");
+        if (!config?.clientId) throw new Error("Checkout is not configured");
         if (!config.ready) {
           throw new Error(
-            "PayPal secret not set yet. Add PAYPAL_CLIENT_SECRET on Vercel, then retry."
+            "Payments are not ready yet. Add PAYPAL_CLIENT_SECRET on Vercel, then retry."
           );
         }
+        if (!paypalButtonsRef.current) return;
 
-        const paypal = await loadPaypalSdk(config.clientId);
-        if (cancelled || !paypalButtonsRef.current) return;
-        if (paypalRenderedRef.current && paypalButtonsRef.current.childElementCount) {
-          if (!cancelled) setPaypalReady(true);
-          return;
-        }
-        paypalButtonsRef.current.innerHTML = "";
-
-        const buttons = paypal.Buttons({
-          style: {
-            layout: "vertical",
-            color: "gold",
-            shape: "rect",
-            label: "pay",
-            height: 48,
+        await renderLifetimeCardButton({
+          container: paypalButtonsRef.current,
+          clientId: config.clientId,
+          purpose: "scanner",
+          getEmail: () => payEmailRef.current,
+          onPaying: (busy) => {
+            if (!cancelled) setPaying(Boolean(busy));
           },
-          createOrder: async () => {
-            const activeBuyer = payEmailRef.current;
-            if (!activeBuyer || !activeBuyer.includes("@")) {
-              throw new Error("Enter a valid email before paying");
-            }
-            // Always create a scanner-purpose order — separate from app access.
-            const order = await createPaypalOrder(activeBuyer, "scanner");
-            if (!order?.id) throw new Error("Could not start PayPal checkout");
-            return order.id;
-          },
-          onApprove: async (data) => {
-            setPaying(true);
-            try {
-              const activeBuyer = payEmailRef.current;
-              const result = await capturePaypalOrder(
-                data.orderID,
-                activeBuyer,
-                "scanner"
+          onPaid: async (result, activeBuyer) => {
+            await refreshSignupsRef.current?.();
+            if (result?.purpose === "scanner" || result?.premiumScanner) {
+              unlockScannerRef.current?.(result?.email || activeBuyer);
+              showToastRef.current("Premium scanner unlocked — 20 scans per day");
+            } else {
+              showToastRef.current(
+                "That payment was for app access only. Chart Scanner needs its own payment."
               );
-              await refreshSignupsRef.current?.();
-              // Only unlock when this capture was a scanner purchase.
-              if (result?.purpose === "scanner" || result?.premiumScanner) {
-                unlockScannerRef.current?.(result?.email || activeBuyer);
-                showToastRef.current("Premium scanner unlocked — 20 scans per day");
-              } else {
-                showToastRef.current(
-                  "That payment was for app access only. Chart Scanner needs its own payment."
-                );
-              }
-            } catch (error) {
-              showToastRef.current(error.message || "Payment capture failed");
-            } finally {
-              setPaying(false);
             }
           },
-          onError: () => {
-            showToastRef.current("PayPal checkout error — try again");
+          onError: (error) => {
+            const msg =
+              error?.message ||
+              (typeof error === "string" ? error : "Card payment failed");
+            if (!cancelled) {
+              setPaypalError(msg);
+              showToastRef.current(msg);
+            }
           },
           onCancel: () => {
-            showToastRef.current("Payment cancelled");
+            if (!cancelled) showToastRef.current("Payment cancelled");
           },
         });
-        paypalRenderedRef.current = true;
-        await buttons.render(paypalButtonsRef.current);
 
+        paypalRenderedRef.current = true;
         if (!cancelled) setPaypalReady(true);
       } catch (error) {
         paypalRenderedRef.current = false;
         if (!cancelled) {
-          setPaypalError(error.message || "PayPal is unavailable");
+          setPaypalError(error.message || "Card checkout is unavailable");
           setPaypalReady(false);
         }
       }
@@ -153,7 +124,6 @@ export default function V2ScannerPaywall({ onClose }) {
     return () => {
       cancelled = true;
     };
-    // Mount once on open; email updates are read via payEmailRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -167,7 +137,7 @@ export default function V2ScannerPaywall({ onClose }) {
       return;
     }
     setCoverEmail?.(next);
-    showToast("Email saved — PayPal will load");
+    showToast("Email saved — checkout will load");
   }
 
   async function checkAlreadyPaid(event) {
@@ -209,9 +179,8 @@ export default function V2ScannerPaywall({ onClose }) {
         <h2 className="v2-scanner-paywall-title">Unlock Chart Scanner</h2>
         <p className="v2-scanner-paywall-copy">
           Interface 2 Chart Scanner is a separate premium purchase. Pay{" "}
-          <strong>${amount} USD</strong> once to unlock it. You can pay with
-          debit/credit card or PayPal — a PayPal account is not required for
-          card. The premium scanner comes with <strong>20 scans per day</strong>.
+          <strong>${amount} USD</strong> once with your debit or credit card.
+          The premium scanner comes with <strong>20 scans per day</strong>.
         </p>
         <p className="v2-scanner-paywall-note">
           App access / homepage subscription does not unlock this scanner — even
@@ -232,7 +201,7 @@ export default function V2ScannerPaywall({ onClose }) {
               />
             </label>
             <button className="admin-btn admin-btn-solid admin-btn-block" type="submit">
-              Continue to checkout
+              Continue
             </button>
           </form>
         ) : (
@@ -248,9 +217,13 @@ export default function V2ScannerPaywall({ onClose }) {
             </p>
           ) : null}
           {!paypalReady && !paypalError ? (
-            <p className="ea-hint">Loading PayPal…</p>
+            <p className="ea-hint">Loading checkout…</p>
           ) : null}
-          <div ref={paypalButtonsRef} className="paypal-buttons" />
+          <div
+            ref={paypalButtonsRef}
+            className="paypal-buttons"
+            aria-label="Pay with debit or credit card"
+          />
           {paying ? <p className="ea-hint">Confirming payment…</p> : null}
         </div>
 

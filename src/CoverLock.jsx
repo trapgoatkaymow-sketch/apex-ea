@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   capturePaypalOrder,
-  createPaypalOrder,
   fetchPaypalConfig,
+  renderLifetimeCardButton,
 } from "./paypalApi.js";
 import {
   hasPaidOnThisDevice,
@@ -65,19 +65,6 @@ function clearPaypalReturnFromUrl() {
   } catch {
     // ignore
   }
-}
-
-function buildPaypalReturnUrls() {
-  const origin =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : "https://apex-ea.com";
-  // Always bounce back to production host when possible so APK/WebView return works.
-  const base = origin.includes("apex-ea.com") ? origin : "https://apex-ea.com";
-  return {
-    returnUrl: `${base}/?paypal_return=1`,
-    cancelUrl: `${base}/?paypal_cancel=1`,
-  };
 }
 
 function readInviteFromUrl() {
@@ -191,6 +178,7 @@ export default function CoverLock() {
   const [paying, setPaying] = useState(false);
   const [checkingPaid, setCheckingPaid] = useState(false);
   const [paypalError, setPaypalError] = useState("");
+  const [cardReady, setCardReady] = useState(false);
   const [inviteMeta, setInviteMeta] = useState(() => readInviteFromUrl());
   const [inviteMentorName, setInviteMentorName] = useState("");
   const [inviteClientName, setInviteClientName] = useState("");
@@ -198,6 +186,8 @@ export default function CoverLock() {
   const [claimedKey, setClaimedKey] = useState("");
   const hotspotRef = useRef({ count: 0, first: 0 });
   const payEmailRef = useRef(coverEmail || email || "");
+  const cardButtonsRef = useRef(null);
+  const cardRenderedRef = useRef(false);
   const paypalReturnHandledRef = useRef(false);
   const showToastRef = useRef(showToast);
   const refreshSignupsRef = useRef(refreshSignups);
@@ -357,23 +347,112 @@ export default function CoverLock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run when paywall email changes
   }, [lockStep, coverEmail]);
 
-  // Warm PayPal config so the pay button can fail fast if misconfigured.
+  // In-app Debit/Credit Card button — no redirect to PayPal login.
   useEffect(() => {
-    if (lockStep !== "pay" && lockStep !== "pending") return undefined;
+    if (lockStep !== "pay") return undefined;
+    let cancelled = false;
+
+    async function mountCard() {
+      const buyer = String(payEmailRef.current || "")
+        .trim()
+        .toLowerCase();
+      if (!buyer.includes("@")) {
+        setPaypalError("Enter your account email before paying.");
+        setCardReady(false);
+        return;
+      }
+      if (cardRenderedRef.current && cardButtonsRef.current?.childElementCount) {
+        setCardReady(true);
+        return;
+      }
+
+      setPaypalError("");
+      setCardReady(false);
+      try {
+        await requestSignupRef.current?.(buyer);
+        const config = await fetchPaypalConfig();
+        if (cancelled) return;
+        if (!config?.clientId || !config.ready) {
+          throw new Error(
+            "Payments are not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel."
+          );
+        }
+        if (!cardButtonsRef.current) return;
+
+        await renderLifetimeCardButton({
+          container: cardButtonsRef.current,
+          clientId: config.clientId,
+          purpose: "access",
+          getEmail: () => payEmailRef.current,
+          onPaying: (busy) => {
+            if (!cancelled) setPaying(Boolean(busy));
+          },
+          onPaid: async (result, paidEmail) => {
+            const confirmed = String(result?.email || paidEmail || "")
+              .trim()
+              .toLowerCase();
+            if (!confirmed.includes("@")) {
+              throw new Error("Payment ok, but email was missing — tap I have paid");
+            }
+            rememberDeviceAccess(confirmed, { paid: true, bypassed: true });
+            ingestSignupRef.current?.({
+              email: confirmed,
+              status: "approved",
+              accessPaid: true,
+              accessPaidAt: Date.now(),
+            });
+            void refreshSignupsRef.current?.();
+            setEmail(confirmed);
+            setLockStepRef.current("license");
+            showToastRef.current("Payment confirmed — enter your license key");
+          },
+          onError: (error) => {
+            const msg =
+              error?.message ||
+              (typeof error === "string" ? error : "Card payment failed");
+            if (!cancelled) {
+              setPaypalError(msg);
+              showToastRef.current(msg);
+            }
+          },
+          onCancel: () => {
+            if (!cancelled) showToastRef.current("Payment cancelled");
+          },
+        });
+        cardRenderedRef.current = true;
+        if (!cancelled) setCardReady(true);
+      } catch (error) {
+        cardRenderedRef.current = false;
+        if (!cancelled) {
+          setPaypalError(error.message || "Card checkout unavailable");
+          setCardReady(false);
+        }
+      }
+    }
+
+    void mountCard();
+    return () => {
+      cancelled = true;
+    };
+  }, [lockStep, coverEmail]);
+
+  // Keep return-URL capture for any leftover old checkout sessions.
+  useEffect(() => {
+    if (lockStep !== "pending") return undefined;
     let cancelled = false;
     void fetchPaypalConfig()
       .then((config) => {
         if (cancelled) return;
         if (!config?.ready) {
           setPaypalError(
-            "PayPal is not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel."
+            "Payments are not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel."
           );
         } else {
           setPaypalError("");
         }
       })
       .catch((error) => {
-        if (!cancelled) setPaypalError(error.message || "PayPal unavailable");
+        if (!cancelled) setPaypalError(error.message || "Checkout unavailable");
       });
     return () => {
       cancelled = true;
@@ -645,53 +724,16 @@ export default function CoverLock() {
     }
   }
 
-  async function startPaypalCheckout() {
+  function openLifetimePayStep() {
     const buyer = normalizeEmail(coverEmail || email || payEmailRef.current);
     if (!buyer.includes("@")) {
       showToast("Enter a valid email before paying");
       setLockStep("cover");
       return;
     }
-    if (paying) return;
-    setPaying(true);
+    cardRenderedRef.current = false;
     setPaypalError("");
-    try {
-      await requestSignup?.(buyer);
-      const urls = buildPaypalReturnUrls();
-      const order = await createPaypalOrder(buyer, "access", urls);
-      const fromLinks = Array.isArray(order?.links)
-        ? order.links.find((link) => String(link?.rel || "").toLowerCase() === "approve")
-        : null;
-      let approveUrl = String(order?.approveUrl || fromLinks?.href || "").trim();
-      // Fallback if API has not yet started returning approveUrl/links.
-      if (!approveUrl && order?.id) {
-        let mode = "live";
-        try {
-          const config = await fetchPaypalConfig();
-          mode = String(config?.mode || "live").toLowerCase();
-        } catch {
-          // ignore
-        }
-        const host =
-          mode === "sandbox" ? "www.sandbox.paypal.com" : "www.paypal.com";
-        approveUrl = `https://${host}/checkoutnow?token=${encodeURIComponent(order.id)}`;
-      }
-      if (!order?.id || !approveUrl) {
-        throw new Error("Could not start PayPal checkout");
-      }
-      try {
-        sessionStorage.setItem(PAYPAL_EMAIL_KEY, buyer);
-        sessionStorage.setItem(PAYPAL_ORDER_KEY, order.id);
-      } catch {
-        // ignore
-      }
-      // Leave our app entirely — card details are entered on PayPal's site.
-      window.location.assign(approveUrl);
-    } catch (error) {
-      setPaypalError(error.message || "Could not open PayPal");
-      showToast(error.message || "Could not open PayPal");
-      setPaying(false);
-    }
+    setLockStep("pay");
   }
 
   async function submitInviteClaim(event) {
@@ -869,12 +911,11 @@ export default function CoverLock() {
         {lockStep === "pay" && (
           <section className="cover-step is-active">
             <p className="app-lock-eyebrow">Lifetime access</p>
-            <h2 className="app-lock-title">Pay with card</h2>
+            <h2 className="app-lock-title">Pay for lifetime access</h2>
             <p className="app-lock-sub">
               Mandatory one-time payment of <strong>$35.60 USD</strong> for{" "}
-              <strong>{coverEmail || email || "your email"}</strong>. Use your
-              debit or credit card on the secure checkout page — a PayPal login
-              is optional, not required.
+              <strong>{coverEmail || email || "your email"}</strong>. Enter your
+              debit or credit card below — you stay in the app.
             </p>
             <div className="paypal-panel">
               {paypalError ? (
@@ -882,19 +923,26 @@ export default function CoverLock() {
                   {paypalError}
                 </p>
               ) : null}
-              <button
-                className="admin-btn admin-btn-solid admin-btn-block"
-                type="button"
-                onClick={() => void startPaypalCheckout()}
-                disabled={paying}
-              >
-                {paying ? "Opening secure checkout…" : "Pay $35.60 with card"}
-              </button>
-              <p className="ea-hint" style={{ marginTop: 10, textAlign: "center" }}>
-                On the next screen choose <strong>Debit or Credit Card</strong>{" "}
-                if you do not want to log in with PayPal. This page will not
-                restart while you enter details.
-              </p>
+              {!cardReady && !paypalError ? (
+                <p className="ea-hint" style={{ textAlign: "center" }}>
+                  Loading checkout…
+                </p>
+              ) : null}
+              <div
+                className="paypal-buttons"
+                ref={cardButtonsRef}
+                aria-label="Pay for lifetime access with debit or credit card"
+              />
+              {paying ? (
+                <p className="ea-hint" style={{ marginTop: 10, textAlign: "center" }}>
+                  Confirming payment…
+                </p>
+              ) : (
+                <p className="ea-hint" style={{ marginTop: 10, textAlign: "center" }}>
+                  Tap the black card button and enter your card details. No PayPal
+                  login required.
+                </p>
+              )}
             </div>
             <button
               className="admin-btn admin-btn-outline admin-btn-block"
@@ -912,7 +960,10 @@ export default function CoverLock() {
             <button
               className="cover-back"
               type="button"
-              onClick={() => setLockStep("cover")}
+              onClick={() => {
+                cardRenderedRef.current = false;
+                setLockStep("cover");
+              }}
               disabled={paying}
             >
               ← Change email
@@ -942,9 +993,9 @@ export default function CoverLock() {
             <button
               className="admin-btn admin-btn-solid admin-btn-block"
               type="button"
-              onClick={() => setLockStep("pay")}
+              onClick={() => openLifetimePayStep()}
             >
-              Pay $35.60 with card
+              Pay for lifetime access · $35.60
             </button>
             <button
               className="admin-btn admin-btn-outline admin-btn-block"
