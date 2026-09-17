@@ -12,7 +12,11 @@ import { fileURLToPath } from "url";
 
 const REPO =
   process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
-const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
+// Isolated branch avoids non-fast-forward races with signup commits on main.
+const BRANCH =
+  process.env.LICENSES_GITHUB_BRANCH ||
+  process.env.SIGNUPS_GITHUB_BRANCH ||
+  "store-licenses";
 const FILE_PATH = process.env.LICENSES_FILE_PATH || "data/licenses.json";
 const BLOB_PATH = process.env.LICENSES_BLOB_PATH || "apexea/licenses.json";
 const API = `https://api.github.com/repos/${REPO}`;
@@ -846,7 +850,7 @@ function writeLocalStore(licenses, deletedKeys = memoryDeletedKeys) {
   return next;
 }
 
-async function readStore() {
+async function readStore(options = {}) {
   let remote = null;
   let remoteSource = "empty";
 
@@ -854,8 +858,11 @@ async function readStore() {
   const durable = await durableRead({
     blobPath: BLOB_PATH,
     githubPath: FILE_PATH,
+    githubRepo: REPO,
+    githubBranch: BRANCH,
     snapshotEnv: "LICENSES_SNAPSHOT_B64",
     localPaths: [TMP_FILE, BUNDLED_FILE],
+    preferFresh: Boolean(options.preferFresh),
   });
   if (durable.raw != null) {
     try {
@@ -880,12 +887,13 @@ async function readStore() {
 
   // Explicit empty durable document (fresh reset) — do not resurrect keys from
   // the bundled seed /tmp copy, or portals cannot start from zero.
-  // Snapshot counts too: after a wipe we clear LICENSES_SNAPSHOT_B64 to [].
+  // github-raw is excluded: CDN can lag behind a successful git push.
   if (
     Array.isArray(remote.licenses) &&
     remote.licenses.length === 0 &&
     (remoteSource === "blob" ||
       remoteSource === "github" ||
+      remoteSource === "github-git" ||
       remoteSource === "snapshot")
   ) {
     memoryLicenses = [];
@@ -947,6 +955,8 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
     raw: payload,
     blobPath: BLOB_PATH,
     githubPath: FILE_PATH,
+    githubRepo: REPO,
+    githubBranch: BRANCH,
     githubSha: sha && sha !== "local" ? sha : null,
     message,
     localPaths: [TMP_FILE, BUNDLED_FILE],
@@ -964,6 +974,7 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
   return {
     local: true,
     durable: false,
+    conflict: Boolean(durable.conflict),
     error: durable.reason || "durable write failed",
   };
 }

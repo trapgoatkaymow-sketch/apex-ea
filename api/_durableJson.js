@@ -500,7 +500,21 @@ export async function durableRead(opts = {}) {
 
   const blob = blobPath ? await blobGet(blobPath) : null;
   if (blob && !blob.missing && blob.raw != null) {
-    return { raw: blob.raw, sha: blob.etag, source: "blob" };
+    // Empty licenses blob is often a stale wipe — fall through to GitHub
+    // (store-licenses) so Reactivate/Unlock do not see a blank roster.
+    let blobEmptyLicenses = false;
+    if (/licenses\.json$/i.test(String(githubPath || blobPath || ""))) {
+      try {
+        const parsed = JSON.parse(blob.raw || "{}");
+        blobEmptyLicenses =
+          Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
+      } catch {
+        blobEmptyLicenses = false;
+      }
+    }
+    if (!blobEmptyLicenses) {
+      return { raw: blob.raw, sha: blob.etag, source: "blob" };
+    }
   }
 
   if (githubPath) {
