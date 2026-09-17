@@ -12,7 +12,7 @@ export const config = {
 };
 
 const REPO = "trapgoatkaymow-sketch/apex-ea";
-const PROJECT_NAME = "gizmo";
+const PROJECT_NAME = "apex-ea";
 const SKIP_DIRS = new Set([
   ".git",
   "node_modules",
