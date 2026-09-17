@@ -88,6 +88,15 @@ export function normalizeLicenseKey(key) {
     .replace(/[^A-Z0-9-]/g, "");
 }
 
+/** APEXXXXXXXXX → APEX-XXXX-XXXX when hyphens were dropped. */
+export function formatLicenseKey(key) {
+  const compact = normalizeLicenseKey(key).replace(/-/g, "");
+  if (/^APEX[A-Z0-9]{8}$/.test(compact)) {
+    return `APEX-${compact.slice(4, 8)}-${compact.slice(8, 12)}`;
+  }
+  return normalizeLicenseKey(key);
+}
+
 function resolveLicenseExpiry(durationId, from = Date.now()) {
   const id = String(durationId || "lifetime")
     .trim()
@@ -101,22 +110,30 @@ function resolveLicenseExpiry(durationId, from = Date.now()) {
 }
 
 export function licenseKeyVariants(rawKey) {
-  const base = normalizeLicenseKey(rawKey);
+  const base = formatLicenseKey(rawKey);
   if (!base) return [];
-  const out = new Set([base]);
+  const out = new Set([base, base.replace(/-/g, "")]);
+  const pairs = [
+    ["0", "O"],
+    ["1", "I"],
+    ["1", "L"],
+    ["5", "S"],
+    ["8", "B"],
+    ["2", "Z"],
+  ];
   const chars = [...base];
   for (let i = 0; i < chars.length; i += 1) {
-    if (chars[i] === "0") {
-      const next = [...chars];
-      next[i] = "O";
-      out.add(next.join(""));
-    } else if (chars[i] === "O") {
-      const next = [...chars];
-      next[i] = "0";
-      out.add(next.join(""));
+    for (const [a, b] of pairs) {
+      if (chars[i] === a || chars[i] === b) {
+        const next = [...chars];
+        next[i] = chars[i] === a ? b : a;
+        const v = next.join("");
+        out.add(v);
+        out.add(v.replace(/-/g, ""));
+      }
     }
   }
-  return Array.from(out);
+  return Array.from(out).filter(Boolean);
 }
 
 function requireToken() {
@@ -1095,7 +1112,7 @@ export async function createLicense(payload = {}) {
   }
 
   let result = null;
-  await mutateStore((licenses, api) => {
+  const write = await mutateStore((licenses, api) => {
     if (api?.isDeleted?.(key)) {
       const err = new Error("This license key was permanently deleted");
       err.status = 410;
@@ -1179,6 +1196,15 @@ export async function createLicense(payload = {}) {
     return [result, ...licenses];
   }, `license: ${key} · ${clientEmail}`);
 
+  // Never hand out a key that only landed in ephemeral /tmp memory — cold
+  // serverless instances will not see it and clients get "Invalid license key".
+  if (write?.durable === false) {
+    const err = new Error(
+      "License key did not save to the shared store — tap Generate again"
+    );
+    err.status = 503;
+    throw err;
+  }
   return result;
 }
 
@@ -1815,10 +1841,18 @@ export async function deleteLicense(rawKey) {
 }
 
 export async function findLicense(rawKey) {
-  const variants = licenseKeyVariants(rawKey);
-  if (!variants.length) return null;
+  const variants = new Set(licenseKeyVariants(rawKey));
+  if (!variants.size) return null;
+  const compactOf = (value) => normalizeLicenseKey(value).replace(/-/g, "");
+  const wantCompact = compactOf(rawKey);
   const licenses = await listLicenses();
-  return licenses.find((row) => variants.includes(row.key)) || null;
+  return (
+    licenses.find((row) => {
+      const key = normalizeLicenseKey(row.key);
+      if (!key) return false;
+      return variants.has(key) || compactOf(key) === wantCompact;
+    }) || null
+  );
 }
 
 export async function findLicensesByEmail(email) {

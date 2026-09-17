@@ -38,6 +38,15 @@ export function normalizeLicenseKey(key) {
     .replace(/[^A-Z0-9-]/g, "");
 }
 
+/** APEXXXXXXXXX → APEX-XXXX-XXXX when hyphens were dropped. */
+export function formatLicenseKey(key) {
+  const compact = normalizeLicenseKey(key).replace(/-/g, "");
+  if (/^APEX[A-Z0-9]{8}$/.test(compact)) {
+    return `APEX-${compact.slice(4, 8)}-${compact.slice(8, 12)}`;
+  }
+  return normalizeLicenseKey(key);
+}
+
 const DELETED_KEYS_STORAGE = "apexea-deleted-license-keys-v1";
 
 function readDeletedKeyMap() {
@@ -175,24 +184,32 @@ export function formatLicenseExpiry(row) {
   }
 }
 
-/** Try common lookalike swaps so APEX-0M60… still matches if typed as O. */
+/** Try common lookalike swaps so typed/OCR keys still match. */
 export function licenseKeyVariants(rawKey) {
-  const base = normalizeLicenseKey(rawKey);
+  const base = formatLicenseKey(rawKey);
   if (!base) return [];
-  const out = new Set([base]);
+  const out = new Set([base, base.replace(/-/g, "")]);
+  const pairs = [
+    ["0", "O"],
+    ["1", "I"],
+    ["1", "L"],
+    ["5", "S"],
+    ["8", "B"],
+    ["2", "Z"],
+  ];
   const chars = [...base];
   for (let i = 0; i < chars.length; i += 1) {
-    if (chars[i] === "0") {
-      const next = [...chars];
-      next[i] = "O";
-      out.add(next.join(""));
-    } else if (chars[i] === "O") {
-      const next = [...chars];
-      next[i] = "0";
-      out.add(next.join(""));
+    for (const [a, b] of pairs) {
+      if (chars[i] === a || chars[i] === b) {
+        const next = [...chars];
+        next[i] = chars[i] === a ? b : a;
+        const v = next.join("");
+        out.add(v);
+        out.add(v.replace(/-/g, ""));
+      }
     }
   }
-  return Array.from(out);
+  return Array.from(out).filter(Boolean);
 }
 
 export function normalizeLicense(row) {

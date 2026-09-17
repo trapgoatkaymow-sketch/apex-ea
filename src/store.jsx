@@ -900,7 +900,7 @@ export function AppProvider({ children }) {
           if (remoteKeySet.has(key)) return true;
           const age = now - Number(row.createdAt || row.updatedAt || 0);
           if (row.used && age < 24 * 60 * 60 * 1000) return true;
-          if (!row.used && age < 3 * 60 * 1000) return true;
+          if (!row.used && age < 30 * 60 * 1000) return true;
           return false;
         });
       });
@@ -1750,6 +1750,7 @@ export function AppProvider({ children }) {
       }
 
       // Same rule as bulk import — one live key per client+bot.
+      // Only reuse a local key if it still exists on the shared server store.
       const existingForClient = (Array.isArray(licenseKeys) ? licenseKeys : []).find(
         (row) =>
           normalizeEmail(row.clientEmail) === email &&
@@ -1757,12 +1758,22 @@ export function AppProvider({ children }) {
           !isRememberedDeletedLicenseKey(row.key)
       );
       if (existingForClient) {
-        showToast(
-          existingForClient.used
-            ? `This client already has a used key for ${bot?.name || "this bot"}`
-            : `This client already has an unused key: ${existingForClient.key}`
-        );
-        return existingForClient;
+        let remoteExisting = null;
+        try {
+          remoteExisting = await fetchLicense(existingForClient.key);
+        } catch {
+          remoteExisting = null;
+        }
+        if (remoteExisting) {
+          setLicenseKeys((prev) => mergeLicenses(prev, [remoteExisting]));
+          showToast(
+            remoteExisting.used
+              ? `This client already has a used key for ${bot?.name || "this bot"}`
+              : `This client already has an unused key: ${remoteExisting.key}`
+          );
+          return remoteExisting.key;
+        }
+        // Local ghost — fall through and create a durable server key.
       }
 
       const ea = eas.find((item) => item.id === botId);
@@ -1866,7 +1877,6 @@ export function AppProvider({ children }) {
           symbols: Array.isArray(ea?.symbols) ? ea.symbols : [],
         },
       };
-      setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
 
       // Keep signup list in sync — license email is approved for activation.
       try {
@@ -1879,17 +1889,24 @@ export function AppProvider({ children }) {
         // license create still proceeds
       }
 
-      try {
-        const remote = await createLicenseRemote({
-          ...entry,
-          bot: {
-            ...entry.bot,
-            photo: entry.bot.photo || "/logo.png",
-          },
-        });
-        if (remote) {
-          setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
-          const syncedPhoto = remote.bot?.photo;
+      let lastError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const remote = await createLicenseRemote({
+            ...entry,
+            bot: {
+              ...entry.bot,
+              photo: entry.bot.photo || "/logo.png",
+            },
+          });
+          if (!remote?.key) {
+            throw new Error("Server did not return a license key");
+          }
+          // Confirm the key is readable from the shared store (not just this response).
+          const verified = await fetchLicense(remote.key);
+          const saved = verified || remote;
+          setLicenseKeys((prev) => mergeLicenses(prev, [saved]));
+          const syncedPhoto = saved.bot?.photo;
           if (syncedPhoto && syncedPhoto !== "/logo.png") {
             setEas((prev) =>
               prev.map((item) =>
@@ -1902,18 +1919,20 @@ export function AppProvider({ children }) {
               )
             );
           }
+          showToast(`License ready for ${name} · ${email}`);
+          return saved.key;
+        } catch (error) {
+          lastError = error;
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
         }
-        showToast(`License ready for ${name} · ${email}`);
-        return remote?.key || key;
-      } catch (error) {
-        // Keep the local key so mentors can still copy/share it when GitHub sync fails.
-        showToast(
-          error.message === "Bad credentials"
-            ? `License created locally for ${name} — copy it now (server sync needs a fresh GitHub token)`
-            : `License created for ${name} — copy it now (sync pending: ${error.message || "offline"})`
-        );
-        return key;
       }
+
+      showToast(
+        lastError?.message === "Bad credentials"
+          ? `Could not save license — server needs a fresh GitHub token. Try again.`
+          : `Could not save license key (${lastError?.message || "offline"}). Tap Generate again.`
+      );
+      return null;
     },
     [bots, eas, licenseKeys, showToast]
   );
@@ -2014,9 +2033,16 @@ export function AppProvider({ children }) {
       }
 
       const variants = licenseKeyVariants(rawKey);
-      let entry =
-        licenseKeys.find((item) => variants.includes(normalizeLicenseKey(item.key))) ||
-        null;
+      const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+      const matchKey = (item) => {
+        const key = normalizeLicenseKey(item?.key);
+        if (!key) return false;
+        return (
+          variants.includes(key) ||
+          key.replace(/-/g, "") === wantCompact
+        );
+      };
+      let entry = licenseKeys.find(matchKey) || null;
 
       if (!entry) {
         try {
@@ -2030,9 +2056,7 @@ export function AppProvider({ children }) {
         try {
           const byEmail = await fetchLicensesByEmail(accountEmail);
           setLicenseKeys((prev) => mergeLicenses(prev, byEmail));
-          entry =
-            byEmail.find((item) => variants.includes(normalizeLicenseKey(item.key))) ||
-            null;
+          entry = byEmail.find(matchKey) || null;
         } catch {
           // continue
         }
@@ -2041,9 +2065,7 @@ export function AppProvider({ children }) {
         try {
           const remote = await fetchLicenses();
           setLicenseKeys((prev) => mergeLicenses(prev, remote));
-          entry =
-            remote.find((item) => variants.includes(normalizeLicenseKey(item.key))) ||
-            null;
+          entry = remote.find(matchKey) || null;
         } catch {
           // keep local miss
         }

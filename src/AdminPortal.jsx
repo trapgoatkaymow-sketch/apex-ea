@@ -20,6 +20,7 @@ import {
   formatLicenseExpiry,
   isLicenseExpired,
   LICENSE_DURATIONS,
+  normalizeLicenseKey,
   reconcileCommissionRemote,
   resolveLicenseExpiry,
 } from "./licensesApi.js";
@@ -1432,17 +1433,24 @@ export default function AdminPortal() {
   const licenseQuery = String(licenseSearch || "")
     .trim()
     .toLowerCase();
+  const licenseQueryKey = normalizeLicenseKey(licenseSearch)
+    .toLowerCase()
+    .replace(/-/g, "");
   const filteredLicenses = !licenseQuery
     ? myLicenses
     : myLicenses.filter((row) => {
         const name = String(row.clientName || row.mainText || "").toLowerCase();
         const email = String(row.clientEmail || "").toLowerCase();
         const key = String(row.key || "").toLowerCase();
+        const keyCompact = normalizeLicenseKey(row.key)
+          .toLowerCase()
+          .replace(/-/g, "");
         const bot = String(row.botName || "").toLowerCase();
         return (
           name.includes(licenseQuery) ||
           email.includes(licenseQuery) ||
           key.includes(licenseQuery) ||
+          (licenseQueryKey && keyCompact.includes(licenseQueryKey)) ||
           bot.includes(licenseQuery)
         );
       });
@@ -2353,7 +2361,11 @@ export default function AdminPortal() {
             <div className="admin-card admin-keys-card" style={{ marginTop: 14 }}>
               <div className="admin-card-title-row">
                 <h3>Generated keys</h3>
-                <span className="admin-badge">{filteredLicenses.length}</span>
+                <span className="admin-badge">
+                  {licenseQuery
+                    ? `${filteredLicenses.length}/${myLicenses.length}`
+                    : myLicenses.length}
+                </span>
               </div>
               <p className="admin-card-meta" style={{ marginBottom: 10 }}>
                 {unusedKeys.length} unused · {usedKeys.length} used ·{" "}
@@ -2373,7 +2385,10 @@ export default function AdminPortal() {
               {myLicenses.length === 0 ? (
                 <p className="admin-empty">No license keys yet</p>
               ) : filteredLicenses.length === 0 ? (
-                <p className="admin-empty">No keys match “{licenseSearch.trim()}”</p>
+                <p className="admin-empty">
+                  No keys match “{licenseSearch.trim()}”. Refresh the page, or
+                  generate the key again if it never saved.
+                </p>
               ) : (
                 <div className="license-list">
                   {[...filteredLicenses].reverse().map((entry) => (
