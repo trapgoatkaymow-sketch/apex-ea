@@ -364,8 +364,8 @@ function clearAppStoragePressure() {
     const keep = new Set([
       STORAGE_KEY,
       "apexea-daily-scans-v1",
-      "apexea-device-id-v1",
-      "apexea-cover-email",
+      "apexea-device-id",
+      "apexea-device-access-v1",
     ]);
     localStorage.removeItem("apexea-app-v1-backup");
     localStorage.removeItem(BACKUP_KEY);
