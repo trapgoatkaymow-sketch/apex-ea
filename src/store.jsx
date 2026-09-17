@@ -984,6 +984,12 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  /** Merge remote/local license rows into persisted licenseKeys (for robot info). */
+  const ingestLicenses = useCallback((rows) => {
+    if (!Array.isArray(rows) || !rows.length) return;
+    setLicenseKeys((prev) => mergeLicenses(prev, rows));
+  }, []);
+
   // Push any device-local keys into the shared store once so other phones can use them.
   const licenseMigrateRef = useRef(false);
   useEffect(() => {
@@ -1036,6 +1042,68 @@ export function AppProvider({ children }) {
     }, delay);
     return () => clearTimeout(timer);
   }, [licenseKeys, refreshLicenses]);
+
+  // Stamp license key / email / usedAt onto robots for users who already unlocked
+  // without ever seeing their key (auto-claim used to skip that screen).
+  useEffect(() => {
+    const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
+    if (!keys.length) return;
+    const account = normalizeEmail(coverEmail);
+    const pickForBot = (botId) => {
+      const id = String(botId || "").trim();
+      if (!id) return null;
+      const rows = keys.filter(
+        (row) =>
+          String(row.botId || row.bot?.id || "").trim() === id
+      );
+      if (!rows.length) return null;
+      rows.sort(
+        (a, b) =>
+          Number(b.usedAt || b.updatedAt || 0) -
+          Number(a.usedAt || a.updatedAt || 0)
+      );
+      if (account) {
+        const mine = rows.find(
+          (row) => normalizeEmail(row.clientEmail) === account
+        );
+        if (mine) return mine;
+      }
+      return rows.find((row) => row.used) || rows[0];
+    };
+
+    setBots((prev) => {
+      let changed = false;
+      const next = prev.map((bot) => {
+        if (bot.licenseKey) return bot;
+        const row = pickForBot(bot.id);
+        if (!row?.key) return bot;
+        changed = true;
+        return {
+          ...bot,
+          licenseKey: row.key,
+          clientEmail: row.clientEmail || account || "",
+          licenseUsedAt: Number(row.usedAt || row.boundAt) || null,
+        };
+      });
+      return changed ? next : prev;
+    });
+    setEas((prev) => {
+      let changed = false;
+      const next = prev.map((ea) => {
+        if (ea.licenseKey) return ea;
+        const row = pickForBot(ea.id);
+        if (!row?.key) return ea;
+        changed = true;
+        return {
+          ...ea,
+          licenseKey: row.key,
+          clientEmail: row.clientEmail || account || "",
+          licenseUsedAt: Number(row.usedAt || row.boundAt) || null,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, [coverEmail, licenseKeys]);
 
   useEffect(() => {
     // Keep license refresh reasonably fresh on Android without 5s thrash.
@@ -2180,6 +2248,11 @@ export function AppProvider({ children }) {
                   strategy: snapshot.strategy || ea.strategy,
                   ownerEmail: ea.ownerEmail || entry.mentorEmail || "",
                   ownerId: ea.ownerId || entry.mentorId || "",
+                  licenseKey: entry.key || ea.licenseKey || "",
+                  clientEmail:
+                    entry.clientEmail || accountEmail || ea.clientEmail || "",
+                  licenseUsedAt:
+                    Number(entry.usedAt) || ea.licenseUsedAt || Date.now(),
                   symbols:
                     Array.isArray(snapshot.symbols) && snapshot.symbols.length
                       ? snapshot.symbols
@@ -2196,6 +2269,9 @@ export function AppProvider({ children }) {
             strategy: snapshot.strategy || "scalper",
             ownerEmail: entry.mentorEmail || "",
             ownerId: entry.mentorId || "",
+            licenseKey: entry.key || "",
+            clientEmail: entry.clientEmail || accountEmail || "",
+            licenseUsedAt: Number(entry.usedAt) || Date.now(),
             symbols: Array.isArray(snapshot.symbols) ? snapshot.symbols : [],
           },
           ...prev,
@@ -2213,6 +2289,11 @@ export function AppProvider({ children }) {
                   photo: pickProfilePhoto(snapshot.photo, b.photo),
                   active: true,
                   selected: true,
+                  licenseKey: entry.key || b.licenseKey || "",
+                  clientEmail:
+                    entry.clientEmail || accountEmail || b.clientEmail || "",
+                  licenseUsedAt:
+                    Number(entry.usedAt) || b.licenseUsedAt || Date.now(),
                 }
               : { ...b, selected: false }
           );
@@ -2225,6 +2306,9 @@ export function AppProvider({ children }) {
             photo: pickProfilePhoto(snapshot.photo),
             active: true,
             selected: true,
+            licenseKey: entry.key || "",
+            clientEmail: entry.clientEmail || accountEmail || "",
+            licenseUsedAt: Number(entry.usedAt) || Date.now(),
           },
         ];
       });
@@ -2643,6 +2727,7 @@ export function AppProvider({ children }) {
     selectBot,
     removeActiveBot,
     licenseKeys,
+    ingestLicenses,
     generateLicense,
     generateLicensesBulk,
     activateLicense,

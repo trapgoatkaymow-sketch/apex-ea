@@ -8,6 +8,7 @@ import {
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
+import RobotLicenseInfo from "./RobotLicenseInfo.jsx";
 import { useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import TopBar from "./TopBar.jsx";
@@ -209,23 +210,28 @@ export default function V2Interface() {
                   <p className="v2-robot-empty">No connected robots</p>
                 ) : (
                   activeRobots.map((bot) => (
-                    <button
+                    <div
                       key={bot.id}
                       className={`v2-robot-row${bot.id === activeBot?.id ? " is-active" : ""}`}
-                      type="button"
-                      onClick={() => {
-                        selectBot(bot.id);
-                        setFloatCycle(true);
-                      }}
                     >
-                      <BotAvatar
-                        bot={bot}
-                        width="40"
-                        height="40"
-                        fallback="/logo.png"
-                      />
-                      <span>{bot.name}</span>
-                    </button>
+                      <button
+                        className="v2-robot-row-main"
+                        type="button"
+                        onClick={() => {
+                          selectBot(bot.id);
+                          setFloatCycle(true);
+                        }}
+                      >
+                        <BotAvatar
+                          bot={bot}
+                          width="40"
+                          height="40"
+                          fallback="/logo.png"
+                        />
+                        <span>{bot.name}</span>
+                      </button>
+                      <RobotLicenseInfo bot={bot} variant="v2" />
+                    </div>
                   ))
                 )}
                 <button className="v2-robot-row v2-robot-add" type="button" onClick={openLicense}>

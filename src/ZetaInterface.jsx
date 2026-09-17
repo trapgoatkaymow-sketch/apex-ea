@@ -8,6 +8,7 @@ import { isNativeApp, useApp } from "./store.jsx";
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
+import RobotLicenseInfo from "./RobotLicenseInfo.jsx";
 import TopBar from "./TopBar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
@@ -156,20 +157,25 @@ export default function ZetaInterface() {
               {bots
                 .filter((b) => b.active)
                 .map((bot) => (
-                  <button
+                  <div
                     key={bot.id}
                     className={`robot-row${bot.selected ? " is-active" : ""}`}
-                    type="button"
-                    onClick={() => selectBot(bot.id)}
                   >
-                    <BotAvatar
-                      bot={bot}
-                      width="36"
-                      height="36"
-                      fallback="/logo.png"
-                    />
-                    <span>{bot.name}</span>
-                  </button>
+                    <button
+                      className="robot-row-main"
+                      type="button"
+                      onClick={() => selectBot(bot.id)}
+                    >
+                      <BotAvatar
+                        bot={bot}
+                        width="36"
+                        height="36"
+                        fallback="/logo.png"
+                      />
+                      <span>{bot.name}</span>
+                    </button>
+                    <RobotLicenseInfo bot={bot} variant="zeta" />
+                  </div>
                 ))}
               <button
                 className="robot-row robot-add"

@@ -804,21 +804,10 @@ export default function CoverLock() {
       setInviteMentorName(result.mentorName || inviteMentorName);
       clearInviteFromUrl();
 
-      // Auto-unlock with the claimed license object so Unlock doesn't depend on
-      // a second serverless read that may lag the durable write.
-      const unlocked = await activateLicense?.(key, {
-        license: result.license,
-      });
-      if (unlocked) {
-        showToast("Free access + license unlocked — no payment");
-        setLicenseKey("");
-        setClaimedKey("");
-        setClaimedLicense(null);
-        setLockStep("cover");
-      } else {
-        setLockStep("license");
-        showToast("Free access ready — tap Unlock app (no payment)");
-      }
+      // Show the key with copy — do not auto-jump into the robot so clients
+      // (e.g. Sam) can save the key somewhere safe before Unlock.
+      setLockStep("license");
+      showToast("License ready — copy your key, then tap Unlock app");
     } catch (error) {
       showToast(error.message || "Invite claim failed");
     } finally {
@@ -1069,23 +1058,29 @@ export default function CoverLock() {
               {addingBot
                 ? "Enter a new license key to add another robot. Your current bots stay on the home screen."
                 : claimedKey
-                  ? `Your key is ready below. Tap Unlock app to continue.`
+                  ? "Copy your license key and save it somewhere safe, then tap Unlock app."
                   : coverEmail
                     ? `Approved · ${coverEmail}. Enter your license key to unlock — type it again after reinstall.`
                     : "Enter your license key to unlock the app."}
             </p>
             {claimedKey ? (
-              <p
-                className="ea-hint"
-                style={{
-                  marginBottom: 12,
-                  wordBreak: "break-all",
-                  fontWeight: 700,
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {claimedKey}
-              </p>
+              <div className="claimed-key-box">
+                <p className="claimed-key-value">{claimedKey}</p>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-block claimed-key-copy"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(claimedKey);
+                      showToast("License key copied — save it somewhere safe");
+                    } catch {
+                      showToast(claimedKey);
+                    }
+                  }}
+                >
+                  Copy license key
+                </button>
+              </div>
             ) : null}
             <form className="app-lock-form" onSubmit={submitLicense}>
               <label className="ea-field">
