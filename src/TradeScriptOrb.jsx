@@ -6,7 +6,14 @@ import {
   formatTradeHistoryLines,
   loadTradeHistory,
 } from "./dailyTradeHistory.js";
+import {
+  ensureFloatOverlayPermission,
+  hideFloatOverlay,
+  showFloatOverlay,
+  updateFloatOverlay,
+} from "./floatOverlay.js";
 import { buildBotTradeComment } from "./metaApi.js";
+import { isNativeApp } from "./store.jsx";
 
 const FLOAT_SIZE = 58;
 const DRAG_THRESHOLD = 8;
@@ -113,6 +120,69 @@ export default function TradeScriptOrb({
     lastRecordedAtRef.current = live.at;
     setTradeHistory(loadTradeHistory());
   }, [live]);
+
+  // Android: keep the robot bubble over MetaTrader when the app is backgrounded.
+  useEffect(() => {
+    if (!isNativeApp()) return undefined;
+    let cancelled = false;
+    let appHandle = null;
+    let armed = false;
+
+    const payload = () => ({
+      photoSrc,
+      x: floatPos?.x ?? -1,
+      y: floatPos?.y ?? -1,
+      label: displayName,
+    });
+
+    async function armOverlay() {
+      if (!visible) {
+        armed = false;
+        await hideFloatOverlay();
+        return;
+      }
+      const ok = await ensureFloatOverlayPermission(showToast);
+      if (cancelled || !ok) return;
+      armed = true;
+      await updateFloatOverlay(payload());
+    }
+
+    async function onState(isActive) {
+      if (!armed || !visible) return;
+      if (isActive) {
+        await hideFloatOverlay();
+      } else {
+        await showFloatOverlay(payload());
+      }
+    }
+
+    void armOverlay();
+
+    import("@capacitor/app")
+      .then(({ App }) => {
+        if (cancelled) return;
+        appHandle = App.addListener("appStateChange", ({ isActive }) => {
+          void onState(Boolean(isActive));
+        });
+      })
+      .catch(() => {});
+
+    const onVis = () => {
+      void onState(document.visibilityState === "visible");
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVis);
+      try {
+        appHandle?.remove?.();
+      } catch {
+        // ignore
+      }
+      void hideFloatOverlay();
+    };
+  }, [visible, photoSrc, floatPos, displayName, showToast]);
 
   useEffect(() => {
     if (!scriptOpen) {
