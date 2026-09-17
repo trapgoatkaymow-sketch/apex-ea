@@ -461,9 +461,16 @@ async function writeStore(mentors, sha, message) {
     });
   } catch (error) {
     writeLocalStore(mentors);
-    // Auth failures must surface for register/status — otherwise pending mentors
-    // appear saved but vanish on the next serverless instance.
-    if (error.status === 401 || error.status === 403) throw error;
+    // Auth / rate-limit failures must surface for password + register writes —
+    // otherwise callers think the change is durable when only /tmp was updated.
+    if (
+      error.status === 401 ||
+      error.status === 403 ||
+      error.status === 429 ||
+      /bad credentials|rate limit/i.test(String(error.message || ""))
+    ) {
+      throw error;
+    }
     return { local: true };
   }
 }
