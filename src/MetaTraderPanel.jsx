@@ -208,7 +208,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     };
   }, []);
 
-  // Keep connected session fresh and pull live balance / floating profit.
+  // Keep connected session fresh and pull live balance.
   useEffect(() => {
     if (!session?.accountId) {
       setAccountMetrics(null);
