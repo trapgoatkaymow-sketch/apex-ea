@@ -86,6 +86,16 @@ export default async function handler(req, res) {
         sendJson(res, 200, result);
         return;
       }
+      if (
+        action === "reconcile-commission" ||
+        action === "reconcilecommission"
+      ) {
+        const { reconcileCommissionForEmail } = await import("./_lib.js");
+        const email = body.email || body.clientEmail || "";
+        const license = await reconcileCommissionForEmail(email);
+        sendJson(res, 200, { ok: true, license, email });
+        return;
+      }
       const license = await createLicense(body);
       sendJson(res, 200, { license });
       return;

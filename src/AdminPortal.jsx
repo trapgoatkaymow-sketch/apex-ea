@@ -20,6 +20,7 @@ import {
   formatLicenseExpiry,
   isLicenseExpired,
   LICENSE_DURATIONS,
+  reconcileCommissionRemote,
   resolveLicenseExpiry,
 } from "./licensesApi.js";
 import {
@@ -571,6 +572,69 @@ export default function AdminPortal() {
       clearInterval(timer);
     };
   }, [adminOpen, adminSession, adminPage, showToast, licenseKeys]);
+
+  // Pay-after-activate: stamp commissionEligible for paid clients when mentor
+  // opens the commission page (repairs unlocks that stayed at not_paid).
+  useEffect(() => {
+    if (!adminOpen || !adminSession || isSuperAdminSession(adminSession)) {
+      return undefined;
+    }
+    if (adminPage !== "commission") return undefined;
+    let cancelled = false;
+    async function backfillCommission() {
+      const email = normalizeAdminEmail(adminSession.email);
+      const id = String(adminSession.id || "");
+      const owned = (licenseKeys || []).filter((row) => {
+        const owner = normalizeAdminEmail(row.mentorEmail);
+        const ownerId = String(row.mentorId || "");
+        return (
+          ((email && owner === email) || (id && ownerId === id)) &&
+          Boolean(row.used) &&
+          !row.commissionEligible
+        );
+      });
+      const clients = [
+        ...new Set(
+          owned
+            .map((row) => normalizeAdminEmail(row.clientEmail))
+            .filter((client) => client && client.includes("@"))
+        ),
+      ];
+      if (!clients.length) return;
+      let changed = false;
+      for (const client of clients.slice(0, 25)) {
+        if (cancelled) return;
+        const signup = (signups || []).find(
+          (s) => normalizeAdminEmail(s.email) === client
+        );
+        if (!signup?.accessPaid || signup?.accessBypassed) continue;
+        try {
+          const updated = await reconcileCommissionRemote(client);
+          if (updated?.commissionEligible) changed = true;
+        } catch {
+          // Best-effort; live count still shows paid unlocks.
+        }
+      }
+      if (!cancelled && changed) {
+        try {
+          await refreshLicenses?.();
+        } catch {
+          // ignore
+        }
+      }
+    }
+    void backfillCommission();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    adminOpen,
+    adminSession,
+    adminPage,
+    licenseKeys,
+    signups,
+    refreshLicenses,
+  ]);
 
   useEffect(() => {
     if (!adminOpen || !adminSession || isSuperAdminSession(adminSession)) return undefined;
@@ -1403,9 +1467,6 @@ export default function AdminPortal() {
   const unconnectedKeys = myLicenses.filter(
     (k) => k.used && !isKeyConnected(k)
   );
-  const recentKeys = [...myLicenses]
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-    .slice(0, 8);
 
   function licenseStatusLabel(entry) {
     if (!entry?.used) return "Unused";
@@ -1416,15 +1477,54 @@ export default function AdminPortal() {
   function countSoldKeysForMentor(mentor) {
     const email = normalizeAdminEmail(mentor?.email);
     const id = String(mentor?.id || "");
-    return licenseKeys.filter((row) => {
+    const owned = licenseKeys.filter((row) => {
       const owner = normalizeAdminEmail(row.mentorEmail);
       const ownerId = String(row.mentorId || "");
-      const owns =
-        (email && owner === email) || (id && ownerId === id);
-      // Commission only when the key unlocked a paid app subscription for the
-      // first time — not merely from generating a key or reusing existing access.
-      return owns && Boolean(row.used) && Boolean(row.commissionEligible);
-    }).length;
+      return (email && owner === email) || (id && ownerId === id);
+    });
+
+    // Stamped first-paid unlocks.
+    const creditedClients = new Set();
+    let count = 0;
+    for (const row of owned) {
+      if (!row?.used || !row?.commissionEligible) continue;
+      count += 1;
+      const client = normalizeAdminEmail(row.clientEmail);
+      if (client) creditedClients.add(client);
+    }
+
+    // Live backfill: client paid after activating (stamp was not_paid).
+    // Credit this mentor's earliest used key per client when signup is paid
+    // and no key for that client is already commissionEligible.
+    const candidates = new Map();
+    for (const row of owned) {
+      if (!row?.used || row?.commissionEligible) continue;
+      const client = normalizeAdminEmail(row.clientEmail);
+      if (!client || creditedClients.has(client)) continue;
+      const reason = String(row.commissionReason || "");
+      if (
+        reason === "access_already_active" ||
+        reason === "invite_migrate_bypass"
+      ) {
+        continue;
+      }
+      const signup = (signups || []).find(
+        (s) => normalizeAdminEmail(s.email) === client
+      );
+      if (!signup?.accessPaid || signup?.accessBypassed) continue;
+      const alreadyCredited = licenseKeys.some(
+        (r) =>
+          normalizeAdminEmail(r.clientEmail) === client &&
+          Boolean(r.commissionEligible)
+      );
+      if (alreadyCredited) continue;
+      const usedAt = Number(row.usedAt) || Number(row.createdAt) || 0;
+      const prev = candidates.get(client);
+      if (!prev || usedAt < prev.usedAt) {
+        candidates.set(client, { usedAt });
+      }
+    }
+    return count + candidates.size;
   }
 
   const soldKeysCount = countSoldKeysForMentor(adminSession);
@@ -1618,31 +1718,6 @@ export default function AdminPortal() {
                     <p className="admin-stat-label">Total EAs</p>
                     <p className="admin-stat-value">{myEas.length}</p>
                   </article>
-                </div>
-                <div className="admin-card" style={{ marginTop: 14 }}>
-                  <div className="admin-card-title-row">
-                    <h3 className="admin-card-title">Recent keys</h3>
-                    <span className="admin-badge">{recentKeys.length}</span>
-                  </div>
-                  {recentKeys.length === 0 ? (
-                    <p className="admin-empty">No license keys yet</p>
-                  ) : (
-                    recentKeys.map((entry) => (
-                      <div
-                        className={`license-row is-compact${entry.used ? " is-used" : ""}${
-                          isKeyConnected(entry) ? " is-connected" : ""
-                        }`}
-                        key={`${entry.key}-${entry.createdAt}`}
-                      >
-                        <strong>{entry.key}</strong>
-                        <span>
-                          {entry.clientName ? `${entry.clientName} · ` : ""}
-                          {entry.clientEmail || "no email"} · {entry.botName} ·{" "}
-                          {licenseStatusLabel(entry)}
-                        </span>
-                      </div>
-                    ))
-                  )}
                 </div>
               </>
             )}
