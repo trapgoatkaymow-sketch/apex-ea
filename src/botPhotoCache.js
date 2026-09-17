@@ -3,7 +3,7 @@ import { mediaUrl, resolveBotPhotoSrc } from "./apiOrigin.js";
 const DB_NAME = "apexea-bot-photos-v1";
 const STORE = "photos";
 const GITHUB_RAW_BASE =
-  "https://raw.githubusercontent.com/Kamogelo2703/gizmo/main/data/ea-photos";
+  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/data/ea-photos";
 const memoryUrls = new Map(); // botId -> object URL or data URL
 const inflight = new Map();
 let dbPromise = null;

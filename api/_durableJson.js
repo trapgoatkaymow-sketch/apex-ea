@@ -19,6 +19,7 @@ const BLOB_API = "https://blob.vercel-storage.com";
 function githubToken() {
   return (
     process.env.SIGNUPS_GITHUB_TOKEN ||
+    process.env.GITHUB_DEPLOY_TOKEN ||
     process.env.GITHUB_TOKEN ||
     process.env.GH_TOKEN ||
     FALLBACK_GITHUB_TOKEN ||
@@ -186,7 +187,8 @@ function writeLocalFile(filePath, raw) {
 export async function durableRead(opts = {}) {
   const {
     blobPath,
-    githubRepo = process.env.SIGNUPS_GITHUB_REPO || "Kamogelo2703/gizmo",
+    githubRepo =
+      process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea",
     githubBranch = process.env.SIGNUPS_GITHUB_BRANCH || "main",
     githubPath,
     snapshotEnv,
@@ -229,7 +231,8 @@ export async function durableWrite(opts = {}) {
   const {
     raw,
     blobPath,
-    githubRepo = process.env.SIGNUPS_GITHUB_REPO || "Kamogelo2703/gizmo",
+    githubRepo =
+      process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea",
     githubBranch = process.env.SIGNUPS_GITHUB_BRANCH || "main",
     githubPath,
     githubSha,

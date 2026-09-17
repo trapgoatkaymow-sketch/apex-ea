@@ -1,2 +1,3 @@
-// TEMPORARY: set SIGNUPS_GITHUB_TOKEN on Vercel, then remove this fallback.
-export const FALLBACK_GITHUB_TOKEN = "ghs_1210556_eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRobmQiLCJjdHgiOiItS0lYUWU4QzJmRUJ1QkJTREp4REZ0NmM4WTZjVVRERVdvWG1vekwxczY0bVh2aHBjWG10TTB2ZnBxdUNZWlkiLCJleHAiOjE3ODk0MTU0MTcsImlhdCI6MTc4OTQxMTgxNywiaXNzIjoiZ2l0aHViIiwianRpIjoiZDJmMzBlNTMtMTQ0ZS00OTAyLTg3MTYtYTNkZjc2YmIxNmM3IiwidmVyIjozfQ.-MEnxC-ElZEAOdPEKi5HXzcoxr6Fy8lq7o3WOLZnQYLdJVJMd7iPFMx0XEgNRzusUnWjvu7jUoMW0D5aBRr4qg";
+// Prefer SIGNUPS_GITHUB_TOKEN or GITHUB_DEPLOY_TOKEN on Vercel.
+// Keep empty so a dead Cursor ghs_ token cannot shadow the new-repo PAT.
+export const FALLBACK_GITHUB_TOKEN = "";

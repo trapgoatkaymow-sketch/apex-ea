@@ -5,7 +5,8 @@ import { fileURLToPath } from "url";
 import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
 import { applyCorsHeaders } from "../_cors.js";
 
-const REPO = process.env.SIGNUPS_GITHUB_REPO || "Kamogelo2703/gizmo";
+const REPO =
+  process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.MENTORS_FILE_PATH || "data/mentors.json";
 const API = `https://api.github.com/repos/${REPO}`;
@@ -50,6 +51,7 @@ function normalizePhone(value) {
 function requireToken() {
   const token =
     process.env.SIGNUPS_GITHUB_TOKEN ||
+    process.env.GITHUB_DEPLOY_TOKEN ||
     process.env.GITHUB_TOKEN ||
     process.env.GH_TOKEN ||
     FALLBACK_GITHUB_TOKEN ||

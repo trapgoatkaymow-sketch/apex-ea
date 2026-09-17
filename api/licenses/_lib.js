@@ -10,7 +10,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const REPO = process.env.SIGNUPS_GITHUB_REPO || "Kamogelo2703/gizmo";
+const REPO =
+  process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.LICENSES_FILE_PATH || "data/licenses.json";
 const BLOB_PATH = process.env.LICENSES_BLOB_PATH || "apexea/licenses.json";
@@ -121,6 +122,7 @@ export function licenseKeyVariants(rawKey) {
 function requireToken() {
   const token =
     process.env.SIGNUPS_GITHUB_TOKEN ||
+    process.env.GITHUB_DEPLOY_TOKEN ||
     process.env.GITHUB_TOKEN ||
     process.env.GH_TOKEN ||
     FALLBACK_GITHUB_TOKEN ||
