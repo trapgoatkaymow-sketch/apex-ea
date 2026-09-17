@@ -30,15 +30,42 @@ const SCAN_STEP_GAP_MS = isNativeApp() ? 36 : 70;
 const SCAN_SETTLE_MS = isNativeApp() ? 220 : 500;
 const TRADE_SETTLE_MS = isNativeApp() ? 320 : 700;
 
-/** Trade index → TP target: trade 1 → TP1, trade 2 → TP2, rest → TP3. */
+/** Trade index → TP target: trade 1 → TP1, trade 2 → TP2, trade 3+ → TP3. */
 function targetForTradeIndex(index) {
-  if (index === 0) {
+  const n = Math.max(0, Math.floor(Number(index) || 0));
+  if (n === 0) {
     return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: 1 };
   }
-  if (index === 1) {
+  if (n === 1) {
     return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: 2 };
   }
-  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: index + 1 };
+  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
+}
+
+/**
+ * Build the exact open order for each thread.
+ * Thread 1 always uses TP1 price, thread 2 → TP2, thread 3+ → TP3.
+ * Never fall back to a different TP level when the mapped price is missing —
+ * skip that thread instead so tickets stay correctly labeled.
+ */
+function buildTpThreads({ tradeCount, lot, signal }) {
+  const count = clampTrades(tradeCount);
+  const volume = clampLot(lot);
+  const threads = [];
+  for (let i = 0; i < count; i += 1) {
+    const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
+    const takeProfit = Number(signal?.[takeProfitKey]);
+    if (!Number.isFinite(takeProfit) || takeProfit <= 0) continue;
+    threads.push({
+      index: i,
+      tradeNo,
+      target,
+      takeProfitKey,
+      takeProfit,
+      volume,
+    });
+  }
+  return threads;
 }
 
 function clampTrades(value) {
@@ -425,11 +452,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
     const orbComment = isPremiumScanner
       ? `${tradeComment}|premium`.slice(0, 31)
       : tradeComment;
-    const tpMap = {
-      takeProfit1: signal.takeProfit1,
-      takeProfit2: signal.takeProfit2,
-      takeProfit3: signal.takeProfit3,
-    };
+    const threads = buildTpThreads({
+      tradeCount,
+      lot,
+      signal,
+    });
+    if (!threads.length) {
+      showToast("Setup is missing TP1/TP2/TP3 prices for the selected trades");
+      return;
+    }
 
     setBusy(true);
     setFills([]);
@@ -459,6 +490,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
         `Opening ${side} ${tradeSymbol} · SL ${signal.stopLoss} · TP1 ${signal.takeProfit1} · TP2 ${signal.takeProfit2} · TP3 ${signal.takeProfit3}`
       );
       pushEngineLog(`Partial plan · ${managementPlan.summary}`);
+      pushEngineLog(
+        `Thread map · ${threads.map((t) => `T${t.tradeNo}→${t.target}`).join(" · ")}`
+      );
       if (isPremiumScanner) {
         pushEngineLog("Premium scanner · MT5 comments tagged premium");
       }
@@ -466,11 +500,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
       const nextFills = [];
       let lastError = "";
       let completed = 0;
-      const totalTrades = tradeCount;
+      const totalTrades = threads.length;
 
-      for (let i = 0; i < tradeCount; i += 1) {
-        const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
-        const takeProfit = tpMap[takeProfitKey];
+      // Open strictly in thread order: 1=TP1, 2=TP2, 3=TP3 (never reshuffle).
+      for (const thread of threads) {
+        const { target, takeProfit, tradeNo, volume } = thread;
         const tradeCommentTag = buildScannerFillComment({
           botName: activeBot?.name,
           variant: isPremiumScanner ? "v2" : "default",
@@ -483,7 +517,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
           const fill = await placeTrade({
             accountId: mt5Session.accountId,
             symbol: tradeSymbol,
-            volume: lot,
+            volume,
             side,
             stopLoss: signal.stopLoss,
             takeProfit,
@@ -512,7 +546,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             botName: activeBot?.name || "Bot",
             // Same symbol the scanner shows after fill (broker-resolved when available).
             symbol: filledSymbol || tradeSymbol,
-            lotSize: lot,
+            lotSize: volume,
             action: side,
             side,
             comment: tradeCommentTag,
@@ -522,7 +556,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             target,
           });
           pushEngineLog(
-            `Trade ${tradeNo} · ${target}${isPremiumScanner ? " · premium" : ""} · ${filledSymbol || tradeSymbol} · comment ${tradeCommentTag}`
+            `Trade ${tradeNo} · ${target}${isPremiumScanner ? " · premium" : ""} · ${filledSymbol || tradeSymbol} · TP ${takeProfit} · comment ${tradeCommentTag}`
           );
         } catch (error) {
           lastError = error.message || "Trade failed";
@@ -530,7 +564,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             ok: false,
             symbol: tradeSymbol,
             side,
-            volume: lot,
+            volume,
             target,
             tradeNo,
             takeProfit,

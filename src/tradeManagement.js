@@ -103,12 +103,13 @@ export function splitVolumeAcrossTargets(totalVolume, management = DEFAULT_TRADE
     ];
   }
 
-  // If total is too small to split into multiple min lots, use a single TP3 leg.
+  // If total is too small to split into multiple min lots, keep a single TP1 leg
+  // (never dump the only ticket onto TP3 — thread 1 must stay TP1).
   if (total < cfg.minLot * Math.min(3, weights.length)) {
     return [
       {
-        target: "TP3",
-        takeProfitKey: "takeProfit3",
+        target: "TP1",
+        takeProfitKey: "takeProfit1",
         volume: roundLot(total, cfg.minLot),
         closePercent: 100,
       },

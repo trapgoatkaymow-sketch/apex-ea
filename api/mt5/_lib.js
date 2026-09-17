@@ -392,6 +392,7 @@ export async function disconnectAccount(accountId) {
  * Market order via GET /OrderSend
  * operation: Buy | Sell
  * Optional `count` opens multiple market orders (same size each).
+ * Optional `takeProfits` maps thread 1→TP1, 2→TP2, 3+→TP3.
  */
 export async function placeMarketTrade({
   accountId,
@@ -400,6 +401,7 @@ export async function placeMarketTrade({
   side = "BUY",
   stopLoss,
   takeProfit,
+  takeProfits,
   comment = "bot~APEXEA",
   count = 1,
 } = {}) {
@@ -430,12 +432,30 @@ export async function placeMarketTrade({
     const live = await mt5Fetch(`/CheckConnect?id=${encodeURIComponent(id)}`, {
       timeoutMs: 12000,
     });
+    const raw =
+      typeof live === "string"
+        ? live.trim()
+        : live == null
+          ? ""
+          : typeof live === "object"
+            ? JSON.stringify(live)
+            : String(live);
     const ok =
-      live == null ||
       live === true ||
-      /^ok$/i.test(String(live).trim()) ||
-      (typeof live === "object" && !/^\[error\]/i.test(JSON.stringify(live)));
-    if (!ok || /^\[error\]/i.test(String(live || ""))) {
+      live == null ||
+      /^ok$/i.test(raw) ||
+      /^true$/i.test(raw) ||
+      (typeof live === "object" &&
+        live &&
+        !/^\[error\]/i.test(raw) &&
+        live.connected !== false &&
+        live.ok !== false);
+    if (
+      !ok ||
+      /^\[error\]/i.test(raw) ||
+      live === false ||
+      /not\s*found|not\s*connect|disconnect|invalid/i.test(raw)
+    ) {
       const err = new Error(
         "Client MetaTrader session expired — open the app and reconnect the broker"
       );
@@ -446,7 +466,7 @@ export async function placeMarketTrade({
   } catch (error) {
     if (error?.code === "SESSION_EXPIRED") throw error;
     const msg = String(error?.message || "");
-    if (/not\s*connect|disconnect|invalid|token|session|expire|404|401|403/i.test(msg)) {
+    if (/not\s*connect|disconnect|invalid|token|session|expire|404|401|403|not\s*found/i.test(msg)) {
       const err = new Error(
         "Client MetaTrader session expired — open the app and reconnect the broker"
       );
@@ -476,21 +496,41 @@ export async function placeMarketTrade({
     price = null;
   }
 
+  const tpList = Array.isArray(takeProfits)
+    ? takeProfits.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0)
+    : [];
+  const defaultTp = Number(takeProfit);
+
   const fills = [];
   for (let i = 0; i < times; i += 1) {
+    // Thread 1 → TP1, thread 2 → TP2, thread 3+ → TP3 (or last provided TP).
+    let tpForThread = null;
+    if (tpList.length) {
+      if (i === 0) tpForThread = tpList[0];
+      else if (i === 1) tpForThread = tpList[1] ?? tpList[tpList.length - 1];
+      else tpForThread = tpList[2] ?? tpList[tpList.length - 1];
+    } else if (Number.isFinite(defaultTp) && defaultTp > 0) {
+      tpForThread = defaultTp;
+    }
+
+    const threadLabel = i === 0 ? "TP1" : i === 1 ? "TP2" : "TP3";
+    const baseComment = String(comment || "bot~APEXEA").replace(/\|TP[123]\b/gi, "");
+    const threadComment = `${baseComment}|${threadLabel}`.slice(0, 31);
+
     const params = new URLSearchParams({
       id,
       symbol: sym,
       operation: action,
       volume: String(lots),
       slippage: "100",
-      comment: String(comment || "bot~APEXEA").slice(0, 31),
+      comment: threadComment,
     });
     if (Number.isFinite(price) && price > 0) params.set("price", String(price));
     const sl = Number(stopLoss);
-    const tp = Number(takeProfit);
     if (Number.isFinite(sl) && sl > 0) params.set("stoploss", String(sl));
-    if (Number.isFinite(tp) && tp > 0) params.set("takeprofit", String(tp));
+    if (Number.isFinite(tpForThread) && tpForThread > 0) {
+      params.set("takeprofit", String(tpForThread));
+    }
 
     const order = await mt5Fetch(`/OrderSend?${params.toString()}`, { timeoutMs: 45000 });
     const raw =
@@ -511,7 +551,11 @@ export async function placeMarketTrade({
       err.data = order;
       throw err;
     }
-    fills.push(order);
+    fills.push(
+      order && typeof order === "object"
+        ? { ...order, target: threadLabel, tradeNo: i + 1 }
+        : { order, target: threadLabel, tradeNo: i + 1 }
+    );
   }
 
   const last = fills[fills.length - 1];

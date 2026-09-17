@@ -400,6 +400,7 @@ export async function handleMentorTrade(req, res) {
           side,
           stopLoss,
           takeProfit,
+          takeProfits: takeProfits.length ? takeProfits : undefined,
           comment,
           count: tradesCount,
         });
