@@ -364,15 +364,50 @@ async function readStore() {
             licenseKeysUpdatedAt: localUpdated || Date.now(),
           };
         }
+        // Never let a local row without credentials blank out durable hashes.
+        if (!next.passwordHash && local.passwordHash && local.salt) {
+          next = {
+            ...next,
+            passwordHash: local.passwordHash,
+            salt: local.salt,
+          };
+        }
         return next;
       });
+      // Keep local-only mentors (with credentials) that GitHub briefly omitted.
+      for (const local of memoryMentors) {
+        const email = normalizeEmail(local.email);
+        if (!email || !local.passwordHash || !local.salt) continue;
+        if (decoded.mentors.some((m) => normalizeEmail(m.email) === email)) {
+          continue;
+        }
+        decoded.mentors.push({ ...local, email });
+      }
     }
-    return decoded;
+    memoryMentors = decoded.mentors.map((m) => ({ ...m }));
+    return { ...decoded, remote: true };
   } catch (error) {
     if (error.status === 404) {
       return { sha: null, mentors: [], remote: true };
     }
-    // Dev / bad token: fall back to local file store.
+    // Rate-limit / bad token: try public raw file before wiping via local seed.
+    try {
+      const rawUrl = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${FILE_PATH}?t=${Date.now()}`;
+      const rawRes = await fetch(rawUrl, {
+        headers: { Accept: "application/json", "User-Agent": "apex-ea-mentors" },
+        cache: "no-store",
+      });
+      if (rawRes.ok) {
+        const raw = await rawRes.text();
+        const decoded = decodeMentorsJson(raw, null);
+        if (decoded.mentors.length) {
+          memoryMentors = decoded.mentors.map((m) => ({ ...m }));
+          return { ...decoded, remote: true, rawFallback: true };
+        }
+      }
+    } catch {
+      // continue to local
+    }
     const local = readLocalStore();
     return { ...local, remote: false };
   }
@@ -484,8 +519,13 @@ export async function listMentors() {
       seeded &&
       store.mentors.find((m) => m.email === SUPER_ADMIN_EMAIL)?.passwordHash ===
         mentors.find((m) => m.email === SUPER_ADMIN_EMAIL)?.passwordHash;
-    if (!seeded || !sameHash) {
-      await mutateStore((current) => ensureSuperAdminRecord(current), "chore: seed super admin mentor account");
+    // Never seed-write when GitHub auth failed — a local-only superadmin row
+    // would overwrite the durable mentors file and wipe password hashes.
+    if (store.remote !== false && (!seeded || !sameHash)) {
+      await mutateStore(
+        (current) => ensureSuperAdminRecord(current),
+        "chore: seed super admin mentor account"
+      );
       const refreshed = await readStore();
       mentors = ensureSuperAdminRecord(refreshed.mentors);
     }
