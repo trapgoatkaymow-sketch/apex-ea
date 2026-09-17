@@ -19,9 +19,9 @@ function formatUsedAt(value) {
 }
 
 /**
- * Small info control on a robot row — shows client email, when the key was
- * used, and the license key (with copy). Works for users who already unlocked
- * without seeing their key, using local licenseKeys or a by-email refresh.
+ * Small info control on a robot row — shows THIS signed-in client's email,
+ * when their key was used, and their license key (with copy).
+ * Never falls back to another client's license for the same shared botId.
  */
 export default function RobotLicenseInfo({ bot, variant = "v2" }) {
   const { coverEmail, licenseKeys, normalizeEmail, showToast, ingestLicenses } =
@@ -30,51 +30,76 @@ export default function RobotLicenseInfo({ bot, variant = "v2" }) {
   const [busy, setBusy] = useState(false);
 
   const botId = String(bot?.id || "").trim();
+  const account = normalizeEmail(coverEmail);
 
   const license = useMemo(() => {
     const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
-    const account = normalizeEmail(coverEmail);
-    const forBot = keys.filter(
-      (row) =>
-        String(row.botId || row.bot?.id || "").trim() === botId ||
-        String(row.key || "") === String(bot?.licenseKey || "").trim()
-    );
-    forBot.sort(
-      (a, b) =>
-        Number(b.usedAt || b.updatedAt || 0) -
-        Number(a.usedAt || a.updatedAt || 0)
-    );
+    const stampedKey = String(bot?.licenseKey || "").trim();
+    const stampedEmail = normalizeEmail(bot?.clientEmail);
+
+    // Only trust a bot stamp when it belongs to the signed-in account.
+    const stampTrusted =
+      Boolean(stampedKey) &&
+      (!account || !stampedEmail || stampedEmail === account);
+
     if (account) {
-      const mine = forBot.find(
+      const mine = keys.filter(
         (row) => normalizeEmail(row.clientEmail) === account
       );
-      if (mine) return mine;
+      const forBot = mine.filter(
+        (row) =>
+          String(row.botId || row.bot?.id || "").trim() === botId ||
+          (stampedKey &&
+            String(row.key || "").trim().toUpperCase() ===
+              stampedKey.toUpperCase())
+      );
+      forBot.sort(
+        (a, b) =>
+          Number(b.usedAt || b.updatedAt || 0) -
+          Number(a.usedAt || a.updatedAt || 0)
+      );
+      if (forBot[0]) return forBot[0];
+
+      // Same account, any key for this bot id already handled — try stamp
+      // only when the stamp email matches (or stamp has no email).
+      if (stampTrusted && stampedKey) {
+        return {
+          key: stampedKey,
+          clientEmail: account,
+          usedAt: bot.licenseUsedAt || null,
+          used: Boolean(bot.licenseUsedAt),
+        };
+      }
+      return null;
     }
-    const used = forBot.find((row) => row.used) || forBot[0] || null;
-    if (used) return used;
-    // Stamps written onto the bot at activate time (survives older sessions).
-    if (bot?.licenseKey) {
+
+    // No signed-in email — only show an explicit local stamp, never a
+    // random used key from the shared bot pool.
+    if (stampTrusted && stampedKey) {
       return {
-        key: bot.licenseKey,
-        clientEmail: bot.clientEmail || account || "",
+        key: stampedKey,
+        clientEmail: stampedEmail || "",
         usedAt: bot.licenseUsedAt || null,
         used: Boolean(bot.licenseUsedAt),
       };
     }
     return null;
-  }, [bot, botId, coverEmail, licenseKeys, normalizeEmail]);
+  }, [account, bot, botId, licenseKeys, normalizeEmail]);
 
   useEffect(() => {
-    if (!open || license?.key) return;
-    const email = normalizeEmail(coverEmail);
-    if (!email.includes("@") || !botId) return;
+    if (!open) return;
+    const email = account;
+    if (!email.includes("@")) return;
     let cancelled = false;
     (async () => {
       setBusy(true);
       try {
         const remote = await fetchLicensesByEmail(email);
         if (cancelled || !Array.isArray(remote) || !remote.length) return;
-        ingestLicenses?.(remote);
+        // Only ingest this account's rows — never the global license list.
+        ingestLicenses?.(
+          remote.filter((row) => normalizeEmail(row.clientEmail) === email)
+        );
       } catch {
         // keep local miss
       } finally {
@@ -84,7 +109,7 @@ export default function RobotLicenseInfo({ bot, variant = "v2" }) {
     return () => {
       cancelled = true;
     };
-  }, [open, license?.key, coverEmail, botId, normalizeEmail, ingestLicenses]);
+  }, [open, account, botId, normalizeEmail, ingestLicenses]);
 
   async function copyKey() {
     const key = String(license?.key || "").trim();
@@ -100,23 +125,16 @@ export default function RobotLicenseInfo({ bot, variant = "v2" }) {
     }
   }
 
-  const email =
-    String(license?.clientEmail || coverEmail || bot?.clientEmail || "").trim() ||
-    "—";
-  const key = String(license?.key || bot?.licenseKey || "").trim();
-  const usedLabel = formatUsedAt(
-    license?.usedAt || license?.boundAt || bot?.licenseUsedAt
-  );
+  // Always prefer the signed-in email over any license/bot stamp.
+  const email = account || String(license?.clientEmail || "").trim() || "—";
+  const key = String(license?.key || "").trim();
+  const usedLabel = formatUsedAt(license?.usedAt || license?.boundAt);
 
   return (
     <>
       <button
         type="button"
-        className={
-          variant === "zeta"
-            ? "robot-info-btn"
-            : "v2-robot-info-btn"
-        }
+        className={variant === "zeta" ? "robot-info-btn" : "v2-robot-info-btn"}
         aria-label={`License info for ${bot?.name || "robot"}`}
         title="License info"
         onClick={(event) => {
@@ -163,7 +181,7 @@ export default function RobotLicenseInfo({ bot, variant = "v2" }) {
               <div>
                 <dt>License key</dt>
                 <dd className="robot-license-key">
-                  {busy && !key ? "Loading…" : key || "Not found on this device"}
+                  {busy && !key ? "Loading…" : key || "Not found for your email"}
                 </dd>
               </div>
             </dl>

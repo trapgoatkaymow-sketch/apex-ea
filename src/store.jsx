@@ -879,7 +879,18 @@ export function AppProvider({ children }) {
 
   const refreshLicenses = useCallback(async () => {
     try {
-      const remote = await fetchLicenses();
+      const account = normalizeEmail(coverEmail);
+      // Clients must only pull THEIR keys. The global list mixed every
+      // ZETA SCALPER client's email onto the shared bot info sheet.
+      // Mentors/admins still get the full store while the portal is open.
+      let remote = [];
+      if (adminOpen) {
+        remote = await fetchLicenses();
+      } else if (account.includes("@")) {
+        remote = await fetchLicensesByEmail(account);
+      } else {
+        return null;
+      }
       const remoteKeySet = new Set(
         (Array.isArray(remote) ? remote : [])
           .map((row) => normalizeLicenseKey(row?.key))
@@ -892,12 +903,21 @@ export function AppProvider({ children }) {
         const keptLocal = (Array.isArray(prev) ? prev : []).filter(
           (row) => !isRememberedDeletedLicenseKey(row.key)
         );
-        const merged = filterOutDeletedLicenses(mergeLicenses(keptLocal, remote));
+        let merged = filterOutDeletedLicenses(mergeLicenses(keptLocal, remote));
+        // Purge other people's keys that leaked in from older global refreshes.
+        if (!adminOpen && account.includes("@")) {
+          merged = merged.filter(
+            (row) => normalizeEmail(row.clientEmail) === account
+          );
+        }
         if (!remoteKeySet.size) return merged;
         const now = Date.now();
         return merged.filter((row) => {
           const key = normalizeLicenseKey(row.key);
           if (remoteKeySet.has(key)) return true;
+          if (!adminOpen && account.includes("@")) {
+            return normalizeEmail(row.clientEmail) === account;
+          }
           const age = now - Number(row.createdAt || row.updatedAt || 0);
           if (row.used && age < 24 * 60 * 60 * 1000) return true;
           if (!row.used && age < 30 * 60 * 1000) return true;
@@ -982,13 +1002,18 @@ export function AppProvider({ children }) {
     } catch {
       return null;
     }
-  }, []);
+  }, [adminOpen, coverEmail]);
 
   /** Merge remote/local license rows into persisted licenseKeys (for robot info). */
   const ingestLicenses = useCallback((rows) => {
     if (!Array.isArray(rows) || !rows.length) return;
-    setLicenseKeys((prev) => mergeLicenses(prev, rows));
-  }, []);
+    const account = normalizeEmail(coverEmail);
+    const safe = account.includes("@")
+      ? rows.filter((row) => normalizeEmail(row.clientEmail) === account)
+      : rows;
+    if (!safe.length) return;
+    setLicenseKeys((prev) => mergeLicenses(prev, safe));
+  }, [coverEmail]);
 
   // Push any device-local keys into the shared store once so other phones can use them.
   const licenseMigrateRef = useRef(false);
@@ -1045,15 +1070,18 @@ export function AppProvider({ children }) {
 
   // Stamp license key / email / usedAt onto robots for users who already unlocked
   // without ever seeing their key (auto-claim used to skip that screen).
+  // Only use THIS account's rows — never another client's key for the shared botId.
   useEffect(() => {
     const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
-    if (!keys.length) return;
     const account = normalizeEmail(coverEmail);
+    if (!account.includes("@")) return;
+
     const pickForBot = (botId) => {
       const id = String(botId || "").trim();
       if (!id) return null;
       const rows = keys.filter(
         (row) =>
+          normalizeEmail(row.clientEmail) === account &&
           String(row.botId || row.bot?.id || "").trim() === id
       );
       if (!rows.length) return null;
@@ -1062,44 +1090,55 @@ export function AppProvider({ children }) {
           Number(b.usedAt || b.updatedAt || 0) -
           Number(a.usedAt || a.updatedAt || 0)
       );
-      if (account) {
-        const mine = rows.find(
-          (row) => normalizeEmail(row.clientEmail) === account
-        );
-        if (mine) return mine;
-      }
       return rows.find((row) => row.used) || rows[0];
+    };
+
+    const patchBot = (bot) => {
+      const row = pickForBot(bot.id);
+      const stampedEmail = normalizeEmail(bot.clientEmail);
+      const wrongStamp = Boolean(stampedEmail && stampedEmail !== account);
+      if (row) {
+        const usedAt = Number(row.usedAt || row.boundAt) || null;
+        if (
+          bot.licenseKey === row.key &&
+          stampedEmail === account &&
+          bot.licenseUsedAt === usedAt
+        ) {
+          return bot;
+        }
+        return {
+          ...bot,
+          licenseKey: row.key,
+          clientEmail: account,
+          licenseUsedAt: usedAt,
+        };
+      }
+      if (wrongStamp) {
+        return {
+          ...bot,
+          licenseKey: "",
+          clientEmail: "",
+          licenseUsedAt: null,
+        };
+      }
+      return bot;
     };
 
     setBots((prev) => {
       let changed = false;
       const next = prev.map((bot) => {
-        if (bot.licenseKey) return bot;
-        const row = pickForBot(bot.id);
-        if (!row?.key) return bot;
-        changed = true;
-        return {
-          ...bot,
-          licenseKey: row.key,
-          clientEmail: row.clientEmail || account || "",
-          licenseUsedAt: Number(row.usedAt || row.boundAt) || null,
-        };
+        const patched = patchBot(bot);
+        if (patched !== bot) changed = true;
+        return patched;
       });
       return changed ? next : prev;
     });
     setEas((prev) => {
       let changed = false;
       const next = prev.map((ea) => {
-        if (ea.licenseKey) return ea;
-        const row = pickForBot(ea.id);
-        if (!row?.key) return ea;
-        changed = true;
-        return {
-          ...ea,
-          licenseKey: row.key,
-          clientEmail: row.clientEmail || account || "",
-          licenseUsedAt: Number(row.usedAt || row.boundAt) || null,
-        };
+        const patched = patchBot(ea);
+        if (patched !== ea) changed = true;
+        return patched;
       });
       return changed ? next : prev;
     });
@@ -2134,15 +2173,8 @@ export function AppProvider({ children }) {
           // continue
         }
       }
-      if (!entry) {
-        try {
-          const remote = await fetchLicenses();
-          setLicenseKeys((prev) => mergeLicenses(prev, remote));
-          entry = remote.find(matchKey) || null;
-        } catch {
-          // keep local miss
-        }
-      }
+      // Do not fetch the global license list on client unlock — that mixed
+      // other people's emails into local storage for shared bot ids.
 
       if (!entry) {
         showToast("Invalid license key — ask your mentor to generate a new one");

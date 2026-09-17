@@ -11,8 +11,9 @@ import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
 
 /**
- * Client trading app shell. UI is packaged in the APK for fast cold start;
- * PayPal, licenses, Chart Scanner, MetaAPI, and secrets stay on apex-ea.com.
+ * Client trading app shell.
+ * UI loads from https://www.apex-ea.com so web deploys reach Android without
+ * another APK rebuild. PayPal, licenses, Chart Scanner, MetaAPI stay remote.
  * Mentor/admin portal routes are blocked inside the APK.
  */
 public class MainActivity extends BridgeActivity {
@@ -52,8 +53,8 @@ public class MainActivity extends BridgeActivity {
         private void goHome() {
           Bridge b = MainActivity.this.getBridge();
           if (b != null && b.getWebView() != null) {
-            // Packaged Capacitor assets (not the remote website).
-            b.getWebView().loadUrl("https://localhost/");
+            // Live site — same as capacitor server.url (no packaged UI lag).
+            b.getWebView().loadUrl("https://www.apex-ea.com/");
           }
         }
 
