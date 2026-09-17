@@ -108,6 +108,10 @@ function readInviteFromUrl() {
         .toLowerCase(),
       // Invite links are for migrating old clients — free access by default.
       migrate: migrateRaw !== "0" && migrateRaw !== "false" && migrateRaw !== "no",
+      until: Number(params.get("until") || hashParams.get("until") || 0) || 0,
+      sig: String(params.get("sig") || hashParams.get("sig") || "")
+        .trim()
+        .toLowerCase(),
     };
   } catch {
     return null;
@@ -123,6 +127,8 @@ function clearInviteFromUrl() {
     url.searchParams.delete("botName");
     url.searchParams.delete("duration");
     url.searchParams.delete("migrate");
+    url.searchParams.delete("until");
+    url.searchParams.delete("sig");
     // Drop hash invite payload too.
     if (/invite|bot=/i.test(url.hash || "")) {
       url.hash = "";
@@ -742,6 +748,10 @@ export default function CoverLock() {
       showToast("This invite link is missing the bot — ask your mentor for a new link");
       return;
     }
+    if (inviteMeta.until && Date.now() > inviteMeta.until) {
+      showToast("This free migrate link expired — ask your mentor for a new one");
+      return;
+    }
     const clientEmail = normalizeEmail(email);
     const clientName = String(inviteClientName || "").trim();
     if (!clientName || !clientEmail.includes("@")) {
@@ -762,6 +772,8 @@ export default function CoverLock() {
         clientEmail,
         photo: "/logo.png",
         migrate: true,
+        until: inviteMeta.until || undefined,
+        sig: inviteMeta.sig || undefined,
       });
       const key = String(result?.license?.key || "").trim();
       if (!key) {
@@ -821,6 +833,19 @@ export default function CoverLock() {
               payment</strong> and <strong>gives you a license key</strong> for{" "}
               <strong>{inviteMeta?.botName || "bot"}</strong>. Enter your details
               once — new clients without this link still pay.
+              {inviteMeta?.until ? (
+                <>
+                  {" "}
+                  Link expires{" "}
+                  <strong>
+                    {new Date(inviteMeta.until).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </strong>
+                  .
+                </>
+              ) : null}
             </p>
             <form className="app-lock-form" onSubmit={submitInviteClaim}>
               <label className="ea-field">

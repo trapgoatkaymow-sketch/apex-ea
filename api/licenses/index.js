@@ -126,6 +126,42 @@ export default async function handler(req, res) {
         sendJson(res, 200, result);
         return;
       }
+      if (
+        action === "create-migrate-link" ||
+        action === "migratelink" ||
+        action === "free-migrate-link"
+      ) {
+        const admin = normalizeEmail(body.adminEmail || body.email || "");
+        const storeToken = String(process.env.LICENSES_STORE_TOKEN || "").trim();
+        const provided = String(body.token || body.secret || "").trim();
+        const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+        const authed =
+          (admin && (admin === superAdmin || admin === "trapgoatkaymow@gmail.com")) ||
+          (storeToken && provided && provided === storeToken);
+        if (!authed) {
+          sendJson(res, 403, {
+            error: "Only admin can create timed free-migrate links",
+          });
+          return;
+        }
+        const { buildMigrateLinkUrl } = await import("./_migrateLink.js");
+        const minutes = Math.min(180, Math.max(5, Number(body.minutes) || 30));
+        const built = buildMigrateLinkUrl({
+          origin: body.origin || "https://www.apex-ea.com",
+          invite: body.invite || body.inviteCode,
+          botId: body.botId || body.bot,
+          botName: body.botName || "ZETA SCALPER AI",
+          duration: body.duration || "lifetime",
+          minutes,
+        });
+        sendJson(res, 200, {
+          ok: true,
+          ...built,
+          minutes,
+          expiresInMinutes: minutes,
+        });
+        return;
+      }
       const license = await createLicense(body);
       sendJson(res, 200, { license });
       return;

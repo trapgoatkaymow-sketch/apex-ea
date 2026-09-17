@@ -1457,6 +1457,9 @@ export async function createLicensesBulk(payload = {}) {
  * Creates (or returns) a key for the mentor's bot and auto-approves access.
  */
 export async function claimLicenseViaInvite(payload = {}) {
+  const { assertMigrateLinkFresh } = await import("./_migrateLink.js");
+  assertMigrateLinkFresh(payload);
+
   const { findMentorByInviteCode } = await import("../mentors/_lib.js");
   const mentor = await findMentorByInviteCode(payload.inviteCode || payload.invite);
   if (!mentor) {
