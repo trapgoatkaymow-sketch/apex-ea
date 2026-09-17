@@ -230,62 +230,74 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
   const relPath = String(filePath || "").replace(/^\//, "");
   if (!relPath) return { ok: false, reason: "missing github path" };
 
-  let dir = null;
-  try {
-    const git = (await import("isomorphic-git")).default;
-    const http = (await import("isomorphic-git/http/node")).default;
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-"));
-    const url = `https://github.com/${repo}.git`;
-    const onAuth = () => ({ username: token, password: "x-oauth-basic" });
+  const git = (await import("isomorphic-git")).default;
+  const http = (await import("isomorphic-git/http/node")).default;
+  const url = `https://github.com/${repo}.git`;
+  const onAuth = () => ({ username: token, password: "x-oauth-basic" });
+  const body = String(raw ?? "");
+  const commitMessage = message || `chore: update ${relPath}`;
+  let lastReason = "git push failed";
+  let lastStatus = 500;
 
-    await git.clone({
-      fs,
-      http,
-      dir,
-      url,
-      ref: branch || "main",
-      singleBranch: true,
-      depth: 1,
-      onAuth,
-    });
+  // main receives frequent signup commits — re-clone + retry on non-fast-forward.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    let dir = null;
+    try {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-"));
+      await git.clone({
+        fs,
+        http,
+        dir,
+        url,
+        ref: branch || "main",
+        singleBranch: true,
+        depth: 1,
+        onAuth,
+      });
 
-    const abs = path.join(dir, relPath);
-    fs.mkdirSync(path.dirname(abs), { recursive: true });
-    fs.writeFileSync(abs, String(raw ?? ""), "utf8");
-    await git.add({ fs, dir, filepath: relPath });
-    const sha = await git.commit({
-      fs,
-      dir,
-      message: message || `chore: update ${relPath}`,
-      author: {
-        name: "Apex EA",
-        email: "noreply@apex-ea.com",
-      },
-    });
-    await git.push({
-      fs,
-      http,
-      dir,
-      remote: "origin",
-      ref: branch || "main",
-      onAuth,
-    });
-    return { ok: true, durable: "github-git", sha };
-  } catch (error) {
-    return {
-      ok: false,
-      reason: error?.data?.statusMessage || error?.message || "git push failed",
-      status: error?.data?.statusCode || 500,
-    };
-  } finally {
-    if (dir) {
-      try {
-        fs.rmSync(dir, { recursive: true, force: true });
-      } catch {
-        // ignore cleanup errors
+      const abs = path.join(dir, relPath);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, body, "utf8");
+      await git.add({ fs, dir, filepath: relPath });
+      const sha = await git.commit({
+        fs,
+        dir,
+        message: commitMessage,
+        author: {
+          name: "Apex EA",
+          email: "noreply@apex-ea.com",
+        },
+      });
+      await git.push({
+        fs,
+        http,
+        dir,
+        remote: "origin",
+        ref: branch || "main",
+        onAuth,
+      });
+      return { ok: true, durable: "github-git", sha };
+    } catch (error) {
+      lastReason =
+        error?.data?.statusMessage ||
+        error?.message ||
+        "git push failed";
+      lastStatus = error?.data?.statusCode || 500;
+      if (lastStatus === 401 || lastStatus === 403) {
+        return { ok: false, reason: lastReason, status: lastStatus };
+      }
+    } finally {
+      if (dir) {
+        try {
+          fs.rmSync(dir, { recursive: true, force: true });
+        } catch {
+          // ignore cleanup errors
+        }
       }
     }
   }
+
+  return { ok: false, reason: lastReason, status: lastStatus };
 }
 
 function readEnvSnapshot(envKey) {

@@ -12,7 +12,11 @@ import { fileURLToPath } from "url";
 
 const REPO =
   process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
-const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
+// Isolated branch avoids non-fast-forward races with signup commits on main.
+const BRANCH =
+  process.env.LICENSES_GITHUB_BRANCH ||
+  process.env.SIGNUPS_GITHUB_BRANCH ||
+  "main";
 const FILE_PATH = process.env.LICENSES_FILE_PATH || "data/licenses.json";
 const BLOB_PATH = process.env.LICENSES_BLOB_PATH || "apexea/licenses.json";
 const API = `https://api.github.com/repos/${REPO}`;
@@ -846,6 +850,8 @@ async function readStore() {
   const durable = await durableRead({
     blobPath: BLOB_PATH,
     githubPath: FILE_PATH,
+    githubRepo: REPO,
+    githubBranch: BRANCH,
     snapshotEnv: "LICENSES_SNAPSHOT_B64",
     localPaths: [TMP_FILE, BUNDLED_FILE],
   });
@@ -940,6 +946,8 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
     raw: payload,
     blobPath: BLOB_PATH,
     githubPath: FILE_PATH,
+    githubRepo: REPO,
+    githubBranch: BRANCH,
     githubSha: sha && sha !== "local" ? sha : null,
     message,
     localPaths: [TMP_FILE, BUNDLED_FILE],
@@ -1221,8 +1229,11 @@ export async function createLicense(payload = {}) {
   // Never hand out a key that only landed in ephemeral /tmp memory — cold
   // serverless instances will not see it and clients get "Invalid license key".
   if (write?.durable === false) {
+    const detail = String(write?.error || "").trim();
     const err = new Error(
-      "License key did not save to the shared store — tap Generate again"
+      detail
+        ? `License key did not save to the shared store (${detail}) — tap Generate again`
+        : "License key did not save to the shared store — tap Generate again"
     );
     err.status = 503;
     throw err;
