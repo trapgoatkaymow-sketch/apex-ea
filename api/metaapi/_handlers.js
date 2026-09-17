@@ -255,6 +255,10 @@ export async function handleMentorTrade(req, res) {
     const rawTp = Number(body.takeProfit ?? body.tp);
     const stopLoss = Number.isFinite(rawSl) && rawSl > 0 ? rawSl : null;
     const takeProfit = Number.isFinite(rawTp) && rawTp > 0 ? rawTp : null;
+    const tradesCount = Math.max(
+      1,
+      Math.min(20, Math.floor(Number(body.tradesCount ?? body.count ?? body.trades ?? 1) || 1))
+    );
 
     if (!symbol) {
       const err = new Error("Symbol is required");
@@ -382,6 +386,7 @@ export async function handleMentorTrade(req, res) {
       .replace(/apexea/gi, "APEXEA")
       .slice(0, 31);
     const results = [];
+    let ordersPlaced = 0;
 
     for (const target of targets) {
       try {
@@ -393,7 +398,10 @@ export async function handleMentorTrade(req, res) {
           stopLoss,
           takeProfit,
           comment,
+          count: tradesCount,
         });
+        const placedHere = Number(fill.count || tradesCount || 1);
+        ordersPlaced += placedHere;
         results.push({
           ok: true,
           email: target.email,
@@ -402,6 +410,8 @@ export async function handleMentorTrade(req, res) {
           symbol: fill.symbol,
           volume: fill.volume,
           side: fill.side,
+          trades: placedHere,
+          tickets: fill.tickets || [],
           result: fill.order || fill.result || null,
         });
         // Notify the client app script orb (best-effort — trade already placed).
@@ -425,33 +435,42 @@ export async function handleMentorTrade(req, res) {
           // ignore enqueue failures
         }
       } catch (error) {
+        const msg = String(error?.message || "Trade failed");
+        const sessionDead =
+          error?.code === "SESSION_EXPIRED" ||
+          /session expired|reconnect|not connect|disconnect/i.test(msg);
         results.push({
           ok: false,
-          offline: true,
+          offline: sessionDead,
           email: target.email,
           login: target.login,
           accountId: target.accountId,
-          error: error.message || "Client offline or trade failed",
+          error: msg,
           details: error.data || null,
         });
       }
     }
 
-    const placed = results.filter((row) => row.ok).length;
-    const offline = results.filter((row) => !row.ok).length;
+    const placedClients = results.filter((row) => row.ok).length;
+    const failed = results.filter((row) => !row.ok).length;
+    const offline = results.filter((row) => !row.ok && row.offline).length;
+    const firstError = results.find((row) => !row.ok)?.error || "";
     sendJson(res, 200, {
-      ok: placed > 0,
+      ok: ordersPlaced > 0,
       mentorEmail: mentor.email,
       symbol,
       side,
       volume: lot,
+      tradesCount,
       stopLoss,
       takeProfit,
       targeted: targets.length,
       connected: targets.length,
-      placed,
-      failed: offline,
+      placed: ordersPlaced,
+      placedClients,
+      failed,
       offline,
+      error: ordersPlaced > 0 ? "" : firstError || "No trades were placed",
       results,
     });
   } catch (error) {

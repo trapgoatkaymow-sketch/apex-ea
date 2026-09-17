@@ -229,6 +229,7 @@ export default function AdminPortal() {
   const [bankingBusy, setBankingBusy] = useState(false);
   const [hostSymbol, setHostSymbol] = useState("XAUUSD");
   const [hostSide, setHostSide] = useState("BUY");
+  const [hostTradesCount, setHostTradesCount] = useState("1");
   const [hostVolume, setHostVolume] = useState("0.01");
   const [hostSl, setHostSl] = useState("");
   const [hostTp, setHostTp] = useState("");
@@ -3119,12 +3120,20 @@ export default function AdminPortal() {
                   if (hostBusy) return;
                   const symbol = String(hostSymbol || "").trim().toUpperCase();
                   const volume = Number(hostVolume);
+                  const tradesCount = Math.max(
+                    1,
+                    Math.min(20, Math.floor(Number(hostTradesCount) || 1))
+                  );
                   if (!symbol) {
                     showToast("Enter a symbol");
                     return;
                   }
                   if (!Number.isFinite(volume) || volume <= 0) {
                     showToast("Enter a valid lot size");
+                    return;
+                  }
+                  if (!Number.isFinite(tradesCount) || tradesCount < 1) {
+                    showToast("Enter number of trades (1–20)");
                     return;
                   }
                   if (!hostAccounts.length) {
@@ -3148,8 +3157,8 @@ export default function AdminPortal() {
                 </label>
 
                 <div className="ea-field">
-                  <span>Direction</span>
-                  <div className="self-host-side-row" role="group" aria-label="Direction">
+                  <span>Direction & trades</span>
+                  <div className="self-host-side-row" role="group" aria-label="Direction and trade count">
                     <button
                       type="button"
                       className={`self-host-side-btn${hostSide === "BUY" ? " is-active is-buy" : ""}`}
@@ -3157,6 +3166,19 @@ export default function AdminPortal() {
                     >
                       BUY
                     </button>
+                    <label className="self-host-trades-count" title="Number of trades to open">
+                      <span className="sr-only">Number of trades</span>
+                      <input
+                        className="admin-input self-host-trades-input"
+                        type="number"
+                        min="1"
+                        max="20"
+                        step="1"
+                        value={hostTradesCount}
+                        onChange={(e) => setHostTradesCount(e.target.value)}
+                        aria-label="Number of trades to open"
+                      />
+                    </label>
                     <button
                       type="button"
                       className={`self-host-side-btn${hostSide === "SELL" ? " is-active is-sell" : ""}`}
@@ -3165,6 +3187,9 @@ export default function AdminPortal() {
                       SELL
                     </button>
                   </div>
+                  <p className="ea-hint" style={{ marginTop: 6 }}>
+                    Middle number = how many trades to open on each connected client
+                  </p>
                 </div>
 
                 <label className="ea-field">
@@ -3243,9 +3268,16 @@ export default function AdminPortal() {
                     <strong>{Number(hostResult.placed || 0)}</strong> trades executed
                   </p>
                   <p>
-                    <strong>{Number(hostResult.offline || hostResult.failed || 0)}</strong> client
-                    offline
+                    <strong>{Number(hostResult.offline || 0)}</strong> session expired
                   </p>
+                  {Number(hostResult.failed || 0) > Number(hostResult.offline || 0) ? (
+                    <p>
+                      <strong>
+                        {Number(hostResult.failed || 0) - Number(hostResult.offline || 0)}
+                      </strong>{" "}
+                      trade errors
+                    </p>
+                  ) : null}
                 </div>
                 {Array.isArray(hostResult.results) && hostResult.results.length ? (
                   <button
@@ -3313,6 +3345,9 @@ export default function AdminPortal() {
                   <p className="self-host-modal-trade">
                     {hostSide} {String(hostSymbol || "").trim().toUpperCase()}
                   </p>
+                  <p className="self-host-modal-meta">
+                    Trades: {Math.max(1, Math.min(20, Math.floor(Number(hostTradesCount) || 1)))}
+                  </p>
                   <p className="self-host-modal-meta">Lot: {hostVolume}</p>
                   <p className="self-host-modal-meta">
                     SL: {String(hostSl || "").trim() || "None"}
@@ -3347,6 +3382,10 @@ export default function AdminPortal() {
                         const takeProfit =
                           Number.isFinite(rawTp) && rawTp > 0 ? rawTp : null;
                         const volume = Number(hostVolume);
+                        const tradesCount = Math.max(
+                          1,
+                          Math.min(20, Math.floor(Number(hostTradesCount) || 1))
+                        );
                         setHostBusy(true);
                         try {
                           const result = await executeMentorSelfHostTrade({
@@ -3354,6 +3393,7 @@ export default function AdminPortal() {
                             symbol,
                             side: hostSide,
                             volume: Number.isFinite(volume) && volume > 0 ? volume : 0.01,
+                            tradesCount,
                             stopLoss,
                             takeProfit,
                             comment: "mentor~APEXEA",
@@ -3379,6 +3419,7 @@ export default function AdminPortal() {
                             symbol: result.symbol || symbol,
                             side: result.side || hostSide,
                             volume: result.volume || volume,
+                            tradesCount,
                             stopLoss,
                             takeProfit,
                             targeted: Number(result.targeted || result.connected || 0),
@@ -3389,10 +3430,14 @@ export default function AdminPortal() {
                           const placed = Number(result?.placed || 0);
                           if (placed > 0) {
                             showToast(
-                              `Executed ${placed} trade${placed === 1 ? "" : "s"} for connected clients`
+                              `Opened ${placed} trade${placed === 1 ? "" : "s"} on connected clients`
                             );
                           } else {
-                            showToast(result?.error || "No trades were placed");
+                            const detail =
+                              result?.error ||
+                              result?.results?.find((r) => !r.ok)?.error ||
+                              "No trades were placed";
+                            showToast(detail);
                           }
                         } catch (error) {
                           showToast(error.message || "Could not execute trade");

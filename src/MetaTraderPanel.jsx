@@ -131,6 +131,38 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when session or cover email changes
   }, [session?.accountId, coverEmail]);
 
+  // Keep MT5API session warm and re-register for mentor Self Hosting.
+  useEffect(() => {
+    if (!session?.accountId) return undefined;
+    let cancelled = false;
+    async function heartbeat() {
+      try {
+        const status = await getAccountStatus(session.accountId, {
+          company: session.company || "",
+        });
+        if (cancelled) return;
+        const disconnected =
+          String(status?.connectionStatus || "").toUpperCase().includes("DISCONNECT") ||
+          String(status?.state || "").toUpperCase() === "UNDEPLOYED" ||
+          status?.disconnected === true;
+        if (disconnected) {
+          showToast("Broker session expired — reconnect MetaTrader");
+          return;
+        }
+        await syncHostedAccount(session, coverEmail);
+      } catch {
+        // ignore transient heartbeat failures
+      }
+    }
+    void heartbeat();
+    const timer = setInterval(() => void heartbeat(), 45000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- heartbeat tied to live session
+  }, [session?.accountId, session?.company, coverEmail]);
+
   // Broker API on/off — poll so clients see when 66.23.225.158 is down.
   useEffect(() => {
     let cancelled = false;

@@ -367,6 +367,7 @@ export async function disconnectAccount(accountId) {
 /**
  * Market order via GET /OrderSend
  * operation: Buy | Sell
+ * Optional `count` opens multiple market orders (same size each).
  */
 export async function placeMarketTrade({
   accountId,
@@ -376,18 +377,20 @@ export async function placeMarketTrade({
   stopLoss,
   takeProfit,
   comment = "bot~APEXEA",
+  count = 1,
 } = {}) {
   const id = String(accountId || "").trim();
-  const sym = String(symbol || "").trim().toUpperCase();
+  const requested = String(symbol || "").trim().toUpperCase();
   const lots = Number(volume);
   const action = String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
+  const times = Math.max(1, Math.min(20, Math.floor(Number(count) || 1)));
 
   if (!id) {
     const err = new Error("accountId is required");
     err.status = 400;
     throw err;
   }
-  if (!sym) {
+  if (!requested) {
     const err = new Error("Symbol is required");
     err.status = 400;
     throw err;
@@ -398,26 +401,158 @@ export async function placeMarketTrade({
     throw err;
   }
 
-  const params = new URLSearchParams({
-    id,
-    symbol: sym,
-    operation: action,
-    volume: String(lots),
-    comment: String(comment || "bot~APEXEA").slice(0, 31),
-  });
-  const sl = Number(stopLoss);
-  const tp = Number(takeProfit);
-  if (Number.isFinite(sl) && sl > 0) params.set("stoploss", String(sl));
-  if (Number.isFinite(tp) && tp > 0) params.set("takeprofit", String(tp));
+  // Ensure the MT5API session is still alive before trading.
+  try {
+    const live = await mt5Fetch(`/CheckConnect?id=${encodeURIComponent(id)}`, {
+      timeoutMs: 12000,
+    });
+    const ok =
+      live == null ||
+      live === true ||
+      /^ok$/i.test(String(live).trim()) ||
+      (typeof live === "object" && !/^\[error\]/i.test(JSON.stringify(live)));
+    if (!ok || /^\[error\]/i.test(String(live || ""))) {
+      const err = new Error(
+        "Client MetaTrader session expired — open the app and reconnect the broker"
+      );
+      err.status = 409;
+      err.code = "SESSION_EXPIRED";
+      throw err;
+    }
+  } catch (error) {
+    if (error?.code === "SESSION_EXPIRED") throw error;
+    const msg = String(error?.message || "");
+    if (/not\s*connect|disconnect|invalid|token|session|expire|404|401|403/i.test(msg)) {
+      const err = new Error(
+        "Client MetaTrader session expired — open the app and reconnect the broker"
+      );
+      err.status = 409;
+      err.code = "SESSION_EXPIRED";
+      err.data = error.data;
+      throw err;
+    }
+    // Soft-fail check — still attempt OrderSend (some builds return odd CheckConnect bodies)
+  }
 
-  const order = await mt5Fetch(`/OrderSend?${params.toString()}`, { timeoutMs: 45000 });
+  const sym = await resolveTradeSymbol(id, requested);
+
+  let price = null;
+  try {
+    const quote = await mt5Fetch(
+      `/GetQuote?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(sym)}`,
+      { timeoutMs: 12000 }
+    );
+    const bid = Number(quote?.bid ?? quote?.Bid ?? quote?.bidPrice);
+    const ask = Number(quote?.ask ?? quote?.Ask ?? quote?.askPrice);
+    const mid = Number(quote?.price ?? quote?.last ?? quote?.Last);
+    if (action === "Buy" && Number.isFinite(ask) && ask > 0) price = ask;
+    else if (action === "Sell" && Number.isFinite(bid) && bid > 0) price = bid;
+    else if (Number.isFinite(mid) && mid > 0) price = mid;
+  } catch {
+    price = null;
+  }
+
+  const fills = [];
+  for (let i = 0; i < times; i += 1) {
+    const params = new URLSearchParams({
+      id,
+      symbol: sym,
+      operation: action,
+      volume: String(lots),
+      slippage: "100",
+      comment: String(comment || "bot~APEXEA").slice(0, 31),
+    });
+    if (Number.isFinite(price) && price > 0) params.set("price", String(price));
+    const sl = Number(stopLoss);
+    const tp = Number(takeProfit);
+    if (Number.isFinite(sl) && sl > 0) params.set("stoploss", String(sl));
+    if (Number.isFinite(tp) && tp > 0) params.set("takeprofit", String(tp));
+
+    const order = await mt5Fetch(`/OrderSend?${params.toString()}`, { timeoutMs: 45000 });
+    const raw =
+      typeof order === "string"
+        ? order.trim()
+        : order && typeof order === "object"
+          ? JSON.stringify(order)
+          : String(order ?? "");
+    if (/^\[error\]/i.test(raw) || (order && order.error) || /invalid|not\s*exist|market\s*closed|trade\s*disabled|no\s*prices/i.test(raw)) {
+      const hint =
+        typeof order === "string"
+          ? order.replace(/^\[error\]:?\s*/i, "").trim()
+          : order?.message || order?.error || raw;
+      const err = new Error(
+        String(hint || "Broker rejected the order").slice(0, 180)
+      );
+      err.status = 400;
+      err.data = order;
+      throw err;
+    }
+    fills.push(order);
+  }
+
+  const last = fills[fills.length - 1];
   return {
     ok: true,
     provider: "mt5api",
-    order,
-    ticket: order?.ticket ?? order?.order ?? null,
+    order: last,
+    orders: fills,
+    tickets: fills.map((o) => o?.ticket ?? o?.order ?? null).filter((v) => v != null),
+    count: fills.length,
+    ticket: last?.ticket ?? last?.order ?? null,
     symbol: sym,
     volume: lots,
     side: action.toUpperCase(),
   };
+}
+
+/** Pick the broker's real symbol name for a requested pair (XAUUSD → XAUUSD.mic, etc.). */
+async function resolveTradeSymbol(accountId, requested) {
+  const want = String(requested || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9.]/g, "");
+  if (!want) return requested;
+
+  let symbols = [];
+  try {
+    const data = await mt5Fetch(`/Symbols?id=${encodeURIComponent(accountId)}`, {
+      timeoutMs: 20000,
+    });
+    if (Array.isArray(data)) symbols = data.map(String);
+    else if (Array.isArray(data?.symbols)) symbols = data.symbols.map(String);
+    else if (typeof data === "string") {
+      symbols = data
+        .split(/[\s,;]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  } catch {
+    return want;
+  }
+
+  const upper = symbols.map((s) => ({ raw: s, u: String(s).toUpperCase() }));
+  const exact = upper.find((s) => s.u === want);
+  if (exact) return exact.raw;
+
+  const base = want.replace(/\.(MIC|M|I|PRO|RAW|ECN|STD)$/i, "");
+  const candidates = upper.filter(
+    (s) =>
+      s.u === base ||
+      s.u.startsWith(base) ||
+      s.u.includes(base) ||
+      (base === "XAUUSD" && /XAU|GOLD/i.test(s.u)) ||
+      (base === "XAGUSD" && /XAG|SILVER/i.test(s.u))
+  );
+  if (!candidates.length) return want;
+
+  // Prefer common broker suffixes for gold/FX.
+  const rank = (u) => {
+    if (u === base) return 0;
+    if (u === `${base}.MIC`) return 1;
+    if (u === `${base}M` || u === `${base}.M`) return 2;
+    if (u.startsWith(base)) return 3;
+    return 4;
+  };
+  candidates.sort((a, b) => rank(a.u) - rank(b.u) || a.u.length - b.u.length);
+  return candidates[0].raw;
 }
