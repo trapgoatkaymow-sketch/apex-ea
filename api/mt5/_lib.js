@@ -503,17 +503,17 @@ export async function placeMarketTrade({
 
   const fills = [];
   for (let i = 0; i < times; i += 1) {
-    // Thread 1 → TP1, thread 2 → TP2, thread 3+ → TP3 (or last provided TP).
+    // Cycle TP1 → TP2 → TP3 for every thread (T1=TP1, T2=TP2, T3=TP3, T4=TP1, …).
     let tpForThread = null;
+    const slot = i % 3;
     if (tpList.length) {
-      if (i === 0) tpForThread = tpList[0];
-      else if (i === 1) tpForThread = tpList[1] ?? tpList[tpList.length - 1];
-      else tpForThread = tpList[2] ?? tpList[tpList.length - 1];
+      tpForThread =
+        tpList[slot] ?? tpList[Math.min(slot, tpList.length - 1)] ?? null;
     } else if (Number.isFinite(defaultTp) && defaultTp > 0) {
       tpForThread = defaultTp;
     }
 
-    const threadLabel = i === 0 ? "TP1" : i === 1 ? "TP2" : "TP3";
+    const threadLabel = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
     const baseComment = String(comment || "bot~APEXEA").replace(/\|TP[123]\b/gi, "");
     const threadComment = `${baseComment}|${threadLabel}`.slice(0, 31);
 

@@ -258,6 +258,16 @@ export async function handleMentorTrade(req, res) {
     const rawTp = Number(body.takeProfit ?? body.tp);
     const stopLoss = Number.isFinite(rawSl) && rawSl > 0 ? rawSl : null;
     const takeProfit = Number.isFinite(rawTp) && rawTp > 0 ? rawTp : null;
+    const takeProfits = [
+      body.takeProfit1,
+      body.takeProfit2,
+      body.takeProfit3,
+      body.tp1,
+      body.tp2,
+      body.tp3,
+    ]
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n) && n > 0);
     const tradesCount = Math.max(
       1,
       Math.min(20, Math.floor(Number(body.tradesCount ?? body.count ?? body.trades ?? 1) || 1))

@@ -30,23 +30,27 @@ const SCAN_STEP_GAP_MS = isNativeApp() ? 36 : 70;
 const SCAN_SETTLE_MS = isNativeApp() ? 220 : 500;
 const TRADE_SETTLE_MS = isNativeApp() ? 320 : 700;
 
-/** Trade index → TP target: trade 1 → TP1, trade 2 → TP2, trade 3+ → TP3. */
+/**
+ * Trade index → TP target (cycles forever):
+ *   T1 → TP1, T2 → TP2, T3 → TP3, T4 → TP1, T5 → TP2, ...
+ * Never dump T4+ onto TP3 — that made 15-trade fills look like T3..T15 all TP3.
+ */
 function targetForTradeIndex(index) {
   const n = Math.max(0, Math.floor(Number(index) || 0));
-  if (n === 0) {
-    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: 1 };
+  const slot = n % 3;
+  if (slot === 0) {
+    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: n + 1 };
   }
-  if (n === 1) {
-    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: 2 };
+  if (slot === 1) {
+    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: n + 1 };
   }
   return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
 }
 
 /**
  * Build the exact open order for each thread.
- * Thread 1 always uses TP1 price, thread 2 → TP2, thread 3+ → TP3.
- * Never fall back to a different TP level when the mapped price is missing —
- * skip that thread instead so tickets stay correctly labeled.
+ * Thread 1 always TP1, thread 2 always TP2, thread 3 always TP3, then repeat.
+ * Skip a thread only when its mapped TP price is missing.
  */
 function buildTpThreads({ tradeCount, lot, signal }) {
   const count = clampTrades(tradeCount);
@@ -590,7 +594,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       const okCount = nextFills.filter((f) => f.ok !== false).length;
       if (okCount) {
         showToast(
-          `Executed ${okCount}/${nextFills.length} trades · T1→TP1 · T2→TP2 · rest→TP3`
+          `Executed ${okCount}/${nextFills.length} trades · T1→TP1 · T2→TP2 · T3→TP3 (cycles)`
         );
       } else {
         showToast(lastError || nextFills[0]?.error || "No trades filled");
