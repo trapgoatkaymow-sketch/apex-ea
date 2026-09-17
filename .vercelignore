@@ -1,3 +1,24 @@
 android
 node_modules
 .git
+# Keep only current APKs in the deploy upload; older sideload builds stay in git.
+public/apex-ea-v1.*.apk
+public/apex-ea-v2.0.apk
+public/apex-ea-v2.1.apk
+public/apex-ea-v2.2.apk
+public/apex-ea-v2.3.apk
+public/apex-ea-v2.4.apk
+public/apex-ea-v2.5.apk
+public/apex-ea-v2.6.apk
+public/apex-ea-v2.7.apk
+public/apex-ea-v2.8.apk
+public/apex-ea-v2.9.apk
+public/apex-ea-v2.10.apk
+public/apex-ea-v2.11.apk
+public/apex-ea-v2.12.apk
+public/apex-ea-v2.13.apk
+public/apex-ea-v2.14.apk
+public/apex-ea-v2.15.apk
+public/apex-ea-v2.16.apk
+public/apex-ea-v2.17.apk
+public/apex-ea-v2.18.apk
