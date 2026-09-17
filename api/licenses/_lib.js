@@ -842,7 +842,7 @@ function writeLocalStore(licenses, deletedKeys = memoryDeletedKeys) {
   return next;
 }
 
-async function readStore() {
+async function readStore(options = {}) {
   let remote = null;
   let remoteSource = "empty";
 
@@ -854,6 +854,7 @@ async function readStore() {
     githubBranch: BRANCH,
     snapshotEnv: "LICENSES_SNAPSHOT_B64",
     localPaths: [TMP_FILE, BUNDLED_FILE],
+    preferFresh: Boolean(options.preferFresh),
   });
   if (durable.raw != null) {
     try {
@@ -1036,8 +1037,8 @@ async function mutateStore(mutator, message) {
   throw lastError || new Error("Could not update licenses store");
 }
 
-export async function listLicenses() {
-  const store = await readStore();
+export async function listLicenses(options = {}) {
+  const store = await readStore(options);
   let licenses = store.licenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   // Fill missing mentorName from the mentor portal username so client headers
@@ -1644,9 +1645,15 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   const claimEmail = normalizeEmail(email);
 
   // Peek current license + signup before mutate so commission rules use paid/first-access.
-  const currentList = await listLicenses();
-  const current =
+  let currentList = await listLicenses();
+  let current =
     currentList.find((row) => variants.includes(row.key)) || null;
+  if (!current) {
+    // Just-claimed keys may not be on CDN yet — refresh from git once.
+    memoryLicenses = null;
+    currentList = await listLicenses({ preferFresh: true });
+    current = currentList.find((row) => variants.includes(row.key)) || null;
+  }
   if (!current) {
     const err = new Error("Invalid license key");
     err.status = 404;
@@ -1906,14 +1913,19 @@ export async function findLicense(rawKey) {
   if (!variants.size) return null;
   const compactOf = (value) => normalizeLicenseKey(value).replace(/-/g, "");
   const wantCompact = compactOf(rawKey);
-  const licenses = await listLicenses();
-  return (
+  const match = (licenses) =>
     licenses.find((row) => {
       const key = normalizeLicenseKey(row.key);
       if (!key) return false;
       return variants.has(key) || compactOf(key) === wantCompact;
-    }) || null
-  );
+    }) || null;
+
+  let found = match(await listLicenses());
+  if (found) return found;
+
+  // Stale CDN can miss a key that was just claimed — force a fresh git read.
+  memoryLicenses = null;
+  return match(await listLicenses({ preferFresh: true }));
 }
 
 export async function findLicensesByEmail(email) {

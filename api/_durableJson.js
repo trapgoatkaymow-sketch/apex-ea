@@ -378,15 +378,18 @@ export async function durableRead(opts = {}) {
       return { raw: gh.raw, sha: gh.sha, source: "github" };
     }
 
-    // Prefer git over raw CDN. CDN often returns a non-empty but stale document
-    // that is missing keys just pushed — clients then see "Invalid license key".
-    const viaGit = await githubGetViaGit({
-      repo: githubRepo,
-      branch: githubBranch,
-      filePath: githubPath,
-    });
-    if (viaGit && !viaGit.missing && viaGit.raw != null) {
-      return { raw: viaGit.raw, sha: null, source: "github-git" };
+    const preferFresh = Boolean(opts.preferFresh);
+
+    // Fresh reads (claim/unlock) skip stale CDN and go straight to git.
+    if (preferFresh) {
+      const viaGit = await githubGetViaGit({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (viaGit && !viaGit.missing && viaGit.raw != null) {
+        return { raw: viaGit.raw, sha: null, source: "github-git" };
+      }
     }
 
     const raw = await githubGetRaw({
@@ -395,7 +398,35 @@ export async function durableRead(opts = {}) {
       filePath: githubPath,
     });
     if (raw && !raw.missing && raw.raw != null) {
+      let looksEmpty = false;
+      try {
+        const parsed = JSON.parse(raw.raw || "{}");
+        looksEmpty =
+          Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
+      } catch {
+        looksEmpty = false;
+      }
+      if (!looksEmpty) {
+        return { raw: raw.raw, sha: null, source: "github-raw" };
+      }
+      const viaGit = await githubGetViaGit({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (viaGit && !viaGit.missing && viaGit.raw != null) {
+        return { raw: viaGit.raw, sha: null, source: "github-git" };
+      }
       return { raw: raw.raw, sha: null, source: "github-raw" };
+    }
+
+    const viaGit = await githubGetViaGit({
+      repo: githubRepo,
+      branch: githubBranch,
+      filePath: githubPath,
+    });
+    if (viaGit && !viaGit.missing && viaGit.raw != null) {
+      return { raw: viaGit.raw, sha: null, source: "github-git" };
     }
   }
 
