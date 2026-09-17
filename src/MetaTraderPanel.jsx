@@ -66,12 +66,6 @@ function formatMoney(value, currency = "USD") {
   }
 }
 
-function profitTone(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount === 0) return "";
-  return amount > 0 ? " is-profit" : " is-loss";
-}
-
 export default function MetaTraderPanel({ variant = "zeta" }) {
   const {
     showToast,
@@ -627,17 +621,11 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                 Disconnect
               </button>
             </div>
-            <div className="mt-session-metrics" aria-label="Account balance and floating profit">
+            <div className="mt-session-metrics" aria-label="Account balance">
               <div className="mt-metric">
                 <span className="mt-metric-label">Balance</span>
                 <strong className="mt-metric-value">
                   {formatMoney(accountMetrics?.balance, accountMetrics?.currency)}
-                </strong>
-              </div>
-              <div className="mt-metric">
-                <span className="mt-metric-label">Floating profit</span>
-                <strong className={`mt-metric-value${profitTone(accountMetrics?.profit)}`}>
-                  {formatMoney(accountMetrics?.profit, accountMetrics?.currency)}
                 </strong>
               </div>
             </div>

@@ -4,14 +4,16 @@
  * Priority for reads:
  *  1) Vercel Blob (BLOB_READ_WRITE_TOKEN) — shared across all instances
  *  2) GitHub Contents API (SIGNUPS_GITHUB_TOKEN / FALLBACK)
- *  3) Env snapshot (e.g. LICENSES_SNAPSHOT_B64) — read-only seed
- *  4) /tmp + in-memory — per-instance only
+ *  3) GitHub raw CDN (when Contents API is rate-limited)
+ *  4) Env snapshot (e.g. LICENSES_SNAPSHOT_B64) — read-only seed
+ *  5) /tmp + in-memory — per-instance only
  *
- * Writes always update /tmp + memory; Blob/GitHub when credentials work.
+ * Writes: Blob → GitHub Contents API → isomorphic-git push (bypasses REST rate limits).
  */
 
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { FALLBACK_GITHUB_TOKEN } from "./signups/_githubToken.js";
 
 const BLOB_API = "https://blob.vercel-storage.com";
@@ -108,6 +110,80 @@ async function githubGet({ repo, branch, filePath }) {
   }
 }
 
+/** Raw CDN / media read — works when Contents API is rate-limited. */
+async function githubGetRaw({ repo, branch, filePath }) {
+  const token = githubToken();
+  const cleaned = String(filePath || "").replace(/^\//, "");
+  const bust = Date.now();
+  const urls = [
+    `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(
+      branch
+    )}/${cleaned}?ts=${bust}`,
+    `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(
+      branch
+    )}/${cleaned}?ts=${bust}`,
+  ];
+  for (const url of urls) {
+    try {
+      const headers = {
+        Accept: "application/json,text/plain,*/*",
+        "Cache-Control": "no-cache",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(url, { headers, cache: "no-store" });
+      if (res.status === 404) continue;
+      if (!res.ok) continue;
+      const raw = await res.text();
+      if (raw != null && String(raw).trim()) {
+        return { missing: false, raw, sha: null };
+      }
+    } catch {
+      // try next
+    }
+  }
+  return null;
+}
+
+/** Shallow clone read — correct but slower; used when CDN is stale. */
+async function githubGetViaGit({ repo, branch, filePath }) {
+  const token = githubToken();
+  if (!token) return null;
+  const relPath = String(filePath || "").replace(/^\//, "");
+  if (!relPath) return null;
+  let dir = null;
+  try {
+    const git = (await import("isomorphic-git")).default;
+    const http = (await import("isomorphic-git/http/node")).default;
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-r-"));
+    const url = `https://github.com/${repo}.git`;
+    const onAuth = () => ({ username: token, password: "x-oauth-basic" });
+    await git.clone({
+      fs,
+      http,
+      dir,
+      url,
+      ref: branch || "main",
+      singleBranch: true,
+      depth: 1,
+      onAuth,
+    });
+    const abs = path.join(dir, relPath);
+    if (!fs.existsSync(abs)) return { missing: true, raw: null, sha: null };
+    const raw = fs.readFileSync(abs, "utf8");
+    return { missing: false, raw, sha: null };
+  } catch {
+    return null;
+  } finally {
+    if (dir) {
+      try {
+        fs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
 async function githubPut({ repo, branch, filePath, raw, sha, message }) {
   const token = githubToken();
   if (!token) return { ok: false, reason: "no-github-token" };
@@ -141,6 +217,74 @@ async function githubPut({ repo, branch, filePath, raw, sha, message }) {
     return { ok: true, durable: "github", sha: data?.content?.sha || null };
   } catch (error) {
     return { ok: false, reason: error?.message || "github put failed" };
+  }
+}
+
+/**
+ * Write via Git Smart HTTP (isomorphic-git). Bypasses Contents API rate limits
+ * that otherwise block license generation on Vercel.
+ */
+async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
+  const token = githubToken();
+  if (!token) return { ok: false, reason: "no-github-token" };
+  const relPath = String(filePath || "").replace(/^\//, "");
+  if (!relPath) return { ok: false, reason: "missing github path" };
+
+  let dir = null;
+  try {
+    const git = (await import("isomorphic-git")).default;
+    const http = (await import("isomorphic-git/http/node")).default;
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-"));
+    const url = `https://github.com/${repo}.git`;
+    const onAuth = () => ({ username: token, password: "x-oauth-basic" });
+
+    await git.clone({
+      fs,
+      http,
+      dir,
+      url,
+      ref: branch || "main",
+      singleBranch: true,
+      depth: 1,
+      onAuth,
+    });
+
+    const abs = path.join(dir, relPath);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, String(raw ?? ""), "utf8");
+    await git.add({ fs, dir, filepath: relPath });
+    const sha = await git.commit({
+      fs,
+      dir,
+      message: message || `chore: update ${relPath}`,
+      author: {
+        name: "Apex EA",
+        email: "noreply@apex-ea.com",
+      },
+    });
+    await git.push({
+      fs,
+      http,
+      dir,
+      remote: "origin",
+      ref: branch || "main",
+      onAuth,
+    });
+    return { ok: true, durable: "github-git", sha };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error?.data?.statusMessage || error?.message || "git push failed",
+      status: error?.data?.statusCode || 500,
+    };
+  } finally {
+    if (dir) {
+      try {
+        fs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // ignore cleanup errors
+      }
+    }
   }
 }
 
@@ -209,6 +353,45 @@ export async function durableRead(opts = {}) {
     if (gh && !gh.missing && gh.raw != null) {
       return { raw: gh.raw, sha: gh.sha, source: "github" };
     }
+
+    // Contents API often 403s under secondary rate limits — raw CDN still works.
+    const raw = await githubGetRaw({
+      repo: githubRepo,
+      branch: githubBranch,
+      filePath: githubPath,
+    });
+    if (raw && !raw.missing && raw.raw != null) {
+      // If CDN looks empty, confirm via shallow git clone (CDN can lag pushes).
+      let looksEmpty = false;
+      try {
+        const parsed = JSON.parse(raw.raw || "{}");
+        looksEmpty =
+          Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
+      } catch {
+        looksEmpty = false;
+      }
+      if (!looksEmpty) {
+        return { raw: raw.raw, sha: null, source: "github-raw" };
+      }
+      const viaGit = await githubGetViaGit({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (viaGit && !viaGit.missing && viaGit.raw != null) {
+        return { raw: viaGit.raw, sha: null, source: "github-git" };
+      }
+      return { raw: raw.raw, sha: null, source: "github-raw" };
+    }
+
+    const viaGit = await githubGetViaGit({
+      repo: githubRepo,
+      branch: githubBranch,
+      filePath: githubPath,
+    });
+    if (viaGit && !viaGit.missing && viaGit.raw != null) {
+      return { raw: viaGit.raw, sha: null, source: "github-git" };
+    }
   }
 
   if (snapshotEnv) {
@@ -249,20 +432,66 @@ export async function durableWrite(opts = {}) {
   }
 
   if (githubPath) {
-    const put = await githubPut({
+    // Prefer Contents API when we have a sha (fast). Without a sha — or when
+    // the API is rate-limited — fall through to Git Smart HTTP push.
+    let put = { ok: false, reason: "skipped", status: 0 };
+    if (githubSha) {
+      put = await githubPut({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+        raw: body,
+        sha: githubSha,
+        message,
+      });
+      if (put.ok) {
+        return { ok: true, durable: true, source: "github", sha: put.sha };
+      }
+    } else {
+      // Try Contents create/update without sha once (new file); otherwise git.
+      put = await githubPut({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+        raw: body,
+        sha: null,
+        message,
+      });
+      if (put.ok) {
+        return { ok: true, durable: true, source: "github", sha: put.sha };
+      }
+    }
+
+    // Contents API rate-limited / missing sha / bad credentials — Git push.
+    const viaGit = await githubPutViaGit({
       repo: githubRepo,
       branch: githubBranch,
       filePath: githubPath,
       raw: body,
-      sha: githubSha,
       message,
     });
-    if (put.ok) {
-      return { ok: true, durable: true, source: "github", sha: put.sha };
+    if (viaGit.ok) {
+      return {
+        ok: true,
+        durable: true,
+        source: "github-git",
+        sha: viaGit.sha,
+      };
     }
     if (put.status === 409 || put.status === 422) {
-      return { ok: false, durable: false, reason: put.reason, conflict: true };
+      return {
+        ok: false,
+        durable: false,
+        reason: viaGit.reason || put.reason,
+        conflict: true,
+      };
     }
+    return {
+      ok: false,
+      durable: false,
+      reason: viaGit.reason || put.reason || "github write failed",
+      status: viaGit.status || put.status,
+    };
   }
 
   return {

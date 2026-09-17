@@ -872,12 +872,13 @@ async function readStore() {
 
   // Explicit empty durable document (fresh reset) — do not resurrect keys from
   // the bundled seed /tmp copy, or portals cannot start from zero.
-  // Snapshot counts too: after a wipe we clear LICENSES_SNAPSHOT_B64 to [].
+  // github-raw is excluded: CDN can lag behind a successful git push.
   if (
     Array.isArray(remote.licenses) &&
     remote.licenses.length === 0 &&
     (remoteSource === "blob" ||
       remoteSource === "github" ||
+      remoteSource === "github-git" ||
       remoteSource === "snapshot")
   ) {
     memoryLicenses = [];
