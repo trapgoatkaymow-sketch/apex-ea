@@ -997,6 +997,8 @@ async function mutateStore(mutator, message) {
         licenses,
         deletedKeys: normalizeDeletedKeys(deletedKeys),
         durable: lastWrite?.durable !== false,
+        error: lastWrite?.error || null,
+        source: lastWrite?.source || null,
       };
     } catch (error) {
       lastError = error;
@@ -1517,7 +1519,8 @@ export async function claimLicenseViaInvite(payload = {}) {
 
   let license = null;
   let created = false;
-  await mutateStore((licenses, api) => {
+  let write = null;
+  write = await mutateStore((licenses, api) => {
     const existing = licenses.find(
       (row) =>
         normalizeEmail(row.clientEmail) === clientEmail &&
@@ -1578,6 +1581,27 @@ export async function claimLicenseViaInvite(payload = {}) {
     return [license, ...licenses];
   }, `invite claim · ${mentorName || mentorEmail} · ${clientEmail}`);
 
+  // Never hand out a key that only landed in ephemeral /tmp — Unlock app would
+  // then say "Invalid license key" on the next serverless instance.
+  if (created && write?.durable === false) {
+    const detail = String(write?.error || "").trim();
+    const err = new Error(
+      detail
+        ? `Could not save your license key (${detail}). Tap claim again.`
+        : "Could not save your license key to the shared store. Tap claim again."
+    );
+    err.status = 503;
+    throw err;
+  }
+
+  // Prefer the row returned from the durable write when present.
+  if (created && write?.licenses?.length) {
+    const saved = write.licenses.find(
+      (row) => normalizeLicenseKey(row.key) === normalizeLicenseKey(license?.key)
+    );
+    if (saved) license = saved;
+  }
+
   try {
     const { upsertSignupsInviteBypass } = await import("../signups/_lib.js");
     await upsertSignupsInviteBypass([clientEmail]);
@@ -1588,6 +1612,7 @@ export async function claimLicenseViaInvite(payload = {}) {
   return {
     license,
     created,
+    durable: write?.durable !== false,
     mentorName,
     accessBypassed: true,
     inviteCode: String(payload.inviteCode || payload.invite || "")

@@ -2022,7 +2022,7 @@ export function AppProvider({ children }) {
   );
 
   const activateLicense = useCallback(
-    async (rawKey) => {
+    async (rawKey, options = {}) => {
       const accountEmail = normalizeEmail(coverEmail);
       const signup = getSignup(accountEmail);
 
@@ -2042,7 +2042,12 @@ export function AppProvider({ children }) {
           key.replace(/-/g, "") === wantCompact
         );
       };
-      let entry = licenseKeys.find(matchKey) || null;
+      // Prefer a just-claimed license from the invite response so Unlock works
+      // even before every serverless instance sees the durable write.
+      let entry =
+        (options?.license && matchKey(options.license) ? options.license : null) ||
+        licenseKeys.find(matchKey) ||
+        null;
 
       if (!entry) {
         try {

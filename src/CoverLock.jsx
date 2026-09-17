@@ -190,6 +190,7 @@ export default function CoverLock() {
   const [inviteClientName, setInviteClientName] = useState("");
   const [inviteBusy, setInviteBusy] = useState(false);
   const [claimedKey, setClaimedKey] = useState("");
+  const [claimedLicense, setClaimedLicense] = useState(null);
   const hotspotRef = useRef({ count: 0, first: 0 });
   const payEmailRef = useRef(coverEmail || email || "");
   const cardButtonsRef = useRef(null);
@@ -721,10 +722,18 @@ export default function CoverLock() {
 
   async function submitLicense(event) {
     event.preventDefault();
-    const ok = await activateLicense(licenseKey);
+    const ok = await activateLicense(licenseKey, {
+      license:
+        claimedLicense &&
+        String(claimedLicense.key || "").toUpperCase() ===
+          String(licenseKey || "").trim().toUpperCase()
+          ? claimedLicense
+          : null,
+    });
     if (ok) {
       setLicenseKey("");
       setClaimedKey("");
+      setClaimedLicense(null);
       // Close the overlay after a successful add/activate.
       setLockStep("cover");
     }
@@ -790,16 +799,21 @@ export default function CoverLock() {
         createdAt: Date.now(),
       });
       setClaimedKey(key);
+      setClaimedLicense(result.license || null);
       setLicenseKey(key);
       setInviteMentorName(result.mentorName || inviteMentorName);
       clearInviteFromUrl();
 
-      // Auto-unlock so they don't need a second step.
-      const unlocked = await activateLicense?.(key);
+      // Auto-unlock with the claimed license object so Unlock doesn't depend on
+      // a second serverless read that may lag the durable write.
+      const unlocked = await activateLicense?.(key, {
+        license: result.license,
+      });
       if (unlocked) {
         showToast("Free access + license unlocked — no payment");
         setLicenseKey("");
         setClaimedKey("");
+        setClaimedLicense(null);
         setLockStep("cover");
       } else {
         setLockStep("license");
