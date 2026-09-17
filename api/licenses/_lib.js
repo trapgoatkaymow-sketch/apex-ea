@@ -2056,15 +2056,12 @@ export async function deactivateLicense(
   const write = await mutateStore((licenses, api) => {
     let idx = licenses.findIndex(rowMatches);
     if (idx < 0) {
-      if (!claimEmail || api.isDeleted?.(formattedKey)) {
-        const err = new Error(
-          claimEmail
-            ? "Invalid license key"
-            : "License key not found — enter the client email to restore it"
-        );
+      if (api.isDeleted?.(formattedKey)) {
+        const err = new Error("Invalid license key");
         err.status = 404;
         throw err;
       }
+      // Key-only reactivate: restore a wiped key with no email required.
       const resolvedBotId =
         String(botId || "zeta-scalper-ai-mtyew2ps").trim() ||
         "zeta-scalper-ai-mtyew2ps";
@@ -2072,13 +2069,13 @@ export async function deactivateLicense(
         String(botName || "ZETA SCALPER AI").trim() || "ZETA SCALPER AI";
       const name =
         String(clientName || "").trim() ||
-        claimEmail.split("@")[0] ||
+        (claimEmail ? claimEmail.split("@")[0] : "") ||
         "Client";
       const restored = normalizeLicense({
         key: formattedKey,
         botId: resolvedBotId,
         botName: resolvedBotName,
-        clientEmail: claimEmail,
+        clientEmail: claimEmail || "",
         clientName: name,
         mainText: name,
         mentorEmail: admin,
@@ -2106,6 +2103,7 @@ export async function deactivateLicense(
       result = restored;
       return [restored, ...licenses];
     }
+    // Always clear phone lock — even when used on another device.
     licenses[idx] = {
       ...licenses[idx],
       used: false,

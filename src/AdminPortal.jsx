@@ -341,15 +341,12 @@ export default function AdminPortal() {
     if (reactivateBusy || licenseActionBusy) return;
     setReactivateBusy(true);
     try {
+      // Key only — clears device lock / used flag. No email required.
       const result = await onDeactivateLicense(key, {
-        clientEmail: reactivateEmail,
-        clientName: reactivateName,
         botId: licenseBotId,
       });
       if (result) {
         setReactivateKey("");
-        setReactivateEmail("");
-        setReactivateName("");
         setReactivateOpen(false);
         openLicenseDetail(result);
       }
@@ -2264,8 +2261,8 @@ export default function AdminPortal() {
               <div className="admin-card admin-reactivate-card">
                 <h3 className="admin-h3">Reactivate license key</h3>
                 <p className="ea-hint">
-                  Clears device lock so the key can unlock again. If the key was wiped
-                  from the store, enter the client email to restore it.
+                  Paste the key only. This clears “locked to another phone” so the
+                  client can Unlock on a new device — no email needed.
                 </p>
                 <form className="license-form" onSubmit={onReactivateLicenseSubmit}>
                   <label className="ea-field">
@@ -2277,25 +2274,6 @@ export default function AdminPortal() {
                       placeholder="APEX-XXXX-XXXX"
                       autoCapitalize="characters"
                       required
-                    />
-                  </label>
-                  <label className="ea-field">
-                    <span>Client email (required to restore missing keys)</span>
-                    <input
-                      className="admin-input"
-                      type="email"
-                      value={reactivateEmail}
-                      onChange={(e) => setReactivateEmail(e.target.value)}
-                      placeholder="client@email.com"
-                    />
-                  </label>
-                  <label className="ea-field">
-                    <span>Client name (optional)</span>
-                    <input
-                      className="admin-input"
-                      value={reactivateName}
-                      onChange={(e) => setReactivateName(e.target.value)}
-                      placeholder="e.g. Sam smith"
                     />
                   </label>
                   <button

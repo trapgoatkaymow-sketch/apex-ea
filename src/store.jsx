@@ -2231,7 +2231,21 @@ export function AppProvider({ children }) {
       }
 
       const deviceId = getOrCreateDeviceId();
-      const boundDevice = String(entry.deviceId || "").trim();
+      let boundDevice = String(entry.deviceId || "").trim();
+      // Stale local cache can still say "locked to another phone" after admin
+      // reactivate — always refresh the key from the server before blocking.
+      if (entry.used && boundDevice && boundDevice !== deviceId) {
+        try {
+          const fresh = await fetchLicense(rawKey);
+          if (fresh) {
+            entry = fresh;
+            setLicenseKeys((prev) => mergeLicenses(prev, [fresh]));
+            boundDevice = String(entry.deviceId || "").trim();
+          }
+        } catch {
+          // keep local
+        }
+      }
       if (entry.used && boundDevice && boundDevice !== deviceId) {
         showToast("This license is locked to another phone");
         return false;
