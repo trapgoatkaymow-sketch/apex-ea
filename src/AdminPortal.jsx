@@ -3489,7 +3489,7 @@ export default function AdminPortal() {
                         setHostBusy(true);
                         try {
                           // Prefer the EA name on connected client licenses so MT5
-                          // comments read e.g. ZETASCALPERAI~APEXEA|TP1 (not mentor~…).
+                          // comments read e.g. ZETASCALPERAI~APEXEA (not mentor~…).
                           const firstHostEmail = String(
                             hostAccounts[0]?.email || ""
                           )
