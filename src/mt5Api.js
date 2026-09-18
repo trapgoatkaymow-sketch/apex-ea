@@ -1,8 +1,8 @@
-/** Client helpers for MT5API (Swagger http://66.23.225.158). Prefer server proxy. */
+/** Client helpers for MT5API (Swagger http://159.203.191.196). Prefer server proxy. */
 
 export const MT5_API_BASE = String(
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_MT5_API_BASE) ||
-    "http://66.23.225.158"
+    "http://159.203.191.196"
 ).replace(/\/$/, "");
 
 export function parseAccessPoint(access) {

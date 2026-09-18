@@ -48,20 +48,28 @@ export function mediaUrl(src) {
 
 /**
  * Home / hero / orb display source for a bot.
- * Prefer instant local bytes (data URL / packaged asset) so first paint is never
- * blocked on /api/licenses/photo. Only use the API path when the bot record
- * already points there (real uploaded photo).
+ * Prefer instant local bytes (data URL / packaged asset) when present.
+ * When the record still says /logo.png but we have a botId, return the durable
+ * photo API path so Home can show a mentor upload (Mentor Portal already does).
  */
 export function resolveBotPhotoSrc(bot, fallback = "/logo.png") {
   const photo = String(bot?.photo || "").trim();
   const fb = fallback || "/logo.png";
+  const id = String(bot?.id || "").trim();
 
   // Instant local / absolute sources — never block first paint on a network hop.
   if (photo.startsWith("data:image/") || photo.startsWith("blob:")) return photo;
   if (/^https?:\/\//i.test(photo)) return photo;
   if (photo.startsWith("/api/licenses/photo")) return mediaUrl(photo);
 
-  // Packaged / static assets (including /logo.png) — paint immediately.
+  // Mentor uploaded after activate — license may still say /logo.png.
+  if (id && (!photo || photo === "/logo.png")) {
+    return mediaUrl(
+      `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=hq`
+    );
+  }
+
+  // Other packaged / static assets.
   if (photo && photo !== "/logo.png") return mediaUrl(photo);
   return fb;
 }

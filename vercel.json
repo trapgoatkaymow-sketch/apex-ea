@@ -89,7 +89,7 @@
   "rewrites": [
     {
       "source": "/mt5-api/:path*",
-      "destination": "http://66.23.225.158/:path*"
+      "destination": "http://159.203.191.196/:path*"
     },
     {
       "source": "/((?!api/|mt5-api/|get-app\\.html|.*\\.apk$).*)",

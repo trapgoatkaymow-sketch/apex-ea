@@ -14,11 +14,21 @@ const COPYFACTORY_URL_TEMPLATE =
 const MT5_API_BASE = (
   process.env.MT5_API_BASE ||
   process.env.MT5_API_TARGET ||
-  "http://66.23.225.158"
+  "http://159.203.191.196"
 ).replace(/\/$/, "");
 
 
 function requireToken(requestToken = "") {
+  // Hard-disable MetaAPI cloud so Apex never bills for trading accounts.
+  // All live connect/trade/broker traffic goes through api/mt5/_lib.js (free VPS).
+  if (String(process.env.ALLOW_METAAPI || "").trim() !== "1") {
+    const err = new Error(
+      "MetaAPI is disabled. Apex uses the free self-hosted MT5 bridge only."
+    );
+    err.status = 503;
+    err.code = "METAAPI_DISABLED";
+    throw err;
+  }
   const token =
     String(requestToken || "").trim() ||
     process.env.METAAPI_TOKEN ||
@@ -177,7 +187,7 @@ function normalizeClientEmail(email) {
 }
 
 /**
- * Broker search via MT5API /Search?company=… (https://66.23.225.158/swagger).
+ * Broker search via MT5API /Search?company=… (http://159.203.191.196/swagger).
  * Returns Company[] → { company, results:[{ name, logo_url, site, access }] }.
  */
 export async function searchMt5ApiBrokers(query, platform = "MT5") {
