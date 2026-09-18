@@ -217,11 +217,25 @@ export default function ChartScanner({ variant = "default", active = true }) {
     });
   }
 
+  function requireConnectedMt5(action = "scan") {
+    if (connected) return true;
+    showToast(
+      action === "capture"
+        ? "Connect a trading account before scanning charts"
+        : "Connect a trading account to use the scanner"
+    );
+    setZetaView("metatrader");
+    setV2View("metatrader");
+    return false;
+  }
+
   function openUpload() {
+    if (!requireConnectedMt5("capture")) return;
     uploadRef.current?.click();
   }
 
   function openCamera() {
+    if (!requireConnectedMt5("capture")) return;
     cameraRef.current?.click();
   }
 
@@ -269,6 +283,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
         ensureCatalog?.(suggested);
         setSymbol(suggested);
         setSymbolSource("scanner");
+        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
+        setDetectionMessage(`Possible symbol: ${suggested}`);
         showToast(`Possible symbol: ${suggested} — edit if needed`);
         return suggested;
       }
@@ -310,6 +326,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
   function onFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!connected) {
+      showToast("Connect a trading account before scanning charts");
+      setZetaView("metatrader");
+      setV2View("metatrader");
+      event.target.value = "";
+      return;
+    }
     if (!file.type.startsWith("image/")) {
       showToast("Upload a chart screenshot image");
       return;
@@ -330,6 +353,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   }
 
   async function runScan() {
+    if (!requireConnectedMt5("scan")) return;
     if (!preview) {
       showToast("Capture or upload a chart first");
       return;
@@ -433,6 +457,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
         setDetectionMessage(error.message || "Chart detected — symbol unclear");
         setDetectionHint(error.uiMessage || "Chart detected — symbol unclear");
         showToast("Chart detected — symbol unclear");
+      } else if (error.code === "ANALYSIS_UNAVAILABLE") {
+        showToast(error.message || "Live analysis unavailable — retry");
       } else {
         showToast(error.message || "Scan failed");
       }
@@ -459,7 +485,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       return;
     }
     if (!connected) {
-      showToast("Connect MT5 first to execute trades");
+      showToast("Connect a trading account to execute trades");
       setZetaView("metatrader");
       setV2View("metatrader");
       return;
@@ -642,6 +668,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   }
 
   const canScan =
+    connected &&
     Boolean(preview) &&
     Boolean(symbol) &&
     detectionStatus !== CHART_DETECTION_STATUS.NO_CHART &&
@@ -788,7 +815,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               className="cs-capture-btn is-primary"
               type="button"
               onClick={openCamera}
-              disabled={busy}
+              disabled={busy || !connected}
             >
               <span className="cs-capture-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
@@ -812,7 +839,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               className="cs-capture-btn is-ghost"
               type="button"
               onClick={openUpload}
-              disabled={busy}
+              disabled={busy || !connected}
             >
               <span className="cs-capture-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
@@ -1085,13 +1112,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
             ? "Building trade setup…"
             : detectingSymbol
               ? "Analyzing chart…"
-              : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
-                ? "Upload a trading chart"
-                : detectionStatus === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR
-                  ? "Symbol unclear on chart"
-                  : !symbol
-                    ? "Waiting for symbol…"
-                    : "Scan Chart"}
+              : !connected
+                ? "Connect MT5 to Scan"
+                : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
+                  ? "Upload a trading chart"
+                  : detectionStatus === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR
+                    ? "Symbol unclear on chart"
+                    : !symbol
+                      ? "Waiting for symbol…"
+                      : "Scan Chart"}
         </button>
       ) : (
         <button
@@ -1176,7 +1205,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             setV2View("metatrader");
           }}
         >
-          Connect MetaTrader before executing →
+          Connect a trading account to unlock the scanner →
         </button>
       ) : null}
     </section>

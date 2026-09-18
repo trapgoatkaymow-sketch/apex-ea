@@ -8,31 +8,6 @@ function loadImage(src) {
   });
 }
 
-function sampleBias(imageData) {
-  const { data, width, height } = imageData;
-  let bull = 0;
-  let bear = 0;
-  let bright = 0;
-  let dark = 0;
-  const step = Math.max(4, Math.floor((width * height) / 12000));
-
-  for (let i = 0; i < data.length; i += 4 * step) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const lum = (r + g + b) / 3;
-    if (lum > 180) bright += 1;
-    if (lum < 50) dark += 1;
-    if (g > r + 18 && g > b + 8) bull += 1;
-    if (r > g + 18 && r > b + 8) bear += 1;
-  }
-
-  const total = Math.max(1, bull + bear);
-  const bullRatio = bull / total;
-  const structure = bright > dark ? "light-theme" : "dark-theme";
-  return { bull, bear, bullRatio, structure };
-}
-
 export const CHART_DETECTION_STATUS = {
   NO_CHART: "no_chart",
   SYMBOL_DETECTED: "symbol_detected",
@@ -311,52 +286,6 @@ async function analyzeSetupWithOpenAI(
   return data;
 }
 
-async function localDirectionalBias(dataUrl) {
-  const img = await loadImage(dataUrl);
-  const canvas = document.createElement("canvas");
-  const maxW = 640;
-  const scale = Math.min(1, maxW / Math.max(1, img.width));
-  canvas.width = Math.max(1, Math.round(img.width * scale));
-  canvas.height = Math.max(1, Math.round(img.height * scale));
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return { side: "BUY", confidence: 62, reasons: ["Local bias unavailable"] };
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  const x0 = Math.floor(canvas.width * 0.62);
-  const y0 = Math.floor(canvas.height * 0.12);
-  const w = Math.max(1, canvas.width - x0 - 8);
-  const h = Math.max(1, Math.floor(canvas.height * 0.72));
-  const recent = ctx.getImageData(x0, y0, w, h);
-  const full = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const recentBias = sampleBias(recent);
-  const fullBias = sampleBias(full);
-  const score = recentBias.bullRatio * 0.7 + fullBias.bullRatio * 0.3;
-
-  let side = "BUY";
-  let confidence = Math.round(50 + Math.abs(score - 0.5) * 90);
-  if (score < 0.46) side = "SELL";
-  else if (score > 0.54) side = "BUY";
-  else {
-    side = recentBias.bullRatio >= 0.5 ? "BUY" : "SELL";
-    confidence = Math.max(52, confidence - 8);
-  }
-  confidence = Math.min(92, Math.max(55, confidence));
-
-  return {
-    side,
-    confidence,
-    score,
-    reasons: [
-      recentBias.bullRatio >= 0.5
-        ? "Recent candles skew bullish"
-        : "Recent candles skew bearish",
-      fullBias.structure === "dark-theme"
-        ? "Dark chart theme detected"
-        : "Light chart theme detected",
-    ],
-  };
-}
-
 /**
  * Analyze a chart image and ALWAYS return a complete trade setup when the
  * image is a valid trading chart. Never returns an incomplete setup.
@@ -425,50 +354,15 @@ export async function analyzeChartImage(
     };
   }
 
-  // Fallback: chart previously validated via symbol detection + local bias.
-  const detection = await detectSymbolFromChart(dataUrl, { catalog });
-  if (detection.status === CHART_DETECTION_STATUS.NO_CHART) {
-    const err = new Error(
-      openAiError || detection.message || CHART_DETECTION_MESSAGES.no_chart.message
-    );
-    err.code = "NO_CHART";
-    err.uiMessage =
-      detection.uiMessage || CHART_DETECTION_MESSAGES.no_chart.uiMessage;
-    throw err;
-  }
-
-  const symbol = String(detection.symbol || hintSymbol || "")
-    .trim()
-    .toUpperCase();
-  if (!symbol) {
-    const err = new Error(CHART_DETECTION_MESSAGES.symbol_unclear.message);
-    err.code = "SYMBOL_UNCLEAR";
-    err.uiMessage = CHART_DETECTION_MESSAGES.symbol_unclear.uiMessage;
-    throw err;
-  }
-
-  const bias = await localDirectionalBias(dataUrl);
-  const complete = ensureCompleteSetup({
-    symbol,
-    side: bias.side,
-    confidence: bias.confidence,
-    analysis: bias.reasons?.[0] || `${bias.side} setup from chart structure`,
-    reasons: [
-      ...(bias.reasons || []),
-      `Symbol from scanner: ${symbol}`,
-    ],
-    timeframe: "M15",
-    source: "local",
-  });
-
-  return {
-    ...complete,
-    symbol,
-    detectedSymbol: symbol,
-    detectionStatus: CHART_DETECTION_STATUS.SETUP_READY,
-    detectionConfidence: complete.confidence,
-    scannedAt: Date.now(),
-  };
+  // Live scanner only — never invent a local/demo setup when OpenAI fails.
+  const err = new Error(
+    openAiError ||
+      setup?.message ||
+      "Live chart analysis unavailable — retry in a moment"
+  );
+  err.code = "ANALYSIS_UNAVAILABLE";
+  err.uiMessage = "Live OpenAI analysis failed. Please retry.";
+  throw err;
 }
 
 export function sleep(ms) {
