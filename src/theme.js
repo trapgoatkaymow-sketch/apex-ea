@@ -95,6 +95,7 @@ export function applyAppTheme(baseColor = DEFAULT_APP_COLOR) {
   root.style.setProperty("--pink-soft", theme.pinkSoft);
   root.style.setProperty("--pink-deep", theme.pinkDeep);
   root.style.setProperty("--pink-dark", theme.pinkDark);
+  root.style.setProperty("--accent", theme.pink);
   root.style.setProperty("--accent-glow", theme.glow);
   root.style.setProperty("--pink-rgb", rgbChannels(theme.pink));
   root.style.setProperty("--pink-hot-rgb", rgbChannels(theme.pinkHot));
