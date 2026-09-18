@@ -61,9 +61,9 @@ export async function handleBrokers(req, res) {
     const url = new URL(req.url, `http://${host}`);
     const q = url.searchParams.get("q") || "";
     const platform = url.searchParams.get("platform") || "MT5";
-    // Brokers come ONLY from MT5API /Search (http://66.23.225.158) — no MetaAPI.
+    // Brokers come ONLY from the free Apex MT5 bridge — never MetaAPI.
     const brokers = await mt5SearchBrokers(q, platform);
-    sendJson(res, 200, { brokers });
+    sendJson(res, 200, { brokers, provider: "apex-mt5" });
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Broker search failed",
@@ -84,14 +84,24 @@ export async function handleHealth(req, res) {
 
   try {
     const health = await pingBrokerApi();
-    sendJson(res, 200, health);
+    sendJson(res, 200, {
+      ...health,
+      provider: "apex-mt5",
+      metaapi: "disabled",
+      message: health.online
+        ? "Apex trade API is online (free MT5 bridge)."
+        : health.message ||
+          "Apex trade API is waiting for the free MT5 bridge host to come back online.",
+    });
   } catch (error) {
     sendJson(res, 200, {
       online: false,
       status: "offline",
+      provider: "apex-mt5",
+      metaapi: "disabled",
       checkedAt: Date.now(),
       message:
-        "Broker connection service is temporarily unavailable. Please wait and try again shortly.",
+        "Apex trade API is waiting for the free MT5 bridge host to come back online.",
       error: error?.message || "health check failed",
     });
   }

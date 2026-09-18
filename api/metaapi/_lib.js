@@ -19,6 +19,16 @@ const MT5_API_BASE = (
 
 
 function requireToken(requestToken = "") {
+  // Hard-disable MetaAPI cloud so Apex never bills for trading accounts.
+  // All live connect/trade/broker traffic goes through api/mt5/_lib.js (free VPS).
+  if (String(process.env.ALLOW_METAAPI || "").trim() !== "1") {
+    const err = new Error(
+      "MetaAPI is disabled. Apex uses the free self-hosted MT5 bridge only."
+    );
+    err.status = 503;
+    err.code = "METAAPI_DISABLED";
+    throw err;
+  }
   const token =
     String(requestToken || "").trim() ||
     process.env.METAAPI_TOKEN ||
