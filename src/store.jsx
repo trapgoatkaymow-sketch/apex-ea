@@ -2107,6 +2107,38 @@ export function AppProvider({ children }) {
       }
 
       if (!entry) {
+        // Entitled accounts: ask the server to heal a wiped key then bind this phone.
+        const entitled =
+          isSignupEntitled(signup, accountEmail) ||
+          Boolean(options?.license && matchKey(options.license));
+        if (entitled && accountEmail) {
+          try {
+            const deviceId = getOrCreateDeviceId();
+            const remote = await markLicenseUsedRemote(key, {
+              deviceId,
+              email: accountEmail,
+              license:
+                options?.license && matchKey(options.license)
+                  ? options.license
+                  : null,
+              botId: options?.botId || options?.license?.botId || "",
+              botName: options?.botName || options?.license?.botName || "",
+            });
+            if (remote) {
+              entry = remote;
+              setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
+            }
+          } catch (error) {
+            showToast(
+              error?.message ||
+                "Invalid license key — ask your mentor to generate a new one"
+            );
+            return false;
+          }
+        }
+      }
+
+      if (!entry) {
         showToast("Invalid license key — ask your mentor to generate a new one");
         return false;
       }
@@ -2146,12 +2178,18 @@ export function AppProvider({ children }) {
       } catch {
         // keep local
       }
-      if (entry.used && boundDevice && boundDevice !== deviceId) {
+      // Same phone OR owner email reclaim (WebView cleared / reinstall regenerated device id).
+      if (
+        entry.used &&
+        boundDevice &&
+        boundDevice !== deviceId &&
+        !emailOwnsLicense
+      ) {
         showToast("This license is locked to another phone");
         return false;
       }
 
-      // Bind to this phone (same phone re-opens automatically).
+      // Bind to this phone (or reclaim by matching email after reinstall).
       const healLicense =
         options && typeof options === "object" && matchKey(options.license)
           ? options.license
@@ -2363,18 +2401,12 @@ export function AppProvider({ children }) {
         remote = [];
       }
 
-      const deviceId = getOrCreateDeviceId();
       const mine = (remote.length ? remote : licenseKeys).filter(
         (row) =>
           normalizeEmail(row.clientEmail) === accountEmail &&
           !isLicenseExpired(row) &&
           String(row.key || "").trim()
       );
-      // Same phone only — never pull a key locked to a different device.
-      const onThisPhone = mine.filter((row) => {
-        const bound = String(row.deviceId || "").trim();
-        return !bound || bound === deviceId;
-      });
 
       const signup = getSignup(accountEmail);
       const entitled =
@@ -2408,13 +2440,14 @@ export function AppProvider({ children }) {
         bypassed: true,
       });
 
-      if (!onThisPhone.length) {
+      if (!mine.length) {
         return false;
       }
 
       let restored = 0;
-      for (const row of onThisPhone) {
-        const ok = await activateLicense(row.key);
+      for (const row of mine) {
+        // Owner email reclaim rebinds even when WebView minted a new device id.
+        const ok = await activateLicense(row.key, { license: row });
         if (ok) restored += 1;
       }
       if (restored === 0) {

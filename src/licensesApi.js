@@ -515,7 +515,9 @@ export async function markLicenseUsedRemote(
       email: String(email || "")
         .trim()
         .toLowerCase(),
-      ...(license && typeof license === "object" ? { license } : {}),
+      ...(license && typeof license === "object"
+        ? { license, seed: license }
+        : {}),
       ...(botId ? { botId: String(botId).trim() } : {}),
       ...(botName ? { botName: String(botName).trim() } : {}),
     },
