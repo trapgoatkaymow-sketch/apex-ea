@@ -16,13 +16,23 @@ async function readJsonBody(req) {
   return JSON.parse(raw);
 }
 
+/** Normalize broker header text into a tradeable symbol token. */
 function normalizeSymbol(raw) {
   return String(raw || "")
     .trim()
     .toUpperCase()
+    .replace(/^\.+/, "") // .US30Cash → US30CASH
     .replace(/\s+/g, "")
     .replace(/[\/_\-]/g, "")
     .replace(/[^A-Z0-9.]/g, "");
+}
+
+function looksLikeTradingSymbol(raw) {
+  const s = normalizeSymbol(raw);
+  if (!s || s.length < 2 || s.length > 32) return false;
+  // Must include a letter; reject pure numbers / prices.
+  if (!/[A-Z]/.test(s)) return false;
+  return /^[A-Z][A-Z0-9.]{1,31}$/.test(s);
 }
 
 function requireOpenAiKey() {
@@ -37,14 +47,16 @@ function requireOpenAiKey() {
   return key;
 }
 
-const MIN_CHART_CONFIDENCE = 68;
-const MIN_SYMBOL_CONFIDENCE = 70;
+// Phone MT screenshots are noisy — keep thresholds permissive so real headers pass.
+const MIN_CHART_CONFIDENCE = 50;
+const MIN_SYMBOL_CONFIDENCE = 45;
 
 function buildNoChartResult() {
   return {
     status: "no_chart",
     isChart: false,
     symbol: null,
+    suggestedSymbol: null,
     message: "No trading chart detected",
     uiMessage: "Please upload a clear trading chart.",
     chartConfidence: 0,
@@ -53,11 +65,12 @@ function buildNoChartResult() {
   };
 }
 
-function buildSymbolUnclearResult(chartConfidence = 0) {
+function buildSymbolUnclearResult(chartConfidence = 0, suggestedSymbol = null) {
   return {
     status: "symbol_unclear",
     isChart: true,
     symbol: null,
+    suggestedSymbol: suggestedSymbol || null,
     message: "Chart detected — symbol unclear",
     uiMessage: "Chart detected — symbol unclear",
     chartConfidence,
@@ -66,14 +79,28 @@ function buildSymbolUnclearResult(chartConfidence = 0) {
   };
 }
 
+/**
+ * Keep the OCR'd header as the source of truth.
+ * Catalog only remaps when the base name matches exactly (e.g. EURUSD → EURUSD.m).
+ */
 function resolveCatalogSymbol(symbol, catalog = []) {
   const normalized = normalizeSymbol(symbol);
   if (!normalized) return "";
   const base = normalized.split(".")[0];
-  const catalogHit = (Array.isArray(catalog) ? catalog : []).find(
-    (item) => normalizeSymbol(item).split(".")[0] === base
-  );
-  return catalogHit ? normalizeSymbol(catalogHit) : normalized;
+  const list = Array.isArray(catalog) ? catalog : [];
+  const exact = list.find((item) => normalizeSymbol(item) === normalized);
+  if (exact) return normalizeSymbol(exact);
+  const baseHit = list.find((item) => {
+    const n = normalizeSymbol(item);
+    return n === base || n.split(".")[0] === base;
+  });
+  // Only adopt catalog form when OCR base equals catalog base (not a longer CFD name).
+  if (baseHit) {
+    const catalogNorm = normalizeSymbol(baseHit);
+    const catalogBase = catalogNorm.split(".")[0];
+    if (catalogBase === base) return catalogNorm;
+  }
+  return normalized;
 }
 
 function normalizeAnalysis(parsed = {}) {
@@ -95,25 +122,37 @@ function normalizeAnalysis(parsed = {}) {
   }
 
   const rawSymbol = normalizeSymbol(parsed?.symbol || "");
+  const plausible = looksLikeTradingSymbol(rawSymbol);
   const confidentSymbol =
-    parsed?.status === "symbol_detected" &&
-    rawSymbol &&
+    plausible &&
+    (parsed?.status === "symbol_detected" || symbolConfidence >= MIN_SYMBOL_CONFIDENCE) &&
     symbolConfidence >= MIN_SYMBOL_CONFIDENCE;
 
-  if (!confidentSymbol) {
-    return buildSymbolUnclearResult(chartConfidence);
+  // Also accept a clear OCR string even if the model under-scored confidence slightly.
+  const softAccept =
+    plausible &&
+    rawSymbol.length >= 3 &&
+    symbolConfidence >= 35 &&
+    parsed?.status !== "symbol_unclear";
+
+  if (confidentSymbol || softAccept) {
+    return {
+      status: "symbol_detected",
+      isChart: true,
+      symbol: rawSymbol,
+      suggestedSymbol: rawSymbol,
+      message: `Symbol detected: ${rawSymbol}`,
+      uiMessage: rawSymbol,
+      chartConfidence,
+      symbolConfidence: Math.max(symbolConfidence, MIN_SYMBOL_CONFIDENCE),
+      source: "openai",
+    };
   }
 
-  return {
-    status: "symbol_detected",
-    isChart: true,
-    symbol: rawSymbol,
-    message: `Symbol detected: ${rawSymbol}`,
-    uiMessage: rawSymbol,
+  return buildSymbolUnclearResult(
     chartConfidence,
-    symbolConfidence,
-    source: "openai",
-  };
+    plausible ? rawSymbol : null
+  );
 }
 
 export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
@@ -146,25 +185,25 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
     body: JSON.stringify({
       model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
       temperature: 0,
-      max_tokens: 180,
+      max_tokens: 220,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "You are a strict trading-chart image analyzer. Return JSON only with this schema: " +
+            "You are a trading-chart OCR engine for MetaTrader, TradingView, and cTrader screenshots (phone or desktop). Return JSON only: " +
             '{"isChart":boolean,"chartConfidence":0-100,"symbol":string|null,"symbolConfidence":0-100,"status":"no_chart"|"symbol_detected"|"symbol_unclear"}. ' +
-            "Set isChart=true ONLY when the image clearly shows a genuine financial trading chart (MetaTrader, TradingView, cTrader, etc.) " +
-            "with visible chart structure: candlesticks or OHLC bars, price movement, price/time axes, gridlines, and a trading-platform layout. " +
-            "Do NOT treat photographs, people, buildings, cars, landscapes, random screenshots, websites, documents, or plain text/numbers as charts. " +
-            "Text resembling a symbol (e.g. EURUSD) is NEVER enough for isChart=true without clear chart visuals. " +
-            "If isChart=false, set status=no_chart, symbol=null, symbolConfidence=0. " +
-            "If isChart=true but the instrument label is not clearly visible on the chart, set status=symbol_unclear and symbol=null. " +
-            "Only set status=symbol_detected when the instrument is clearly readable on the chart header/title/tab " +
-            "(e.g. EURUSD, XAUUSD, BTCUSD, NAS100, US30, GBPJPY). Read the exact visible characters — " +
-            "do not substitute a popular pair (never invent EURUSD/XAUUSD/BTCUSD when the header shows something else). " +
-            "NEVER guess a symbol from chart shape, price scale, or a known-symbols list. When uncertain, use symbol_unclear. " +
-            "Keep broker suffixes when clearly visible (e.g. EURUSD.m).",
+            "Set isChart=true when candlesticks/bars, a price axis, and a trading-platform layout are visible — including mobile MetaTrader, " +
+            "shared WhatsApp/Telegram screenshots, and nested chart previews. Candle colors may be green/red/purple/blue/any. " +
+            "Do NOT treat photos of people, cars, buildings, or landscapes as charts. " +
+            "If isChart=false → status=no_chart, symbol=null, symbolConfidence=0. " +
+            "If isChart=true → OCR the instrument from the chart HEADER / TITLE / TAB / SYMBOL ROW exactly as shown. " +
+            "Detect ANY shared instrument: forex pairs, metals, indices, stocks, crypto, oil, CFDs, synthetics — " +
+            "including broker-prefixed or suffixed names such as .US30Cash, US30Cash, US30, NAS100, GER40, XAUUSD, EURUSD.m, BTCUSD, AAPL. " +
+            "Strip only a leading broker dot in the symbol field (.US30Cash → US30Cash). Keep other visible letters/digits. " +
+            "The catalog is NOT a multiple-choice list — never pick a popular pair just because it is listed. " +
+            "NEVER invent EURUSD/XAUUSD/BTCUSD when the header shows something else. " +
+            "Use symbol_unclear ONLY when header text is truly unreadable. Prefer symbol_detected whenever any instrument text is visible.",
         },
         {
           role: "user",
@@ -172,11 +211,10 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
             {
               type: "text",
               text:
-                "Analyze this screenshot. First decide if it is a real trading chart. " +
-                "Only if it is, OCR-read the instrument symbol from the chart header/title/tab exactly as shown. " +
-                "Do not guess. If the label is blurry or missing, return symbol_unclear." +
+                "Is this a trading chart screenshot? If yes, OCR-read the exact instrument symbol from the header/tab " +
+                "(any forex, index, metal, crypto, stock, or CFD name shown). Do not guess from the catalog." +
                 (catalogHint
-                  ? ` After reading, you may map an exact match onto this catalog (do not pick from it blindly): ${catalogHint}.`
+                  ? ` Optional exact-match catalog (mapping only, never choose blindly): ${catalogHint}.`
                   : ""),
             },
             {
@@ -220,8 +258,11 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
   const result = normalizeAnalysis(parsed);
   if (result.status === "symbol_detected" && result.symbol) {
     result.symbol = resolveCatalogSymbol(result.symbol, catalog);
+    result.suggestedSymbol = result.symbol;
     result.message = `Symbol detected: ${result.symbol}`;
     result.uiMessage = result.symbol;
+  } else if (result.suggestedSymbol) {
+    result.suggestedSymbol = resolveCatalogSymbol(result.suggestedSymbol, catalog);
   }
 
   return result;

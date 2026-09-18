@@ -259,16 +259,42 @@ export default function ChartScanner({ variant = "default", active = true }) {
         return next;
       }
 
-      setSymbol("");
-      setSymbolSource("");
-      if (status === CHART_DETECTION_STATUS.NO_CHART) {
+      // OpenAI saw a chart but was unsure — still prefill any OCR guess for edit.
+      const suggested = String(
+        detection?.suggestedSymbol || detection?.symbol || ""
+      )
+        .trim()
+        .toUpperCase();
+      if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR && suggested) {
+        ensureCatalog?.(suggested);
+        setSymbol(suggested);
+        setSymbolSource("scanner");
+        showToast(`Possible symbol: ${suggested} — edit if needed`);
+        return suggested;
+      }
+
+      setSymbol(suggested || "");
+      setSymbolSource(suggested ? "scanner" : "");
+      if (
+        status === CHART_DETECTION_STATUS.NO_CHART &&
+        detection?.error &&
+        /credit|quota|billing|unavailable|OpenAI|503|429/i.test(
+          String(detection.error)
+        )
+      ) {
+        showToast(
+          /credit|quota|billing/i.test(String(detection.error))
+            ? "Scanner temporarily unavailable — retry in a moment"
+            : detection.message || detection.error || "Chart analysis unavailable"
+        );
+      } else if (status === CHART_DETECTION_STATUS.NO_CHART) {
         showToast("No trading chart detected");
       } else if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR) {
-        showToast("Chart detected — symbol unclear");
+        showToast("Chart detected — symbol unclear. Type the symbol manually.");
       } else {
         showToast(detection?.error || "Chart analysis unavailable");
       }
-      return null;
+      return suggested || null;
     } catch {
       resetDetectionState();
       setDetectionStatus(CHART_DETECTION_STATUS.NO_CHART);
@@ -321,7 +347,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
       detectionStatus === CHART_DETECTION_STATUS.NO_CHART ||
       !symbol
     ) {
-      showToast("Please upload a clear trading chart.");
+      showToast(
+        preview && !symbol
+          ? "Enter the chart symbol (e.g. US30) or re-upload a clearer screenshot"
+          : "Please upload a clear trading chart."
+      );
       return;
     }
 
@@ -883,14 +913,31 @@ export default function ChartScanner({ variant = "default", active = true }) {
               ? " · scanner reading…"
               : symbolSource === "scanner"
                 ? " · from scanner"
-                : " · auto from chart"}
+                : symbol
+                  ? " · edit if needed"
+                  : " · auto from chart"}
           </span>
           <input
             className="cs-lot cs-symbol-auto"
-            value={detectingSymbol ? "" : symbol || "—"}
-            readOnly
+            value={detectingSymbol ? "" : symbol}
             disabled={busy || detectingSymbol}
-            placeholder={detectingSymbol ? "Analyzing image…" : "—"}
+            placeholder={detectingSymbol ? "Analyzing image…" : "Symbol (e.g. US30)"}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            onChange={(e) => {
+              const next = String(e.target.value || "")
+                .trim()
+                .toUpperCase()
+                .replace(/\s+/g, "");
+              setSymbol(next);
+              setSymbolSource(next ? "manual" : "");
+              if (next) {
+                setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
+                setDetectionMessage(`Symbol: ${next}`);
+                setDetectionHint("");
+              }
+            }}
           />
         </label>
 
