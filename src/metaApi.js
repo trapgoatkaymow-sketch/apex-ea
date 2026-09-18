@@ -173,8 +173,8 @@ function buildTaggedBotPrefix(botName, maxLen = 31) {
 
 /**
  * Per-fill MT5 comment (max 31 chars).
- * Interface 2 (premium scanner): always includes the word "premium".
- * Interface 1: bot tag + TPx only (e.g. …|TP1) — no premium, no T1/T2 index.
+ * Interface 2 (premium scanner): bot tag + |premium — never TPx.
+ * Interface 1: bot tag only — never TPx.
  */
 export function buildScannerFillComment({
   botName = "",
@@ -183,14 +183,10 @@ export function buildScannerFillComment({
   target = "TP1",
   tradeNo = 1,
 } = {}) {
-  const tp =
-    String(target || "TP1")
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .slice(0, 4) || "TP1";
+  void target;
+  void tradeNo;
   const isPremium = Boolean(premium) || variant === "v2";
-  const suffix = isPremium ? `|premium|${tp}` : `|${tp}`;
+  const suffix = isPremium ? "|premium" : "";
   const prefix = buildTaggedBotPrefix(botName, 31 - suffix.length);
   return `${prefix}${suffix}`.slice(0, 31);
 }
