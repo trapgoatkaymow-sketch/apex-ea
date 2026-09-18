@@ -17,11 +17,65 @@ import {
   searchBrokers as mt5SearchBrokers,
   sendJson,
 } from "../mt5/_lib.js";
+import {
+  connectTradingAccount as metaConnectAccount,
+  getConnectionStatus as metaGetConnectionStatus,
+  listProvisionedAccounts,
+  placeMarketTrade as metaPlaceMarketTrade,
+  searchKnownServers as metaSearchBrokers,
+  undeployAccount as metaUndeployAccount,
+} from "./_lib.js";
 
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
+}
+
+/** MetaAPI account ids are UUIDs; MT5API session tokens are opaque strings. */
+function isMetaApiAccountId(accountId) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(accountId || "").trim()
+  );
+}
+
+function isBrokerNetworkDown(error) {
+  const status = Number(error?.status || 0);
+  const msg = String(error?.message || "");
+  return (
+    status === 502 ||
+    status === 504 ||
+    /unreachable|timed?\s*out|timeout|ECONNREFUSED|ENOTFOUND|fetch failed|network is offline|Broker API/i.test(
+      msg
+    )
+  );
+}
+
+async function pingMetaApi() {
+  const started = Date.now();
+  try {
+    await listProvisionedAccounts();
+    return {
+      online: true,
+      status: "online",
+      provider: "metaapi",
+      latencyMs: Date.now() - started,
+      checkedAt: Date.now(),
+      message:
+        "Trading network is online — connect MetaTrader in the app to search brokers and place trades.",
+    };
+  } catch (error) {
+    return {
+      online: false,
+      status: "offline",
+      provider: "metaapi",
+      latencyMs: Date.now() - started,
+      checkedAt: Date.now(),
+      message:
+        "Broker connection service is temporarily unavailable. Please wait and try again shortly.",
+      error: error?.message || "MetaAPI unreachable",
+    };
+  }
 }
 
 async function assertApprovedMentor(email) {
@@ -46,6 +100,57 @@ async function assertApprovedMentor(email) {
   return mentor;
 }
 
+async function placeTradeOnAccount(opts) {
+  const accountId = String(opts.accountId || "").trim();
+  const times = Math.max(1, Math.min(20, Math.floor(Number(opts.count) || 1)));
+
+  if (isMetaApiAccountId(accountId)) {
+    const fills = [];
+    for (let i = 0; i < times; i += 1) {
+      const fill = await metaPlaceMarketTrade({
+        accountId,
+        symbol: opts.symbol,
+        volume: opts.volume,
+        side: opts.side,
+        stopLoss: opts.stopLoss,
+        takeProfit: opts.takeProfit,
+        comment: opts.comment,
+        region: opts.region || "",
+      });
+      fills.push(fill);
+    }
+    const last = fills[fills.length - 1];
+    return {
+      ok: true,
+      provider: "metaapi",
+      order: last?.result || last,
+      orders: fills,
+      tickets: fills
+        .map((o) => o?.result?.orderId || o?.result?.positionId || o?.ticket || null)
+        .filter((v) => v != null),
+      count: fills.length,
+      ticket: last?.result?.orderId || last?.result?.positionId || null,
+      symbol: last?.symbol,
+      volume: last?.volume,
+      side: last?.side,
+    };
+  }
+
+  try {
+    return await mt5PlaceMarketTrade(opts);
+  } catch (error) {
+    if (isBrokerNetworkDown(error)) {
+      const err = new Error(
+        "Broker network is offline — open MetaTrader in the app and reconnect, then try again"
+      );
+      err.status = 503;
+      err.code = "BROKER_OFFLINE";
+      throw err;
+    }
+    throw error;
+  }
+}
+
 export async function handleBrokers(req, res) {
   if (req.method === "OPTIONS") {
     endOptions(res);
@@ -61,9 +166,15 @@ export async function handleBrokers(req, res) {
     const url = new URL(req.url, `http://${host}`);
     const q = url.searchParams.get("q") || "";
     const platform = url.searchParams.get("platform") || "MT5";
-    // Brokers come ONLY from MT5API /Search (http://66.23.225.158) — no MetaAPI.
-    const brokers = await mt5SearchBrokers(q, platform);
-    sendJson(res, 200, { brokers });
+    try {
+      const brokers = await mt5SearchBrokers(q, platform);
+      sendJson(res, 200, { brokers, provider: "mt5api" });
+      return;
+    } catch (error) {
+      if (!isBrokerNetworkDown(error)) throw error;
+      const brokers = await metaSearchBrokers(q, platform);
+      sendJson(res, 200, { brokers, provider: "metaapi" });
+    }
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Broker search failed",
@@ -83,8 +194,17 @@ export async function handleHealth(req, res) {
   }
 
   try {
-    const health = await pingBrokerApi();
-    sendJson(res, 200, health);
+    const mt5 = await pingBrokerApi();
+    if (mt5.online) {
+      sendJson(res, 200, { ...mt5, provider: "mt5api" });
+      return;
+    }
+    const meta = await pingMetaApi();
+    sendJson(
+      res,
+      200,
+      meta.online ? meta : { ...mt5, provider: "mt5api", fallback: meta }
+    );
   } catch (error) {
     sendJson(res, 200, {
       online: false,
@@ -109,14 +229,24 @@ export async function handleConnect(req, res) {
 
   try {
     const body = await readJsonBody(req);
-    const session = await mt5ConnectAccount({
+    const payload = {
       login: body.login,
       password: body.password,
       server: body.server,
       platform: body.platform || "MT5",
       company: body.company || "",
-    });
-    sendJson(res, 200, session);
+      clientEmail: body.email || body.clientEmail || "",
+    };
+
+    try {
+      const session = await mt5ConnectAccount(payload);
+      sendJson(res, 200, session);
+      return;
+    } catch (error) {
+      if (!isBrokerNetworkDown(error)) throw error;
+      const session = await metaConnectAccount(payload);
+      sendJson(res, 200, { ...session, provider: session.provider || "metaapi" });
+    }
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: formatHandlerError(error, "Connection failed"),
@@ -151,8 +281,26 @@ export async function handleStatus(req, res) {
     const url = new URL(req.url, `http://${host}`);
     const accountId = url.searchParams.get("accountId") || "";
     const company = url.searchParams.get("company") || "";
-    const session = await mt5GetAccountStatus(accountId, { company });
-    sendJson(res, 200, session);
+    if (isMetaApiAccountId(accountId)) {
+      const session = await metaGetConnectionStatus(accountId, { company });
+      sendJson(res, 200, session);
+      return;
+    }
+    try {
+      const session = await mt5GetAccountStatus(accountId, { company });
+      sendJson(res, 200, session);
+    } catch (error) {
+      if (isBrokerNetworkDown(error) && accountId) {
+        try {
+          const session = await metaGetConnectionStatus(accountId, { company });
+          sendJson(res, 200, session);
+          return;
+        } catch {
+          /* fall through */
+        }
+      }
+      throw error;
+    }
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Status check failed",
@@ -174,13 +322,12 @@ export async function handleTrade(req, res) {
   try {
     const body = await readJsonBody(req);
     const source = String(body.source || "").trim().toLowerCase();
-    // Chart Scanner only — Interface 1 (chart-scanner) and Interface 2 premium scanner.
     if (source !== "chart-scanner" && source !== "premium-scanner") {
       const err = new Error("Trades can only be opened from Chart Scanner after a scan");
       err.status = 403;
       throw err;
     }
-    const result = await mt5PlaceMarketTrade({
+    const result = await placeTradeOnAccount({
       accountId: body.accountId,
       symbol: body.symbol,
       volume: body.volume,
@@ -188,6 +335,8 @@ export async function handleTrade(req, res) {
       stopLoss: body.stopLoss,
       takeProfit: body.takeProfit,
       comment: body.comment || "bot~APEXEA",
+      region: body.region || "",
+      count: body.count || body.trades || 1,
     });
     sendJson(res, 200, result);
   } catch (error) {
@@ -215,7 +364,34 @@ export async function handleDisconnect(req, res) {
       sendJson(res, 400, { error: "accountId is required" });
       return;
     }
-    const disconnected = await mt5DisconnectAccount(accountId);
+    let disconnected;
+    if (isMetaApiAccountId(accountId)) {
+      try {
+        await metaUndeployAccount(accountId);
+      } catch {
+        // best-effort
+      }
+      disconnected = {
+        accountId,
+        provider: "metaapi",
+        state: "UNDEPLOYED",
+        connectionStatus: "DISCONNECTED",
+        disconnected: true,
+      };
+    } else {
+      try {
+        disconnected = await mt5DisconnectAccount(accountId);
+      } catch (error) {
+        if (!isBrokerNetworkDown(error)) throw error;
+        disconnected = {
+          accountId,
+          provider: "mt5api",
+          state: "UNDEPLOYED",
+          connectionStatus: "DISCONNECTED",
+          disconnected: true,
+        };
+      }
+    }
     const clientEmail = normalizeEmail(body.email || body.clientEmail || "");
     if (clientEmail.includes("@")) {
       try {
@@ -253,7 +429,6 @@ export async function handleMentorTrade(req, res) {
       .trim()
       .toUpperCase();
     const volume = Number(body.volume);
-    // SL / TP are optional — market orders can run without protective levels.
     const rawSl = Number(body.stopLoss ?? body.sl);
     const rawTp = Number(body.takeProfit ?? body.tp);
     const stopLoss = Number.isFinite(rawSl) && rawSl > 0 ? rawSl : null;
@@ -297,7 +472,6 @@ export async function handleMentorTrade(req, res) {
       throw err;
     }
 
-    // Prefer newest used license per client for bot name on the app script.
     const botMetaByClient = new Map();
     for (const row of licenses) {
       if (normalizeEmail(row.mentorEmail) !== mentor.email) continue;
@@ -315,10 +489,6 @@ export async function handleMentorTrade(req, res) {
       });
     }
 
-    // Targets come from (in order of preference):
-    // 1) clients[] sent by the mentor portal (same list the UI just loaded)
-    // 2) robot sessions stamped onto licenses (durable across serverless fns)
-    // 3) mt5-accounts registry (ephemeral /tmp — may be empty in mentor-trade)
     const byEmail = new Map();
 
     const pushTarget = (row) => {
@@ -358,8 +528,6 @@ export async function handleMentorTrade(req, res) {
       .filter(Boolean);
     for (const row of registry) pushTarget(row);
 
-    // Cross-function fallback: ask /api/mt5-accounts (may hold warm /tmp or
-    // license-stamped sessions this mentor-trade instance cannot see locally).
     if (!byEmail.size) {
       try {
         const host =
@@ -380,7 +548,7 @@ export async function handleMentorTrade(req, res) {
           }
         }
       } catch {
-        // ignore — fall through to empty-target error
+        // ignore
       }
     }
 
@@ -403,7 +571,7 @@ export async function handleMentorTrade(req, res) {
 
     for (const target of targets) {
       try {
-        const fill = await mt5PlaceMarketTrade({
+        const fill = await placeTradeOnAccount({
           accountId: target.accountId,
           symbol,
           volume: lot,
@@ -426,9 +594,9 @@ export async function handleMentorTrade(req, res) {
           side: fill.side,
           trades: placedHere,
           tickets: fill.tickets || [],
+          provider: fill.provider || null,
           result: fill.order || fill.result || null,
         });
-        // Notify the client app script orb (best-effort — trade already placed).
         try {
           const meta = botMetaByClient.get(normalizeEmail(target.email)) || {};
           await enqueueTradeEvent({
@@ -452,7 +620,8 @@ export async function handleMentorTrade(req, res) {
         const msg = String(error?.message || "Trade failed");
         const sessionDead =
           error?.code === "SESSION_EXPIRED" ||
-          /session expired|reconnect|not connect|disconnect/i.test(msg);
+          error?.code === "BROKER_OFFLINE" ||
+          /session expired|reconnect|not connect|disconnect|network is offline/i.test(msg);
         results.push({
           ok: false,
           offline: sessionDead,
