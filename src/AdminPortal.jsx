@@ -43,6 +43,7 @@ import {
   executeMentorSelfHostTrade,
   listMentorHostedAccounts,
 } from "./mt5AccountsApi.js";
+import { buildBotTradeComment } from "./metaApi.js";
 import { STRATEGY_LABELS, useApp } from "./store.jsx";
 import { APP_COLOR_PRESETS, DEFAULT_APP_COLOR } from "./theme.js";
 
@@ -3487,6 +3488,33 @@ export default function AdminPortal() {
                         );
                         setHostBusy(true);
                         try {
+                          // Prefer the EA name on connected client licenses so MT5
+                          // comments read e.g. ZETASCALPERAI~APEXEA|TP1 (not mentor~…).
+                          const firstHostEmail = String(
+                            hostAccounts[0]?.email || ""
+                          )
+                            .trim()
+                            .toLowerCase();
+                          const licenseBotName = firstHostEmail
+                            ? (Array.isArray(licenseKeys) ? licenseKeys : []).find(
+                                (row) =>
+                                  String(row.clientEmail || "")
+                                    .trim()
+                                    .toLowerCase() === firstHostEmail &&
+                                  String(row.botName || row.bot?.name || "").trim()
+                              )
+                            : null;
+                          const eaName =
+                            String(
+                              licenseBotName?.botName ||
+                                licenseBotName?.bot?.name ||
+                                eas.find((ea) =>
+                                  normalizeAdminEmail(ea.ownerEmail) ===
+                                  normalizeAdminEmail(adminSession.email)
+                                )?.name ||
+                                eas[0]?.name ||
+                                "Bot"
+                            ).trim() || "Bot";
                           const result = await executeMentorSelfHostTrade({
                             mentorEmail: adminSession.email,
                             symbol,
@@ -3495,7 +3523,8 @@ export default function AdminPortal() {
                             tradesCount,
                             stopLoss,
                             takeProfit,
-                            comment: "mentor~APEXEA",
+                            botName: eaName,
+                            comment: buildBotTradeComment(eaName),
                             // Pass the same connected clients the UI is showing —
                             // mentor-trade runs in a separate serverless function
                             // and cannot see mt5-accounts /tmp state alone.

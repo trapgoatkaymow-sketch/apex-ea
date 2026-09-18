@@ -2595,8 +2595,12 @@ export function AppProvider({ children }) {
           const botName =
             String(activeBot?.name || event.botName || "Bot").trim() || "Bot";
           const comment =
-            String(event.comment || "mentor~APEXEA").trim().slice(0, 31) ||
-            "mentor~APEXEA";
+            String(
+              event.comment ||
+                `${botName.replace(/\s+/g, "").replace(/[^a-zA-Z0-9._~\-]/g, "").slice(0, 24)}~APEXEA`
+            )
+              .trim()
+              .slice(0, 31) || `${botName.slice(0, 24).replace(/\s+/g, "")}~APEXEA`;
           recordTrade({
             botName,
             symbol,
