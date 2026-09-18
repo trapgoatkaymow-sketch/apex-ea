@@ -6,6 +6,7 @@
   --pink-soft: #ff4b93;
   --pink-deep: #d90063;
   --pink-dark: #8a003f;
+  --accent: #ff2d7a;
   --accent-glow: #220014;
   --pink-rgb: 255, 45, 122;
   --pink-hot-rgb: 255, 17, 119;
@@ -5206,12 +5207,13 @@ html:has(.phone[data-interface="v2"]) body {
   padding: 8px 18px 8px 8px;
   min-height: 56px;
   border-radius: 999px;
-  background: #d8437d;
+  background: var(--pink);
   color: #fff;
   border: 0;
-  box-shadow: 0 8px 18px rgba(216, 67, 125, 0.28);
+  box-shadow: 0 8px 18px rgba(var(--pink-rgb), 0.28);
   text-align: left;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .v2-robot-row:active {
@@ -5222,7 +5224,7 @@ html:has(.phone[data-interface="v2"]) body {
   outline: 0;
   filter: brightness(1.05);
   box-shadow:
-    0 8px 18px rgba(216, 67, 125, 0.32),
+    0 8px 18px rgba(var(--pink-rgb), 0.32),
     0 0 0 2px rgba(255, 255, 255, 0.28);
 }
 
@@ -5233,7 +5235,7 @@ html:has(.phone[data-interface="v2"]) body {
   object-fit: cover;
   background: #1a0610;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1.5px rgba(255, 210, 230, 0.9);
+  box-shadow: 0 0 0 1.5px rgba(var(--pink-soft-rgb), 0.9);
 }
 
 .v2-robot-row > span {
@@ -8572,9 +8574,9 @@ html:has(.phone[data-interface="v2"]) body {
   transform: none;
   max-width: 96px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--accent, #ff2d7a) 55%, #fff 10%);
+  border: 1px solid color-mix(in srgb, var(--pink) 55%, #fff 10%);
   border-radius: 12px;
-  background: color-mix(in srgb, #0a0a0f 78%, var(--accent, #ff2d7a) 12%);
+  background: color-mix(in srgb, #0a0a0f 78%, var(--pink) 12%);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -8588,6 +8590,7 @@ html:has(.phone[data-interface="v2"]) body {
   cursor: pointer;
   overflow: visible;
   isolation: isolate;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .econ-cal-btn-label {
@@ -8628,8 +8631,11 @@ html:has(.phone[data-interface="v2"]) body {
   bottom: auto;
   transform: translateY(-50%);
   max-width: 96px;
-  background: color-mix(in srgb, #000 72%, var(--accent, #ff2d7a) 14%);
-  border-color: rgba(255, 80, 140, 0.85);
+  background: color-mix(in srgb, #000 72%, var(--pink) 14%);
+  border-color: rgba(var(--pink-rgb), 0.85);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(var(--pink-rgb), 0.35);
 }
 
 .econ-cal-btn-v2:active {
@@ -8692,7 +8698,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent, #ff2d7a) 80%, #fff);
+  color: color-mix(in srgb, var(--pink) 80%, #fff);
   font-weight: 700;
 }
 
@@ -8728,7 +8734,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent, #ff2d7a) 80%, #fff);
+  color: color-mix(in srgb, var(--pink) 80%, #fff);
   font-weight: 700;
   white-space: nowrap;
 }
