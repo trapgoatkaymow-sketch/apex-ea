@@ -65,7 +65,7 @@ export function resolveBotPhotoSrc(bot, fallback = "/logo.png") {
   // Mentor uploaded after activate — license may still say /logo.png.
   if (id && (!photo || photo === "/logo.png")) {
     return mediaUrl(
-      `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`
+      `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=hq`
     );
   }
 

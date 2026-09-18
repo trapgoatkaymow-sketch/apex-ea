@@ -9,21 +9,33 @@ import {
 function botPhotoApiSrc(botId) {
   const id = String(botId || "").trim();
   if (!id) return "";
+  // Cache-bust so a newly uploaded sharp photo replaces a soft thumb.
   return mediaUrl(
-    `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`
+    `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=hq`
   );
 }
 
 function githubRawSrc(botId) {
   const id = String(botId || "").trim();
   if (!id) return "";
-  return `https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/data/ea-photos/${encodeURIComponent(id)}.jpg`;
+  return `https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/store-licenses/data/ea-photos/${encodeURIComponent(id)}.jpg`;
+}
+
+function isPackagedHeroFallback(fallback) {
+  const value = String(fallback || "").trim();
+  if (!value || value === "/logo.png") return false;
+  if (value.startsWith("/api/") || value.startsWith("data:") || value.startsWith("blob:")) {
+    return false;
+  }
+  return value.startsWith("/");
 }
 
 /**
  * Robot / hero avatar.
  * Prefer a durable photo URL in the <img> itself (same as Mentor Portal) so
  * Home never depends on IndexedDB/fetch races that left the default logo stuck.
+ * If the synced photo is a tiny thumb, fall back to a packaged sharp hero when
+ * one was provided (Interface 2).
  */
 export default function BotAvatar({
   bot,
@@ -40,6 +52,7 @@ export default function BotAvatar({
   const safeFallback = fallback || "/logo.png";
   const apiSrc = botPhotoApiSrc(id);
   const remote = resolveBotPhotoSrc(bot, safeFallback);
+  const heroFallback = isPackagedHeroFallback(safeFallback) ? safeFallback : "";
 
   // Direct URL the browser can load — API path when mentor uploaded by botId.
   const preferred = (() => {
@@ -56,8 +69,6 @@ export default function BotAvatar({
   const [src, setSrc] = useState(() => {
     const cached = getCachedBotPhotoSync(id);
     if (cached) return cached;
-    // Prefer durable URL on first paint (API / data) — do not start on /logo.png
-    // or a failed hydrate can look like "still the default robot".
     return preferred || safeFallback;
   });
 
@@ -69,7 +80,6 @@ export default function BotAvatar({
       setSrc(next);
     };
 
-    // Always prefer the durable URL first.
     paint(preferred || safeFallback);
 
     const cached = getCachedBotPhotoSync(id);
@@ -83,7 +93,6 @@ export default function BotAvatar({
       })
       .catch(() => {});
 
-    // Warm blob cache in background (robot list / next open).
     if (id) {
       resolveCachedBotPhoto(bot, safeFallback)
         .then((url) => {
@@ -111,11 +120,23 @@ export default function BotAvatar({
       decoding={decoding}
       loading={fetchPriority === "high" ? "eager" : "lazy"}
       fetchPriority={fetchPriority}
+      onLoad={(event) => {
+        const node = event.currentTarget;
+        if (!node || !heroFallback) return;
+        const w = Number(node.naturalWidth || 0);
+        const h = Number(node.naturalHeight || 0);
+        const minEdge = Math.min(w, h);
+        // Tiny synced thumbs look mushy on full-bleed Interface 2 — use sharp packaged hero.
+        if (minEdge > 0 && minEdge < 480) {
+          const current = String(node.getAttribute("src") || src || "");
+          if (current.includes(heroFallback)) return;
+          setSrc(heroFallback);
+        }
+      }}
       onError={(event) => {
         const node = event.currentTarget;
         if (!node) return;
         const current = String(node.src || "");
-        // Step through durable sources before giving up on the default robot.
         if (apiSrc && !current.includes("/api/licenses/photo") && !current.includes("raw.githubusercontent.com")) {
           setSrc(apiSrc);
           return;
@@ -123,6 +144,10 @@ export default function BotAvatar({
         const gh = githubRawSrc(id);
         if (gh && !current.includes("raw.githubusercontent.com")) {
           setSrc(gh);
+          return;
+        }
+        if (heroFallback && !current.includes(heroFallback)) {
+          setSrc(heroFallback);
           return;
         }
         if (node.dataset.fallbackApplied === "1") return;
