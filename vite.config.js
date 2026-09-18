@@ -96,30 +96,36 @@ function metaApiDevPlugin() {
             return paypalCaptureOrderHandler(req, res)
           }
 
-          if (!url.pathname.startsWith('/api/metaapi/')) return next()
+          const isApexTradeApi =
+            url.pathname.startsWith('/api/metaapi/') ||
+            url.pathname.startsWith('/api/trades/')
+          if (!isApexTradeApi) return next()
 
           // Preserve full path+query for handlers that parse req.url
           req.url = `${url.pathname}${url.search}`
+          const route = url.pathname
+            .replace(/^\/api\/(?:metaapi|trades)/, '')
+            .replace(/\/$/, '') || '/'
 
-          if (req.method === 'GET' && url.pathname === '/api/metaapi/brokers') {
+          if (req.method === 'GET' && route === '/brokers') {
             return handleBrokers(req, res)
           }
-          if (req.method === 'GET' && url.pathname === '/api/metaapi/health') {
+          if (req.method === 'GET' && route === '/health') {
             return handleHealth(req, res)
           }
-          if (req.method === 'GET' && url.pathname === '/api/metaapi/status') {
+          if (req.method === 'GET' && route === '/status') {
             return handleStatus(req, res)
           }
-          if (req.method === 'POST' && url.pathname === '/api/metaapi/connect') {
+          if (req.method === 'POST' && route === '/connect') {
             return handleConnect(req, res)
           }
-          if (req.method === 'POST' && url.pathname === '/api/metaapi/trade') {
+          if (req.method === 'POST' && route === '/trade') {
             return handleTrade(req, res)
           }
-          if (req.method === 'POST' && url.pathname === '/api/metaapi/mentor-trade') {
+          if (req.method === 'POST' && route === '/mentor-trade') {
             return handleMentorTrade(req, res)
           }
-          if (req.method === 'POST' && url.pathname === '/api/metaapi/disconnect') {
+          if (req.method === 'POST' && route === '/disconnect') {
             return handleDisconnect(req, res)
           }
 
