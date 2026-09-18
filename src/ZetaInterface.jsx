@@ -1,9 +1,5 @@
 import { resolveBotPhotoSrc } from "./apiOrigin.js";
 import BotAvatar from "./BotAvatar.jsx";
-import {
-  getCachedBotPhotoSync,
-  resolveCachedBotPhoto,
-} from "./botPhotoCache.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";

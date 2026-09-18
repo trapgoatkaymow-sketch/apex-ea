@@ -10,8 +10,7 @@ function botPhotoApiSrc(botId) {
 }
 
 /**
- * Robot / hero avatar — one stable mentor photo URL.
- * Same source on Interface 1 and Interface 2 (no packaged phone-screenshot fallback).
+ * Robot / hero avatar — one stable mentor photo on Interface 1 and Interface 2.
  */
 export default function BotAvatar({
   bot,
@@ -25,7 +24,7 @@ export default function BotAvatar({
 }) {
   const id = String(bot?.id || "").trim();
   const photo = String(bot?.photo || "").trim();
-  const safeFallback = fallback === "/zeta-scalper-hero.jpg" ? "/logo.png" : fallback || "/logo.png";
+  const safeFallback = fallback || "/logo.png";
   const apiSrc = botPhotoApiSrc(id);
 
   const preferred = (() => {
@@ -34,11 +33,8 @@ export default function BotAvatar({
       return mediaUrl(photo);
     }
     if (apiSrc) return apiSrc;
-    const resolved = resolveBotPhotoSrc(
-      { ...bot, photo: photo === "/zeta-scalper-hero.jpg" ? "/logo.png" : photo },
-      safeFallback
-    );
-    if (resolved && resolved !== "/zeta-scalper-hero.jpg") return resolved;
+    const resolved = resolveBotPhotoSrc(bot, safeFallback);
+    if (resolved && resolved !== safeFallback) return resolved;
     return apiSrc || safeFallback;
   })();
 
