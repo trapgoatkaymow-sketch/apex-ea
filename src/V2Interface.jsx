@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { resolveBotPhotoSrc } from "./apiOrigin.js";
 import BotAvatar from "./BotAvatar.jsx";
-import {
-  getCachedBotPhotoSync,
-  resolveCachedBotPhoto,
-} from "./botPhotoCache.js";
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
@@ -109,7 +105,7 @@ export default function V2Interface() {
                   <BotAvatar
                     className="v2-home-hero-img"
                     bot={activeBot}
-                    fallback="/zeta-scalper-hero.jpg"
+                    fallback="/logo.png"
                     fetchPriority="high"
                     decoding="async"
                   />
