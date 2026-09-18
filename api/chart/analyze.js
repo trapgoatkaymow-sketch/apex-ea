@@ -60,8 +60,6 @@ function requireOpenAiKey() {
 }
 
 const MIN_CHART_CONFIDENCE = 55;
-/** Setups below this confidence stay visible but Execute is discouraged/blocked. */
-const MIN_EXECUTE_CONFIDENCE = 70;
 const RECOMMENDED_TIMEFRAME = "H1";
 const ALLOWED_TIMEFRAMES = new Set([
   "M15",
@@ -246,7 +244,6 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
 
   // Fixed R:R ladder: TP1 1:1 · TP2 1:2 · TP3 1:3
   const riskReward = "1:1 · 1:2 · 1:3";
-  const executeReady = confidence >= MIN_EXECUTE_CONFIDENCE;
 
   return {
     status: "setup_ready",
@@ -269,17 +266,14 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
       "Enter on pullbacks into support/resistance — not mid-range spikes",
       "Use structural stops beyond the last swing (no tight scalp SL)",
       `Best timeframe: ${RECOMMENDED_TIMEFRAME} (also good: H4). Avoid M1–M5`,
-      `Execute only when confidence ≥ ${MIN_EXECUTE_CONFIDENCE}%`,
+      "Higher confidence is safer — Execute stays available on every setup",
     ],
-    executeReady,
-    minExecuteConfidence: MIN_EXECUTE_CONFIDENCE,
+    executeReady: true,
     analysis,
     reasons,
     chartConfidence,
     message: `${levels.side} ${symbol || "setup"} ready`,
-    uiMessage: executeReady
-      ? `Capital Guard · ${timeframe} — press Execute Trade when ready.`
-      : `Capital Guard · confidence ${confidence}% is below ${MIN_EXECUTE_CONFIDENCE}% — wait for a clearer ${RECOMMENDED_TIMEFRAME} chart.`,
+    uiMessage: `Capital Guard · ${timeframe} — press Execute Trade to send to MetaTrader.`,
     source: "openai",
   };
 }

@@ -17,14 +17,13 @@ export const CHART_DETECTION_STATUS = {
 
 /** Best client timeframe for Capital Guard (also good: H4). Avoid M1–M5. */
 export const RECOMMENDED_SCAN_TIMEFRAME = "H1";
-export const MIN_EXECUTE_CONFIDENCE = 70;
 export const SCANNER_STRATEGY_NAME = "Capital Guard";
 export const SCANNER_STRATEGY_RULES = [
   "Trade with the higher-timeframe trend only",
   "Enter on pullbacks into support/resistance — not mid-range spikes",
   "Use structural stops beyond the last swing (no tight scalp SL)",
   `Best timeframe: ${RECOMMENDED_SCAN_TIMEFRAME} (also good: H4). Avoid M1–M5`,
-  `Execute only when confidence ≥ ${MIN_EXECUTE_CONFIDENCE}%`,
+  "Higher confidence is safer — Execute stays available on every setup",
 ];
 
 export const CHART_DETECTION_MESSAGES = {
@@ -140,10 +139,6 @@ function ensureCompleteSetup(partial = {}) {
     55,
     Math.min(92, Math.round(Number(partial.confidence) || 68))
   );
-  const executeReady =
-    partial.executeReady != null
-      ? Boolean(partial.executeReady)
-      : confidence >= MIN_EXECUTE_CONFIDENCE;
 
   const analysis =
     String(partial.analysis || "").trim() ||
@@ -170,8 +165,7 @@ function ensureCompleteSetup(partial = {}) {
     strategyRules: Array.isArray(partial.strategyRules) && partial.strategyRules.length
       ? partial.strategyRules
       : SCANNER_STRATEGY_RULES,
-    executeReady,
-    minExecuteConfidence: MIN_EXECUTE_CONFIDENCE,
+    executeReady: true,
     analysis,
     reasons: Array.isArray(partial.reasons) && partial.reasons.length
       ? partial.reasons

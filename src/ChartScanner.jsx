@@ -3,7 +3,6 @@ import BotAvatar from "./BotAvatar.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
-  MIN_EXECUTE_CONFIDENCE,
   RECOMMENDED_SCAN_TIMEFRAME,
   SCANNER_STRATEGY_NAME,
   SCANNER_STRATEGY_RULES,
@@ -490,13 +489,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
       return;
     }
     const confidence = Math.round(Number(signal.confidence) || 0);
-    const minConf = Number(signal.minExecuteConfidence) || MIN_EXECUTE_CONFIDENCE;
-    if (signal.executeReady === false || confidence < minConf) {
-      showToast(
-        `Capital Guard blocked this trade — confidence ${confidence}% is below ${minConf}%. Use a clearer ${RECOMMENDED_SCAN_TIMEFRAME} chart.`
-      );
-      return;
-    }
     if (!connected) {
       showToast("Connect a trading account to execute trades");
       setZetaView("metatrader");
@@ -903,8 +895,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <p className="cs-strategy-kicker">{SCANNER_STRATEGY_NAME}</p>
         <strong>Best timeframe: {RECOMMENDED_SCAN_TIMEFRAME}</strong>
         <span>
-          Also good: H4 · Avoid M1–M5. Trend pullbacks only, structural stops, execute at{" "}
-          {MIN_EXECUTE_CONFIDENCE}%+ confidence.
+          Also good: H4 · Avoid M1–M5. Trend pullbacks only, structural stops. Higher
+          confidence is safer, but you can still execute any setup.
         </span>
         <ul className="cs-strategy-rules">
           {SCANNER_STRATEGY_RULES.slice(0, 3).map((rule) => (
@@ -1154,23 +1146,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
           className="cs-run-btn"
           type="button"
           onClick={executeTrade}
-          disabled={
-            busy ||
-            !connected ||
-            signal?.executeReady === false ||
-            Math.round(Number(signal?.confidence) || 0) <
-              (Number(signal?.minExecuteConfidence) || MIN_EXECUTE_CONFIDENCE)
-          }
+          disabled={busy || !connected}
         >
           {busy && engineMode === "trading"
             ? "Sending to MetaTrader…"
             : !connected
               ? "Connect MT5 to Execute"
-              : signal?.executeReady === false ||
-                  Math.round(Number(signal?.confidence) || 0) <
-                    (Number(signal?.minExecuteConfidence) || MIN_EXECUTE_CONFIDENCE)
-                ? `Need ${signal?.minExecuteConfidence || MIN_EXECUTE_CONFIDENCE}%+ confidence`
-                : "Execute Trade"}
+              : "Execute Trade"}
         </button>
       )}
 
@@ -1186,12 +1168,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
             Confidence {signal.confidence}% · TF {signal.timeframe || RECOMMENDED_SCAN_TIMEFRAME} ·
             Best {signal.recommendedTimeframe || RECOMMENDED_SCAN_TIMEFRAME}
           </span>
-          {signal.executeReady === false ? (
-            <span className="cs-setup-warn">
-              Confidence too low to execute — scan a clearer{" "}
-              {signal.recommendedTimeframe || RECOMMENDED_SCAN_TIMEFRAME} chart.
-            </span>
-          ) : null}
 
           <div className="cs-setup-grid">
             <span>
