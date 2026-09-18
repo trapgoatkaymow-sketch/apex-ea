@@ -144,6 +144,22 @@ export default function V2Interface() {
 
               <div className="v2-pill-bar">
               <button
+                className="v2-pill-btn"
+                type="button"
+                onClick={() => {
+                  setV2SymTab("allowed");
+                  setV2View("quotes");
+                }}
+              >
+                <span className="v2-pill-icon is-quotes" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2.2 13.7 7l4.8.4-3.7 3.1 1.2 4.7L12 12.8 8 15.2l1.2-4.7L5.5 7.4 10.3 7 12 2.2z" />
+                    <path d="M18.2 11.2 19.1 13.6l2.5.2-1.9 1.6.6 2.4-2.1-1.2-2.1 1.2.6-2.4-1.9-1.6 2.5-.2 0.9-2.4z" />
+                  </svg>
+                </span>
+                <span className="v2-pill-label">QUOTES</span>
+              </button>
+              <button
                 className={`v2-pill-btn${v2Running ? " is-running" : ""}`}
                 type="button"
                 id="v2-trade-btn"
@@ -169,28 +185,12 @@ export default function V2Interface() {
                 </span>
                 <span className="v2-pill-label">{v2Running ? "STOP" : "TRADE"}</span>
               </button>
-              <button
-                className="v2-pill-btn"
-                type="button"
-                onClick={() => {
-                  setV2SymTab("allowed");
-                  setV2View("quotes");
-                }}
-              >
-                <span className="v2-pill-icon is-quotes" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2.2 13.7 7l4.8.4-3.7 3.1 1.2 4.7L12 12.8 8 15.2l1.2-4.7L5.5 7.4 10.3 7 12 2.2z" />
-                    <path d="M18.2 11.2 19.1 13.6l2.5.2-1.9 1.6.6 2.4-2.1-1.2-2.1 1.2.6-2.4-1.9-1.6 2.5-.2 0.9-2.4z" />
-                  </svg>
-                </span>
-                <span className="v2-pill-label">QUOTES</span>
-              </button>
               <button className="v2-pill-btn" type="button" onClick={removeActiveBot}>
                 <span className="v2-pill-icon is-remove" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9.2 3.5h5.6c.5 0 .9.4.9.9V6h3.1v2H5.2V6h3.1V4.4c0-.5.4-.9.9-.9zm1.2 2.5h3.2V5.5h-3.2V6z" />
                     <path d="M7.2 9h9.6l-.7 10.2a1.8 1.8 0 0 1-1.8 1.6H9.7a1.8 1.8 0 0 1-1.8-1.6L7.2 9z" />
-                    <path d="M10.2 12.2h1.4v5.2h-1.4zm2.2 0h1.4v5.2h-1.4z" fill="#fff" />
+                    <path d="M10.2 12.2h1.4v5.2h-1.4zm2.2 0h1.4v5.2h-1.4z" fill="#0a0a0c" />
                   </svg>
                 </span>
                 <span className="v2-pill-label">REMOVE</span>

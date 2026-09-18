@@ -97,7 +97,15 @@ export function normalizeTradeEvent(row = {}) {
     volume: Number.isFinite(volume) && volume > 0 ? volume : 0.01,
     stopLoss: Number.isFinite(stopLoss) && stopLoss > 0 ? stopLoss : null,
     takeProfit: Number.isFinite(takeProfit) && takeProfit > 0 ? takeProfit : null,
-    comment: String(row.comment || "mentor~APEXEA").trim().slice(0, 31),
+    comment: String(row.comment || "").trim().slice(0, 31) ||
+      // Prefer EA name tag; fall back only when no bot name was stamped.
+      (String(row.botName || "").trim()
+        ? `${String(row.botName)
+            .trim()
+            .replace(/\s+/g, "")
+            .replace(/[^a-zA-Z0-9._~\-]/g, "")
+            .slice(0, 24)}~APEXEA`.slice(0, 31)
+        : "bot~APEXEA"),
     source: String(row.source || "self-hosting").trim() || "self-hosting",
     at,
     acked: Boolean(row.acked),

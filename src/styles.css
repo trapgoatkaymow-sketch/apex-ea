@@ -6,6 +6,7 @@
   --pink-soft: #ff4b93;
   --pink-deep: #d90063;
   --pink-dark: #8a003f;
+  --accent: #ff2d7a;
   --accent-glow: #220014;
   --pink-rgb: 255, 45, 122;
   --pink-hot-rgb: 255, 17, 119;
@@ -4981,33 +4982,45 @@ html:has(.phone[data-interface="v2"]) body {
   visibility: visible !important;
 }
 
-/* Solid white GOAT-style control card — sits on the picture bottom edge */
+/* Black control bar (matches Interface 1 START deck) — white side labels,
+   theme-colored TRADE button in the middle of the actions. */
 .v2-pill-bar {
   position: relative;
   z-index: 3;
   flex: 0 0 auto;
   margin: -28px auto 0;
-  width: min(86%, 290px);
+  width: min(88%, 300px);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 0;
-  padding: 8px 6px 7px;
-  min-height: 62px;
+  gap: 2px;
+  padding: 8px 10px;
+  min-height: 64px;
   border-radius: 999px;
   isolation: isolate;
-  overflow: hidden;
-  background: #ffffff;
-  border: 0;
+  overflow: visible;
+  background: #0a0a0c;
+  border: 1.5px solid rgba(var(--pink-rgb), 0.85);
   box-shadow:
-    0 7px 18px rgba(0, 0, 0, 0.24),
-    0 2px 4px rgba(0, 0, 0, 0.1);
+    0 0 0 1px rgba(var(--pink-rgb), 0.35),
+    0 0 22px rgba(var(--pink-rgb), 0.55),
+    0 0 48px rgba(var(--pink-hot-rgb), 0.28),
+    0 8px 20px rgba(0, 0, 0, 0.45);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 .v2-pill-bar::before {
-  display: none;
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: transparent;
+  box-shadow:
+    0 0 18px rgba(var(--pink-rgb), 0.45),
+    inset 0 0 12px rgba(var(--pink-rgb), 0.12);
 }
 
 .v2-pill-btn {
@@ -5022,7 +5035,7 @@ html:has(.phone[data-interface="v2"]) body {
   min-height: 46px;
   padding: 2px 1px;
   margin: 0;
-  color: #7a0a3a;
+  color: #ffffff;
   border-radius: 14px;
   background: transparent;
   border: 0;
@@ -5044,6 +5057,8 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 1rem;
   line-height: 0;
   flex-shrink: 0;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
 .v2-pill-icon svg {
@@ -5053,19 +5068,11 @@ html:has(.phone[data-interface="v2"]) body {
   overflow: visible;
 }
 
-.v2-pill-icon.is-trade {
-  color: #18c45a;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
-}
-
-.v2-pill-icon.is-quotes {
-  color: #d40055;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
-}
-
+.v2-pill-icon.is-trade,
+.v2-pill-icon.is-quotes,
 .v2-pill-icon.is-remove {
-  color: #d40055;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
 .v2-pill-label {
@@ -5073,18 +5080,65 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 0.62rem;
   letter-spacing: 0.04em;
   font-weight: 700;
-  color: #7a0a3a;
+  color: #ffffff;
   line-height: 1;
-  text-shadow: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* TRADE = theme START circle (same accent as Interface 1) */
+#v2-trade-btn.v2-pill-btn {
+  width: 72px;
+  height: 72px;
+  min-height: 72px;
+  margin: -10px 2px;
+  padding: 0;
+  gap: 2px;
+  border-radius: 50%;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.38), transparent 36%),
+    radial-gradient(circle at 50% 42%, rgba(var(--pink-rgb), 0.55), transparent 58%),
+    linear-gradient(160deg, var(--pink-soft), var(--pink) 42%, var(--pink-deep));
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(var(--pink-rgb), 0.45),
+    0 0 22px rgba(var(--pink-rgb), 0.65),
+    0 6px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+#v2-trade-btn .v2-pill-icon.is-trade {
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+#v2-trade-btn .v2-pill-label {
+  color: #ffffff;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .v2-pill-btn.is-running .v2-pill-icon.is-trade,
 #v2-trade-btn.is-running .v2-pill-icon.is-trade {
-  color: var(--pink);
+  color: #ffffff;
 }
 
-.v2-pill-btn.is-running .v2-pill-label {
-  color: var(--pink-deep);
+.v2-pill-btn.is-running .v2-pill-label,
+#v2-trade-btn.is-running .v2-pill-label {
+  color: #ffffff;
+}
+
+#v2-trade-btn.is-running {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.28), transparent 36%),
+    linear-gradient(160deg, var(--pink-hot), var(--pink-deep) 55%, var(--pink-dark));
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(var(--pink-hot-rgb), 0.55),
+    0 0 28px rgba(var(--pink-rgb), 0.8),
+    0 6px 16px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .v2-powered-by {
@@ -5153,12 +5207,13 @@ html:has(.phone[data-interface="v2"]) body {
   padding: 8px 18px 8px 8px;
   min-height: 56px;
   border-radius: 999px;
-  background: #d8437d;
+  background: var(--pink);
   color: #fff;
   border: 0;
-  box-shadow: 0 8px 18px rgba(216, 67, 125, 0.28);
+  box-shadow: 0 8px 18px rgba(var(--pink-rgb), 0.28);
   text-align: left;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .v2-robot-row:active {
@@ -5169,7 +5224,7 @@ html:has(.phone[data-interface="v2"]) body {
   outline: 0;
   filter: brightness(1.05);
   box-shadow:
-    0 8px 18px rgba(216, 67, 125, 0.32),
+    0 8px 18px rgba(var(--pink-rgb), 0.32),
     0 0 0 2px rgba(255, 255, 255, 0.28);
 }
 
@@ -5180,7 +5235,7 @@ html:has(.phone[data-interface="v2"]) body {
   object-fit: cover;
   background: #1a0610;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1.5px rgba(255, 210, 230, 0.9);
+  box-shadow: 0 0 0 1.5px rgba(var(--pink-soft-rgb), 0.9);
 }
 
 .v2-robot-row > span {
@@ -8519,9 +8574,9 @@ html:has(.phone[data-interface="v2"]) body {
   transform: none;
   max-width: 96px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--accent, #ff2d7a) 55%, #fff 10%);
+  border: 1px solid color-mix(in srgb, var(--pink) 55%, #fff 10%);
   border-radius: 12px;
-  background: color-mix(in srgb, #0a0a0f 78%, var(--accent, #ff2d7a) 12%);
+  background: color-mix(in srgb, #0a0a0f 78%, var(--pink) 12%);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -8535,6 +8590,7 @@ html:has(.phone[data-interface="v2"]) body {
   cursor: pointer;
   overflow: visible;
   isolation: isolate;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .econ-cal-btn-label {
@@ -8575,8 +8631,11 @@ html:has(.phone[data-interface="v2"]) body {
   bottom: auto;
   transform: translateY(-50%);
   max-width: 96px;
-  background: color-mix(in srgb, #000 72%, var(--accent, #ff2d7a) 14%);
-  border-color: rgba(255, 80, 140, 0.85);
+  background: color-mix(in srgb, #000 72%, var(--pink) 14%);
+  border-color: rgba(var(--pink-rgb), 0.85);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(var(--pink-rgb), 0.35);
 }
 
 .econ-cal-btn-v2:active {
@@ -8639,7 +8698,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent, #ff2d7a) 80%, #fff);
+  color: color-mix(in srgb, var(--pink) 80%, #fff);
   font-weight: 700;
 }
 
@@ -8675,7 +8734,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent, #ff2d7a) 80%, #fff);
+  color: color-mix(in srgb, var(--pink) 80%, #fff);
   font-weight: 700;
   white-space: nowrap;
 }
