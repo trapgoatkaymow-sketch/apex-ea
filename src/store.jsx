@@ -1784,8 +1784,29 @@ export function AppProvider({ children }) {
         return null;
       }
 
-      // Same rule as bulk import — one live key per client+bot.
-      // Only reuse a local key if it still exists on the shared server store.
+      // Same rule as bulk import — one live key per client+bot (used or unused).
+      // Check the shared server store first so a missing local row can't mint a duplicate.
+      let serverExisting = null;
+      try {
+        const byEmail = await fetchLicensesByEmail(email);
+        serverExisting = (Array.isArray(byEmail) ? byEmail : []).find(
+          (row) =>
+            String(row.botId || row.bot?.id || "") === String(botId) &&
+            !isRememberedDeletedLicenseKey(row.key)
+        );
+      } catch {
+        serverExisting = null;
+      }
+      if (serverExisting) {
+        setLicenseKeys((prev) => mergeLicenses(prev, [serverExisting]));
+        showToast(
+          serverExisting.used
+            ? `This client already has a used key for ${bot?.name || "this bot"}`
+            : `This client already has an unused key: ${serverExisting.key}`
+        );
+        return serverExisting.key;
+      }
+
       const existingForClient = (Array.isArray(licenseKeys) ? licenseKeys : []).find(
         (row) =>
           normalizeEmail(row.clientEmail) === email &&
@@ -1808,7 +1829,15 @@ export function AppProvider({ children }) {
           );
           return remoteExisting.key;
         }
-        // Local ghost — fall through and create a durable server key.
+        // Local-only ghost: drop it from UI and do not create a second key
+        // until we confirm the email has none on the server (checked above).
+        setLicenseKeys((prev) =>
+          (Array.isArray(prev) ? prev : []).filter(
+            (row) =>
+              normalizeLicenseKey(row.key) !==
+              normalizeLicenseKey(existingForClient.key)
+          )
+        );
       }
 
       const ea = eas.find((item) => item.id === botId);
@@ -1954,7 +1983,15 @@ export function AppProvider({ children }) {
               )
             );
           }
-          showToast(`License ready for ${name} · ${email}`);
+          if (remote.alreadyExists) {
+            showToast(
+              saved.used
+                ? `This client already has a used key for ${bot?.name || "this bot"}`
+                : `This client already has an unused key: ${saved.key}`
+            );
+          } else {
+            showToast(`License ready for ${name} · ${email}`);
+          }
           return saved.key;
         } catch (error) {
           lastError = error;
