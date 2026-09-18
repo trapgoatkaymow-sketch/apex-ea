@@ -16,6 +16,7 @@ import {
   WITHDRAW_MIN_KEYS,
 } from "./mentorsApi.js";
 import {
+  fetchLicense,
   formatLicenseDuration,
   formatLicenseExpiry,
   isLicenseExpired,
@@ -2317,23 +2318,32 @@ export default function AdminPortal() {
                       mentorName,
                     });
                     if (key) {
+                      await refreshLicenses?.();
+                      const emailKey = String(licenseClientEmail || "")
+                        .trim()
+                        .toLowerCase();
+                      const fromStore = (Array.isArray(licenseKeys) ? licenseKeys : []).find(
+                        (row) =>
+                          String(row.key || "").toUpperCase() === String(key).toUpperCase()
+                      );
                       const timing = resolveLicenseExpiry(licenseDuration);
-                      openLicenseDetail({
-                        key,
-                        clientName: licenseClientName.trim(),
-                        clientEmail: String(licenseClientEmail || "")
-                          .trim()
-                          .toLowerCase(),
-                        botName: ea?.name || "",
-                        used: false,
-                        duration: timing.duration,
-                        expiresAt: timing.expiresAt,
-                        createdAt: Date.now(),
-                        mentorName,
-                        mentorEmail: ownerEmail,
-                      });
+                      openLicenseDetail(
+                        fromStore || {
+                          key,
+                          clientName: licenseClientName.trim(),
+                          clientEmail: emailKey,
+                          botName: ea?.name || "",
+                          used: false,
+                          duration: timing.duration,
+                          expiresAt: timing.expiresAt,
+                          createdAt: Date.now(),
+                          mentorName,
+                          mentorEmail: ownerEmail,
+                        }
+                      );
+                    } else {
+                      await refreshLicenses?.();
                     }
-                    await refreshLicenses?.();
                   } finally {
                     setLicenseGenBusy(false);
                   }
