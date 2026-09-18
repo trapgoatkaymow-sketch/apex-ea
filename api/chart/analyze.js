@@ -20,6 +20,7 @@ function normalizeSymbol(raw) {
   return String(raw || "")
     .trim()
     .toUpperCase()
+    .replace(/^\.+/, "")
     .replace(/\s+/g, "")
     .replace(/[\/_\-]/g, "")
     .replace(/[^A-Z0-9.]/g, "");
@@ -37,7 +38,7 @@ function requireOpenAiKey() {
   return key;
 }
 
-const MIN_CHART_CONFIDENCE = 72;
+const MIN_CHART_CONFIDENCE = 55;
 
 function toFiniteNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -113,10 +114,18 @@ function resolveCatalogSymbol(symbol, catalog = []) {
   const normalized = normalizeSymbol(symbol);
   if (!normalized) return "";
   const base = normalized.split(".")[0];
-  const catalogHit = (Array.isArray(catalog) ? catalog : []).find(
-    (item) => normalizeSymbol(item).split(".")[0] === base
-  );
-  return catalogHit ? normalizeSymbol(catalogHit) : normalized;
+  const list = Array.isArray(catalog) ? catalog : [];
+  const exact = list.find((item) => normalizeSymbol(item) === normalized);
+  if (exact) return normalizeSymbol(exact);
+  const baseHit = list.find((item) => {
+    const n = normalizeSymbol(item);
+    return n === base || n.split(".")[0] === base;
+  });
+  if (baseHit) {
+    const catalogNorm = normalizeSymbol(baseHit);
+    if (catalogNorm.split(".")[0] === base) return catalogNorm;
+  }
+  return normalized;
 }
 
 function buildNoChartResult() {
@@ -253,16 +262,15 @@ export async function analyzeChartSetupWithOpenAI({
         {
           role: "system",
           content:
-            "You are a strict trading-chart analyst. Return JSON only with schema: " +
+            "You are a trading-chart analyst for MetaTrader / TradingView / cTrader screenshots. Return JSON only with schema: " +
             '{"isChart":boolean,"chartConfidence":0-100,"status":"no_chart"|"setup_ready",' +
             '"symbol":string|null,"side":"BUY"|"SELL","confidence":0-100,' +
             '"entry":number,"stopLoss":number,' +
             '"takeProfit1":number,"takeProfit2":number,"takeProfit3":number,' +
             '"riskReward":string,"timeframe":string,"analysis":string,"reasons":string[]}. ' +
-            "FIRST decide if the image is a genuine financial trading chart " +
-            "(candlesticks/OHLC, price axis, grid, trading platform layout). " +
-            "Photographs, people, buildings, cars, landscapes, websites, and random screenshots are NOT charts. " +
-            "Text resembling a symbol alone is NOT a chart. " +
+            "Set isChart=true for phone or desktop trading charts with candlesticks/bars and a price axis " +
+            "(including shared chat screenshots and nested chart previews). " +
+            "Photographs of people, cars, buildings, or landscapes are NOT charts. " +
             "If not a chart: status=no_chart, isChart=false, and leave trade fields null. " +
             "If it IS a chart: ALWAYS return a COMPLETE trade setup with THREE take-profit levels. NEVER say incomplete. " +
             "ALWAYS provide side, confidence, entry, stopLoss, takeProfit1, takeProfit2, takeProfit3, riskReward, timeframe, and analysis. " +
@@ -271,8 +279,9 @@ export async function analyzeChartSetupWithOpenAI({
             "Read entry and stop from chart structure (support/resistance, swings). " +
             "BUY must satisfy: stopLoss < entry < takeProfit1 < takeProfit2 < takeProfit3. " +
             "SELL must satisfy: stopLoss > entry > takeProfit1 > takeProfit2 > takeProfit3. " +
-            "Read the instrument from the chart header/title/tab when visible — OCR the exact characters. " +
-            "NEVER invent a popular pair (EURUSD/XAUUSD/BTCUSD) when the header shows a different symbol. " +
+            "OCR the instrument from the chart header/title/tab — ANY shared symbol " +
+            "(forex, metals, indices, stocks, crypto, oil, CFDs) including broker forms like .US30Cash / US30Cash / US30. " +
+            "Strip only a leading broker dot. Catalog is NOT multiple choice — never invent EURUSD/XAUUSD/BTCUSD. " +
             "If a symbol hint is provided and it matches the chart, keep it; otherwise prefer the visible header text. " +
             "If the setup is imperfect, still choose the strongest available BUY or SELL and compute reasonable multi-TP levels. " +
             "Do not omit Entry, SL, TP1, TP2, or TP3 for a valid chart.",
@@ -284,12 +293,12 @@ export async function analyzeChartSetupWithOpenAI({
               type: "text",
               text:
                 "Validate whether this is a trading chart. If yes, generate a complete trade setup with Entry, SL, TP1, TP2, and TP3. " +
-                "Read the symbol from the chart header exactly — do not guess from the catalog." +
+                "OCR the exact symbol from the chart header (any instrument shown) — do not guess from the catalog." +
                 (hintSymbol
                   ? ` Prefer this already-detected symbol if it matches the chart: ${normalizeSymbol(hintSymbol)}.`
                   : "") +
                 (catalogHint
-                  ? ` Catalog for exact-match mapping only: ${catalogHint}.`
+                  ? ` Optional exact-match catalog (mapping only): ${catalogHint}.`
                   : ""),
             },
             {

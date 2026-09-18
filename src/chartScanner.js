@@ -238,11 +238,17 @@ async function detectSymbolWithOpenAI(dataUrl, { catalog = [] } = {}) {
     status === CHART_DETECTION_STATUS.SYMBOL_DETECTED && data?.symbol
       ? String(data.symbol).trim().toUpperCase()
       : null;
+  const suggestedSymbol = String(
+    data?.suggestedSymbol || data?.symbol || ""
+  )
+    .trim()
+    .toUpperCase() || null;
 
   return {
     status,
     isChart: Boolean(data?.isChart),
     symbol,
+    suggestedSymbol,
     message: data?.message || CHART_DETECTION_MESSAGES[status]?.message || "",
     uiMessage:
       data?.uiMessage || CHART_DETECTION_MESSAGES[status]?.uiMessage || "",
