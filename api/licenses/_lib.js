@@ -1381,23 +1381,13 @@ export async function createLicensesBulk(payload = {}) {
     const usedKeys = new Set(
       licenses.map((row) => normalizeLicenseKey(row.key)).filter(Boolean)
     );
-    const byEmailBot = new Map(
-      licenses
-        .filter((row) => String(row.botId || row.bot?.id || "").trim() === botId)
-        .map((row) => [
-          `${normalizeEmail(row.clientEmail)}::${botId}`,
-          row,
-        ])
-    );
 
     if (mentorEmail && keyAllowance != null) {
       const used = licenses.filter(
         (row) => normalizeEmail(row.mentorEmail) === mentorEmail
       ).length;
-      const need = normalizedClients.filter((c) => {
-        const existing = byEmailBot.get(`${c.clientEmail}::${botId}`);
-        return !existing;
-      }).length;
+      // Always create one key per upload row — emails may already hold keys.
+      const need = normalizedClients.length;
       if (used + need > keyAllowance) {
         const err = new Error(
           `License key limit reached (${used}/${keyAllowance}). Need ${need} more — ask super admin to raise your allotment.`
@@ -1410,18 +1400,6 @@ export async function createLicensesBulk(payload = {}) {
     const next = [...licenses];
     const now = Date.now();
     for (const client of normalizedClients) {
-      const mapKey = `${client.clientEmail}::${botId}`;
-      const existing = byEmailBot.get(mapKey);
-      if (existing && !api.isDeleted?.(existing.key)) {
-        skipped.push({
-          clientEmail: client.clientEmail,
-          clientName: client.clientName,
-          key: existing.key,
-          reason: "already_has_key_for_bot",
-        });
-        continue;
-      }
-
       let key = randomLicenseKeyServer(usedKeys);
       while (api.isDeleted?.(key) || usedKeys.has(key)) {
         key = randomLicenseKeyServer(usedKeys);
@@ -1451,7 +1429,6 @@ export async function createLicensesBulk(payload = {}) {
         bot,
       };
       next.unshift(entry);
-      byEmailBot.set(mapKey, entry);
       created.push(entry);
     }
     return next;
