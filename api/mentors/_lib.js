@@ -4,14 +4,17 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
 import { applyCorsHeaders } from "../_cors.js";
+import { durableRead, durableWrite } from "../_durableJson.js";
 
 const REPO =
   process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.MENTORS_FILE_PATH || "data/mentors.json";
+const BLOB_PATH = process.env.MENTORS_BLOB_PATH || "apexea/mentors.json";
 const API = `https://api.github.com/repos/${REPO}`;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/mentors.json");
+const TMP_FILE = path.join("/tmp", "apexea-mentors.json");
 
 export const SUPER_ADMIN_EMAIL = String(
   process.env.SUPER_ADMIN_EMAIL || "trapgoatkaymow22@icloud.com"
@@ -376,12 +379,22 @@ function writeLocalStore(mentors) {
 
 async function readStore() {
   try {
-    const file = await ghFetch(
-      `${API}/contents/${FILE_PATH}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    const decoded = decodeContent(file);
-    // Overlay locally-saved banking / key allotments when GitHub still has
+    const durable = await durableRead({
+      blobPath: BLOB_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      localPaths: [TMP_FILE, LOCAL_FILE],
+    });
+    let decoded = { sha: durable.sha || null, mentors: [] };
+    if (durable.raw) {
+      try {
+        decoded = decodeMentorsJson(durable.raw, durable.sha);
+      } catch {
+        decoded = { sha: durable.sha || null, mentors: [] };
+      }
+    }
+    // Overlay locally-saved banking / key allotments when remote still has
     // older values (write may have failed auth on a prior request).
     if (Array.isArray(memoryMentors) && memoryMentors.length) {
       const localByEmail = new Map(
@@ -426,7 +439,7 @@ async function readStore() {
         }
         return next;
       });
-      // Keep local-only mentors (with credentials) that GitHub briefly omitted.
+      // Keep local-only mentors (with credentials) that remote briefly omitted.
       for (const local of memoryMentors) {
         const email = normalizeEmail(local.email);
         if (!email || !local.passwordHash || !local.salt) continue;
@@ -443,28 +456,14 @@ async function readStore() {
       credentialBackupPool(decoded.mentors)
     );
     memoryMentors = decoded.mentors.map((m) => ({ ...m }));
-    return { ...decoded, remote: true };
+    return {
+      ...decoded,
+      remote: durable.source !== "empty" && durable.source !== "local",
+      source: durable.source,
+    };
   } catch (error) {
     if (error.status === 404) {
       return { sha: null, mentors: [], remote: true };
-    }
-    // Rate-limit / bad token: try public raw file before wiping via local seed.
-    try {
-      const rawUrl = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${FILE_PATH}?t=${Date.now()}`;
-      const rawRes = await fetch(rawUrl, {
-        headers: { Accept: "application/json", "User-Agent": "apex-ea-mentors" },
-        cache: "no-store",
-      });
-      if (rawRes.ok) {
-        const raw = await rawRes.text();
-        const decoded = decodeMentorsJson(raw, null);
-        if (decoded.mentors.length) {
-          memoryMentors = decoded.mentors.map((m) => ({ ...m }));
-          return { ...decoded, remote: true, rawFallback: true };
-        }
-      }
-    } catch {
-      // continue to local
     }
     const local = readLocalStore();
     return { ...local, remote: false };
@@ -494,63 +493,64 @@ async function writeStore(mentors, sha, message) {
       });
     }
   }
-  const durable = Array.from(nextByEmail.values());
-  memoryMentors = durable.map((m) => ({ ...m }));
+  const durableRows = Array.from(nextByEmail.values());
+  memoryMentors = durableRows.map((m) => ({ ...m }));
 
-  const content = Buffer.from(
-    JSON.stringify(
-      {
-        mentors: durable
-          .map((m) => {
-            const role = m.role || "mentor";
-            return {
-              id: m.id,
-              username: m.username,
-              email: normalizeEmail(m.email),
-              contact: normalizePhone(m.contact),
-              role,
-              status: m.status || "pending",
-              passwordHash: m.passwordHash,
-              salt: m.salt,
-              createdAt: Number(m.createdAt) || Date.now(),
-              banking: normalizeBanking(m.banking),
-              licenseKeysAllowed: normalizeLicenseKeysAllowed(
-                m.licenseKeysAllowed,
-                { role }
-              ),
-              licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
-            };
-          })
-          .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt)
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-      },
-      null,
-      2
-    ) + "\n",
-    "utf8"
-  ).toString("base64");
-
-  const body = {
-    message,
-    content,
-    branch: BRANCH,
+  const payload = {
+    mentors: durableRows
+      .map((m) => {
+        const role = m.role || "mentor";
+        return {
+          id: m.id,
+          username: m.username,
+          email: normalizeEmail(m.email),
+          contact: normalizePhone(m.contact),
+          role,
+          status: m.status || "pending",
+          passwordHash: m.passwordHash,
+          salt: m.salt,
+          createdAt: Number(m.createdAt) || Date.now(),
+          banking: normalizeBanking(m.banking),
+          licenseKeysAllowed: normalizeLicenseKeysAllowed(
+            m.licenseKeysAllowed,
+            { role }
+          ),
+          licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
+        };
+      })
+      .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
   };
-  if (sha && sha !== "local") body.sha = sha;
+  const raw = JSON.stringify(payload, null, 2) + "\n";
+  writeLocalStore(durableRows);
 
   try {
-    return await ghFetch(`${API}/contents/${FILE_PATH}`, {
-      method: "PUT",
-      body,
+    const result = await durableWrite({
+      raw,
+      blobPath: BLOB_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      githubSha: sha && sha !== "local" ? sha : null,
+      message,
+      localPaths: [TMP_FILE, LOCAL_FILE],
     });
+    if (result?.ok) return result;
+    const err = new Error(result?.reason || "Mentor store write failed");
+    err.status = 503;
+    throw err;
   } catch (error) {
-    writeLocalStore(durable);
+    writeLocalStore(durableRows);
     // Auth / rate-limit failures must surface for password + register writes —
     // otherwise callers think the change is durable when only /tmp was updated.
     if (
       error.status === 401 ||
       error.status === 403 ||
       error.status === 429 ||
-      /bad credentials|rate limit/i.test(String(error.message || ""))
+      error.status === 503 ||
+      /bad credentials|rate limit|firebase|not configured/i.test(
+        String(error.message || "")
+      )
     ) {
       throw error;
     }

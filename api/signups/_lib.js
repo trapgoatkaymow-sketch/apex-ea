@@ -3,11 +3,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { FALLBACK_GITHUB_TOKEN } from "./_githubToken.js";
 import { applyCorsHeaders } from "../_cors.js";
+import { durableRead, durableWrite } from "../_durableJson.js";
 
 const REPO =
   process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.SIGNUPS_FILE_PATH || "data/signups.json";
+const BLOB_PATH = process.env.SIGNUPS_BLOB_PATH || "apexea/signups.json";
 const API = `https://api.github.com/repos/${REPO}`;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/signups.json");
@@ -197,37 +199,31 @@ function mergeSignupLists(...lists) {
 }
 
 async function readStore() {
-  // Always prefer Contents API — raw.githubusercontent.com can stay stale.
   try {
-    const file = await ghFetch(
-      `${API}/contents/${FILE_PATH}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    const remote = decodeContent(file);
-    memorySignups = mergeSignupLists(readLocalStore().signups, remote.signups);
-    return { sha: remote.sha, signups: memorySignups.map((s) => ({ ...s })), remote: true };
-  } catch (error) {
-    // Public repo: retry without auth when the configured token is expired.
-    if (error.status === 401 || error.status === 403) {
+    const durable = await durableRead({
+      blobPath: BLOB_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      localPaths: [TMP_FILE, LOCAL_FILE],
+    });
+    let remoteSignups = [];
+    if (durable.raw) {
       try {
-        const file = await ghFetch(
-          `${API}/contents/${FILE_PATH}?ref=${encodeURIComponent(BRANCH)}`,
-          { auth: false, cache: "no-store" }
-        );
-        const remote = decodeContent(file);
-        memorySignups = mergeSignupLists(readLocalStore().signups, remote.signups);
-        return {
-          sha: remote.sha,
-          signups: memorySignups.map((s) => ({ ...s })),
-          remote: true,
-        };
+        const parsed = JSON.parse(durable.raw || "{}");
+        remoteSignups = Array.isArray(parsed?.signups) ? parsed.signups : [];
       } catch {
-        // fall through to local
+        remoteSignups = [];
       }
     }
-    if (error.status === 404) {
-      return { sha: null, signups: readLocalStore().signups, remote: true };
-    }
+    memorySignups = mergeSignupLists(readLocalStore().signups, remoteSignups);
+    return {
+      sha: durable.sha,
+      signups: memorySignups.map((s) => ({ ...s })),
+      remote: durable.source !== "empty" && durable.source !== "local",
+      source: durable.source,
+    };
+  } catch {
     return { ...readLocalStore(), remote: false };
   }
 }
@@ -236,30 +232,24 @@ async function writeStore(signups, sha, message) {
   const normalized = mergeSignupLists(signups).sort(
     (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
   );
-  const content = Buffer.from(
-    JSON.stringify({ signups: normalized }, null, 2) + "\n",
-    "utf8"
-  ).toString("base64");
-
-  const body = {
-    message,
-    content,
-    branch: BRANCH,
-  };
-  if (sha && sha !== "local") body.sha = sha;
+  const raw = JSON.stringify({ signups: normalized }, null, 2) + "\n";
+  writeLocalStore(normalized);
+  memorySignups = normalized.map((s) => ({ ...s }));
 
   try {
-    const result = await ghFetch(`${API}/contents/${FILE_PATH}`, {
-      method: "PUT",
-      body,
+    const result = await durableWrite({
+      raw,
+      blobPath: BLOB_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      githubSha: sha && sha !== "local" ? sha : null,
+      message,
+      localPaths: [TMP_FILE, LOCAL_FILE],
     });
-    memorySignups = normalized.map((s) => ({ ...s }));
-    writeLocalStore(normalized);
-    return result;
-  } catch (error) {
-    // Always persist locally so admin bypass / approvals still work when the
-    // GitHub token is expired ("Bad credentials").
-    writeLocalStore(normalized);
+    if (result?.ok) return result;
+    return { local: true, durable: false, reason: result?.reason || null };
+  } catch {
     return { local: true };
   }
 }
