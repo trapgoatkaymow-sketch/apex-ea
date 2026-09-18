@@ -1104,11 +1104,34 @@ export default function AdminPortal() {
       const dataUrl = String(reader.result || "");
       const img = new Image();
       img.onload = () => {
-        // Cap longest edge high enough for full-bleed / retina heroes.
-        // App state stores short /api/licenses/photo paths (not this data URL),
-        // so localStorage quota stays safe while Home stays sharp on Android.
-        const maxEdge = 1600;
-        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height, 1));
+        // Keep heroes sharp on retina / full-bleed Interface 2.
+        // Prefer original gallery/camera bytes when already under budget —
+        // canvas re-encode was crushing neon artwork into soft mush.
+        const maxEdge = 2560;
+        const maxDataChars = 1_600_000;
+        const longest = Math.max(img.width, img.height, 1);
+        const needsResize = longest > maxEdge;
+        const typeOk = /image\/(jpeg|jpg|png|webp)/i.test(file.type || "");
+        const originalOk =
+          !needsResize &&
+          typeOk &&
+          file.size > 0 &&
+          file.size <= 1_200_000 &&
+          dataUrl.startsWith("data:image/") &&
+          dataUrl.length <= maxDataChars;
+
+        if (originalOk) {
+          setPhoto(dataUrl);
+          setPhotoUploaded(true);
+          if (longest < 900) {
+            showToast("Picture ready — use a larger photo for a sharper Home hero");
+          } else {
+            showToast("Picture ready (full quality)");
+          }
+          return;
+        }
+
+        const scale = Math.min(1, maxEdge / longest);
         const width = Math.max(1, Math.round(img.width * scale));
         const height = Math.max(1, Math.round(img.height * scale));
         const canvas = document.createElement("canvas");
@@ -1129,15 +1152,19 @@ export default function AdminPortal() {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, width, height);
-        let quality = 0.88;
+        let quality = 0.92;
         let nextPhoto = canvas.toDataURL("image/jpeg", quality);
-        while (nextPhoto.length > 900_000 && quality > 0.72) {
-          quality -= 0.06;
+        while (nextPhoto.length > maxDataChars && quality > 0.84) {
+          quality -= 0.02;
           nextPhoto = canvas.toDataURL("image/jpeg", quality);
         }
         setPhoto(nextPhoto);
         setPhotoUploaded(true);
-        showToast("Picture ready");
+        if (Math.max(width, height) < 900) {
+          showToast("Picture ready — upload a larger photo for full Home quality");
+        } else {
+          showToast("Picture ready (full quality)");
+        }
       };
       img.onerror = () => {
         setPhoto("/logo.png");
