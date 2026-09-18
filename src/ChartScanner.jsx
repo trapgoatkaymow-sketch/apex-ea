@@ -3,6 +3,9 @@ import BotAvatar from "./BotAvatar.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
+  RECOMMENDED_SCAN_TIMEFRAME,
+  SCANNER_STRATEGY_NAME,
+  SCANNER_STRATEGY_RULES,
   TRADE_ENGINE_STEPS,
   analyzeChartImage,
   detectSymbolFromChart,
@@ -73,8 +76,9 @@ function buildTpThreads({ tradeCount, lot, signal }) {
 }
 
 function clampTrades(value) {
+  // Capital Guard: keep concurrency lower so multi-TP spam can't blow accounts.
   const n = Math.floor(Number(value) || 1);
-  return Math.min(20, Math.max(1, n));
+  return Math.min(6, Math.max(1, n));
 }
 
 /** Normalize lot only when saving / trading — not while the user is typing. */
@@ -685,7 +689,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <div className="cs-head-main">
           <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
           <h2 className="cs-title">Chart Scanner</h2>
-          <p className="cs-tagline">Scan · Analyze · Trade Smarter</p>
+          <p className="cs-tagline">Capital Guard · Best TF {RECOMMENDED_SCAN_TIMEFRAME}</p>
         </div>
         <div className="cs-head-meta">
           <button
@@ -1139,12 +1143,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
       {setupReady && !engineActive ? (
         <div className={`cs-result cs-result--${String(signal.side).toLowerCase()}`}>
-          <p className="cs-result-kicker">Trade Signal</p>
+          <p className="cs-result-kicker">
+            {signal.strategy || SCANNER_STRATEGY_NAME} Signal
+          </p>
           <strong>
             {signal.side} {signal.symbol}
           </strong>
           <span className="cs-result-meta">
-            Confidence {signal.confidence}% · {signal.timeframe || "M15"}
+            Confidence {signal.confidence}% · TF {signal.timeframe || RECOMMENDED_SCAN_TIMEFRAME} ·
+            Best {signal.recommendedTimeframe || RECOMMENDED_SCAN_TIMEFRAME}
           </span>
 
           <div className="cs-setup-grid">
@@ -1175,9 +1182,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
           </div>
 
           <span className="cs-setup-analysis">
-            {signal.analysis || signal.reasons?.[0] || "Setup from chart structure"}
+            {signal.analysis || signal.reasons?.[0] || "Capital Guard setup from chart structure"}
           </span>
-          <span className="cs-setup-plan">TP targets · 1:1 · 1:2 · 1:3</span>
+          <span className="cs-setup-plan">
+            Capital Guard · structural SL · TP 1:1 · 1:2 · 1:3
+          </span>
 
           {fills.length ? (
             <span>

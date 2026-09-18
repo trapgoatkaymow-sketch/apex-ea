@@ -24,6 +24,19 @@ function normalizeEmail(email) {
     .toLowerCase();
 }
 
+/** MT5 comment tag — e.g. ZETASCALPERAI~APEXEA (max 31 chars). */
+function buildBotTradeComment(botName) {
+  const brand = "~APEXEA";
+  const nameRoom = Math.max(1, 31 - brand.length);
+  const raw = String(botName || "bot")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9._~\-]/g, "")
+    .replace(/~apexea$/i, "");
+  const name = (raw || "bot").slice(0, nameRoom);
+  return `${name}${brand}`;
+}
+
 async function assertApprovedMentor(email) {
   const key = normalizeEmail(email);
   if (!key || !key.includes("@")) {
@@ -309,8 +322,7 @@ export async function handleMentorTrade(req, res) {
       botMetaByClient.set(clientEmail, {
         stamp,
         botName:
-          String(row.botName || row.bot?.name || row.clientName || "").trim() ||
-          "Bot",
+          String(row.botName || row.bot?.name || "").trim() || "Bot",
         mentorName: String(row.mentorName || mentor.username || "").trim(),
       });
     }
@@ -395,14 +407,30 @@ export async function handleMentorTrade(req, res) {
     }
 
     const lot = Number.isFinite(volume) && volume > 0 ? volume : 0.01;
-    const comment = String(body.comment || "mentor~APEXEA")
+    const requestedComment = String(body.comment || "")
+      .trim()
       .replace(/apexea/gi, "APEXEA")
       .slice(0, 31);
+    // Legacy self-host used a hard-coded "mentor~APEXEA" tag — always prefer
+    // the client's EA name so MT5 shows e.g. ZETASCALPERAI~APEXEA (not mentor~…).
+    const isLegacyMentorComment = /^mentor[~-]APEXEA$/i.test(
+      requestedComment.replace(/\|TP[123]\b/gi, "").replace(/\|premium\b/gi, "").trim()
+    );
     const results = [];
     let ordersPlaced = 0;
 
     for (const target of targets) {
       try {
+        const meta = botMetaByClient.get(normalizeEmail(target.email)) || {};
+        const eaName =
+          String(meta.botName || body.botName || "").trim() || "Bot";
+        const comment = (
+          requestedComment && !isLegacyMentorComment
+            ? requestedComment
+            : buildBotTradeComment(eaName)
+        )
+          .replace(/apexea/gi, "APEXEA")
+          .slice(0, 31);
         const fill = await mt5PlaceMarketTrade({
           accountId: target.accountId,
           symbol,
@@ -427,15 +455,16 @@ export async function handleMentorTrade(req, res) {
           trades: placedHere,
           tickets: fill.tickets || [],
           result: fill.order || fill.result || null,
+          comment,
+          botName: eaName,
         });
         // Notify the client app script orb (best-effort — trade already placed).
         try {
-          const meta = botMetaByClient.get(normalizeEmail(target.email)) || {};
           await enqueueTradeEvent({
             clientEmail: target.email,
             mentorEmail: mentor.email,
             mentorName: meta.mentorName || mentor.username || "",
-            botName: meta.botName || "Bot",
+            botName: eaName,
             symbol: fill.symbol || symbol,
             side: fill.side || side,
             volume: fill.volume || lot,

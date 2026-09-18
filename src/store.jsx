@@ -35,6 +35,7 @@ import {
   pickFresherPhoto,
   uploadBotPhotoRemote,
   rememberDeletedLicenseKey,
+  forgetDeletedLicenseKey,
   isRememberedDeletedLicenseKey,
   filterOutDeletedLicenses,
 } from "./licensesApi.js";
@@ -2077,13 +2078,20 @@ export function AppProvider({ children }) {
           key.replace(/-/g, "") === wantCompact
         );
       };
+      // Stale local denylist must not hide a key the server still has.
+      forgetDeletedLicenseKey(key);
+
       let entry = licenseKeys.find(matchKey) || null;
+      let lookupUnavailable = false;
 
       if (!entry) {
         try {
           entry = await fetchLicense(rawKey);
           if (entry) setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
-        } catch {
+        } catch (error) {
+          if (error?.network || Number(error?.status) >= 500 || Number(error?.status) === 0) {
+            lookupUnavailable = true;
+          }
           entry = null;
         }
       }
@@ -2092,8 +2100,10 @@ export function AppProvider({ children }) {
           const byEmail = await fetchLicensesByEmail(accountEmail);
           setLicenseKeys((prev) => mergeLicenses(prev, byEmail));
           entry = byEmail.find(matchKey) || null;
-        } catch {
-          // continue
+        } catch (error) {
+          if (error?.network || Number(error?.status) >= 500 || Number(error?.status) === 0) {
+            lookupUnavailable = true;
+          }
         }
       }
       if (!entry) {
@@ -2101,19 +2111,68 @@ export function AppProvider({ children }) {
           const remote = await fetchLicenses();
           setLicenseKeys((prev) => mergeLicenses(prev, remote));
           entry = remote.find(matchKey) || null;
-        } catch {
-          // keep local miss
+        } catch (error) {
+          if (error?.network || Number(error?.status) >= 500 || Number(error?.status) === 0) {
+            lookupUnavailable = true;
+          }
         }
       }
 
       if (!entry) {
-        showToast("Invalid license key — ask your mentor to generate a new one");
+        // Entitled accounts / returning clients: heal a wiped key then bind.
+        const entitled =
+          isSignupEntitled(signup, accountEmail) ||
+          hasDeviceAccess(accountEmail) ||
+          Boolean(options?.license && matchKey(options.license));
+        if ((entitled || accountEmail) && accountEmail) {
+          try {
+            const deviceId = getOrCreateDeviceId();
+            const remote = await markLicenseUsedRemote(key, {
+              deviceId,
+              email: accountEmail,
+              license:
+                options?.license && matchKey(options.license)
+                  ? options.license
+                  : null,
+              botId: options?.botId || options?.license?.botId || "",
+              botName: options?.botName || options?.license?.botName || "",
+            });
+            if (remote) {
+              entry = remote;
+              setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
+              lookupUnavailable = false;
+            }
+          } catch (error) {
+            const status = Number(error?.status) || 0;
+            if (status === 404) {
+              // genuine miss — fall through
+            } else {
+              showToast(
+                error?.message ||
+                  "Could not verify this license key right now — try again"
+              );
+              return false;
+            }
+          }
+        }
+      }
+
+      if (!entry) {
+        showToast(
+          lookupUnavailable
+            ? "Could not reach the license server — try again"
+            : "Invalid license key — ask your mentor to generate a new one"
+        );
         return false;
       }
 
       if (isLicenseExpired(entry)) {
-        showToast("License key has expired — ask your mentor for a new one");
-        return false;
+        const duration = String(entry.duration || "").toLowerCase();
+        // Lifetime keys must never be blocked by a stale expiresAt stamp.
+        if (duration !== "lifetime") {
+          showToast("License key has expired — ask your mentor for a new one");
+          return false;
+        }
       }
 
       const licenseEmail = normalizeEmail(entry.clientEmail);
@@ -2146,12 +2205,18 @@ export function AppProvider({ children }) {
       } catch {
         // keep local
       }
-      if (entry.used && boundDevice && boundDevice !== deviceId) {
+      // Same phone OR owner email reclaim (WebView cleared / reinstall regenerated device id).
+      if (
+        entry.used &&
+        boundDevice &&
+        boundDevice !== deviceId &&
+        !emailOwnsLicense
+      ) {
         showToast("This license is locked to another phone");
         return false;
       }
 
-      // Bind to this phone (same phone re-opens automatically).
+      // Bind to this phone (or reclaim by matching email after reinstall).
       const healLicense =
         options && typeof options === "object" && matchKey(options.license)
           ? options.license
@@ -2363,18 +2428,12 @@ export function AppProvider({ children }) {
         remote = [];
       }
 
-      const deviceId = getOrCreateDeviceId();
       const mine = (remote.length ? remote : licenseKeys).filter(
         (row) =>
           normalizeEmail(row.clientEmail) === accountEmail &&
           !isLicenseExpired(row) &&
           String(row.key || "").trim()
       );
-      // Same phone only — never pull a key locked to a different device.
-      const onThisPhone = mine.filter((row) => {
-        const bound = String(row.deviceId || "").trim();
-        return !bound || bound === deviceId;
-      });
 
       const signup = getSignup(accountEmail);
       const entitled =
@@ -2408,13 +2467,14 @@ export function AppProvider({ children }) {
         bypassed: true,
       });
 
-      if (!onThisPhone.length) {
+      if (!mine.length) {
         return false;
       }
 
       let restored = 0;
-      for (const row of onThisPhone) {
-        const ok = await activateLicense(row.key);
+      for (const row of mine) {
+        // Owner email reclaim rebinds even when WebView minted a new device id.
+        const ok = await activateLicense(row.key, { license: row });
         if (ok) restored += 1;
       }
       if (restored === 0) {
@@ -2595,8 +2655,12 @@ export function AppProvider({ children }) {
           const botName =
             String(activeBot?.name || event.botName || "Bot").trim() || "Bot";
           const comment =
-            String(event.comment || "mentor~APEXEA").trim().slice(0, 31) ||
-            "mentor~APEXEA";
+            String(
+              event.comment ||
+                `${botName.replace(/\s+/g, "").replace(/[^a-zA-Z0-9._~\-]/g, "").slice(0, 24)}~APEXEA`
+            )
+              .trim()
+              .slice(0, 31) || `${botName.slice(0, 24).replace(/\s+/g, "")}~APEXEA`;
           recordTrade({
             botName,
             symbol,
