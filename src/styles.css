@@ -5085,8 +5085,11 @@ html:has(.phone[data-interface="v2"]) body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
-/* TRADE = theme START circle (same accent as Interface 1) */
+/* TRADE = theme START circle (same accent + animations as Interface 1) */
 #v2-trade-btn.v2-pill-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
   width: 72px;
   height: 72px;
   min-height: 72px;
@@ -5096,15 +5099,37 @@ html:has(.phone[data-interface="v2"]) body {
   border-radius: 50%;
   color: #ffffff;
   background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.38), transparent 36%),
-    radial-gradient(circle at 50% 42%, rgba(var(--pink-rgb), 0.55), transparent 58%),
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.42), transparent 36%),
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.16), transparent 48%),
+    radial-gradient(circle at 50% 42%, rgba(var(--pink-rgb), 0.34), transparent 58%),
     linear-gradient(160deg, var(--pink-soft), var(--pink) 42%, var(--pink-deep));
   border: 2px solid rgba(255, 255, 255, 0.42);
   box-shadow:
     0 0 0 1px rgba(var(--pink-rgb), 0.45),
     0 0 22px rgba(var(--pink-rgb), 0.65),
+    0 0 36px rgba(var(--pink-hot-rgb), 0.35),
     0 6px 16px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 14px rgba(var(--pink-rgb), 0.12);
+  animation: breathe-stop 6s ease-in-out infinite;
+  transition:
+    transform 0.18s ease,
+    border-color 0.2s ease;
+}
+
+#v2-trade-btn .stop-energy {
+  z-index: 0;
+}
+
+#v2-trade-btn .stop-core-glow {
+  inset: 8px;
+  z-index: 1;
+}
+
+#v2-trade-btn .v2-pill-icon,
+#v2-trade-btn .v2-pill-label {
+  position: relative;
+  z-index: 2;
 }
 
 #v2-trade-btn .v2-pill-icon.is-trade {
@@ -5130,15 +5155,37 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 #v2-trade-btn.is-running {
+  border-color: var(--pink-hot);
+  animation-duration: 3.6s;
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.28), transparent 36%),
+    radial-gradient(circle at 50% 42%, rgba(var(--pink-hot-rgb), 0.4), transparent 58%),
     linear-gradient(160deg, var(--pink-hot), var(--pink-deep) 55%, var(--pink-dark));
-  border-color: rgba(255, 255, 255, 0.5);
   box-shadow:
     0 0 0 1px rgba(var(--pink-hot-rgb), 0.55),
     0 0 28px rgba(var(--pink-rgb), 0.8),
+    0 0 48px rgba(var(--pink-hot-rgb), 0.45),
     0 6px 16px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 0 16px rgba(var(--pink-rgb), 0.18);
+}
+
+#v2-trade-btn.is-running .stop-particle {
+  --p-opacity: 0.95;
+  animation-duration: calc(var(--p-dur, 5.5s) * 0.72);
+  box-shadow:
+    0 0 8px rgba(var(--pink-rgb), 1),
+    0 0 16px rgba(var(--pink-hot-rgb), 0.7);
+}
+
+#v2-trade-btn.is-running .stop-core-glow {
+  animation-duration: 2.8s;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(var(--pink-soft-rgb), 0.4) 0%,
+    rgba(var(--pink-rgb), 0.18) 42%,
+    transparent 72%
+  );
 }
 
 .v2-powered-by {

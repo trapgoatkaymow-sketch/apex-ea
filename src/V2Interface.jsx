@@ -8,11 +8,13 @@ import {
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
-import { useApp } from "./store.jsx";
+import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import TopBar from "./TopBar.jsx";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import V2ScannerPaywall from "./V2ScannerPaywall.jsx";
+
+const START_PARTICLE_COUNT = isNativeApp() ? 6 : 18;
 
 export default function V2Interface() {
   const {
@@ -171,6 +173,12 @@ export default function V2Interface() {
                   showToast(next ? `${activeBot?.name || "Bot"} started` : "Bot stopped");
                 }}
               >
+                <span className="stop-energy" aria-hidden="true">
+                  {Array.from({ length: START_PARTICLE_COUNT }, (_, i) => (
+                    <span key={i} className={`stop-particle stop-particle-${i + 1}`} />
+                  ))}
+                </span>
+                <span className="stop-core-glow" aria-hidden="true" />
                 <span className="v2-pill-icon is-trade" aria-hidden="true">
                   {v2Running ? (
                     <svg viewBox="0 0 24 24" fill="currentColor">
