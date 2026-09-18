@@ -3,6 +3,10 @@ import BotAvatar from "./BotAvatar.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
+  MIN_EXECUTE_CONFIDENCE,
+  RECOMMENDED_SCAN_TIMEFRAME,
+  SCANNER_STRATEGY_NAME,
+  SCANNER_STRATEGY_RULES,
   TRADE_ENGINE_STEPS,
   analyzeChartImage,
   detectSymbolFromChart,
@@ -73,8 +77,9 @@ function buildTpThreads({ tradeCount, lot, signal }) {
 }
 
 function clampTrades(value) {
+  // Capital Guard: keep concurrency lower so multi-TP spam can't blow accounts.
   const n = Math.floor(Number(value) || 1);
-  return Math.min(20, Math.max(1, n));
+  return Math.min(6, Math.max(1, n));
 }
 
 /** Normalize lot only when saving / trading — not while the user is typing. */
@@ -484,6 +489,14 @@ export default function ChartScanner({ variant = "default", active = true }) {
       showToast("Setup is missing TP1/TP2/TP3");
       return;
     }
+    const confidence = Math.round(Number(signal.confidence) || 0);
+    const minConf = Number(signal.minExecuteConfidence) || MIN_EXECUTE_CONFIDENCE;
+    if (signal.executeReady === false || confidence < minConf) {
+      showToast(
+        `Capital Guard blocked this trade — confidence ${confidence}% is below ${minConf}%. Use a clearer ${RECOMMENDED_SCAN_TIMEFRAME} chart.`
+      );
+      return;
+    }
     if (!connected) {
       showToast("Connect a trading account to execute trades");
       setZetaView("metatrader");
@@ -685,7 +698,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <div className="cs-head-main">
           <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
           <h2 className="cs-title">Chart Scanner</h2>
-          <p className="cs-tagline">Scan · Analyze · Trade Smarter</p>
+          <p className="cs-tagline">Capital Guard · Best TF {RECOMMENDED_SCAN_TIMEFRAME}</p>
         </div>
         <div className="cs-head-meta">
           <button
@@ -884,6 +897,20 @@ export default function ChartScanner({ variant = "default", active = true }) {
           hidden
           onChange={onFile}
         />
+      </div>
+
+      <div className="cs-strategy-card" role="note">
+        <p className="cs-strategy-kicker">{SCANNER_STRATEGY_NAME}</p>
+        <strong>Best timeframe: {RECOMMENDED_SCAN_TIMEFRAME}</strong>
+        <span>
+          Also good: H4 · Avoid M1–M5. Trend pullbacks only, structural stops, execute at{" "}
+          {MIN_EXECUTE_CONFIDENCE}%+ confidence.
+        </span>
+        <ul className="cs-strategy-rules">
+          {SCANNER_STRATEGY_RULES.slice(0, 3).map((rule) => (
+            <li key={rule}>{rule}</li>
+          ))}
+        </ul>
       </div>
 
       <div className={`cs-engine${engineActive ? " is-open" : ""}`} aria-live="polite">
@@ -1127,25 +1154,44 @@ export default function ChartScanner({ variant = "default", active = true }) {
           className="cs-run-btn"
           type="button"
           onClick={executeTrade}
-          disabled={busy || !connected}
+          disabled={
+            busy ||
+            !connected ||
+            signal?.executeReady === false ||
+            Math.round(Number(signal?.confidence) || 0) <
+              (Number(signal?.minExecuteConfidence) || MIN_EXECUTE_CONFIDENCE)
+          }
         >
           {busy && engineMode === "trading"
             ? "Sending to MetaTrader…"
             : !connected
               ? "Connect MT5 to Execute"
-              : "Execute Trade"}
+              : signal?.executeReady === false ||
+                  Math.round(Number(signal?.confidence) || 0) <
+                    (Number(signal?.minExecuteConfidence) || MIN_EXECUTE_CONFIDENCE)
+                ? `Need ${signal?.minExecuteConfidence || MIN_EXECUTE_CONFIDENCE}%+ confidence`
+                : "Execute Trade"}
         </button>
       )}
 
       {setupReady && !engineActive ? (
         <div className={`cs-result cs-result--${String(signal.side).toLowerCase()}`}>
-          <p className="cs-result-kicker">Trade Signal</p>
+          <p className="cs-result-kicker">
+            {signal.strategy || SCANNER_STRATEGY_NAME} Signal
+          </p>
           <strong>
             {signal.side} {signal.symbol}
           </strong>
           <span className="cs-result-meta">
-            Confidence {signal.confidence}% · {signal.timeframe || "M15"}
+            Confidence {signal.confidence}% · TF {signal.timeframe || RECOMMENDED_SCAN_TIMEFRAME} ·
+            Best {signal.recommendedTimeframe || RECOMMENDED_SCAN_TIMEFRAME}
           </span>
+          {signal.executeReady === false ? (
+            <span className="cs-setup-warn">
+              Confidence too low to execute — scan a clearer{" "}
+              {signal.recommendedTimeframe || RECOMMENDED_SCAN_TIMEFRAME} chart.
+            </span>
+          ) : null}
 
           <div className="cs-setup-grid">
             <span>
@@ -1175,9 +1221,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
           </div>
 
           <span className="cs-setup-analysis">
-            {signal.analysis || signal.reasons?.[0] || "Setup from chart structure"}
+            {signal.analysis || signal.reasons?.[0] || "Capital Guard setup from chart structure"}
           </span>
-          <span className="cs-setup-plan">TP targets · 1:1 · 1:2 · 1:3</span>
+          <span className="cs-setup-plan">
+            Capital Guard · structural SL · TP 1:1 · 1:2 · 1:3
+          </span>
 
           {fills.length ? (
             <span>
