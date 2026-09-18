@@ -7063,6 +7063,59 @@ html:has(.phone[data-interface="v2"]) body {
   box-shadow: none;
 }
 
+.cs-strategy-card {
+  display: grid;
+  gap: 6px;
+  margin: 10px 14px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  text-align: left;
+  background: color-mix(in srgb, #0a0a0f 78%, var(--pink) 14%);
+  border: 1px solid rgba(var(--pink-rgb), 0.45);
+  box-shadow: 0 0 18px rgba(var(--pink-rgb), 0.18);
+}
+
+.cs-strategy-kicker {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pink) 75%, #fff);
+}
+
+.cs-strategy-card strong {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.cs-strategy-card > span {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.cs-strategy-rules {
+  margin: 2px 0 0;
+  padding: 0 0 0 16px;
+  display: grid;
+  gap: 3px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.cs-setup-warn {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 170, 40, 0.14);
+  border: 1px solid rgba(255, 170, 40, 0.45);
+  color: #ffd38a;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .cs-result {
   display: grid;
   gap: 8px;
@@ -8410,6 +8463,11 @@ html:has(.phone[data-interface="v2"]) body {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 45, 122, 0.22);
   color: #fff;
+}
+
+.view-scanner.cs-v2 .cs-strategy-card {
+  background: color-mix(in srgb, #000 72%, var(--pink) 16%);
+  border-color: rgba(var(--pink-rgb), 0.55);
 }
 
 .view-scanner.cs-v2 .cs-result-kicker,

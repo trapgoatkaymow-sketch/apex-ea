@@ -15,6 +15,18 @@ export const CHART_DETECTION_STATUS = {
   SETUP_READY: "setup_ready",
 };
 
+/** Best client timeframe for Capital Guard (also good: H4). Avoid M1–M5. */
+export const RECOMMENDED_SCAN_TIMEFRAME = "H1";
+export const MIN_EXECUTE_CONFIDENCE = 70;
+export const SCANNER_STRATEGY_NAME = "Capital Guard";
+export const SCANNER_STRATEGY_RULES = [
+  "Trade with the higher-timeframe trend only",
+  "Enter on pullbacks into support/resistance — not mid-range spikes",
+  "Use structural stops beyond the last swing (no tight scalp SL)",
+  `Best timeframe: ${RECOMMENDED_SCAN_TIMEFRAME} (also good: H4). Avoid M1–M5`,
+  `Execute only when confidence ≥ ${MIN_EXECUTE_CONFIDENCE}%`,
+];
+
 export const CHART_DETECTION_MESSAGES = {
   no_chart: {
     message: "No trading chart detected",
@@ -57,6 +69,30 @@ function formatRiskReward(entry, stopLoss, takeProfit) {
   return `1:${(reward / risk).toFixed(1)}`;
 }
 
+function minStructuralRisk(entry) {
+  const e = Math.abs(toFiniteNumber(entry) || 1);
+  if (e >= 1000) return Math.max(e * 0.004, 8);
+  if (e >= 100) return Math.max(e * 0.0045, 1.8);
+  if (e >= 10) return Math.max(e * 0.005, 0.12);
+  return Math.max(e * 0.006, 0.004);
+}
+
+function normalizeTimeframe(raw) {
+  const tf = String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .replace(/^1H$/, "H1")
+    .replace(/^4H$/, "H4")
+    .replace(/^15M$/, "M15")
+    .replace(/^30M$/, "M30");
+  if (["M1", "M5", "1M", "5M", "M2", "M3"].includes(tf)) {
+    return RECOMMENDED_SCAN_TIMEFRAME;
+  }
+  if (["M15", "M30", "H1", "H4", "D1"].includes(tf)) return tf;
+  return RECOMMENDED_SCAN_TIMEFRAME;
+}
+
 /**
  * Always produce Entry, SL, TP1, TP2, TP3 with fixed R:R targets.
  * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
@@ -69,15 +105,14 @@ function ensureCompleteSetup(partial = {}) {
   let stopLoss = toFiniteNumber(partial.stopLoss);
 
   if (entry == null) entry = 1;
-  const magnitude = Math.max(
-    Math.abs(entry) * 0.0025,
-    entry >= 1000 ? 3 : entry >= 100 ? 1 : entry >= 10 ? 0.05 : 0.0015
-  );
+  const magnitude = minStructuralRisk(entry);
 
   if (side === "BUY") {
     if (stopLoss == null || !(stopLoss < entry)) stopLoss = entry - magnitude;
-  } else if (stopLoss == null || !(stopLoss > entry)) {
-    stopLoss = entry + magnitude;
+    if (Math.abs(entry - stopLoss) < magnitude) stopLoss = entry - magnitude;
+  } else {
+    if (stopLoss == null || !(stopLoss > entry)) stopLoss = entry + magnitude;
+    if (Math.abs(entry - stopLoss) < magnitude) stopLoss = entry + magnitude;
   }
 
   const risk = Math.abs(entry - stopLoss);
@@ -100,18 +135,28 @@ function ensureCompleteSetup(partial = {}) {
   takeProfit2 = formatPrice(takeProfit2);
   takeProfit3 = formatPrice(takeProfit3);
 
+  const timeframe = normalizeTimeframe(partial.timeframe);
+  const confidence = Math.max(
+    55,
+    Math.min(92, Math.round(Number(partial.confidence) || 68))
+  );
+  const executeReady =
+    partial.executeReady != null
+      ? Boolean(partial.executeReady)
+      : confidence >= MIN_EXECUTE_CONFIDENCE;
+
   const analysis =
     String(partial.analysis || "").trim() ||
     (side === "BUY"
-      ? "Bullish structure supports a BUY setup toward higher resistance"
-      : "Bearish structure supports a SELL setup toward lower support");
+      ? `Capital Guard BUY · ${timeframe} trend pullback into support`
+      : `Capital Guard SELL · ${timeframe} trend pullback into resistance`);
 
   return {
     ...partial,
     status: CHART_DETECTION_STATUS.SETUP_READY,
     isChart: true,
     side,
-    confidence: Math.max(55, Math.min(95, Math.round(Number(partial.confidence) || 70))),
+    confidence,
     entry,
     stopLoss,
     takeProfit1,
@@ -119,7 +164,14 @@ function ensureCompleteSetup(partial = {}) {
     takeProfit3,
     takeProfit: takeProfit3,
     riskReward: "1:1 · 1:2 · 1:3",
-    timeframe: String(partial.timeframe || "M15").trim().toUpperCase() || "M15",
+    timeframe,
+    recommendedTimeframe: RECOMMENDED_SCAN_TIMEFRAME,
+    strategy: SCANNER_STRATEGY_NAME,
+    strategyRules: Array.isArray(partial.strategyRules) && partial.strategyRules.length
+      ? partial.strategyRules
+      : SCANNER_STRATEGY_RULES,
+    executeReady,
+    minExecuteConfidence: MIN_EXECUTE_CONFIDENCE,
     analysis,
     reasons: Array.isArray(partial.reasons) && partial.reasons.length
       ? partial.reasons
@@ -377,12 +429,12 @@ export const CONNECT_ENGINE_STEPS = [
 ];
 
 export const TRADE_ENGINE_STEPS = [
-  { id: "load", label: "Loading chart into trading engine" },
-  { id: "structure", label: "Reading market structure" },
-  { id: "bias", label: "Detecting directional bias" },
-  { id: "signal", label: "Building entry signal" },
-  { id: "levels", label: "Calculating entry, SL, TP1, TP2 and TP3" },
-  { id: "ready", label: "Trade setup ready" },
+  { id: "load", label: "Loading chart into Capital Guard" },
+  { id: "structure", label: "Reading higher-timeframe structure" },
+  { id: "bias", label: "Confirming trend bias (no counter-trend scalp)" },
+  { id: "signal", label: "Building pullback entry signal" },
+  { id: "levels", label: "Structural SL · TP1 1:1 · TP2 1:2 · TP3 1:3" },
+  { id: "ready", label: `Setup ready · best TF ${RECOMMENDED_SCAN_TIMEFRAME}` },
 ];
 
 export const EXECUTE_ENGINE_STEPS = [
