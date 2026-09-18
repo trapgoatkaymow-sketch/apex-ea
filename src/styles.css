@@ -5193,6 +5193,7 @@ html:has(.phone[data-interface="v2"]) body {
 .v2-robot-list {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
   width: 100%;
 }
@@ -5200,18 +5201,20 @@ html:has(.phone[data-interface="v2"]) body {
 .v2-robot-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 100%;
+  gap: 6px;
+  width: 96px;
+  max-width: 96px;
   box-sizing: border-box;
-  padding: 8px 18px 8px 8px;
-  min-height: 56px;
-  border-radius: 999px;
+  padding: 8px 10px;
+  min-height: 43px;
+  height: 43px;
+  border-radius: 12px;
   background: var(--pink);
   color: #fff;
   border: 0;
   box-shadow: 0 8px 18px rgba(var(--pink-rgb), 0.28);
   text-align: left;
+  overflow: hidden;
   transition: transform 0.15s ease, filter 0.15s ease, background 0.2s ease,
     box-shadow 0.2s ease;
 }
@@ -5225,44 +5228,49 @@ html:has(.phone[data-interface="v2"]) body {
   filter: brightness(1.05);
   box-shadow:
     0 8px 18px rgba(var(--pink-rgb), 0.32),
-    0 0 0 2px rgba(255, 255, 255, 0.28);
+    0 0 0 1.5px rgba(255, 255, 255, 0.28);
 }
 
 .v2-robot-row img {
-  width: 40px;
-  height: 40px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   object-fit: cover;
   background: #1a0610;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1.5px rgba(var(--pink-soft-rgb), 0.9);
+  box-shadow: 0 0 0 1px rgba(var(--pink-soft-rgb), 0.9);
 }
 
 .v2-robot-row > span {
   font-family: var(--font-v2);
-  font-size: 0.92rem;
-  letter-spacing: 0.03em;
+  font-size: 10px;
+  letter-spacing: 0.02em;
   font-weight: 700;
-  text-transform: uppercase;
-  line-height: 1.15;
+  text-transform: none;
+  line-height: 1.25;
   color: #fff;
   text-shadow: none;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .v2-robot-add > span:not(.v2-robot-add-icon) {
   text-transform: none;
-  letter-spacing: 0.01em;
-  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  font-size: 10px;
 }
 
 .v2-robot-add-icon {
-  width: 40px;
-  height: 40px;
+  width: 18px;
+  height: 18px;
   border-radius: 0;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  font-size: 1.7rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
   color: #fff;
