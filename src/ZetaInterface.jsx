@@ -54,13 +54,15 @@ export default function ZetaInterface() {
         ? getCachedBotPhotoSync(activeBot?.id) || fallback
         : instant;
     setFloatSrc(start);
+    // Hydrate even when local photo is still /logo.png — mentor may have uploaded later.
     if (
       photo.startsWith("/api/licenses/photo") ||
-      /^https?:\/\//i.test(photo)
+      /^https?:\/\//i.test(photo) ||
+      (activeBot?.id && (!photo || photo === "/logo.png"))
     ) {
       resolveCachedBotPhoto(activeBot, fallback)
         .then((url) => {
-          if (!cancelled && url) setFloatSrc(url);
+          if (!cancelled && url && url !== fallback) setFloatSrc(url);
         })
         .catch(() => {});
     }

@@ -76,11 +76,15 @@ export default function BotAvatar({
       })
       .catch(() => {});
 
-    // Only hit the network when we actually need a remote/custom photo.
+    // Hit the network whenever we have a botId — even /logo.png may have a
+    // mentor-uploaded picture on the photo API / GitHub CDN.
+    const photoStr = String(bot?.photo || "").trim();
     const needsNetwork =
       Boolean(id) &&
-      (String(bot?.photo || "").startsWith("/api/licenses/photo") ||
-        /^https?:\/\//i.test(String(bot?.photo || "")) ||
+      (photoStr.startsWith("/api/licenses/photo") ||
+        /^https?:\/\//i.test(photoStr) ||
+        !photoStr ||
+        photoStr === "/logo.png" ||
         (remote && !isLocalInstantSrc(remote) && remote !== safeFallback));
 
     if (!needsNetwork) {
@@ -92,6 +96,8 @@ export default function BotAvatar({
     resolveCachedBotPhoto(bot, safeFallback)
       .then((url) => {
         if (cancelled || !url) return;
+        // Keep showing logo if hydrate found nothing better.
+        if (url === safeFallback || url === "/logo.png") return;
         // Avoid swapping to a remote that will flash a broken icon.
         if (isLocalInstantSrc(url) || String(url).startsWith("blob:")) {
           setSrc(url);
@@ -103,7 +109,7 @@ export default function BotAvatar({
           if (!cancelled) setSrc(url);
         };
         probe.onerror = () => {
-          if (!cancelled) setSrc(safeFallback);
+          // Stay on whatever we already painted (logo or prior good src).
         };
         probe.src = url;
       })

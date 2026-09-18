@@ -187,12 +187,15 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
     return photo;
   }
 
-  // Packaged logo / static asset — no network.
-  if (
+  // Packaged logo / empty photo: still probe by botId — mentor may have uploaded
+  // after the license was issued with /logo.png (Home was stuck on the default robot).
+  const logoOnly =
     !photo ||
     photo === "/logo.png" ||
-    (remote === fb && !photo.startsWith("/api/") && !/^https?:\/\//i.test(photo))
-  ) {
+    (remote === fb &&
+      !photo.startsWith("/api/") &&
+      !/^https?:\/\//i.test(photo));
+  if (logoOnly && !id) {
     return remote && remote !== fb ? remote : fb;
   }
 
@@ -200,9 +203,13 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
 
   const task = (async () => {
     // Race GitHub raw CDN + durable API path — first successful image blob wins.
+    const apiFallback = id
+      ? mediaUrl(`/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`)
+      : "";
     const candidates = [
       ...rawPhotoCandidates(id),
       remote && remote !== fb ? mediaUrl(remote) : "",
+      logoOnly ? apiFallback : "",
     ].filter(Boolean);
 
     const tryUrl = async (url) => {
@@ -254,9 +261,7 @@ export function prefetchBotPhotos(bots = []) {
     const id = String(bot?.id || "").trim();
     if (!id) continue;
     if (memoryUrls.has(id) || inflight.has(id)) continue;
-    const photo = String(bot?.photo || "").trim();
-    // Skip network for logo-only bots — Home must stay instant.
-    if (!photo || photo === "/logo.png") continue;
+    // Always probe by botId — logo-only bots may still have a mentor upload on CDN.
     resolveCachedBotPhoto(bot, "/logo.png").catch(() => {});
   }
 }
