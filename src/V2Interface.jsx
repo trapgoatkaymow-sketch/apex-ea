@@ -212,8 +212,8 @@ export default function V2Interface() {
                     >
                       <BotAvatar
                         bot={bot}
-                        width="40"
-                        height="40"
+                        width="18"
+                        height="18"
                         fallback="/logo.png"
                       />
                       <span>{bot.name}</span>
