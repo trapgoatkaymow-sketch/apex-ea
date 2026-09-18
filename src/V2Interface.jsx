@@ -50,28 +50,12 @@ export default function V2Interface() {
   const [trades, setTrades] = useState(1);
   const [floatCycle, setFloatCycle] = useState(false);
   const [floatSrc, setFloatSrc] = useState(
-    () =>
-      getCachedBotPhotoSync(activeBot?.id) ||
-      resolveBotPhotoSrc(activeBot, "/logo.png")
+    () => resolveBotPhotoSrc(activeBot, "/logo.png")
   );
 
   useEffect(() => {
-    let cancelled = false;
-    const fallback = "/logo.png";
-    const preferred =
-      getCachedBotPhotoSync(activeBot?.id) ||
-      resolveBotPhotoSrc(activeBot, fallback);
-    setFloatSrc(preferred);
-    if (activeBot?.id) {
-      resolveCachedBotPhoto(activeBot, fallback)
-        .then((url) => {
-          if (!cancelled && url && url !== fallback) setFloatSrc(url);
-        })
-        .catch(() => {});
-    }
-    return () => {
-      cancelled = true;
-    };
+    // Stable URL only — no blob-cache swaps (those made the float photo flicker).
+    setFloatSrc(resolveBotPhotoSrc(activeBot, "/logo.png"));
   }, [activeBot?.id, activeBot?.photo]);
 
   const allowed = catalog.filter((s) => appSymbols.has(s));

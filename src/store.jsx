@@ -1102,60 +1102,39 @@ export function AppProvider({ children }) {
   }, [refreshLicenses]);
 
   // If mentor uploaded a photo after the license was issued (still /logo.png on
-  // the key), upgrade local bots/EAs when the photo API starts serving bytes.
-  // Never snap a real API path back to /logo.png on a flaky probe — that left
-  // Home stuck on the default robot even when Mentor Portal showed the picture.
+  // the key), upgrade local bots/EAs once when the photo API serves bytes.
+  // Do not keep rewriting photo URLs (that re-mounted avatars and made pictures
+  // flicker / disappear).
   useEffect(() => {
     const botId = String(activeBot?.id || "").trim();
     const photo = String(activeBot?.photo || "").trim();
     if (!botId) return undefined;
-    // Always pin logo-only bots onto the durable API path when bytes exist.
-    // Also re-check bots that already have an API path so a late upload sticks.
+    if (isRealProfilePhoto(photo)) return undefined;
+
     let cancelled = false;
-    const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`;
-    void fetch(mediaUrl(`${apiPath}&_=${Date.now()}`), {
-      method: "GET",
-      cache: "no-store",
-    })
+    const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=hq`;
+    void fetch(mediaUrl(apiPath), { method: "GET", cache: "no-store" })
       .then(async (response) => {
         if (cancelled) return;
         const type = String(response.headers.get("content-type") || "");
-        const okImage = response.ok && type.startsWith("image/");
-        if (!okImage) return;
-        const nextPhoto = apiPath;
+        if (!(response.ok && type.startsWith("image/"))) return;
         setBots((prev) =>
           prev.map((bot) =>
-            bot.id === botId && String(bot.photo || "").trim() !== nextPhoto
-              ? { ...bot, photo: nextPhoto }
+            bot.id === botId && !isRealProfilePhoto(bot.photo)
+              ? { ...bot, photo: apiPath }
               : bot
           )
         );
         setEas((prev) =>
           prev.map((ea) =>
-            ea.id === botId && String(ea.photo || "").trim() !== nextPhoto
-              ? { ...ea, photo: nextPhoto }
+            ea.id === botId && !isRealProfilePhoto(ea.photo)
+              ? { ...ea, photo: apiPath }
               : ea
           )
         );
       })
       .catch(() => {});
-    // Optimistic: if still on logo, point at the API path immediately so <img> loads it.
-    if (!isRealProfilePhoto(photo)) {
-      setBots((prev) =>
-        prev.map((bot) =>
-          bot.id === botId && !isRealProfilePhoto(bot.photo)
-            ? { ...bot, photo: apiPath }
-            : bot
-        )
-      );
-      setEas((prev) =>
-        prev.map((ea) =>
-          ea.id === botId && !isRealProfilePhoto(ea.photo)
-            ? { ...ea, photo: apiPath }
-            : ea
-        )
-      );
-    }
+
     return () => {
       cancelled = true;
     };
