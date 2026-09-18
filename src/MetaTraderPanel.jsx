@@ -66,12 +66,6 @@ function formatMoney(value, currency = "USD") {
   }
 }
 
-function profitTone(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount === 0) return "";
-  return amount > 0 ? " is-profit" : " is-loss";
-}
-
 export default function MetaTraderPanel({ variant = "zeta" }) {
   const {
     showToast,
@@ -214,7 +208,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     };
   }, []);
 
-  // Keep connected session fresh and pull live balance / floating profit.
+  // Keep connected session fresh and pull live balance.
   useEffect(() => {
     if (!session?.accountId) {
       setAccountMetrics(null);
