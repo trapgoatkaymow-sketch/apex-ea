@@ -2,19 +2,26 @@
  * Shared durable JSON document store for serverless.
  *
  * Priority for reads:
- *  1) Vercel Blob (BLOB_READ_WRITE_TOKEN) — shared across all instances
- *  2) GitHub Contents API (SIGNUPS_GITHUB_TOKEN / FALLBACK)
- *  3) GitHub raw CDN (when Contents API is rate-limited)
- *  4) Env snapshot (e.g. LICENSES_SNAPSHOT_B64) — read-only seed
- *  5) /tmp + in-memory — per-instance only
+ *  1) Firebase Realtime Database (FIREBASE_DATABASE_URL + service account)
+ *  2) Vercel Blob (BLOB_READ_WRITE_TOKEN) — shared across all instances
+ *  3) GitHub Contents API (SIGNUPS_GITHUB_TOKEN / FALLBACK)
+ *  4) GitHub raw CDN (when Contents API is rate-limited)
+ *  5) Env snapshot (e.g. LICENSES_SNAPSHOT_B64) — read-only seed
+ *  6) /tmp + in-memory — per-instance only
  *
- * Writes: Blob → GitHub Contents API → isomorphic-git push (bypasses REST rate limits).
+ * Writes: Firebase → Blob → GitHub Contents API → isomorphic-git push.
  */
 
 import fs from "fs";
 import path from "path";
 import os from "os";
 import { FALLBACK_GITHUB_TOKEN } from "./signups/_githubToken.js";
+import {
+  firebaseConfigured,
+  firebaseGet,
+  firebasePut,
+  toFirebasePath,
+} from "./_firebaseRtdb.js";
 
 const BLOB_API = "https://blob.vercel-storage.com";
 
@@ -496,9 +503,29 @@ function writeLocalFile(filePath, raw) {
   }
 }
 
+/** Seed Firebase from Blob/GitHub on first read so rollout fills RTDB automatically. */
+async function seedFirebaseFrom(result, rtdbPath) {
+  if (
+    !result ||
+    result.raw == null ||
+    !rtdbPath ||
+    !firebaseConfigured() ||
+    result.source === "firebase"
+  ) {
+    return result;
+  }
+  try {
+    await firebasePut(rtdbPath, result.raw);
+  } catch {
+    // best-effort
+  }
+  return result;
+}
+
 /**
  * @param {object} opts
  * @param {string} opts.blobPath - Vercel Blob pathname (e.g. apexea/mt5-accounts.json)
+ * @param {string} [opts.firebasePath] - RTDB path (defaults from blobPath/githubPath)
  * @param {string} [opts.githubRepo]
  * @param {string} [opts.githubBranch]
  * @param {string} [opts.githubPath]
@@ -509,6 +536,7 @@ function writeLocalFile(filePath, raw) {
 export async function durableRead(opts = {}) {
   const {
     blobPath,
+    firebasePath,
     githubRepo =
       process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea",
     githubBranch = process.env.SIGNUPS_GITHUB_BRANCH || "main",
@@ -517,6 +545,19 @@ export async function durableRead(opts = {}) {
     localPaths = [],
   } = opts;
 
+  const rtdbPath =
+    firebasePath ||
+    toFirebasePath(blobPath || githubPath || "") ||
+    "";
+
+  // 1) Firebase Realtime Database — primary shared store when configured.
+  if (rtdbPath && firebaseConfigured()) {
+    const fb = await firebaseGet(rtdbPath);
+    if (fb && !fb.missing && fb.raw != null) {
+      return { raw: fb.raw, sha: fb.etag || null, source: "firebase" };
+    }
+  }
+
   const blob = blobPath ? await blobGet(blobPath) : null;
   // Licenses: GitHub is source of truth, but Blob may hold keys written during
   // GitHub outages — merge so Generate → Unlock never misses a fresh key.
@@ -524,7 +565,10 @@ export async function durableRead(opts = {}) {
     String(githubPath || blobPath || "")
   );
   if (blob && !blob.missing && blob.raw != null && !licensesViaGit) {
-    return { raw: blob.raw, sha: blob.etag, source: "blob" };
+    return seedFirebaseFrom(
+      { raw: blob.raw, sha: blob.etag, source: "blob" },
+      rtdbPath
+    );
   }
 
   if (githubPath) {
@@ -602,29 +646,47 @@ export async function durableRead(opts = {}) {
           githubResult.raw,
           "license read merge"
         );
-        return {
-          raw: merged,
-          sha: githubResult.sha,
-          source: `${githubResult.source}+blob`,
-        };
+        return seedFirebaseFrom(
+          {
+            raw: merged,
+            sha: githubResult.sha,
+            source: `${githubResult.source}+blob`,
+          },
+          rtdbPath
+        );
       } catch {
         // fall through to github-only
       }
     }
-    if (githubResult?.raw != null) return githubResult;
+    if (githubResult?.raw != null) {
+      return seedFirebaseFrom(githubResult, rtdbPath);
+    }
     if (licensesViaGit && blob && !blob.missing && blob.raw != null) {
-      return { raw: blob.raw, sha: blob.etag, source: "blob" };
+      return seedFirebaseFrom(
+        { raw: blob.raw, sha: blob.etag, source: "blob" },
+        rtdbPath
+      );
     }
   }
 
   if (snapshotEnv) {
     const snap = readEnvSnapshot(snapshotEnv);
-    if (snap != null) return { raw: snap, sha: null, source: "snapshot" };
+    if (snap != null) {
+      return seedFirebaseFrom(
+        { raw: snap, sha: null, source: "snapshot" },
+        rtdbPath
+      );
+    }
   }
 
   for (const file of localPaths) {
     const local = readLocalFile(file);
-    if (local != null) return { raw: local, sha: "local", source: "local" };
+    if (local != null) {
+      return seedFirebaseFrom(
+        { raw: local, sha: "local", source: "local" },
+        rtdbPath
+      );
+    }
   }
 
   return { raw: null, sha: null, source: "empty" };
@@ -637,6 +699,7 @@ export async function durableWrite(opts = {}) {
   const {
     raw,
     blobPath,
+    firebasePath,
     githubRepo =
       process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea",
     githubBranch = process.env.SIGNUPS_GITHUB_BRANCH || "main",
@@ -648,6 +711,21 @@ export async function durableWrite(opts = {}) {
 
   const body = String(raw ?? "");
   for (const file of localPaths) writeLocalFile(file, body);
+
+  const rtdbPath =
+    firebasePath ||
+    toFirebasePath(blobPath || githubPath || "") ||
+    "";
+
+  // 1) Firebase first when configured — true shared database.
+  if (rtdbPath && firebaseConfigured()) {
+    const put = await firebasePut(rtdbPath, body);
+    if (put.ok) {
+      // Best-effort mirrors so cold Blob/GitHub reads still work during rollout.
+      if (blobPath) await blobPut(blobPath, body);
+      return { ok: true, durable: true, source: "firebase" };
+    }
+  }
 
   const licensesViaGit = /licenses\.json$/i.test(
     String(githubPath || blobPath || "")

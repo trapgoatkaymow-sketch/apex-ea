@@ -3,11 +3,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
 import { applyCorsHeaders } from "../_cors.js";
+import { durableRead, durableWrite } from "../_durableJson.js";
 
 const REPO =
   process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.TRADE_EVENTS_FILE_PATH || "data/trade-events.json";
+const BLOB_PATH = process.env.TRADE_EVENTS_BLOB_PATH || "apexea/trade-events.json";
 const API = `https://api.github.com/repos/${REPO}`;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/trade-events.json");
@@ -158,14 +160,19 @@ function writeLocalStore(events) {
 
 async function readStore() {
   try {
-    const file = await ghFetch(
-      `${API}/contents/${FILE_PATH}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    const raw = Buffer.from(String(file.content || "").replace(/\n/g, ""), "base64").toString(
-      "utf8"
-    );
-    return decodeEventsJson(raw, file.sha);
+    const durable = await durableRead({
+      blobPath: BLOB_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      localPaths: [TMP_FILE, LOCAL_FILE],
+    });
+    if (!durable.raw) return { sha: null, events: [], remote: false };
+    return {
+      ...decodeEventsJson(durable.raw, durable.sha),
+      remote: durable.source !== "empty" && durable.source !== "local",
+      source: durable.source,
+    };
   } catch (error) {
     if (error.status === 404) return { sha: null, events: [], remote: true };
     return { ...readLocalStore(), remote: false };
@@ -174,20 +181,23 @@ async function readStore() {
 
 async function writeStore(events, sha, message) {
   const normalized = pruneEvents(events);
-  const content = Buffer.from(
-    JSON.stringify({ events: normalized }, null, 2) + "\n",
-    "utf8"
-  ).toString("base64");
-  const body = { message, content, branch: BRANCH };
-  if (sha && sha !== "local") body.sha = sha;
+  const raw = JSON.stringify({ events: normalized }, null, 2) + "\n";
+  memoryEvents = normalized;
   try {
-    const result = await ghFetch(`${API}/contents/${FILE_PATH}`, {
-      method: "PUT",
-      body,
+    const result = await durableWrite({
+      raw,
+      blobPath: BLOB_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      githubSha: sha && sha !== "local" ? sha : null,
+      message,
+      localPaths: [TMP_FILE, LOCAL_FILE],
     });
-    memoryEvents = normalized;
-    return result;
-  } catch (error) {
+    if (result?.ok) return result;
+    writeLocalStore(normalized);
+    return { local: true, durable: false };
+  } catch {
     writeLocalStore(normalized);
     return { local: true };
   }
