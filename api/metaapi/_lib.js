@@ -818,18 +818,56 @@ function candidateSymbols(symbol) {
   const raw = String(symbol || "").trim();
   if (!raw) return [];
   const upper = raw.toUpperCase();
-  const base = upper.replace(/\.MIC$/i, "").replace(/^\./, "");
+  const bare = upper.replace(/^\.+/, "").replace(/\.+$/, "");
+  const base = bare.replace(/\.MIC$/i, "").replace(/\.(R|I|M)$/i, "");
   const out = [];
   const push = (v) => {
-    if (v && !out.includes(v)) out.push(v);
+    const s = String(v || "").trim();
+    if (s && !out.includes(s)) out.push(s);
   };
+
   push(upper);
+  push(bare);
+  push(base);
+  push(`.${base}`);
+  push(`.${base}.`);
+  push(`${base}.`);
   push(`${base}.mic`);
   push(`.${base}.mic`);
-  push(base);
   push(`${base}.r`);
   push(`${base}.i`);
   push(`${base}m`);
+  push(`${base}.m`);
+
+  // Common index aliases used by different brokers.
+  const indexAliases = {
+    DE30: ["DE30", "DE40", "GER40", "GER30", "GDAXI", ".DE30.", ".DE40.", ".GER40."],
+    DE40: ["DE40", "DE30", "GER40", "GER30", "GDAXI", ".DE40.", ".DE30.", ".GER40."],
+    GER40: ["GER40", "DE40", "DE30", "GER30", "GDAXI", ".GER40.", ".DE40.", ".DE30."],
+    GER30: ["GER30", "GER40", "DE30", "DE40", "GDAXI"],
+    US30: ["US30", "DJ30", "DJIA", "WS30", "US30Cash", ".US30.", ".US30Cash"],
+    NAS100: ["NAS100", "USTEC", "NDX100", "NAS100Cash", ".NAS100.", ".NAS100Cash"],
+    UK100: ["UK100", "FTSE100", "UK100Cash", ".UK100."],
+    JP225: ["JP225", "JPN225", "NI225", ".JP225."],
+  };
+  const aliases = indexAliases[base] || [];
+  for (const alias of aliases) {
+    push(alias);
+    const aliasBare = alias.replace(/^\.+/, "").replace(/\.+$/, "");
+    push(aliasBare);
+    push(`.${aliasBare}`);
+    push(`.${aliasBare}.`);
+    push(`${aliasBare}.mic`);
+    push(`.${aliasBare}.mic`);
+  }
+
+  // CFD cash / spot suffixes often attached by brokers.
+  for (const core of [base, ...aliases.map((a) => a.replace(/^\.+/, "").replace(/\.+$/, ""))]) {
+    push(`${core}Cash`);
+    push(`.${core}Cash`);
+    push(`${core}.cash`);
+  }
+
   return out;
 }
 

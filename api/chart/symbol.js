@@ -16,23 +16,33 @@ async function readJsonBody(req) {
   return JSON.parse(raw);
 }
 
-/** Normalize broker header text into a tradeable symbol token. */
+/** Normalize broker header text into a tradeable symbol token.
+ * Keeps leading/trailing broker dots (e.g. .DE30. / .US30Cash).
+ */
 function normalizeSymbol(raw) {
-  return String(raw || "")
+  let s = String(raw || "")
     .trim()
     .toUpperCase()
-    .replace(/^\.+/, "") // .US30Cash → US30CASH
     .replace(/\s+/g, "")
     .replace(/[\/_\-]/g, "")
     .replace(/[^A-Z0-9.]/g, "");
+  // Collapse accidental multi-dots but keep a single leading/trailing broker dot.
+  s = s.replace(/\.{2,}/g, ".");
+  return s;
+}
+
+function symbolBase(raw) {
+  return normalizeSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "").split(".")[0];
 }
 
 function looksLikeTradingSymbol(raw) {
   const s = normalizeSymbol(raw);
   if (!s || s.length < 2 || s.length > 32) return false;
+  const base = symbolBase(s);
+  if (!base || base.length < 2) return false;
   // Must include a letter; reject pure numbers / prices.
-  if (!/[A-Z]/.test(s)) return false;
-  return /^[A-Z][A-Z0-9.]{1,31}$/.test(s);
+  if (!/[A-Z]/.test(base)) return false;
+  return /^\.?[A-Z][A-Z0-9.]*\.?$/.test(s);
 }
 
 function requireOpenAiKey() {
@@ -79,26 +89,19 @@ function buildSymbolUnclearResult(chartConfidence = 0, suggestedSymbol = null) {
   };
 }
 
-/**
- * Keep the OCR'd header as the source of truth.
- * Catalog only remaps when the base name matches exactly (e.g. EURUSD → EURUSD.m).
- */
 function resolveCatalogSymbol(symbol, catalog = []) {
   const normalized = normalizeSymbol(symbol);
   if (!normalized) return "";
-  const base = normalized.split(".")[0];
+  const base = symbolBase(normalized);
   const list = Array.isArray(catalog) ? catalog : [];
   const exact = list.find((item) => normalizeSymbol(item) === normalized);
   if (exact) return normalizeSymbol(exact);
-  const baseHit = list.find((item) => {
-    const n = normalizeSymbol(item);
-    return n === base || n.split(".")[0] === base;
-  });
-  // Only adopt catalog form when OCR base equals catalog base (not a longer CFD name).
+  // Prefer keeping the OCR'd broker form (.DE30.) over a plain catalog alias.
+  if (/^\./.test(normalized) || /\.$/.test(normalized)) return normalized;
+  const baseHit = list.find((item) => symbolBase(item) === base);
   if (baseHit) {
     const catalogNorm = normalizeSymbol(baseHit);
-    const catalogBase = catalogNorm.split(".")[0];
-    if (catalogBase === base) return catalogNorm;
+    if (symbolBase(catalogNorm) === base) return catalogNorm;
   }
   return normalized;
 }
@@ -192,17 +195,19 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
           role: "system",
           content:
             "You are a trading-chart OCR engine for MetaTrader, TradingView, and cTrader screenshots (phone or desktop). Return JSON only: " +
-            '{"isChart":boolean,"chartConfidence":0-100,"symbol":string|null,"symbolConfidence":0-100,"status":"no_chart"|"symbol_detected"|"symbol_unclear"}. ' +
+            '{"isChart":boolean,"chartConfidence":0-100,"symbol":string|null,"symbolConfidence":0-100,"status":"no_chart"|"symbol_detected"|"symbol_unclear","description":string|null}. ' +
             "Set isChart=true when candlesticks/bars, a price axis, and a trading-platform layout are visible — including mobile MetaTrader, " +
             "shared WhatsApp/Telegram screenshots, and nested chart previews. Candle colors may be green/red/purple/blue/any. " +
             "Do NOT treat photos of people, cars, buildings, or landscapes as charts. " +
             "If isChart=false → status=no_chart, symbol=null, symbolConfidence=0. " +
-            "If isChart=true → OCR the instrument from the chart HEADER / TITLE / TAB / SYMBOL ROW exactly as shown. " +
-            "Detect ANY shared instrument: forex pairs, metals, indices, stocks, crypto, oil, CFDs, synthetics — " +
-            "including broker-prefixed or suffixed names such as .US30Cash, US30Cash, US30, NAS100, GER40, XAUUSD, EURUSD.m, BTCUSD, AAPL. " +
-            "Strip only a leading broker dot in the symbol field (.US30Cash → US30Cash). Keep other visible letters/digits. " +
+            "If isChart=true → OCR the instrument from the chart HEADER / TITLE / TAB / SYMBOL ROW EXACTLY as shown — " +
+            "copy every character including broker dots (examples: .DE30. , .US30Cash , EURUSD.m , NAS100). " +
+            "Also read the description line under the ticker when present (e.g. 'German 40 Index', 'Wall Street 30') into description. " +
+            "Use the ticker code as symbol (not the long description). " +
+            "Detect ANY shared instrument: forex, metals, indices, stocks, crypto, oil, CFDs, synthetics. " +
+            "Do NOT strip leading/trailing broker dots. Do NOT rename .DE30. to GER40 or US30. " +
             "The catalog is NOT a multiple-choice list — never pick a popular pair just because it is listed. " +
-            "NEVER invent EURUSD/XAUUSD/BTCUSD when the header shows something else. " +
+            "NEVER invent EURUSD/XAUUSD/BTCUSD/US30 when the header shows something else. " +
             "Use symbol_unclear ONLY when header text is truly unreadable. Prefer symbol_detected whenever any instrument text is visible.",
         },
         {
@@ -211,8 +216,8 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
             {
               type: "text",
               text:
-                "Is this a trading chart screenshot? If yes, OCR-read the exact instrument symbol from the header/tab " +
-                "(any forex, index, metal, crypto, stock, or CFD name shown). Do not guess from the catalog." +
+                "Is this a trading chart screenshot? If yes, OCR-read the EXACT instrument ticker from the header/tab " +
+                "(keep broker dots like .DE30.) and the short description under it if shown. Do not guess from the catalog." +
                 (catalogHint
                   ? ` Optional exact-match catalog (mapping only, never choose blindly): ${catalogHint}.`
                   : ""),

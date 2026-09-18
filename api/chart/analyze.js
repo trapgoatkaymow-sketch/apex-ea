@@ -17,13 +17,34 @@ async function readJsonBody(req) {
 }
 
 function normalizeSymbol(raw) {
-  return String(raw || "")
+  let s = String(raw || "")
     .trim()
     .toUpperCase()
-    .replace(/^\.+/, "")
     .replace(/\s+/g, "")
     .replace(/[\/_\-]/g, "")
     .replace(/[^A-Z0-9.]/g, "");
+  s = s.replace(/\.{2,}/g, ".");
+  return s;
+}
+
+function symbolBase(raw) {
+  return normalizeSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "").split(".")[0];
+}
+
+function resolveCatalogSymbol(symbol, catalog = []) {
+  const normalized = normalizeSymbol(symbol);
+  if (!normalized) return "";
+  const base = symbolBase(normalized);
+  const list = Array.isArray(catalog) ? catalog : [];
+  const exact = list.find((item) => normalizeSymbol(item) === normalized);
+  if (exact) return normalizeSymbol(exact);
+  if (/^\./.test(normalized) || /\.$/.test(normalized)) return normalized;
+  const baseHit = list.find((item) => symbolBase(item) === base);
+  if (baseHit) {
+    const catalogNorm = normalizeSymbol(baseHit);
+    if (symbolBase(catalogNorm) === base) return catalogNorm;
+  }
+  return normalized;
 }
 
 function requireOpenAiKey() {
@@ -108,24 +129,6 @@ function ensureMultiTpLevels({ side, entry, stopLoss }) {
     takeProfit3: formatPrice(tp3),
     takeProfit: formatPrice(tp3),
   };
-}
-
-function resolveCatalogSymbol(symbol, catalog = []) {
-  const normalized = normalizeSymbol(symbol);
-  if (!normalized) return "";
-  const base = normalized.split(".")[0];
-  const list = Array.isArray(catalog) ? catalog : [];
-  const exact = list.find((item) => normalizeSymbol(item) === normalized);
-  if (exact) return normalizeSymbol(exact);
-  const baseHit = list.find((item) => {
-    const n = normalizeSymbol(item);
-    return n === base || n.split(".")[0] === base;
-  });
-  if (baseHit) {
-    const catalogNorm = normalizeSymbol(baseHit);
-    if (catalogNorm.split(".")[0] === base) return catalogNorm;
-  }
-  return normalized;
 }
 
 function buildNoChartResult() {
@@ -279,9 +282,9 @@ export async function analyzeChartSetupWithOpenAI({
             "Read entry and stop from chart structure (support/resistance, swings). " +
             "BUY must satisfy: stopLoss < entry < takeProfit1 < takeProfit2 < takeProfit3. " +
             "SELL must satisfy: stopLoss > entry > takeProfit1 > takeProfit2 > takeProfit3. " +
-            "OCR the instrument from the chart header/title/tab — ANY shared symbol " +
-            "(forex, metals, indices, stocks, crypto, oil, CFDs) including broker forms like .US30Cash / US30Cash / US30. " +
-            "Strip only a leading broker dot. Catalog is NOT multiple choice — never invent EURUSD/XAUUSD/BTCUSD. " +
+            "OCR the instrument from the chart header/title/tab EXACTLY as shown — keep broker dots " +
+            "(e.g. .DE30. , .US30Cash , US30). Also use the description line under the ticker when present. " +
+            "Do NOT rename .DE30. to GER40/US30. Catalog is NOT multiple choice — never invent EURUSD/XAUUSD/BTCUSD. " +
             "If a symbol hint is provided and it matches the chart, keep it; otherwise prefer the visible header text. " +
             "If the setup is imperfect, still choose the strongest available BUY or SELL and compute reasonable multi-TP levels. " +
             "Do not omit Entry, SL, TP1, TP2, or TP3 for a valid chart.",
