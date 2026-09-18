@@ -819,7 +819,10 @@ function candidateSymbols(symbol) {
   if (!raw) return [];
   const upper = raw.toUpperCase();
   const bare = upper.replace(/^\.+/, "").replace(/\.+$/, "");
-  const base = bare.replace(/\.MIC$/i, "").replace(/\.(R|I|M)$/i, "");
+  const base = bare
+    .replace(/\.MIC$/i, "")
+    .replace(/\.(R|I|M)$/i, "")
+    .replace(/CASH$/i, "");
   const out = [];
   const push = (v) => {
     const s = String(v || "").trim();
