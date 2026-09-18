@@ -937,7 +937,23 @@ async function readStore(options = {}) {
 
 async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKeys) {
   const nextDeleted = normalizeDeletedKeys(deletedKeys);
-  const normalized = withoutDeletedLicenses(mergeLicenseLists(licenses), nextDeleted);
+  // Drop embedded data-URL photos so licenses.json stays under Contents API
+  // size limits and git pushes stay fast on Vercel.
+  const compact = (Array.isArray(licenses) ? licenses : []).map((row) => {
+    const botId = String(row?.botId || row?.bot?.id || "").trim();
+    const photo = String(row?.bot?.photo || "").trim();
+    if (!row?.bot || !photo.startsWith("data:image/")) return row;
+    return {
+      ...row,
+      bot: {
+        ...row.bot,
+        photo: botId
+          ? `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`
+          : "/logo.png",
+      },
+    };
+  });
+  const normalized = withoutDeletedLicenses(mergeLicenseLists(compact), nextDeleted);
   // Always keep a local copy first so a failed remote write cannot drop keys.
   writeLocalStore(normalized, nextDeleted);
 
@@ -1240,7 +1256,9 @@ export async function createLicense(payload = {}) {
   // serverless instances will not see it and clients get "Invalid license key".
   if (write?.durable === false) {
     const err = new Error(
-      "License key did not save to the shared store — tap Generate again"
+      `License key did not save to the shared store${
+        write?.error ? ` (${write.error})` : ""
+      } — tap Generate again`
     );
     err.status = 503;
     throw err;

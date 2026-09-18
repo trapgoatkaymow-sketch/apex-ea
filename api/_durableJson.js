@@ -152,8 +152,11 @@ async function githubGetViaGit({ repo, branch, filePath }) {
   if (!relPath) return null;
   let dir = null;
   try {
-    const git = (await import("isomorphic-git")).default;
-    const http = (await import("isomorphic-git/http/node")).default;
+    const gitMod = await import("isomorphic-git");
+    const git = gitMod.default || gitMod;
+    const httpMod = await import("isomorphic-git/http/node/index.js");
+    const http = httpMod.default || httpMod;
+    if (!git?.clone || !http?.request) return null;
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "apexea-git-r-"));
     const url = `https://github.com/${repo}.git`;
     const onAuth = () => ({ username: token, password: "x-oauth-basic" });
@@ -332,8 +335,24 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
   const relPath = String(filePath || "").replace(/^\//, "");
   if (!relPath) return { ok: false, reason: "missing github path" };
 
-  const git = (await import("isomorphic-git")).default;
-  const http = (await import("isomorphic-git/http/node")).default;
+  let git;
+  let http;
+  try {
+    const gitMod = await import("isomorphic-git");
+    git = gitMod.default || gitMod;
+    // Node ESM cannot import the http/node directory — use the explicit entry.
+    const httpMod = await import("isomorphic-git/http/node/index.js");
+    http = httpMod.default || httpMod;
+  } catch (error) {
+    return {
+      ok: false,
+      reason: `isomorphic-git import failed: ${error?.message || error}`,
+      status: 500,
+    };
+  }
+  if (!git?.clone || !http?.request) {
+    return { ok: false, reason: "isomorphic-git unavailable", status: 500 };
+  }
   const url = `https://github.com/${repo}.git`;
   const onAuth = () => ({ username: token, password: "x-oauth-basic" });
   const intendedBody = String(raw ?? "");
@@ -499,8 +518,8 @@ export async function durableRead(opts = {}) {
   } = opts;
 
   const blob = blobPath ? await blobGet(blobPath) : null;
-  // Licenses live on the store-licenses git branch. A stale Vercel Blob copy
-  // must not win over GitHub or Reactivate/Unlock keep seeing old phone locks.
+  // Licenses: GitHub is source of truth, but Blob may hold keys written during
+  // GitHub outages — merge so Generate → Unlock never misses a fresh key.
   const licensesViaGit = /licenses\.json$/i.test(
     String(githubPath || blobPath || "")
   );
@@ -509,64 +528,92 @@ export async function durableRead(opts = {}) {
   }
 
   if (githubPath) {
+    let githubResult = null;
     const gh = await githubGet({
       repo: githubRepo,
       branch: githubBranch,
       filePath: githubPath,
     });
     if (gh && !gh.missing && gh.raw != null) {
-      return { raw: gh.raw, sha: gh.sha, source: "github" };
+      githubResult = { raw: gh.raw, sha: gh.sha, source: "github" };
     }
 
     const preferFresh = Boolean(opts.preferFresh);
 
     // Fresh reads (claim/unlock) skip stale CDN and go straight to git.
-    if (preferFresh) {
+    if (!githubResult && preferFresh) {
       const viaGit = await githubGetViaGit({
         repo: githubRepo,
         branch: githubBranch,
         filePath: githubPath,
       });
       if (viaGit && !viaGit.missing && viaGit.raw != null) {
-        return { raw: viaGit.raw, sha: null, source: "github-git" };
+        githubResult = { raw: viaGit.raw, sha: null, source: "github-git" };
       }
     }
 
-    const raw = await githubGetRaw({
-      repo: githubRepo,
-      branch: githubBranch,
-      filePath: githubPath,
-    });
-    if (raw && !raw.missing && raw.raw != null) {
-      let looksEmpty = false;
+    if (!githubResult) {
+      const raw = await githubGetRaw({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (raw && !raw.missing && raw.raw != null) {
+        let looksEmpty = false;
+        try {
+          const parsed = JSON.parse(raw.raw || "{}");
+          looksEmpty =
+            Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
+        } catch {
+          looksEmpty = false;
+        }
+        if (!looksEmpty) {
+          githubResult = { raw: raw.raw, sha: null, source: "github-raw" };
+        } else {
+          const viaGit = await githubGetViaGit({
+            repo: githubRepo,
+            branch: githubBranch,
+            filePath: githubPath,
+          });
+          if (viaGit && !viaGit.missing && viaGit.raw != null) {
+            githubResult = { raw: viaGit.raw, sha: null, source: "github-git" };
+          } else {
+            githubResult = { raw: raw.raw, sha: null, source: "github-raw" };
+          }
+        }
+      }
+    }
+
+    if (!githubResult) {
+      const viaGit = await githubGetViaGit({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (viaGit && !viaGit.missing && viaGit.raw != null) {
+        githubResult = { raw: viaGit.raw, sha: null, source: "github-git" };
+      }
+    }
+
+    if (licensesViaGit && githubResult?.raw && blob && !blob.missing && blob.raw) {
       try {
-        const parsed = JSON.parse(raw.raw || "{}");
-        looksEmpty =
-          Array.isArray(parsed?.licenses) && parsed.licenses.length === 0;
+        const merged = mergeLicensesDocuments(
+          blob.raw,
+          githubResult.raw,
+          "license read merge"
+        );
+        return {
+          raw: merged,
+          sha: githubResult.sha,
+          source: `${githubResult.source}+blob`,
+        };
       } catch {
-        looksEmpty = false;
+        // fall through to github-only
       }
-      if (!looksEmpty) {
-        return { raw: raw.raw, sha: null, source: "github-raw" };
-      }
-      const viaGit = await githubGetViaGit({
-        repo: githubRepo,
-        branch: githubBranch,
-        filePath: githubPath,
-      });
-      if (viaGit && !viaGit.missing && viaGit.raw != null) {
-        return { raw: viaGit.raw, sha: null, source: "github-git" };
-      }
-      return { raw: raw.raw, sha: null, source: "github-raw" };
     }
-
-    const viaGit = await githubGetViaGit({
-      repo: githubRepo,
-      branch: githubBranch,
-      filePath: githubPath,
-    });
-    if (viaGit && !viaGit.missing && viaGit.raw != null) {
-      return { raw: viaGit.raw, sha: null, source: "github-git" };
+    if (githubResult?.raw != null) return githubResult;
+    if (licensesViaGit && blob && !blob.missing && blob.raw != null) {
+      return { raw: blob.raw, sha: blob.etag, source: "blob" };
     }
   }
 
@@ -606,42 +653,55 @@ export async function durableWrite(opts = {}) {
     String(githubPath || blobPath || "")
   );
 
-  // Licenses must land on GitHub (store-licenses). Writing Blob first and
-  // returning early left GitHub stale so Reactivate never stuck.
+  // Non-license docs can still use Blob first.
   if (blobPath && !licensesViaGit) {
     const put = await blobPut(blobPath, body);
     if (put.ok) return { ok: true, durable: true, source: "blob" };
   }
 
   if (githubPath) {
-    // Prefer Contents API when we have a sha (fast). Without a sha — or when
-    // the API is rate-limited — fall through to Git Smart HTTP push.
+    // Resolve / refresh Contents sha so updates work when the caller only
+    // read via raw CDN (sha:null) — common under Contents API rate limits.
+    let sha = githubSha || null;
     let put = { ok: false, reason: "skipped", status: 0 };
-    if (githubSha) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      if (!sha) {
+        const latest = await githubGet({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        if (latest?.sha) sha = latest.sha;
+      }
       put = await githubPut({
         repo: githubRepo,
         branch: githubBranch,
         filePath: githubPath,
         raw: body,
-        sha: githubSha,
+        sha,
         message,
       });
       if (put.ok) {
+        // Mirror licenses to Blob after GitHub so cold reads stay fast, but
+        // GitHub remains the source of truth.
+        if (licensesViaGit && blobPath) {
+          await blobPut(blobPath, body);
+        }
         return { ok: true, durable: true, source: "github", sha: put.sha };
       }
-    } else {
-      // Try Contents create/update without sha once (new file); otherwise git.
-      put = await githubPut({
-        repo: githubRepo,
-        branch: githubBranch,
-        filePath: githubPath,
-        raw: body,
-        sha: null,
-        message,
-      });
-      if (put.ok) {
-        return { ok: true, durable: true, source: "github", sha: put.sha };
+      // Conflict / missing sha — refresh and retry.
+      if (put.status === 409 || put.status === 422 || !sha) {
+        const latest = await githubGet({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        sha = latest?.sha || null;
+        continue;
       }
+      // Rate limit — break to git push.
+      if (put.status === 403 || put.status === 429) break;
+      break;
     }
 
     // Contents API rate-limited / missing sha / bad credentials — Git push.
@@ -653,6 +713,9 @@ export async function durableWrite(opts = {}) {
       message,
     });
     if (viaGit.ok) {
+      if (licensesViaGit && blobPath) {
+        await blobPut(blobPath, body);
+      }
       return {
         ok: true,
         durable: true,
@@ -660,6 +723,21 @@ export async function durableWrite(opts = {}) {
         sha: viaGit.sha,
       };
     }
+
+    // Last resort for Generate: Blob is still shared across serverless
+    // instances. Prefer this over blocking mentors when GitHub is down.
+    if (licensesViaGit && blobPath) {
+      const blob = await blobPut(blobPath, body);
+      if (blob.ok) {
+        return {
+          ok: true,
+          durable: true,
+          source: "blob-fallback",
+          reason: viaGit.reason || put.reason || null,
+        };
+      }
+    }
+
     if (put.status === 409 || put.status === 422 || viaGit.conflict) {
       return {
         ok: false,
