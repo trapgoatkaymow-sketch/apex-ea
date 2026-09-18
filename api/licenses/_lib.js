@@ -2170,14 +2170,20 @@ export async function findLicense(rawKey) {
   if (!variants.size) return null;
   const compactOf = (value) => normalizeLicenseKey(value).replace(/-/g, "");
   const wantCompact = compactOf(rawKey);
-  const licenses = await listLicenses();
-  return (
-    licenses.find((row) => {
-      const key = normalizeLicenseKey(row.key);
-      if (!key) return false;
-      return variants.has(key) || compactOf(key) === wantCompact;
-    }) || null
-  );
+  const matchRow = (row) => {
+    const key = normalizeLicenseKey(row.key);
+    if (!key) return false;
+    return variants.has(key) || compactOf(key) === wantCompact;
+  };
+  let licenses = await listLicenses();
+  let hit = licenses.find(matchRow) || null;
+  if (!hit) {
+    // Cold/stale durable read — force a fresh pull once before 404.
+    memoryLicenses = null;
+    licenses = await listLicenses({ preferFresh: true });
+    hit = licenses.find(matchRow) || null;
+  }
+  return hit;
 }
 
 export async function findLicensesByEmail(email) {

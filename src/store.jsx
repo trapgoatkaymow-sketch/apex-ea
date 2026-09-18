@@ -35,6 +35,7 @@ import {
   pickFresherPhoto,
   uploadBotPhotoRemote,
   rememberDeletedLicenseKey,
+  forgetDeletedLicenseKey,
   isRememberedDeletedLicenseKey,
   filterOutDeletedLicenses,
 } from "./licensesApi.js";
@@ -2077,13 +2078,20 @@ export function AppProvider({ children }) {
           key.replace(/-/g, "") === wantCompact
         );
       };
+      // Stale local denylist must not hide a key the server still has.
+      forgetDeletedLicenseKey(key);
+
       let entry = licenseKeys.find(matchKey) || null;
+      let lookupUnavailable = false;
 
       if (!entry) {
         try {
           entry = await fetchLicense(rawKey);
           if (entry) setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
-        } catch {
+        } catch (error) {
+          if (error?.network || Number(error?.status) >= 500 || Number(error?.status) === 0) {
+            lookupUnavailable = true;
+          }
           entry = null;
         }
       }
@@ -2092,8 +2100,10 @@ export function AppProvider({ children }) {
           const byEmail = await fetchLicensesByEmail(accountEmail);
           setLicenseKeys((prev) => mergeLicenses(prev, byEmail));
           entry = byEmail.find(matchKey) || null;
-        } catch {
-          // continue
+        } catch (error) {
+          if (error?.network || Number(error?.status) >= 500 || Number(error?.status) === 0) {
+            lookupUnavailable = true;
+          }
         }
       }
       if (!entry) {
@@ -2101,17 +2111,20 @@ export function AppProvider({ children }) {
           const remote = await fetchLicenses();
           setLicenseKeys((prev) => mergeLicenses(prev, remote));
           entry = remote.find(matchKey) || null;
-        } catch {
-          // keep local miss
+        } catch (error) {
+          if (error?.network || Number(error?.status) >= 500 || Number(error?.status) === 0) {
+            lookupUnavailable = true;
+          }
         }
       }
 
       if (!entry) {
-        // Entitled accounts: ask the server to heal a wiped key then bind this phone.
+        // Entitled accounts / returning clients: heal a wiped key then bind.
         const entitled =
           isSignupEntitled(signup, accountEmail) ||
+          hasDeviceAccess(accountEmail) ||
           Boolean(options?.license && matchKey(options.license));
-        if (entitled && accountEmail) {
+        if ((entitled || accountEmail) && accountEmail) {
           try {
             const deviceId = getOrCreateDeviceId();
             const remote = await markLicenseUsedRemote(key, {
@@ -2127,25 +2140,39 @@ export function AppProvider({ children }) {
             if (remote) {
               entry = remote;
               setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
+              lookupUnavailable = false;
             }
           } catch (error) {
-            showToast(
-              error?.message ||
-                "Invalid license key — ask your mentor to generate a new one"
-            );
-            return false;
+            const status = Number(error?.status) || 0;
+            if (status === 404) {
+              // genuine miss — fall through
+            } else {
+              showToast(
+                error?.message ||
+                  "Could not verify this license key right now — try again"
+              );
+              return false;
+            }
           }
         }
       }
 
       if (!entry) {
-        showToast("Invalid license key — ask your mentor to generate a new one");
+        showToast(
+          lookupUnavailable
+            ? "Could not reach the license server — try again"
+            : "Invalid license key — ask your mentor to generate a new one"
+        );
         return false;
       }
 
       if (isLicenseExpired(entry)) {
-        showToast("License key has expired — ask your mentor for a new one");
-        return false;
+        const duration = String(entry.duration || "").toLowerCase();
+        // Lifetime keys must never be blocked by a stale expiresAt stamp.
+        if (duration !== "lifetime") {
+          showToast("License key has expired — ask your mentor for a new one");
+          return false;
+        }
       }
 
       const licenseEmail = normalizeEmail(entry.clientEmail);

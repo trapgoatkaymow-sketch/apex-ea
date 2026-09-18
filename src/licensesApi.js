@@ -3,15 +3,25 @@ import { apiUrl } from "./apiOrigin.js";
 const API_PATH = "/api/licenses";
 
 async function apiFetch(path = "", { method = "GET", body } = {}) {
-  const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
-    method,
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
+  let response;
+  try {
+    response = await fetch(`${apiUrl(API_PATH)}${path}`, {
+      method,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+    });
+  } catch (error) {
+    const err = new Error(
+      error?.message || "Could not reach the license server — try again"
+    );
+    err.status = 0;
+    err.network = true;
+    throw err;
+  }
   const text = await response.text();
   let data = null;
   try {
@@ -23,7 +33,10 @@ async function apiFetch(path = "", { method = "GET", body } = {}) {
     const message =
       (data && (data.error || data.message)) ||
       (typeof data === "string" ? data : `License sync failed (${response.status})`);
-    throw new Error(message);
+    const err = new Error(message);
+    err.status = response.status;
+    err.data = data;
+    throw err;
   }
   return data;
 }
@@ -420,15 +433,37 @@ export async function fetchLicenses() {
 
 export async function fetchLicense(key) {
   const variants = licenseKeyVariants(key);
+  let sawNotFound = false;
+  let lastTransportError = null;
   for (const candidate of variants) {
     try {
       const data = await apiFetch(`?key=${encodeURIComponent(candidate)}`);
       const row = normalizeLicense(data?.license);
-      if (row) return row;
-    } catch {
-      // try next lookalike
+      if (row) {
+        forgetDeletedLicenseKey(row.key);
+        return row;
+      }
+    } catch (error) {
+      const status = Number(error?.status) || 0;
+      if (status === 404) {
+        sawNotFound = true;
+        continue;
+      }
+      // 5xx / network / timeout — do not pretend the key is invalid.
+      lastTransportError = error;
+      break;
     }
   }
+  if (lastTransportError) {
+    const err = new Error(
+      lastTransportError.message ||
+        "Could not verify this license key right now — try again"
+    );
+    err.status = Number(lastTransportError.status) || 0;
+    err.network = Boolean(lastTransportError.network) || err.status >= 500 || err.status === 0;
+    throw err;
+  }
+  if (sawNotFound) return null;
   return null;
 }
 
