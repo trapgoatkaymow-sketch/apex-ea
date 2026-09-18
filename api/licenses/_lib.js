@@ -1168,7 +1168,6 @@ export async function createLicense(payload = {}) {
   }
 
   let result = null;
-  let alreadyExists = false;
   const write = await mutateStore((licenses, api) => {
     if (api?.isDeleted?.(key)) {
       const err = new Error("This license key was permanently deleted");
@@ -1176,22 +1175,6 @@ export async function createLicense(payload = {}) {
       throw err;
     }
     const existing = licenses.find((row) => row.key === key);
-
-    // One live key per client email + bot — never mint another while one exists.
-    if (!existing) {
-      const existingForClient = licenses.find(
-        (row) =>
-          normalizeEmail(row.clientEmail) === clientEmail &&
-          String(row.botId || row.bot?.id || "").trim() === botId &&
-          !api?.isDeleted?.(row.key)
-      );
-      if (existingForClient) {
-        alreadyExists = true;
-        result = existingForClient;
-        return licenses;
-      }
-    }
-
     if (!existing && ownerEmailForQuota && keyAllowance != null) {
       const used = licenses.filter(
         (row) => normalizeEmail(row.mentorEmail) === ownerEmailForQuota
@@ -1271,7 +1254,7 @@ export async function createLicense(payload = {}) {
 
   // Never hand out a key that only landed in ephemeral /tmp memory — cold
   // serverless instances will not see it and clients get "Invalid license key".
-  if (write?.durable === false && !alreadyExists) {
+  if (write?.durable === false) {
     const err = new Error(
       `License key did not save to the shared store${
         write?.error ? ` (${write.error})` : ""
@@ -1279,9 +1262,6 @@ export async function createLicense(payload = {}) {
     );
     err.status = 503;
     throw err;
-  }
-  if (alreadyExists && result) {
-    return { ...result, alreadyExists: true };
   }
   return result;
 }
@@ -1401,23 +1381,13 @@ export async function createLicensesBulk(payload = {}) {
     const usedKeys = new Set(
       licenses.map((row) => normalizeLicenseKey(row.key)).filter(Boolean)
     );
-    const byEmailBot = new Map(
-      licenses
-        .filter((row) => String(row.botId || row.bot?.id || "").trim() === botId)
-        .map((row) => [
-          `${normalizeEmail(row.clientEmail)}::${botId}`,
-          row,
-        ])
-    );
 
     if (mentorEmail && keyAllowance != null) {
       const used = licenses.filter(
         (row) => normalizeEmail(row.mentorEmail) === mentorEmail
       ).length;
-      const need = normalizedClients.filter((c) => {
-        const existing = byEmailBot.get(`${c.clientEmail}::${botId}`);
-        return !existing;
-      }).length;
+      // Always create one key per upload row — emails may already hold keys.
+      const need = normalizedClients.length;
       if (used + need > keyAllowance) {
         const err = new Error(
           `License key limit reached (${used}/${keyAllowance}). Need ${need} more — ask super admin to raise your allotment.`
@@ -1430,18 +1400,6 @@ export async function createLicensesBulk(payload = {}) {
     const next = [...licenses];
     const now = Date.now();
     for (const client of normalizedClients) {
-      const mapKey = `${client.clientEmail}::${botId}`;
-      const existing = byEmailBot.get(mapKey);
-      if (existing && !api.isDeleted?.(existing.key)) {
-        skipped.push({
-          clientEmail: client.clientEmail,
-          clientName: client.clientName,
-          key: existing.key,
-          reason: "already_has_key_for_bot",
-        });
-        continue;
-      }
-
       let key = randomLicenseKeyServer(usedKeys);
       while (api.isDeleted?.(key) || usedKeys.has(key)) {
         key = randomLicenseKeyServer(usedKeys);
@@ -1471,7 +1429,6 @@ export async function createLicensesBulk(payload = {}) {
         bot,
       };
       next.unshift(entry);
-      byEmailBot.set(mapKey, entry);
       created.push(entry);
     }
     return next;

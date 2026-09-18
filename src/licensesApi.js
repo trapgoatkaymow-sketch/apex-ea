@@ -448,12 +448,7 @@ export async function createLicenseRemote(payload) {
     method: "POST",
     body: payload,
   });
-  const row = normalizeLicense(data?.license);
-  if (!row) return null;
-  return {
-    ...row,
-    alreadyExists: Boolean(data?.alreadyExists || data?.license?.alreadyExists),
-  };
+  return normalizeLicense(data?.license);
 }
 
 /** CSV migration — create many keys in one server write. */

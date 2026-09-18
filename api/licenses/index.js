@@ -127,10 +127,7 @@ export default async function handler(req, res) {
         return;
       }
       const license = await createLicense(body);
-      sendJson(res, 200, {
-        license,
-        alreadyExists: Boolean(license?.alreadyExists),
-      });
+      sendJson(res, 200, { license });
       return;
     }
 
