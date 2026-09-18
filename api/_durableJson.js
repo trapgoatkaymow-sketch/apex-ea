@@ -16,12 +16,27 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { FALLBACK_GITHUB_TOKEN } from "./signups/_githubToken.js";
-import {
-  firebaseConfigured,
-  firebaseGet,
-  firebasePut,
-  toFirebasePath,
-} from "./_firebaseRtdb.js";
+
+async function firebaseApi() {
+  try {
+    return await import("./_firebaseRtdb.js");
+  } catch (error) {
+    return {
+      firebaseConfigured: () => false,
+      firebaseGet: async () => null,
+      firebasePut: async () => ({
+        ok: false,
+        reason: error?.message || "firebase-module-failed",
+      }),
+      toFirebasePath: (p) =>
+        String(p || "")
+          .trim()
+          .replace(/^\/+/, "")
+          .replace(/\.json$/i, "")
+          .replace(/[.#$\[\]]/g, "_"),
+    };
+  }
+}
 
 const BLOB_API = "https://blob.vercel-storage.com";
 
@@ -505,17 +520,18 @@ function writeLocalFile(filePath, raw) {
 
 /** Seed Firebase from Blob/GitHub on first read so rollout fills RTDB automatically. */
 async function seedFirebaseFrom(result, rtdbPath) {
+  const fb = await firebaseApi();
   if (
     !result ||
     result.raw == null ||
     !rtdbPath ||
-    !firebaseConfigured() ||
+    !fb.firebaseConfigured() ||
     result.source === "firebase"
   ) {
     return result;
   }
   try {
-    await firebasePut(rtdbPath, result.raw);
+    await fb.firebasePut(rtdbPath, result.raw);
   } catch {
     // best-effort
   }
@@ -545,16 +561,17 @@ export async function durableRead(opts = {}) {
     localPaths = [],
   } = opts;
 
+  const fb = await firebaseApi();
   const rtdbPath =
     firebasePath ||
-    toFirebasePath(blobPath || githubPath || "") ||
+    fb.toFirebasePath(blobPath || githubPath || "") ||
     "";
 
   // 1) Firebase Realtime Database — primary shared store when configured.
-  if (rtdbPath && firebaseConfigured()) {
-    const fb = await firebaseGet(rtdbPath);
-    if (fb && !fb.missing && fb.raw != null) {
-      return { raw: fb.raw, sha: fb.etag || null, source: "firebase" };
+  if (rtdbPath && fb.firebaseConfigured()) {
+    const hit = await fb.firebaseGet(rtdbPath);
+    if (hit && !hit.missing && hit.raw != null) {
+      return { raw: hit.raw, sha: hit.etag || null, source: "firebase" };
     }
   }
 
@@ -712,14 +729,15 @@ export async function durableWrite(opts = {}) {
   const body = String(raw ?? "");
   for (const file of localPaths) writeLocalFile(file, body);
 
+  const fb = await firebaseApi();
   const rtdbPath =
     firebasePath ||
-    toFirebasePath(blobPath || githubPath || "") ||
+    fb.toFirebasePath(blobPath || githubPath || "") ||
     "";
 
   // 1) Firebase first when configured — true shared database.
-  if (rtdbPath && firebaseConfigured()) {
-    const put = await firebasePut(rtdbPath, body);
+  if (rtdbPath && fb.firebaseConfigured()) {
+    const put = await fb.firebasePut(rtdbPath, body);
     if (put.ok) {
       // Best-effort mirrors so cold Blob/GitHub reads still work during rollout.
       if (blobPath) await blobPut(blobPath, body);

@@ -8,13 +8,14 @@
  *  - or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY
  * Plus:
  *  - FIREBASE_DATABASE_URL     → https://<project>-default-rtdb.<region>.firebasedatabase.app
- *    (or https://<project>.firebaseio.com)
  */
 
-import admin from "firebase-admin";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getDatabase } from "firebase-admin/database";
 
 let initAttempted = false;
 let initError = "";
+let appRef = null;
 
 function parseServiceAccount() {
   const raw = String(process.env.FIREBASE_SERVICE_ACCOUNT || "").trim();
@@ -59,12 +60,16 @@ export function firebaseStatus() {
     configured: firebaseConfigured(),
     databaseURL: databaseURL() || null,
     initError: initError || null,
-    apps: admin.apps.length,
+    apps: getApps().length,
   };
 }
 
 function ensureApp() {
-  if (admin.apps.length) return admin.app();
+  if (appRef) return appRef;
+  if (getApps().length) {
+    appRef = getApps()[0];
+    return appRef;
+  }
   if (initAttempted && initError) return null;
   initAttempted = true;
   const account = parseServiceAccount();
@@ -76,10 +81,11 @@ function ensureApp() {
     return null;
   }
   try {
-    return admin.initializeApp({
-      credential: admin.credential.cert(account),
+    appRef = initializeApp({
+      credential: cert(account),
       databaseURL: url,
     });
+    return appRef;
   } catch (error) {
     initError = error?.message || "Firebase init failed";
     return null;
@@ -107,10 +113,9 @@ export async function firebaseGet(docPath) {
   const path = toFirebasePath(docPath);
   if (!path) return null;
   try {
-    const snap = await admin.database(app).ref(path).get();
+    const snap = await getDatabase(app).ref(path).get();
     if (!snap.exists()) return { missing: true, raw: null };
     const val = snap.val();
-    // Support both stored string and stored object.
     if (typeof val === "string") {
       return { missing: false, raw: val, etag: snap.key || null };
     }
@@ -142,10 +147,9 @@ export async function firebasePut(docPath, raw) {
     try {
       payload = JSON.parse(String(raw ?? ""));
     } catch {
-      // Keep non-JSON as a wrapped string so RTDB stays valid.
       payload = { __raw: String(raw ?? "") };
     }
-    await admin.database(app).ref(path).set(payload);
+    await getDatabase(app).ref(path).set(payload);
     return { ok: true, durable: "firebase" };
   } catch (error) {
     return { ok: false, reason: error?.message || "firebase put failed" };
