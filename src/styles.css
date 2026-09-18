@@ -1937,7 +1937,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 .mt-session-metrics {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
