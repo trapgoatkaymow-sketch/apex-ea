@@ -5,9 +5,9 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-    <!-- MT5API broker search (http://66.23.225.158/Search) — Swagger catalog. -->
+    <!-- MT5API broker search (http://159.203.191.196/Search) — Swagger catalog. -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">66.23.225.158</domain>
+        <domain includeSubdomains="false">159.203.191.196</domain>
     </domain-config>
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">apex-ea.com</domain>

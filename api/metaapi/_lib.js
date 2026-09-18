@@ -14,7 +14,7 @@ const COPYFACTORY_URL_TEMPLATE =
 const MT5_API_BASE = (
   process.env.MT5_API_BASE ||
   process.env.MT5_API_TARGET ||
-  "http://66.23.225.158"
+  "http://159.203.191.196"
 ).replace(/\/$/, "");
 
 
@@ -187,7 +187,7 @@ function normalizeClientEmail(email) {
 }
 
 /**
- * Broker search via MT5API /Search?company=… (https://66.23.225.158/swagger).
+ * Broker search via MT5API /Search?company=… (http://159.203.191.196/swagger).
  * Returns Company[] → { company, results:[{ name, logo_url, site, access }] }.
  */
 export async function searchMt5ApiBrokers(query, platform = "MT5") {

@@ -169,7 +169,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- heartbeat tied to live session
   }, [session?.accountId, session?.company, coverEmail, apiHealth?.online]);
 
-  // Broker API on/off — poll so clients see when 66.23.225.158 is down.
+  // Broker API on/off — poll so clients see when 159.203.191.196 is down.
   useEffect(() => {
     let cancelled = false;
     let timer = null;

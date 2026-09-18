@@ -159,7 +159,7 @@ export default defineConfig(({ mode }) => {
     process.env.PAYPAL_CLIENT_SECRET || env.PAYPAL_CLIENT_SECRET || ''
   process.env.PAYPAL_MODE = process.env.PAYPAL_MODE || env.PAYPAL_MODE || 'live'
   process.env.MT5_API_BASE =
-    process.env.MT5_API_BASE || env.MT5_API_BASE || env.MT5_API_TARGET || 'http://66.23.225.158'
+    process.env.MT5_API_BASE || env.MT5_API_BASE || env.MT5_API_TARGET || 'http://159.203.191.196'
 
   return {
     plugins: [react(), metaApiDevPlugin()],
