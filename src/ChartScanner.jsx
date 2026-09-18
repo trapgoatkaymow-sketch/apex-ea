@@ -488,7 +488,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
       showToast("Setup is missing TP1/TP2/TP3");
       return;
     }
-    const confidence = Math.round(Number(signal.confidence) || 0);
     if (!connected) {
       showToast("Connect a trading account to execute trades");
       setZetaView("metatrader");
@@ -889,20 +888,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
           hidden
           onChange={onFile}
         />
-      </div>
-
-      <div className="cs-strategy-card" role="note">
-        <p className="cs-strategy-kicker">{SCANNER_STRATEGY_NAME}</p>
-        <strong>Best timeframe: {RECOMMENDED_SCAN_TIMEFRAME}</strong>
-        <span>
-          Also good: H4 · Avoid M1–M5. Trend pullbacks only, structural stops. Higher
-          confidence is safer, but you can still execute any setup.
-        </span>
-        <ul className="cs-strategy-rules">
-          {SCANNER_STRATEGY_RULES.slice(0, 3).map((rule) => (
-            <li key={rule}>{rule}</li>
-          ))}
-        </ul>
       </div>
 
       <div className={`cs-engine${engineActive ? " is-open" : ""}`} aria-live="polite">
