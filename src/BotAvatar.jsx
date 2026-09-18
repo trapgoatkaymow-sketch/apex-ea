@@ -1,23 +1,29 @@
 import { useEffect, useState } from "react";
-import { resolveBotPhotoSrc } from "./apiOrigin.js";
+import { mediaUrl, resolveBotPhotoSrc } from "./apiOrigin.js";
 import {
   getCachedBotPhotoSync,
   resolveCachedBotPhoto,
   warmBotPhotoCache,
 } from "./botPhotoCache.js";
 
-function isLocalInstantSrc(src) {
-  const value = String(src || "").trim();
-  return (
-    value.startsWith("data:image/") ||
-    value.startsWith("blob:") ||
-    (value.startsWith("/") && !value.startsWith("/api/"))
+function botPhotoApiSrc(botId) {
+  const id = String(botId || "").trim();
+  if (!id) return "";
+  return mediaUrl(
+    `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`
   );
 }
 
+function githubRawSrc(botId) {
+  const id = String(botId || "").trim();
+  if (!id) return "";
+  return `https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/data/ea-photos/${encodeURIComponent(id)}.jpg`;
+}
+
 /**
- * Robot / hero avatar that paints a local asset on first frame, then upgrades
- * to a cached/remote photo only after it successfully decodes — never a broken ?.
+ * Robot / hero avatar.
+ * Prefer a durable photo URL in the <img> itself (same as Mentor Portal) so
+ * Home never depends on IndexedDB/fetch races that left the default logo stuck.
  */
 export default function BotAvatar({
   bot,
@@ -30,95 +36,70 @@ export default function BotAvatar({
   decoding = "async",
 }) {
   const id = String(bot?.id || "").trim();
-  const remote = resolveBotPhotoSrc(bot, fallback);
+  const photo = String(bot?.photo || "").trim();
   const safeFallback = fallback || "/logo.png";
+  const apiSrc = botPhotoApiSrc(id);
+  const remote = resolveBotPhotoSrc(bot, safeFallback);
+
+  // Direct URL the browser can load — API path when mentor uploaded by botId.
+  const preferred = (() => {
+    if (photo.startsWith("data:image/") || photo.startsWith("blob:")) return photo;
+    if (photo.startsWith("/api/licenses/photo") || /^https?:\/\//i.test(photo)) {
+      return mediaUrl(photo);
+    }
+    // Logo / empty / packaged placeholder — still try durable photo by botId.
+    if (apiSrc) return apiSrc;
+    if (remote && remote !== safeFallback) return remote;
+    return safeFallback;
+  })();
 
   const [src, setSrc] = useState(() => {
     const cached = getCachedBotPhotoSync(id);
     if (cached) return cached;
-    const photo = String(bot?.photo || "").trim();
-    if (photo.startsWith("data:image/") || photo.startsWith("blob:")) return photo;
-    // Local packaged assets paint with the rest of the UI (same frame).
-    if (isLocalInstantSrc(remote)) return remote || safeFallback;
-    // Remote API / CDN: show fallback instantly, swap after decode.
-    return safeFallback;
+    // Prefer durable URL on first paint (API / data) — do not start on /logo.png
+    // or a failed hydrate can look like "still the default robot".
+    return preferred || safeFallback;
   });
 
   useEffect(() => {
     let cancelled = false;
 
-    const paintInstant = () => {
-      const cached = getCachedBotPhotoSync(id);
-      if (cached) {
-        setSrc(cached);
-        return cached;
-      }
-      const photo = String(bot?.photo || "").trim();
-      if (photo.startsWith("data:image/") || photo.startsWith("blob:")) {
-        setSrc(photo);
-        return photo;
-      }
-      if (isLocalInstantSrc(remote)) {
-        setSrc(remote || safeFallback);
-        return remote || safeFallback;
-      }
-      setSrc(safeFallback);
-      return safeFallback;
+    const paint = (next) => {
+      if (cancelled || !next) return;
+      setSrc(next);
     };
 
-    paintInstant();
+    // Always prefer the durable URL first.
+    paint(preferred || safeFallback);
+
+    const cached = getCachedBotPhotoSync(id);
+    if (cached) paint(cached);
 
     warmBotPhotoCache()
       .then(() => {
         if (cancelled) return;
-        const cached = getCachedBotPhotoSync(id);
-        if (cached) setSrc(cached);
+        const warmed = getCachedBotPhotoSync(id);
+        if (warmed) paint(warmed);
       })
       .catch(() => {});
 
-    // Hit the network whenever we have a botId — even /logo.png may have a
-    // mentor-uploaded picture on the photo API / GitHub CDN.
-    const photoStr = String(bot?.photo || "").trim();
-    const needsNetwork =
-      Boolean(id) &&
-      (photoStr.startsWith("/api/licenses/photo") ||
-        /^https?:\/\//i.test(photoStr) ||
-        !photoStr ||
-        photoStr === "/logo.png" ||
-        (remote && !isLocalInstantSrc(remote) && remote !== safeFallback));
-
-    if (!needsNetwork) {
-      return () => {
-        cancelled = true;
-      };
+    // Warm blob cache in background (robot list / next open).
+    if (id) {
+      resolveCachedBotPhoto(bot, safeFallback)
+        .then((url) => {
+          if (cancelled || !url) return;
+          if (url === safeFallback || url === "/logo.png") return;
+          if (String(url).startsWith("blob:") || url.startsWith("data:image/")) {
+            paint(url);
+          }
+        })
+        .catch(() => {});
     }
-
-    resolveCachedBotPhoto(bot, safeFallback)
-      .then((url) => {
-        if (cancelled || !url) return;
-        // Keep showing logo if hydrate found nothing better.
-        if (url === safeFallback || url === "/logo.png") return;
-        // Avoid swapping to a remote that will flash a broken icon.
-        if (isLocalInstantSrc(url) || String(url).startsWith("blob:")) {
-          setSrc(url);
-          return;
-        }
-        const probe = new Image();
-        probe.decoding = "async";
-        probe.onload = () => {
-          if (!cancelled) setSrc(url);
-        };
-        probe.onerror = () => {
-          // Stay on whatever we already painted (logo or prior good src).
-        };
-        probe.src = url;
-      })
-      .catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [id, bot?.photo, remote, safeFallback]);
+  }, [id, photo, preferred, safeFallback, bot]);
 
   return (
     <img
@@ -133,6 +114,17 @@ export default function BotAvatar({
       onError={(event) => {
         const node = event.currentTarget;
         if (!node) return;
+        const current = String(node.src || "");
+        // Step through durable sources before giving up on the default robot.
+        if (apiSrc && !current.includes("/api/licenses/photo") && !current.includes("raw.githubusercontent.com")) {
+          setSrc(apiSrc);
+          return;
+        }
+        const gh = githubRawSrc(id);
+        if (gh && !current.includes("raw.githubusercontent.com")) {
+          setSrc(gh);
+          return;
+        }
         if (node.dataset.fallbackApplied === "1") return;
         node.dataset.fallbackApplied = "1";
         setSrc(safeFallback);

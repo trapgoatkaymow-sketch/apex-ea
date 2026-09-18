@@ -1109,32 +1109,53 @@ export function AppProvider({ children }) {
     const botId = String(activeBot?.id || "").trim();
     const photo = String(activeBot?.photo || "").trim();
     if (!botId) return undefined;
-    if (isRealProfilePhoto(photo)) return undefined;
+    // Always pin logo-only bots onto the durable API path when bytes exist.
+    // Also re-check bots that already have an API path so a late upload sticks.
     let cancelled = false;
-    const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=${Date.now()}`;
-    void fetch(mediaUrl(apiPath), { method: "GET", cache: "no-store" })
+    const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`;
+    void fetch(mediaUrl(`${apiPath}&_=${Date.now()}`), {
+      method: "GET",
+      cache: "no-store",
+    })
       .then(async (response) => {
         if (cancelled) return;
         const type = String(response.headers.get("content-type") || "");
         const okImage = response.ok && type.startsWith("image/");
         if (!okImage) return;
-        const nextPhoto = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`;
+        const nextPhoto = apiPath;
         setBots((prev) =>
           prev.map((bot) =>
-            bot.id === botId && !isRealProfilePhoto(bot.photo)
+            bot.id === botId && String(bot.photo || "").trim() !== nextPhoto
               ? { ...bot, photo: nextPhoto }
               : bot
           )
         );
         setEas((prev) =>
           prev.map((ea) =>
-            ea.id === botId && !isRealProfilePhoto(ea.photo)
+            ea.id === botId && String(ea.photo || "").trim() !== nextPhoto
               ? { ...ea, photo: nextPhoto }
               : ea
           )
         );
       })
       .catch(() => {});
+    // Optimistic: if still on logo, point at the API path immediately so <img> loads it.
+    if (!isRealProfilePhoto(photo)) {
+      setBots((prev) =>
+        prev.map((bot) =>
+          bot.id === botId && !isRealProfilePhoto(bot.photo)
+            ? { ...bot, photo: apiPath }
+            : bot
+        )
+      );
+      setEas((prev) =>
+        prev.map((ea) =>
+          ea.id === botId && !isRealProfilePhoto(ea.photo)
+            ? { ...ea, photo: apiPath }
+            : ea
+        )
+      );
+    }
     return () => {
       cancelled = true;
     };

@@ -1,6 +1,7 @@
 import { mediaUrl, resolveBotPhotoSrc } from "./apiOrigin.js";
 
-const DB_NAME = "apexea-bot-photos-v1";
+// v2: bust stale IDB entries that kept Home stuck on the default logo.
+const DB_NAME = "apexea-bot-photos-v2";
 const STORE = "photos";
 const GITHUB_RAW_BASE =
   "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/data/ea-photos";
@@ -167,11 +168,21 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
   const remote = resolveBotPhotoSrc(bot, fallback);
   const fb = fallback || "/logo.png";
 
-  if (id) {
+  // Packaged logo / empty photo: still probe by botId — mentor may have uploaded
+  // after the license was issued with /logo.png (Home was stuck on the default robot).
+  const logoOnly =
+    !photo ||
+    photo === "/logo.png" ||
+    (!photo.startsWith("/api/") &&
+      !/^https?:\/\//i.test(photo) &&
+      !photo.startsWith("data:image/") &&
+      (remote.includes("/api/licenses/photo") || remote === fb));
+
+  if (id && !logoOnly) {
     const mem = memoryUrls.get(id);
     if (mem) return mem;
     const row = await idbGet(id);
-    if (row?.blob) {
+    if (row?.blob && row.blob.size >= 256) {
       const url = blobToObjectUrl(row.blob);
       if (url) {
         memoryUrls.set(id, url);
@@ -187,14 +198,6 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
     return photo;
   }
 
-  // Packaged logo / empty photo: still probe by botId — mentor may have uploaded
-  // after the license was issued with /logo.png (Home was stuck on the default robot).
-  const logoOnly =
-    !photo ||
-    photo === "/logo.png" ||
-    (remote === fb &&
-      !photo.startsWith("/api/") &&
-      !/^https?:\/\//i.test(photo));
   if (logoOnly && !id) {
     return remote && remote !== fb ? remote : fb;
   }
@@ -203,19 +206,20 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
 
   const task = (async () => {
     // Race GitHub raw CDN + durable API path — first successful image blob wins.
+    // Prefer API first (same-origin, no CORS risk) then GitHub raw.
     const apiFallback = id
       ? mediaUrl(`/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`)
       : "";
     const candidates = [
+      apiFallback,
+      remote && remote !== fb && remote !== apiFallback ? mediaUrl(remote) : "",
       ...rawPhotoCandidates(id),
-      remote && remote !== fb ? mediaUrl(remote) : "",
-      logoOnly ? apiFallback : "",
     ].filter(Boolean);
 
     const tryUrl = async (url) => {
       const response = await fetch(url, {
         method: "GET",
-        cache: "force-cache",
+        cache: "no-store",
         credentials: "omit",
       });
       if (!response.ok) {

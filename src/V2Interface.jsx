@@ -56,21 +56,11 @@ export default function V2Interface() {
   useEffect(() => {
     let cancelled = false;
     const fallback = "/logo.png";
-    const instant =
+    const preferred =
       getCachedBotPhotoSync(activeBot?.id) ||
       resolveBotPhotoSrc(activeBot, fallback);
-    const photo = String(activeBot?.photo || "").trim();
-    const start =
-      instant.startsWith("/api/") || /^https?:\/\//i.test(instant)
-        ? getCachedBotPhotoSync(activeBot?.id) || fallback
-        : instant;
-    setFloatSrc(start);
-    // Hydrate even when local photo is still /logo.png — mentor may have uploaded later.
-    if (
-      photo.startsWith("/api/licenses/photo") ||
-      /^https?:\/\//i.test(photo) ||
-      (activeBot?.id && (!photo || photo === "/logo.png"))
-    ) {
+    setFloatSrc(preferred);
+    if (activeBot?.id) {
       resolveCachedBotPhoto(activeBot, fallback)
         .then((url) => {
           if (!cancelled && url && url !== fallback) setFloatSrc(url);
