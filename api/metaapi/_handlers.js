@@ -412,9 +412,9 @@ export async function handleMentorTrade(req, res) {
       .replace(/apexea/gi, "APEXEA")
       .slice(0, 31);
     // Legacy self-host used a hard-coded "mentor~APEXEA" tag — always prefer
-    // the client's EA name so MT5 shows e.g. ZETASCALPERAI~APEXEA|TP1.
+    // the client's EA name so MT5 shows e.g. ZETASCALPERAI~APEXEA (not mentor~…).
     const isLegacyMentorComment = /^mentor[~-]APEXEA$/i.test(
-      requestedComment.replace(/\|TP[123]\b/gi, "").trim()
+      requestedComment.replace(/\|TP[123]\b/gi, "").replace(/\|premium\b/gi, "").trim()
     );
     const results = [];
     let ordersPlaced = 0;
