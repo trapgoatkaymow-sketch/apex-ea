@@ -156,7 +156,8 @@ export default async function handler(req, res) {
         : await markLicenseUsed(body.key, {
             deviceId: body.deviceId || "",
             email: body.email || body.clientEmail || "",
-            license: body.license || null,
+            license: body.license || body.seed || null,
+            seed: body.seed || body.license || null,
             botId: body.botId || "",
             botName: body.botName || "",
           });

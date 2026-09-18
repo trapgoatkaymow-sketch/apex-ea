@@ -1060,8 +1060,10 @@ async function mutateStore(mutator, message) {
   throw lastError || new Error("Could not update licenses store");
 }
 
-export async function listLicenses() {
-  const store = await readStore();
+export async function listLicenses(options = {}) {
+  const store = await readStore({
+    preferFresh: Boolean(options.preferFresh),
+  });
   let licenses = store.licenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   // Fill missing mentorName from the mentor portal username so client headers
@@ -1620,16 +1622,38 @@ export async function claimLicenseViaInvite(payload = {}) {
 
 /**
  * Bind a license to the activating phone.
- * Same phone can re-open automatically. A different phone is always rejected —
- * only super admin can deactivate/reset a used key for a new phone.
+ * Same phone can re-open automatically.
+ * A different phone is rejected — unless the CoverLock email matches the
+ * license clientEmail (owner reclaim after reinstall / cleared WebView storage).
+ * Optional seed/license row: if a key was wiped from the shared store, re-insert
+ * it for entitled clients so Unlock stops returning "Invalid license key".
  */
-export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}) {
+export async function markLicenseUsed(
+  rawKey,
+  {
+    deviceId = "",
+    email = "",
+    seed = null,
+    license = null,
+    botId = "",
+    botName = "",
+  } = {}
+) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
     const err = new Error("License key is required");
     err.status = 400;
     throw err;
   }
+  const formattedKey = formatLicenseKey(rawKey);
+  const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const rowMatches = (row) => {
+    const key = normalizeLicenseKey(row?.key);
+    if (!key) return false;
+    return (
+      variants.includes(key) || key.replace(/-/g, "") === wantCompact
+    );
+  };
 
   const claimDevice = String(deviceId || "").trim();
   if (!claimDevice) {
@@ -1639,11 +1663,119 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   }
 
   const claimEmail = normalizeEmail(email);
+  const seedRow =
+    (seed && typeof seed === "object" ? seed : null) ||
+    (license && typeof license === "object" ? license : null);
 
   // Peek current license + signup before mutate so commission rules use paid/first-access.
-  const currentList = await listLicenses();
-  const current =
-    currentList.find((row) => variants.includes(row.key)) || null;
+  let currentList = await listLicenses();
+  let current = currentList.find(rowMatches) || null;
+  if (!current) {
+    // Stale in-memory / CDN lag — force a fresh durable read once.
+    memoryLicenses = null;
+    currentList = await listLicenses({ preferFresh: true });
+    current = currentList.find(rowMatches) || null;
+  }
+
+  if (!current) {
+    // Rebuild a wiped / phantom key for entitled clients so Unlock works.
+    let entitled = Boolean(seedRow);
+    let signup = null;
+    if (claimEmail) {
+      try {
+        signup = await findSignup(claimEmail);
+      } catch {
+        signup = null;
+      }
+      if (
+        signup &&
+        (signup.accessBypassed ||
+          signup.accessPaid ||
+          String(signup.status || "").toLowerCase() === "approved")
+      ) {
+        entitled = true;
+      }
+    }
+
+    if (entitled && !isKeyDeleted(formattedKey, memoryDeletedKeys)) {
+      const mentorEmail = normalizeEmail(
+        seedRow?.mentorEmail || "trapgoatkaymow@gmail.com"
+      );
+      let mentorId = String(seedRow?.mentorId || "").trim();
+      let mentorName = String(seedRow?.mentorName || "").trim();
+      const resolvedBotId =
+        String(
+          seedRow?.botId ||
+            seedRow?.bot?.id ||
+            botId ||
+            "zeta-scalper-ai-mtyew2ps"
+        ).trim() || "zeta-scalper-ai-mtyew2ps";
+      const resolvedBotName =
+        String(
+          seedRow?.botName ||
+            seedRow?.bot?.name ||
+            botName ||
+            "ZETA SCALPER AI"
+        ).trim() || "ZETA SCALPER AI";
+      const clientName = String(
+        seedRow?.clientName ||
+          seedRow?.mainText ||
+          (claimEmail ? claimEmail.split("@")[0] : "") ||
+          "Client"
+      ).trim();
+
+      const seeded = normalizeLicense({
+        ...(seedRow || {}),
+        key: formattedKey,
+        botId: resolvedBotId,
+        botName: resolvedBotName,
+        clientEmail: claimEmail || normalizeEmail(seedRow?.clientEmail) || "",
+        clientName,
+        mainText: clientName,
+        mentorEmail,
+        mentorId,
+        mentorName,
+        used: false,
+        deviceId: null,
+        boundAt: null,
+        usedAt: null,
+        duration: seedRow?.duration || "lifetime",
+        expiresAt: seedRow?.expiresAt ?? null,
+        createdAt: Number(seedRow?.createdAt) || Date.now(),
+        updatedAt: Date.now(),
+        bot: {
+          id: resolvedBotId,
+          name: resolvedBotName,
+          photo:
+            seedRow?.bot?.photo ||
+            `/api/licenses/photo?botId=${encodeURIComponent(resolvedBotId)}`,
+          strategy: seedRow?.bot?.strategy || "scalper",
+          symbols: Array.isArray(seedRow?.bot?.symbols) ? seedRow.bot.symbols : [],
+        },
+      });
+
+      if (seeded && rowMatches(seeded) && seeded.clientEmail) {
+        const write = await mutateStore((licenses, api) => {
+          if (licenses.some(rowMatches)) return licenses;
+          if (api.isDeleted?.(seeded.key)) return licenses;
+          return [seeded, ...licenses];
+        }, `license heal upsert: ${formattedKey}`);
+        if (write?.durable === false) {
+          const err = new Error(
+            String(write?.error || "").trim()
+              ? `Could not restore license key (${write.error}). Tap Unlock again.`
+              : "Could not restore license key. Tap Unlock again."
+          );
+          err.status = 503;
+          throw err;
+        }
+        memoryLicenses = null;
+        currentList = await listLicenses({ preferFresh: true });
+        current = currentList.find(rowMatches) || seeded;
+      }
+    }
+  }
+
   if (!current) {
     const err = new Error("Invalid license key");
     err.status = 404;
@@ -1651,12 +1783,38 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   }
 
   const boundDevice = String(current.deviceId || "").trim();
+  const licenseEmail = normalizeEmail(current.clientEmail);
+  const emailOwnsLicense = Boolean(
+    claimEmail && licenseEmail && claimEmail === licenseEmail
+  );
 
-  // Used on another phone — hard lock. Super admin must deactivate first.
+  // Used on another phone — allow reclaim only when email matches the key owner.
   if (current.used && boundDevice && boundDevice !== claimDevice) {
-    const err = new Error("This license is locked to another phone");
-    err.status = 403;
-    throw err;
+    if (!emailOwnsLicense) {
+      const err = new Error("This license is locked to another phone");
+      err.status = 403;
+      throw err;
+    }
+    let reclaimed = current;
+    const now = Date.now();
+    await mutateStore((licenses) => {
+      const idx = licenses.findIndex(rowMatches);
+      if (idx < 0) return licenses;
+      const row = licenses[idx];
+      const next = {
+        ...row,
+        used: true,
+        usedAt: row.usedAt || now,
+        deviceId: claimDevice,
+        boundAt: now,
+        updatedAt: now,
+        clientEmail: row.clientEmail || claimEmail,
+      };
+      licenses[idx] = next;
+      reclaimed = next;
+      return licenses;
+    }, `license email reclaim: ${variants[0]}`);
+    return reclaimed;
   }
 
   // Same phone re-open, or legacy used key with no device yet → claim/keep.
@@ -1664,7 +1822,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     let claimed = current;
     if (!boundDevice) {
       await mutateStore((licenses) => {
-        const idx = licenses.findIndex((row) => variants.includes(row.key));
+        const idx = licenses.findIndex(rowMatches);
         if (idx < 0) return licenses;
         const row = licenses[idx];
         const next = {
@@ -1701,7 +1859,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     (row) =>
       normalizeEmail(row.clientEmail) === clientEmail &&
       row.used &&
-      !variants.includes(row.key)
+      !rowMatches(row)
   );
   const commissionEligible = Boolean(
     clientEmail && accessPaid && !alreadyUnlocked && !priorUsed
@@ -1719,7 +1877,18 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   let result = null;
   const now = Date.now();
   await mutateStore((licenses) => {
-    const idx = licenses.findIndex((row) => variants.includes(row.key));
+    let idx = licenses.findIndex(rowMatches);
+    // Heal row may not be visible on this read yet — re-insert then bind.
+    if (idx < 0 && current && rowMatches(current)) {
+      licenses.unshift({
+        ...current,
+        used: false,
+        deviceId: null,
+        usedAt: null,
+        boundAt: null,
+      });
+      idx = 0;
+    }
     if (idx < 0) {
       const err = new Error("Invalid license key");
       err.status = 404;
@@ -1727,10 +1896,28 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     }
     const row = licenses[idx];
     const alreadyBound = String(row.deviceId || "").trim();
+    const rowEmail = normalizeEmail(row.clientEmail);
+    const ownsByEmail = Boolean(
+      claimEmail && rowEmail && claimEmail === rowEmail
+    );
     if (row.used && alreadyBound && alreadyBound !== claimDevice) {
-      const err = new Error("This license is locked to another phone");
-      err.status = 403;
-      throw err;
+      if (!ownsByEmail) {
+        const err = new Error("This license is locked to another phone");
+        err.status = 403;
+        throw err;
+      }
+      const next = {
+        ...row,
+        used: true,
+        usedAt: row.usedAt || now,
+        deviceId: claimDevice,
+        boundAt: now,
+        updatedAt: now,
+        clientEmail: row.clientEmail || claimEmail,
+      };
+      licenses[idx] = next;
+      result = next;
+      return licenses;
     }
     if (row.used && (!alreadyBound || alreadyBound === claimDevice)) {
       const next = {
@@ -1983,14 +2170,20 @@ export async function findLicense(rawKey) {
   if (!variants.size) return null;
   const compactOf = (value) => normalizeLicenseKey(value).replace(/-/g, "");
   const wantCompact = compactOf(rawKey);
-  const licenses = await listLicenses();
-  return (
-    licenses.find((row) => {
-      const key = normalizeLicenseKey(row.key);
-      if (!key) return false;
-      return variants.has(key) || compactOf(key) === wantCompact;
-    }) || null
-  );
+  const matchRow = (row) => {
+    const key = normalizeLicenseKey(row.key);
+    if (!key) return false;
+    return variants.has(key) || compactOf(key) === wantCompact;
+  };
+  let licenses = await listLicenses();
+  let hit = licenses.find(matchRow) || null;
+  if (!hit) {
+    // Cold/stale durable read — force a fresh pull once before 404.
+    memoryLicenses = null;
+    licenses = await listLicenses({ preferFresh: true });
+    hit = licenses.find(matchRow) || null;
+  }
+  return hit;
 }
 
 export async function findLicensesByEmail(email) {
