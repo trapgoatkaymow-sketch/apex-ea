@@ -66,12 +66,6 @@ function formatMoney(value, currency = "USD") {
   }
 }
 
-function profitTone(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount === 0) return "";
-  return amount > 0 ? " is-profit" : " is-loss";
-}
-
 export default function MetaTraderPanel({ variant = "zeta" }) {
   const {
     showToast,
@@ -175,7 +169,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- heartbeat tied to live session
   }, [session?.accountId, session?.company, coverEmail, apiHealth?.online]);
 
-  // Broker API on/off — poll so clients see when 66.23.225.158 is down.
+  // Broker API on/off — poll so clients see when 159.203.191.196 is down.
   useEffect(() => {
     let cancelled = false;
     let timer = null;
@@ -214,7 +208,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     };
   }, []);
 
-  // Keep connected session fresh and pull live balance / floating profit.
+  // Keep connected session fresh and pull live balance.
   useEffect(() => {
     if (!session?.accountId) {
       setAccountMetrics(null);
@@ -627,17 +621,11 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                 Disconnect
               </button>
             </div>
-            <div className="mt-session-metrics" aria-label="Account balance and floating profit">
+            <div className="mt-session-metrics" aria-label="Account balance">
               <div className="mt-metric">
                 <span className="mt-metric-label">Balance</span>
                 <strong className="mt-metric-value">
                   {formatMoney(accountMetrics?.balance, accountMetrics?.currency)}
-                </strong>
-              </div>
-              <div className="mt-metric">
-                <span className="mt-metric-label">Floating profit</span>
-                <strong className={`mt-metric-value${profitTone(accountMetrics?.profit)}`}>
-                  {formatMoney(accountMetrics?.profit, accountMetrics?.currency)}
                 </strong>
               </div>
             </div>

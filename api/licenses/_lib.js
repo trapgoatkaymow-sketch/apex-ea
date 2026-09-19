@@ -334,28 +334,60 @@ export async function persistBotPhoto(botId, photo) {
   const id = safePhotoId(botId);
   const ext = parsed.mime.includes("png") ? "png" : "jpg";
   const buffer = Buffer.from(parsed.base64, "base64");
+
+  // Never let a tiny re-encode wipe a sharp hero already on disk / GitHub.
+  // (Home was stuck on a 200px mush after a later low-quality sync.)
+  const existing = readLocalBotPhoto(id) || (await readBotPhoto(id).catch(() => null));
+  if (
+    existing?.buffer?.length &&
+    existing.buffer.length >= 80_000 &&
+    buffer.length < existing.buffer.length * 0.55
+  ) {
+    console.warn(
+      "ea photo upload skipped downgrade",
+      id,
+      buffer.length,
+      "vs",
+      existing.buffer.length
+    );
+    return botPhotoApiPath(id, "full");
+  }
+
   writeLocalBotPhoto(id, ext, buffer, parsed.mime);
 
   const filePath = `data/ea-photos/${id}.${ext}`;
   try {
     // GitHub Contents API rejects oversized payloads — fail early to embed instead.
-    if (parsed.base64.length > 900_000) {
+    if (parsed.base64.length > 1_600_000) {
       throw Object.assign(new Error("Photo too large for GitHub Contents API"), {
         status: 413,
       });
     }
     const token = requireToken();
     let sha = null;
+    let existingSize = 0;
     try {
-      const existing = await ghFetch(
+      const existingFile = await ghFetch(
         `${API}/contents/${filePath}?ref=${encodeURIComponent(BRANCH)}`,
         { token, cache: "no-store" }
       );
-      sha = existing?.sha || null;
+      sha = existingFile?.sha || null;
+      existingSize = Number(existingFile?.size || 0) || 0;
     } catch (error) {
       if (error.status !== 404) {
         console.warn("ea photo lookup failed", error.message);
       }
+    }
+
+    if (existingSize >= 80_000 && buffer.length < existingSize * 0.55) {
+      console.warn(
+        "ea photo github skipped downgrade",
+        id,
+        buffer.length,
+        "vs",
+        existingSize
+      );
+      return botPhotoApiPath(id, "full");
     }
 
     await ghFetch(`${API}/contents/${filePath}`, {
@@ -375,10 +407,10 @@ export async function persistBotPhoto(botId, photo) {
     // path that only exists in this serverless instance's memory — that 404s on
     // the next cold start and breaks client Home heroes.
     const local = readLocalBotPhoto(id);
-    if (value.startsWith("data:image/") && value.length <= 900_000) return value;
+    if (value.startsWith("data:image/") && value.length <= 1_600_000) return value;
     if (local?.buffer?.length) {
       const embedded = dataUrlFromPhoto(local);
-      if (embedded && embedded.length <= 900_000) return embedded;
+      if (embedded && embedded.length <= 1_600_000) return embedded;
     }
     return "/logo.png";
   }
@@ -446,63 +478,75 @@ async function fetchRawBotPhoto(id) {
 export async function readBotPhoto(botId) {
   const id = safePhotoId(botId);
   const local = readLocalBotPhoto(id);
-  if (local) return local;
 
-  // 1) Raw CDN binary (fast). 2) Contents API base64 (fallback).
-  try {
-    const photo = await fetchRawBotPhoto(id);
-    memoryPhotos.set(id, photo);
+  // Bundled /tmp copies can be stale tiny thumbs that shadow a sharp GitHub
+  // upload — always race the CDN when local looks undersized for a Home hero.
+  const localLooksSmall = !local?.buffer?.length || local.buffer.length < 80_000;
+
+  const tryRemote = async () => {
+    // 1) Raw CDN binary (fast). 2) Contents API base64 (fallback).
     try {
-      const ext = photo.mime?.includes("png")
-        ? "png"
-        : photo.mime?.includes("webp")
-          ? "webp"
-          : "jpg";
-      writeLocalBotPhoto(id, ext, photo.buffer, photo.mime || "image/jpeg");
+      const photo = await fetchRawBotPhoto(id);
+      memoryPhotos.set(id, photo);
+      try {
+        const ext = photo.mime?.includes("png")
+          ? "png"
+          : photo.mime?.includes("webp")
+            ? "webp"
+            : "jpg";
+        writeLocalBotPhoto(id, ext, photo.buffer, photo.mime || "image/jpeg");
+      } catch {
+        // optional
+      }
+      return photo;
     } catch {
-      // optional
+      // fall through to Contents API
     }
-    return photo;
-  } catch {
-    // fall through to Contents API
-  }
 
-  const tryExt = async (ext) => {
-    const filePath = `data/ea-photos/${id}.${ext}`;
-    const file = await ghFetch(
-      `${API}/contents/${filePath}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    const base64 = String(file.content || "").replace(/\n/g, "");
-    if (!base64) {
-      const err = new Error("empty photo");
-      err.status = 404;
-      throw err;
+    const tryExt = async (ext) => {
+      const filePath = `data/ea-photos/${id}.${ext}`;
+      const file = await ghFetch(
+        `${API}/contents/${filePath}?ref=${encodeURIComponent(BRANCH)}`,
+        { cache: "no-store" }
+      );
+      const base64 = String(file.content || "").replace(/\n/g, "");
+      if (!base64) {
+        const err = new Error("empty photo");
+        err.status = 404;
+        throw err;
+      }
+      const mime =
+        ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+      return { mime, buffer: Buffer.from(base64, "base64") };
+    };
+
+    try {
+      const photo = await Promise.any(
+        ["jpg", "jpeg", "png", "webp"].map((ext) => tryExt(ext))
+      );
+      memoryPhotos.set(id, photo);
+      try {
+        const ext = photo.mime?.includes("png")
+          ? "png"
+          : photo.mime?.includes("webp")
+            ? "webp"
+            : "jpg";
+        writeLocalBotPhoto(id, ext, photo.buffer, photo.mime || "image/jpeg");
+      } catch {
+        // optional
+      }
+      return photo;
+    } catch {
+      return null;
     }
-    const mime =
-      ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
-    return { mime, buffer: Buffer.from(base64, "base64") };
   };
 
-  try {
-    const photo = await Promise.any(
-      ["jpg", "jpeg", "png", "webp"].map((ext) => tryExt(ext))
-    );
-    memoryPhotos.set(id, photo);
-    try {
-      const ext = photo.mime?.includes("png")
-        ? "png"
-        : photo.mime?.includes("webp")
-          ? "webp"
-          : "jpg";
-      writeLocalBotPhoto(id, ext, photo.buffer, photo.mime || "image/jpeg");
-    } catch {
-      // optional
-    }
-    return photo;
-  } catch {
-    return null;
-  }
+  if (!localLooksSmall) return local;
+
+  const remote = await tryRemote();
+  if (!remote?.buffer?.length) return local || null;
+  if (!local?.buffer?.length) return remote;
+  return remote.buffer.length >= local.buffer.length ? remote : local;
 }
 
 /** Rewrite mentorName on every license owned by this mentor email. */

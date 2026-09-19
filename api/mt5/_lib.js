@@ -1,10 +1,10 @@
 import { applyCorsHeaders } from "../_cors.js";
 
-/** Self-hosted MT5API RESTful — https://66.23.225.158/swagger/index.html */
+/** Self-hosted MT5API RESTful — http://159.203.191.196/swagger/index.html */
 export const MT5_API_BASE = (
   process.env.MT5_API_BASE ||
   process.env.MT5_API_TARGET ||
-  "http://66.23.225.158"
+  "http://159.203.191.196"
 ).replace(/\/$/, "");
 
 export function sendJson(res, status, payload) {
@@ -130,7 +130,10 @@ export function mapSearchResults(data, platform = "MT5") {
   const plat = String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5";
   const brokers = [];
   data.forEach((companyEntry) => {
-    const companyName = String(companyEntry?.company || "").trim() || "Unknown broker";
+    // New MT5REST uses companyName; older hosts used company.
+    const companyName =
+      String(companyEntry?.company || companyEntry?.companyName || "").trim() ||
+      "Unknown broker";
     if (isBlockedBroker({ company: companyName })) return;
     const results = Array.isArray(companyEntry?.results) ? companyEntry.results : [];
     results.forEach((result, index) => {
