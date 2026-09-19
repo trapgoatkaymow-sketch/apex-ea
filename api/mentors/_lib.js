@@ -282,6 +282,7 @@ function decodeMentorsJson(raw, sha = null) {
             contact: normalizePhone(m.contact),
             role,
             status: String(m.status || "pending").toLowerCase(),
+            statusUpdatedAt: Number(m.statusUpdatedAt) || null,
             passwordHash: String(m.passwordHash || ""),
             salt: String(m.salt || ""),
             createdAt: Number(m.createdAt) || Date.now(),
@@ -917,7 +918,12 @@ export async function setMentorStatus(email, status) {
       err.status = 404;
       throw err;
     }
-    list[idx] = { ...list[idx], status: nextStatus, email: key };
+    list[idx] = {
+      ...list[idx],
+      status: nextStatus,
+      email: key,
+      statusUpdatedAt: Date.now(),
+    };
     updated = list[idx];
     return list;
   }, `chore: set mentor ${key} to ${nextStatus}`);

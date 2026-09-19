@@ -271,12 +271,15 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw) {
       .toLowerCase();
   const stamp = (row) =>
     Number(
-      row?.appColorUpdatedAt ||
+      row?.statusUpdatedAt ||
+        row?.appColorUpdatedAt ||
         row?.licenseKeysUpdatedAt ||
         row?.banking?.updatedAt ||
         row?.createdAt ||
         0
     ) || 0;
+  const statusStamp = (row) =>
+    Number(row?.statusUpdatedAt || row?.createdAt || 0) || 0;
   const statusRank = (status) => {
     const s = String(status || "pending").toLowerCase();
     if (s === "approved") return 3;
@@ -298,15 +301,25 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw) {
     const takeIncoming = preferIncoming || incomingNewer;
     const primary = takeIncoming ? row : prev;
     const secondary = takeIncoming ? prev : row;
-    const nextStatus =
-      statusRank(row.status) >= statusRank(prev.status)
-        ? row.status || prev.status
-        : prev.status || row.status;
+    // Prefer explicit admin writes, else the newer statusUpdatedAt, else rank.
+    let nextStatus = prev.status || row.status || "pending";
+    let nextStatusAt = Math.max(statusStamp(prev), statusStamp(row)) || null;
+    if (preferIncoming && row.status) {
+      nextStatus = row.status;
+      nextStatusAt = Math.max(statusStamp(row), Date.now());
+    } else if (statusStamp(row) !== statusStamp(prev)) {
+      const newer = statusStamp(row) >= statusStamp(prev) ? row : prev;
+      nextStatus = newer.status || nextStatus;
+      nextStatusAt = statusStamp(newer) || nextStatusAt;
+    } else if (statusRank(row.status) >= statusRank(prev.status)) {
+      nextStatus = row.status || prev.status || nextStatus;
+    }
     map.set(email, {
       ...secondary,
       ...primary,
       email,
       status: nextStatus || "pending",
+      statusUpdatedAt: nextStatusAt,
       passwordHash: primary.passwordHash || secondary.passwordHash || "",
       salt: primary.salt || secondary.salt || "",
       username: primary.username || secondary.username || "",
