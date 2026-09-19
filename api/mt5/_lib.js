@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { applyCorsHeaders } from "../_cors.js";
 
 /** Self-hosted MT5API RESTful — http://159.203.191.196/swagger/index.html */
@@ -6,6 +9,48 @@ export const MT5_API_BASE = (
   process.env.MT5_API_TARGET ||
   "http://159.203.191.196"
 ).replace(/\/$/, "");
+
+let brokerLogoCatalogCache = null;
+
+function getBrokerLogoCatalog() {
+  if (brokerLogoCatalogCache) return brokerLogoCatalogCache;
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const raw = readFileSync(
+      join(here, "../../data/broker-logo-catalog.json"),
+      "utf8"
+    );
+    brokerLogoCatalogCache = JSON.parse(raw);
+  } catch {
+    brokerLogoCatalogCache = { byServer: {}, byCompanyServer: {} };
+  }
+  return brokerLogoCatalogCache;
+}
+
+/** Attach official logo/site when the live MT5REST Search omits them. */
+function enrichBrokerLogo(broker) {
+  if (!broker) return broker;
+  if (broker.logoUrl && broker.site) return broker;
+  const catalog = getBrokerLogoCatalog();
+  const serverKey = String(broker.name || "")
+    .trim()
+    .toLowerCase();
+  const companyKey = String(broker.company || "")
+    .trim()
+    .toLowerCase();
+  const row =
+    (companyKey &&
+      serverKey &&
+      catalog.byCompanyServer?.[`${companyKey}::${serverKey}`]) ||
+    catalog.byServer?.[serverKey] ||
+    null;
+  if (!row) return broker;
+  return {
+    ...broker,
+    logoUrl: broker.logoUrl || String(row.logoUrl || "").trim(),
+    site: broker.site || String(row.site || "").trim(),
+  };
+}
 
 export function sendJson(res, status, payload) {
   applyCorsHeaders(res);
@@ -202,17 +247,19 @@ export function mapSearchResults(data, platform = "MT5") {
       const access = Array.isArray(result?.access)
         ? result.access.map(String).map((v) => v.trim()).filter(Boolean)
         : [];
-      brokers.push({
-        id: `${companyName}::${serverName}::${index}`,
-        company: companyName,
-        name: serverName,
-        site: String(result?.site || "").trim(),
-        logoUrl: String(result?.logo_url || result?.logoUrl || "").trim(),
-        access,
-        platform: plat,
-        custom: false,
-        source: "mt5api",
-      });
+      brokers.push(
+        enrichBrokerLogo({
+          id: `${companyName}::${serverName}::${index}`,
+          company: companyName,
+          name: serverName,
+          site: String(result?.site || "").trim(),
+          logoUrl: String(result?.logo_url || result?.logoUrl || "").trim(),
+          access,
+          platform: plat,
+          custom: false,
+          source: "mt5api",
+        })
+      );
     });
   });
   return brokers.filter((b) => !isBlockedBroker(b));
