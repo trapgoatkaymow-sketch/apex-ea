@@ -9,11 +9,28 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.18.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.19.apk\""
         },
         {
           "key": "Cache-Control",
           "value": "public, max-age=60, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/apex-ea-v2.19.apk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"apex-ea-v2.19.apk\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     },
@@ -60,7 +77,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.18.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.19.apk\""
         },
         {
           "key": "Cache-Control",
@@ -89,7 +106,7 @@
   "rewrites": [
     {
       "source": "/mt5-api/:path*",
-      "destination": "http://66.23.225.158/:path*"
+      "destination": "http://159.203.191.196/:path*"
     },
     {
       "source": "/((?!api/|mt5-api/|get-app\\.html|.*\\.apk$).*)",

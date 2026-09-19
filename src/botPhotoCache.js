@@ -1,9 +1,12 @@
 import { mediaUrl, resolveBotPhotoSrc } from "./apiOrigin.js";
 
-const DB_NAME = "apexea-bot-photos-v1";
+// v3: don't keep mushy tiny thumbs that made Interface 2 look soft.
+const DB_NAME = "apexea-bot-photos-v3";
 const STORE = "photos";
-const GITHUB_RAW_BASE =
-  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/data/ea-photos";
+const GITHUB_RAW_BASES = [
+  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/store-licenses/data/ea-photos",
+  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/data/ea-photos",
+];
 const memoryUrls = new Map(); // botId -> object URL or data URL
 const inflight = new Map();
 let dbPromise = null;
@@ -14,9 +17,13 @@ function rawPhotoCandidates(botId) {
   const id = String(botId || "").trim();
   if (!id) return [];
   const enc = encodeURIComponent(id);
-  return ["jpg", "jpeg", "png", "webp"].map(
-    (ext) => `${GITHUB_RAW_BASE}/${enc}.${ext}`
-  );
+  const out = [];
+  for (const base of GITHUB_RAW_BASES) {
+    for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+      out.push(`${base}/${enc}.${ext}`);
+    }
+  }
+  return out;
 }
 
 function openDb() {
@@ -98,6 +105,8 @@ function blobToObjectUrl(blob) {
 
 async function cacheBlob(id, blob, mime = "image/jpeg") {
   if (!id || !blob) return "";
+  // Refuse to cache soft thumbs — Home/Interface 2 must keep probing for HQ.
+  if (blob.size < 40_000) return "";
   const url = blobToObjectUrl(blob);
   if (!url) return "";
   const prev = memoryUrls.get(id);
@@ -167,11 +176,21 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
   const remote = resolveBotPhotoSrc(bot, fallback);
   const fb = fallback || "/logo.png";
 
-  if (id) {
+  // Packaged logo / empty photo: still probe by botId — mentor may have uploaded
+  // after the license was issued with /logo.png (Home was stuck on the default robot).
+  const logoOnly =
+    !photo ||
+    photo === "/logo.png" ||
+    (!photo.startsWith("/api/") &&
+      !/^https?:\/\//i.test(photo) &&
+      !photo.startsWith("data:image/") &&
+      (remote.includes("/api/licenses/photo") || remote === fb));
+
+  if (id && !logoOnly) {
     const mem = memoryUrls.get(id);
     if (mem) return mem;
     const row = await idbGet(id);
-    if (row?.blob) {
+    if (row?.blob && row.blob.size >= 256) {
       const url = blobToObjectUrl(row.blob);
       if (url) {
         memoryUrls.set(id, url);
@@ -187,12 +206,7 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
     return photo;
   }
 
-  // Packaged logo / static asset — no network.
-  if (
-    !photo ||
-    photo === "/logo.png" ||
-    (remote === fb && !photo.startsWith("/api/") && !/^https?:\/\//i.test(photo))
-  ) {
+  if (logoOnly && !id) {
     return remote && remote !== fb ? remote : fb;
   }
 
@@ -200,15 +214,20 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
 
   const task = (async () => {
     // Race GitHub raw CDN + durable API path — first successful image blob wins.
+    // Prefer API first (same-origin, no CORS risk) then GitHub raw.
+    const apiFallback = id
+      ? mediaUrl(`/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`)
+      : "";
     const candidates = [
+      apiFallback,
+      remote && remote !== fb && remote !== apiFallback ? mediaUrl(remote) : "",
       ...rawPhotoCandidates(id),
-      remote && remote !== fb ? mediaUrl(remote) : "",
     ].filter(Boolean);
 
     const tryUrl = async (url) => {
       const response = await fetch(url, {
         method: "GET",
-        cache: "force-cache",
+        cache: "no-store",
         credentials: "omit",
       });
       if (!response.ok) {
@@ -224,6 +243,8 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
       }
       const blob = await response.blob();
       // Ignore empty / 1×1 placeholder / JSON-error bodies.
+      // Also skip tiny thumbs (< ~40KB) when a packaged hero fallback exists —
+      // those look mushy when stretched across Interface 2.
       if (!blob || blob.size < 256) {
         const err = new Error("empty photo");
         err.status = 404;
@@ -254,9 +275,7 @@ export function prefetchBotPhotos(bots = []) {
     const id = String(bot?.id || "").trim();
     if (!id) continue;
     if (memoryUrls.has(id) || inflight.has(id)) continue;
-    const photo = String(bot?.photo || "").trim();
-    // Skip network for logo-only bots — Home must stay instant.
-    if (!photo || photo === "/logo.png") continue;
+    // Always probe by botId — logo-only bots may still have a mentor upload on CDN.
     resolveCachedBotPhoto(bot, "/logo.png").catch(() => {});
   }
 }
