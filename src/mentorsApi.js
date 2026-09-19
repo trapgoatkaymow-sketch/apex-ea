@@ -190,6 +190,20 @@ function bankingFromCache(email) {
   return normalizeBanking(readBankingCache()[key]);
 }
 
+function preferMentorStatus(incoming, previous) {
+  const rank = (status) => {
+    const s = String(status || "").toLowerCase();
+    if (s === "approved") return 3;
+    if (s === "declined") return 2;
+    if (s === "pending") return 1;
+    return 0;
+  };
+  if (rank(incoming) >= rank(previous)) {
+    return String(incoming || previous || "pending").toLowerCase();
+  }
+  return String(previous || incoming || "pending").toLowerCase();
+}
+
 function mergeMentorLists(localList = [], remoteList = []) {
   const map = new Map();
   // Local first, then remote wins on the same email so GitHub stays source of truth
@@ -207,7 +221,7 @@ function mergeMentorLists(localList = [], remoteList = []) {
         String(item.role || prev?.role || "mentor").toLowerCase() === "superadmin"
           ? "superadmin"
           : "mentor",
-      status: String(item.status || prev?.status || "pending").toLowerCase(),
+      status: preferMentorStatus(item.status, prev?.status),
       password: item.password || prev?.password,
       createdAt: Number(item.createdAt || prev?.createdAt) || Date.now(),
       banking: pickBanking(item, prev),

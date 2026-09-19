@@ -510,6 +510,17 @@ async function writeStore(mentors, sha, message) {
   const nextByEmail = new Map(
     withCreds.map((m) => [normalizeEmail(m.email), m])
   );
+  // Never shrink the in-memory roster — cold/partial mutators must not drop
+  // pending signups that already registered on this instance.
+  if (Array.isArray(memoryMentors)) {
+    for (const prev of memoryMentors) {
+      const email = normalizeEmail(prev?.email);
+      if (!email || !prev.passwordHash || !prev.salt) continue;
+      if (!nextByEmail.has(email)) {
+        nextByEmail.set(email, { ...prev, email });
+      }
+    }
+  }
   for (const prev of credentialBackupPool()) {
     const email = normalizeEmail(prev?.email);
     if (!email || !prev.passwordHash || !prev.salt) continue;

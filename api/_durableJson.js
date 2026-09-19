@@ -246,6 +246,102 @@ async function githubPut({ repo, branch, filePath, raw, sha, message }) {
 }
 
 /**
+ * Merge two mentors.json documents by email so concurrent/cold writes never
+ * wipe pending mentor signups that landed in another store (Firebase vs GitHub).
+ * Incoming (intended) wins field-level updates for the same email; remote-only
+ * rows are always kept. Credentials are never blanked out.
+ */
+function mergeMentorsDocuments(remoteRaw, intendedRaw) {
+  let remote;
+  let intended;
+  try {
+    remote = JSON.parse(String(remoteRaw || "{}"));
+    intended = JSON.parse(String(intendedRaw || "{}"));
+  } catch {
+    return String(intendedRaw ?? "");
+  }
+  const intendedList = Array.isArray(intended?.mentors) ? intended.mentors : null;
+  const remoteList = Array.isArray(remote?.mentors) ? remote.mentors : null;
+  if (!intendedList) return String(intendedRaw ?? "");
+  if (!remoteList) return String(intendedRaw ?? "");
+
+  const normEmail = (email) =>
+    String(email || "")
+      .trim()
+      .toLowerCase();
+  const stamp = (row) =>
+    Number(
+      row?.appColorUpdatedAt ||
+        row?.licenseKeysUpdatedAt ||
+        row?.banking?.updatedAt ||
+        row?.createdAt ||
+        0
+    ) || 0;
+  const statusRank = (status) => {
+    const s = String(status || "pending").toLowerCase();
+    if (s === "approved") return 3;
+    if (s === "declined") return 2;
+    if (s === "pending") return 1;
+    return 0;
+  };
+
+  const map = new Map();
+  const ingest = (row, { preferIncoming = false } = {}) => {
+    const email = normEmail(row?.email);
+    if (!email || !email.includes("@")) return;
+    const prev = map.get(email);
+    if (!prev) {
+      map.set(email, { ...row, email });
+      return;
+    }
+    const incomingNewer = stamp(row) >= stamp(prev);
+    const takeIncoming = preferIncoming || incomingNewer;
+    const primary = takeIncoming ? row : prev;
+    const secondary = takeIncoming ? prev : row;
+    const nextStatus =
+      statusRank(row.status) >= statusRank(prev.status)
+        ? row.status || prev.status
+        : prev.status || row.status;
+    map.set(email, {
+      ...secondary,
+      ...primary,
+      email,
+      status: nextStatus || "pending",
+      passwordHash: primary.passwordHash || secondary.passwordHash || "",
+      salt: primary.salt || secondary.salt || "",
+      username: primary.username || secondary.username || "",
+      contact: primary.contact || secondary.contact || "",
+      createdAt: (() => {
+        const a = Number(primary.createdAt) || 0;
+        const b = Number(secondary.createdAt) || 0;
+        if (a && b) return Math.min(a, b);
+        return a || b || Date.now();
+      })(),
+      banking: primary.banking?.accountNumber
+        ? primary.banking
+        : secondary.banking || primary.banking,
+      licenseKeysAllowed:
+        primary.licenseKeysAllowed ?? secondary.licenseKeysAllowed,
+      appColor: primary.appColor || secondary.appColor || "",
+      appColorUpdatedAt: Math.max(
+        Number(primary.appColorUpdatedAt) || 0,
+        Number(secondary.appColorUpdatedAt) || 0
+      ) || null,
+    });
+  };
+
+  // Remote first (preserve), then intended overwrites same emails.
+  for (const row of remoteList) ingest(row, { preferIncoming: false });
+  for (const row of intendedList) ingest(row, { preferIncoming: true });
+
+  const mentors = Array.from(map.values())
+    .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt)
+    .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+
+  return JSON.stringify({ mentors }, null, 2) + "\n";
+}
+
+/**
  * Merge two licenses.json documents by key so concurrent git pushes do not
  * wipe each other's newly claimed keys. Prefer the newer row stamp.
  * Reactivate/deactivate (newer used:false) must clear device locks — never
@@ -382,6 +478,7 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
   let lastReason = "git push failed";
   let lastStatus = 500;
   const isLicensesFile = /licenses\.json$/i.test(relPath);
+  const isMentorsFile = /mentors\.json$/i.test(relPath);
 
   // store-licenses receives concurrent invite claims — merge + retry on NFF.
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -407,6 +504,10 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
       if (isLicensesFile && fs.existsSync(abs)) {
         const remoteRaw = fs.readFileSync(abs, "utf8");
         body = mergeLicensesDocuments(remoteRaw, intendedBody, commitMessage);
+      }
+      if (isMentorsFile && fs.existsSync(abs)) {
+        const remoteRaw = fs.readFileSync(abs, "utf8");
+        body = mergeMentorsDocuments(remoteRaw, intendedBody);
       }
       fs.writeFileSync(abs, body, "utf8");
       await git.add({ fs, dir, filepath: relPath });
@@ -566,6 +667,76 @@ export async function durableRead(opts = {}) {
     firebasePath ||
     fb.toFirebasePath(blobPath || githubPath || "") ||
     "";
+
+  const mentorsViaGit = /mentors\.json$/i.test(
+    String(githubPath || blobPath || "")
+  );
+
+  // Mentors: union-merge across Firebase / Blob / GitHub so a shorter primary
+  // copy cannot hide pending signups that only landed in another store.
+  if (mentorsViaGit) {
+    const pieces = [];
+    if (rtdbPath && fb.firebaseConfigured()) {
+      const hit = await fb.firebaseGet(rtdbPath);
+      if (hit && !hit.missing && hit.raw != null) pieces.push(hit.raw);
+    }
+    const blob = blobPath ? await blobGet(blobPath) : null;
+    if (blob && !blob.missing && blob.raw != null) pieces.push(blob.raw);
+
+    let githubResult = null;
+    if (githubPath) {
+      const gh = await githubGet({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (gh && !gh.missing && gh.raw != null) {
+        githubResult = { raw: gh.raw, sha: gh.sha, source: "github" };
+      }
+      if (!githubResult) {
+        const raw = await githubGetRaw({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        if (raw && !raw.missing && raw.raw != null) {
+          githubResult = { raw: raw.raw, sha: null, source: "github-raw" };
+        }
+      }
+      if (!githubResult) {
+        const viaGit = await githubGetViaGit({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        if (viaGit && !viaGit.missing && viaGit.raw != null) {
+          githubResult = { raw: viaGit.raw, sha: null, source: "github-git" };
+        }
+      }
+      if (githubResult?.raw) pieces.push(githubResult.raw);
+    }
+
+    for (const file of localPaths) {
+      const local = readLocalFile(file);
+      if (local != null) pieces.push(local);
+    }
+
+    if (pieces.length) {
+      let merged = pieces[0];
+      for (let i = 1; i < pieces.length; i += 1) {
+        merged = mergeMentorsDocuments(merged, pieces[i]);
+      }
+      return seedFirebaseFrom(
+        {
+          raw: merged,
+          sha: githubResult?.sha || null,
+          source: pieces.length > 1 ? "mentors-merged" : "mentors",
+        },
+        rtdbPath
+      );
+    }
+    return { raw: null, sha: null, source: "empty" };
+  }
 
   // 1) Firebase Realtime Database — primary shared store when configured.
   if (rtdbPath && fb.firebaseConfigured()) {
@@ -735,23 +906,59 @@ export async function durableWrite(opts = {}) {
     fb.toFirebasePath(blobPath || githubPath || "") ||
     "";
 
+  const licensesViaGit = /licenses\.json$/i.test(
+    String(githubPath || blobPath || "")
+  );
+  const mentorsViaGit = /mentors\.json$/i.test(
+    String(githubPath || blobPath || "")
+  );
+
+  // Mentors: merge with existing durable copies before any put so a cold
+  // instance with a short roster cannot wipe pending signups.
+  let mentorsBody = body;
+  if (mentorsViaGit) {
+    try {
+      if (rtdbPath && fb.firebaseConfigured()) {
+        const hit = await fb.firebaseGet(rtdbPath);
+        if (hit && !hit.missing && hit.raw != null) {
+          mentorsBody = mergeMentorsDocuments(hit.raw, mentorsBody);
+        }
+      }
+      if (blobPath) {
+        const blob = await blobGet(blobPath);
+        if (blob && !blob.missing && blob.raw != null) {
+          mentorsBody = mergeMentorsDocuments(blob.raw, mentorsBody);
+        }
+      }
+      if (githubPath) {
+        const gh = await githubGet({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        if (gh && !gh.missing && gh.raw != null) {
+          mentorsBody = mergeMentorsDocuments(gh.raw, mentorsBody);
+        }
+      }
+    } catch {
+      mentorsBody = body;
+    }
+    for (const file of localPaths) writeLocalFile(file, mentorsBody);
+  }
+
   // 1) Firebase first when configured — true shared database.
   if (rtdbPath && fb.firebaseConfigured()) {
-    const put = await fb.firebasePut(rtdbPath, body);
+    const put = await fb.firebasePut(rtdbPath, mentorsViaGit ? mentorsBody : body);
     if (put.ok) {
       // Best-effort mirrors so cold Blob/GitHub reads still work during rollout.
-      if (blobPath) await blobPut(blobPath, body);
+      if (blobPath) await blobPut(blobPath, mentorsViaGit ? mentorsBody : body);
       return { ok: true, durable: true, source: "firebase" };
     }
   }
 
-  const licensesViaGit = /licenses\.json$/i.test(
-    String(githubPath || blobPath || "")
-  );
-
   // Non-license docs can still use Blob first.
   if (blobPath && !licensesViaGit) {
-    const put = await blobPut(blobPath, body);
+    const put = await blobPut(blobPath, mentorsViaGit ? mentorsBody : body);
     if (put.ok) return { ok: true, durable: true, source: "blob" };
   }
 
@@ -761,6 +968,7 @@ export async function durableWrite(opts = {}) {
     let sha = githubSha || null;
     let put = { ok: false, reason: "skipped", status: 0 };
     for (let attempt = 0; attempt < 5; attempt += 1) {
+      const writeBody = mentorsViaGit ? mentorsBody : body;
       if (!sha) {
         const latest = await githubGet({
           repo: githubRepo,
@@ -773,7 +981,7 @@ export async function durableWrite(opts = {}) {
         repo: githubRepo,
         branch: githubBranch,
         filePath: githubPath,
-        raw: body,
+        raw: writeBody,
         sha,
         message,
       });
@@ -781,7 +989,7 @@ export async function durableWrite(opts = {}) {
         // Mirror licenses to Blob after GitHub so cold reads stay fast, but
         // GitHub remains the source of truth.
         if (licensesViaGit && blobPath) {
-          await blobPut(blobPath, body);
+          await blobPut(blobPath, writeBody);
         }
         return { ok: true, durable: true, source: "github", sha: put.sha };
       }
@@ -793,6 +1001,9 @@ export async function durableWrite(opts = {}) {
           filePath: githubPath,
         });
         sha = latest?.sha || null;
+        if (mentorsViaGit && latest?.raw) {
+          mentorsBody = mergeMentorsDocuments(latest.raw, mentorsBody);
+        }
         continue;
       }
       // Rate limit — break to git push.
@@ -805,12 +1016,12 @@ export async function durableWrite(opts = {}) {
       repo: githubRepo,
       branch: githubBranch,
       filePath: githubPath,
-      raw: body,
+      raw: mentorsViaGit ? mentorsBody : body,
       message,
     });
     if (viaGit.ok) {
       if (licensesViaGit && blobPath) {
-        await blobPut(blobPath, body);
+        await blobPut(blobPath, mentorsViaGit ? mentorsBody : body);
       }
       return {
         ok: true,

@@ -3752,6 +3752,15 @@ export default function AdminPortal() {
                 placeholder="Search mentors by name or email"
                 aria-label="Search mentors by name or email"
               />
+              {mentorMgmtQuery ? (
+                <button
+                  className="admin-btn admin-btn-outline admin-btn-sm"
+                  type="button"
+                  onClick={() => setMentorMgmtSearch("")}
+                >
+                  Clear search
+                </button>
+              ) : null}
               <button
                 className={`admin-btn admin-btn-solid admin-btn-sm${mentorBulkBusy ? " is-loading" : ""}`}
                 type="button"
@@ -3856,7 +3865,14 @@ export default function AdminPortal() {
                 <p className="admin-empty">No pending mentors</p>
               ) : filteredPendingMentors.length === 0 ? (
                 <p className="admin-empty">
-                  No pending mentors match “{mentorMgmtSearch.trim()}”
+                  No pending mentors match “{mentorMgmtSearch.trim()}”.{" "}
+                  <button
+                    className="admin-link-btn"
+                    type="button"
+                    onClick={() => setMentorMgmtSearch("")}
+                  >
+                    Clear search to show {pendingMentors.length} pending
+                  </button>
                 </p>
               ) : (
                 filteredPendingMentors.map((mentor) => (
