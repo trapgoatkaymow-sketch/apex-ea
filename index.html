@@ -32,22 +32,17 @@
   <body>
     <div id="root"></div>
     <script>
-      /* Early shell lock — rejects a downgraded HTML shell before React boots. */
+      /* Early upgrade check — remote app-version only, one recovery per tab. */
       (function () {
         var GEN = 5;
         var KEY = "apexea-shell-gen-v1";
+        var RECOVERY = "apexea-shell-recovery-v1";
         try {
           var seen = Number(localStorage.getItem(KEY) || 0);
-          if (seen > GEN) {
-            var u = new URL(location.href);
-            u.searchParams.set("_shell", String(seen));
-            u.searchParams.set("_t", String(Date.now()));
-            location.replace(u.toString());
-            return;
-          }
           localStorage.setItem(KEY, String(Math.max(seen, GEN)));
         } catch (e) {}
         try {
+          if (sessionStorage.getItem(RECOVERY) === "1") return;
           fetch("/app-version.json?t=" + Date.now(), {
             cache: "no-store",
             credentials: "omit",
@@ -59,12 +54,14 @@
             .then(function (v) {
               if (!v) return;
               var remoteGen = Number(v.shellGeneration || 0);
-              if (remoteGen > GEN) {
-                var next = new URL(location.href);
-                next.searchParams.set("_shell", String(remoteGen));
-                next.searchParams.set("_t", String(Date.now()));
-                location.replace(next.toString());
-              }
+              if (!(remoteGen > GEN)) return;
+              try {
+                sessionStorage.setItem(RECOVERY, "1");
+              } catch (e) {}
+              var next = new URL(location.href);
+              next.searchParams.set("_shell", String(remoteGen));
+              next.searchParams.set("_t", String(Date.now()));
+              location.replace(next.toString());
             })
             .catch(function () {});
         } catch (e) {}

@@ -2,11 +2,13 @@
  * Keep clients on the latest deploy and protect against stale Safari / WebView
  * shells that used to serve old JS after apex-ea.com updated.
  *
- * Also enforces UI_SHELL_GENERATION so an older bundled shell cannot keep
- * painting retired layouts once a newer generation is live.
+ * Upgrade path is remote app-version.json only (buildId / shellGeneration).
+ * We never reload solely because localStorage remembers a newer generation —
+ * that caused infinite loops when the CDN kept serving older HTML.
  */
 import {
   BUILD_ID_STORAGE_KEY,
+  RECOVERY_SESSION_KEY,
   RELOAD_SESSION_KEY,
   SHELL_GEN_STORAGE_KEY,
   UI_SHELL_GENERATION,
@@ -54,7 +56,12 @@ async function clearRuntimeCaches() {
 function rememberLocalShell() {
   try {
     localStorage.setItem(BUILD_ID_STORAGE_KEY, BUILD_ID);
-    localStorage.setItem(SHELL_GEN_STORAGE_KEY, String(UI_SHELL_GENERATION));
+    // Only raise the watermark — never fight a sticky CDN with reload loops.
+    const prev = Number(localStorage.getItem(SHELL_GEN_STORAGE_KEY) || 0);
+    localStorage.setItem(
+      SHELL_GEN_STORAGE_KEY,
+      String(Math.max(prev, UI_SHELL_GENERATION))
+    );
     document.documentElement.dataset.uiShell = UI_SHELL_LABEL;
     document.documentElement.dataset.shellGen = String(UI_SHELL_GENERATION);
   } catch {
@@ -62,31 +69,16 @@ function rememberLocalShell() {
   }
 }
 
-/**
- * If this tab previously ran a NEWER shell, then somehow loaded older HTML/JS
- * (bfcache, weird CDN, restored tab), force a network reload.
- */
-function rejectDowngrade() {
-  try {
-    const seenGen = Number(localStorage.getItem(SHELL_GEN_STORAGE_KEY) || 0);
-    if (seenGen > UI_SHELL_GENERATION) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("_shell", String(seenGen));
-      url.searchParams.set("_t", String(Date.now()));
-      window.location.replace(url.toString());
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-  return false;
-}
-
 function forceReload(remoteId, remoteGen) {
   const alreadyReloaded = sessionStorage.getItem(RELOAD_SESSION_KEY);
   const token = `${remoteId || "build"}:${remoteGen || UI_SHELL_GENERATION}`;
   if (alreadyReloaded === token) return false;
   sessionStorage.setItem(RELOAD_SESSION_KEY, token);
+  try {
+    sessionStorage.setItem(RECOVERY_SESSION_KEY, "1");
+  } catch {
+    // ignore
+  }
   const url = new URL(window.location.href);
   url.searchParams.set("_build", String(remoteId || "next").slice(0, 12));
   url.searchParams.set("_shell", String(remoteGen || UI_SHELL_GENERATION));
@@ -133,8 +125,6 @@ function isProdHost() {
 export async function runBootGuard() {
   await unregisterServiceWorkers();
   await clearRuntimeCaches();
-
-  if (rejectDowngrade()) return true;
 
   rememberLocalShell();
 
@@ -190,6 +180,7 @@ export function startShellWatch() {
     if (document.visibilityState === "visible") check();
   };
   const onPageShow = (event) => {
+    // bfcache restore — re-validate against live app-version.json (no local watermark fight).
     if (event?.persisted) check();
   };
 
