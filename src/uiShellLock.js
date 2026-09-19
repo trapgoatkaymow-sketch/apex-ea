@@ -3,12 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 7 — Interface 2 scanner acquire HUD + Shoot/Import intake rail
- * replaces hex SCAN LOCK / Camera-Upload card stage.
+ * Gen 8 — Interface 2 scanner mission header + ops telemetry deck restyle.
  */
-export const UI_SHELL_GENERATION = 7;
+export const UI_SHELL_GENERATION = 8;
 
-export const UI_SHELL_LABEL = "v2-scanner-acquire-hud";
+export const UI_SHELL_LABEL = "v2-scanner-mission-ops";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

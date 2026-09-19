@@ -681,11 +681,28 @@ export default function ChartScanner({ variant = "default", active = true }) {
       hidden={!active ? true : undefined}
       aria-hidden={!active ? true : undefined}
     >
-      <header className="cs-head">
+      <header className={`cs-head${variant === "v2" ? " cs-v2-mission" : ""}`}>
         <div className="cs-head-main">
-          <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
+          {variant === "v2" ? (
+            <p className="cs-kicker">
+              <i className="cs-v2-mission-pip" aria-hidden="true" />
+              {activeBot?.name || "ApexEA"}
+            </p>
+          ) : (
+            <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
+          )}
           <h2 className="cs-title">Chart Scanner</h2>
-          <p className="cs-tagline">Scan · Analyze · Trade Smarter</p>
+          <p className="cs-tagline">
+            {variant === "v2" ? (
+              <>
+                <span>Scan</span>
+                <span>Analyze</span>
+                <span>Trade Smarter</span>
+              </>
+            ) : (
+              "Scan · Analyze · Trade Smarter"
+            )}
+          </p>
         </div>
         <div className="cs-head-meta">
           <button
@@ -898,7 +915,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       </div>
 
       {variant === "v2" ? (
-        <div className="cs-v2-ops" aria-label="Scanner operations deck">
+        <div className="cs-v2-ops cs-v2-ops-deck" aria-label="Scanner operations deck">
           <div
             className={`cs-v2-link${engineActive ? " is-live" : ""}${setupReady ? " is-locked" : ""}`}
             aria-live="polite"
@@ -917,6 +934,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             </div>
             <div className="cs-v2-link-copy">
               <p className="cs-v2-link-kicker">
+                <i aria-hidden="true" />
                 {isPremiumScanner ? "Live link" : "Engine link"}
               </p>
               <p className="cs-v2-link-status">
