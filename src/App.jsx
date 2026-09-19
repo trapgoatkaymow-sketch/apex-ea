@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import AdminPortal from "./AdminPortal.jsx";
 import CoverLock from "./CoverLock.jsx";
 import PairsSheet from "./PairsSheet.jsx";
@@ -17,6 +17,18 @@ export default function App() {
   } = useApp();
 
   const hotspotRef = useRef({ count: 0, first: 0 });
+
+  useEffect(() => {
+    const remoteId = String(window.__APEXEA_UPDATE_AVAILABLE__ || "").trim();
+    if (!remoteId) return undefined;
+    showToast("New app update on apex-ea.com — reinstall APK to stay current");
+    try {
+      delete window.__APEXEA_UPDATE_AVAILABLE__;
+    } catch {
+      // ignore
+    }
+    return undefined;
+  }, [showToast]);
 
   function onBrandHotspot(event) {
     if (!event.target.closest(".apexea-hotspot")) return;

@@ -330,8 +330,43 @@ async function materializePhotoForLicense(photo) {
   return value;
 }
 
+function stabilizePayload(payload) {
+  let slim = slimPayloadForStorage(payload);
+  // Never overwrite a populated robot store with an empty shell (quota races /
+  // Strict Mode remounts). That made the app "forget" bots and look like old code.
+  try {
+    const existing = parseState(localStorage.getItem(STORAGE_KEY));
+    if (existing) {
+      const nextEas = eaCount(slim);
+      const prevEas = eaCount(existing);
+      const prevActive = (existing.bots || []).some((bot) => bot?.active);
+      const nextActive = (slim.bots || []).some((bot) => bot?.active);
+      if (nextEas === 0 && prevEas > 0) {
+        slim = {
+          ...slim,
+          eas: existing.eas,
+          bots: existing.bots,
+          licenseKeys:
+            Array.isArray(slim.licenseKeys) && slim.licenseKeys.length
+              ? slim.licenseKeys
+              : existing.licenseKeys,
+        };
+      } else if (!nextActive && prevActive && Array.isArray(existing.bots)) {
+        slim = {
+          ...slim,
+          bots: existing.bots,
+          eas: slim.eas?.length ? slim.eas : existing.eas,
+        };
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return slim;
+}
+
 function saveState(payload) {
-  const slim = slimPayloadForStorage(payload);
+  const slim = stabilizePayload(payload);
   const raw = JSON.stringify(slim);
   localStorage.setItem(STORAGE_KEY, raw);
   // Keep the last non-empty EA snapshot so an empty overwrite can be recovered.
@@ -353,7 +388,7 @@ function clearEaBackup() {
 }
 
 function clearAppStoragePressure() {
-  clearEaBackup();
+  // Keep primary + backup + device access — never wipe robot memory under quota pressure.
   try {
     clearBotPhotoCache();
   } catch {
@@ -362,14 +397,18 @@ function clearAppStoragePressure() {
   try {
     // Drop known heavy keys that are not required for EA save.
     // Do NOT clear apexea-daily-scans-v1 — quotas must persist through the day.
+    // Do NOT clear BACKUP_KEY — recovering robots after a bad write depends on it.
     const keep = new Set([
       STORAGE_KEY,
+      BACKUP_KEY,
+      "apexea-app-v1-backup",
       "apexea-daily-scans-v1",
       "apexea-device-id",
       "apexea-device-access-v1",
+      "apexea-build-id-v1",
+      "apexea-mt5-session",
+      "apexea-trade-history-v2",
     ]);
-    localStorage.removeItem("apexea-app-v1-backup");
-    localStorage.removeItem(BACKUP_KEY);
     localStorage.removeItem("apexea-float-pos");
     localStorage.removeItem("apexea-float-pos-zeta");
     localStorage.removeItem("apexea-float-pos-v2");
@@ -382,11 +421,10 @@ function clearAppStoragePressure() {
       if (!key || keep.has(key)) continue;
       if (
         key.startsWith("apexea-") &&
-        (key.includes("backup") ||
-          key.includes("cache") ||
-          key.includes("photo") ||
+        (key.includes("cache") ||
           key.includes("float") ||
-          key.includes("draft"))
+          key.includes("draft") ||
+          key.includes("scratch"))
       ) {
         doomed.push(key);
       }
@@ -639,7 +677,7 @@ export function AppProvider({ children }) {
 
     const flush = () => {
       try {
-        const slim = slimPayloadForStorage(payload);
+        const slim = stabilizePayload(payload);
         const raw = JSON.stringify(slim);
         // Skip identical writes — 5s license polls used to thrash localStorage on Android.
         if (raw === lastPersistRawRef.current) return;

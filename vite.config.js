@@ -1,5 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { writeFileSync, mkdirSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   handleBrokers,
   handleConnect,
@@ -21,6 +23,47 @@ import chartAnalyzeHandler from './api/chart/analyze.js'
 import paypalConfigHandler from './api/paypal/config.js'
 import paypalCreateOrderHandler from './api/paypal/create-order.js'
 import paypalCaptureOrderHandler from './api/paypal/capture-order.js'
+
+function resolveBuildId(env) {
+  return (
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.CF_PAGES_COMMIT_SHA ||
+    process.env.GITHUB_SHA ||
+    env.VITE_APP_BUILD_ID ||
+    process.env.VITE_APP_BUILD_ID ||
+    `local-${Date.now().toString(36)}`
+  )
+}
+
+function appVersionPlugin(buildId) {
+  const writeVersion = (outDir) => {
+    try {
+      mkdirSync(outDir, { recursive: true })
+      writeFileSync(
+        resolve(outDir, 'app-version.json'),
+        `${JSON.stringify({ buildId, builtAt: new Date().toISOString() }, null, 2)}\n`,
+        'utf8'
+      )
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    name: 'apexea-app-version',
+    config() {
+      writeVersion(resolve(process.cwd(), 'public'))
+      return {
+        define: {
+          'import.meta.env.VITE_APP_BUILD_ID': JSON.stringify(buildId),
+        },
+      }
+    },
+    closeBundle() {
+      writeVersion(resolve(process.cwd(), 'dist'))
+    },
+  }
+}
 
 function metaApiDevPlugin() {
   return {
@@ -138,6 +181,8 @@ function metaApiDevPlugin() {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const buildId = resolveBuildId(env)
+  process.env.VITE_APP_BUILD_ID = buildId
   process.env.METAAPI_TOKEN = process.env.METAAPI_TOKEN || env.METAAPI_TOKEN || ''
   process.env.METAAPI_STRATEGY_ID = process.env.METAAPI_STRATEGY_ID || env.METAAPI_STRATEGY_ID || ''
   process.env.METAAPI_REGION = process.env.METAAPI_REGION || env.METAAPI_REGION || 'new-york'
@@ -156,7 +201,7 @@ export default defineConfig(({ mode }) => {
     process.env.MT5_API_BASE || env.MT5_API_BASE || env.MT5_API_TARGET || 'http://66.23.225.158'
 
   return {
-    plugins: [react(), metaApiDevPlugin()],
+    plugins: [react(), appVersionPlugin(buildId), metaApiDevPlugin()],
     server: {
       proxy: {
         '/mt5-api': {
