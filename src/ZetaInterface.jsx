@@ -1,9 +1,5 @@
 import { resolveBotPhotoSrc } from "./apiOrigin.js";
 import BotAvatar from "./BotAvatar.jsx";
-import {
-  getCachedBotPhotoSync,
-  resolveCachedBotPhoto,
-} from "./botPhotoCache.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";
@@ -37,36 +33,11 @@ export default function ZetaInterface() {
   } = useApp();
 
   const [floatSrc, setFloatSrc] = useState(
-    () =>
-      getCachedBotPhotoSync(activeBot?.id) ||
-      resolveBotPhotoSrc(activeBot, "/logo.png")
+    () => resolveBotPhotoSrc(activeBot, "/logo.png")
   );
   useEffect(() => {
-    let cancelled = false;
-    const fallback = "/logo.png";
-    const instant =
-      getCachedBotPhotoSync(activeBot?.id) ||
-      resolveBotPhotoSrc(activeBot, fallback);
-    // Never put a remote API URL into the float orb until it decodes.
-    const photo = String(activeBot?.photo || "").trim();
-    const start =
-      instant.startsWith("/api/") || /^https?:\/\//i.test(instant)
-        ? getCachedBotPhotoSync(activeBot?.id) || fallback
-        : instant;
-    setFloatSrc(start);
-    if (
-      photo.startsWith("/api/licenses/photo") ||
-      /^https?:\/\//i.test(photo)
-    ) {
-      resolveCachedBotPhoto(activeBot, fallback)
-        .then((url) => {
-          if (!cancelled && url) setFloatSrc(url);
-        })
-        .catch(() => {});
-    }
-    return () => {
-      cancelled = true;
-    };
+    // Stable URL only — no blob-cache swaps (those made the float photo flicker).
+    setFloatSrc(resolveBotPhotoSrc(activeBot, "/logo.png"));
   }, [activeBot?.id, activeBot?.photo]);
 
   const running = v2Running;

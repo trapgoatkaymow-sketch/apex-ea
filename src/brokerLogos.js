@@ -82,6 +82,10 @@ const BROKER_DOMAINS = {
   "razor markets (pty) ltd": "razormarkets.co.za",
   "razor markets sa": "razormarkets.co.za",
   razormarkets: "razormarkets.co.za",
+  vaultmarkets: "vaultmarkets.trade",
+  "vault markets": "vaultmarkets.trade",
+  "vaultmarkets (pty) ltd": "vaultmarkets.trade",
+  "vaultmarkets pty ltd": "vaultmarkets.trade",
   "valor markets": "valormarkets.com",
   "valor markets ltd": "valormarkets.com",
   "gbe brokers": "gbebrokers.com",
@@ -171,6 +175,8 @@ const BROKER_LOCAL_LOGOS = {
   topstep: "/broker-logos/topstep.png",
   trading212: "/broker-logos/trading212.png",
   valormarkets: "/broker-logos/valormarkets.png",
+  vaultmarkets: "/broker-logos/vaultmarkets.png",
+  "vault markets": "/broker-logos/vaultmarkets.png",
   vantagemarkets: "/broker-logos/vantagemarkets.png",
   vantage: "/broker-logos/vantagemarkets.png",
   vtmarkets: "/broker-logos/vtmarkets.png",
@@ -215,6 +221,8 @@ const DOMAIN_LOCAL_LOGOS = {
   "roboforex.com": "/broker-logos/roboforex.svg",
   "robomarkets.com": "/broker-logos/robomarkets.png",
   "valormarkets.com": "/broker-logos/valormarkets.png",
+  "vaultmarkets.trade": "/broker-logos/vaultmarkets.png",
+  "vaultmarkets.com": "/broker-logos/vaultmarkets.png",
   "gbebrokers.com": "/broker-logos/gbebrokers.png",
   "fbs.com": "/broker-logos/fbs.png",
   "instaforex.com": "/broker-logos/instaforex.png",
@@ -312,20 +320,40 @@ export function resolveBrokerDomain(broker = {}) {
     return fromSite;
   }
 
-  const company = String(broker.company || broker.name || "").trim();
+  const company = String(broker.company || "").trim();
+  const server = String(broker.name || "").trim();
   const key = normalizeCompanyKey(company);
-  if (BROKER_DOMAINS[key]) return BROKER_DOMAINS[key];
+  if (key && key !== "unknown broker" && BROKER_DOMAINS[key]) return BROKER_DOMAINS[key];
 
   const stripped = key
     .replace(/\(.*?\)/g, " ")
     .replace(/\b(pty|ltd|llc|inc|limited|sa)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (BROKER_DOMAINS[stripped]) return BROKER_DOMAINS[stripped];
+  if (stripped && BROKER_DOMAINS[stripped]) return BROKER_DOMAINS[stripped];
+
+  // From MT5 server name: "VaultMarkets-Live" → vaultmarkets / vault markets
+  if (server) {
+    const brand = server.split(/[-_]/)[0] || server;
+    const compact = brand.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (compact && BROKER_DOMAINS[compact]) return BROKER_DOMAINS[compact];
+    const spaced = brand
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+    if (spaced && BROKER_DOMAINS[spaced]) return BROKER_DOMAINS[spaced];
+    if (compact.length >= 4) {
+      // Prefer known local/domain maps before guessing .com
+      if (DOMAIN_LOCAL_LOGOS[`${compact}.com`]) return `${compact}.com`;
+      if (DOMAIN_LOCAL_LOGOS[`${compact}.trade`]) return `${compact}.trade`;
+    }
+  }
 
   // Word-boundary / token match only (avoid "Zora Capital" → capital.com).
   const tokens = stripped.split(/\s+/).filter(Boolean);
-  const compact = tokens.join("");
+  const compactCompany = tokens.join("");
   let best = "";
   let bestLen = 0;
   for (const [name, domain] of Object.entries(BROKER_DOMAINS)) {
@@ -340,7 +368,7 @@ export function resolveBrokerDomain(broker = {}) {
       hit =
         stripped === name ||
         stripped.startsWith(`${name} `) ||
-        compact === nameCompact ||
+        compactCompany === nameCompact ||
         (tokens[0] === name && tokens.length <= 2);
     }
     if (hit && name.length > bestLen) {
@@ -350,8 +378,8 @@ export function resolveBrokerDomain(broker = {}) {
   }
   if (best) return best;
 
-  const slug = slugifyCompany(company);
-  if (slug.length >= 3) return `${slug}.com`;
+  const slug = slugifyCompany(company || server);
+  if (slug.length >= 3 && slug !== "unknown") return `${slug}.com`;
   return "";
 }
 
@@ -359,17 +387,32 @@ function resolveLocalLogo(broker = {}) {
   const domain = resolveBrokerDomain(broker);
   if (domain && DOMAIN_LOCAL_LOGOS[domain]) return DOMAIN_LOCAL_LOGOS[domain];
 
-  const company = String(broker.company || broker.name || "").trim();
-  const key = normalizeCompanyKey(company);
-  const spaced = key.replace(/\s+/g, "");
-  const fullSlug = logoSlug(company);
-  if (BROKER_LOCAL_LOGOS[fullSlug]) return BROKER_LOCAL_LOGOS[fullSlug];
-  if (BROKER_LOCAL_LOGOS[spaced]) return BROKER_LOCAL_LOGOS[spaced];
-  if (BROKER_LOCAL_LOGOS[key]) return BROKER_LOCAL_LOGOS[key];
+  const company = String(broker.company || "").trim();
+  const server = String(broker.name || "").trim();
+  const labels = [company, server, server.split(/[-_]/)[0] || ""].filter(Boolean);
 
-  const compact = slugifyCompany(company);
-  if (BROKER_LOCAL_LOGOS[compact]) return BROKER_LOCAL_LOGOS[compact];
+  for (const label of labels) {
+    const key = normalizeCompanyKey(label);
+    if (!key || key === "unknown broker") continue;
+    const spaced = key.replace(/\s+/g, "");
+    const fullSlug = logoSlug(label);
+    if (BROKER_LOCAL_LOGOS[fullSlug]) return BROKER_LOCAL_LOGOS[fullSlug];
+    if (BROKER_LOCAL_LOGOS[spaced]) return BROKER_LOCAL_LOGOS[spaced];
+    if (BROKER_LOCAL_LOGOS[key]) return BROKER_LOCAL_LOGOS[key];
 
+    const compact = slugifyCompany(label);
+    if (BROKER_LOCAL_LOGOS[compact]) return BROKER_LOCAL_LOGOS[compact];
+
+    // CamelCase server brands: VaultMarkets → vaultmarkets
+    const camel = String(label)
+      .replace(/[-_].*$/, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    if (camel && BROKER_LOCAL_LOGOS[camel]) return BROKER_LOCAL_LOGOS[camel];
+  }
+
+  const fullSlug = logoSlug(company || server);
+  const spaced = normalizeCompanyKey(company || server).replace(/\s+/g, "");
   // Conservative partial match: only longer brand slugs, prefix/contains on company slug.
   for (const [slug, path] of Object.entries(BROKER_LOCAL_LOGOS)) {
     if (slug.length < 4) continue;
@@ -388,22 +431,21 @@ function resolveLocalLogo(broker = {}) {
 
 /**
  * Logo URL candidates for a broker search row (first wins, then fallbacks).
- * Prefer hosted original brand marks, then high-res favicons for the correct domain.
+ * Prefer official Search logo_url, then hosted brand marks, then favicons.
  */
 export function resolveBrokerLogoCandidates(broker = {}) {
-  if (broker.logoUrl) return [String(broker.logoUrl).trim()].filter(Boolean);
-
+  const official = String(broker.logoUrl || "").trim();
   const local = resolveLocalLogo(broker);
   const domain = resolveBrokerDomain(broker);
   const remote = [];
-  if (domain) {
+  if (domain && !/^unknown\b/i.test(domain)) {
     remote.push(
       `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`,
       `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`,
       `https://icon.horse/icon/${encodeURIComponent(domain)}`
     );
   }
-  return [...new Set([local, ...remote].filter(Boolean))];
+  return [...new Set([official, local, ...remote].filter(Boolean))];
 }
 
 /** @deprecated prefer resolveBrokerLogoCandidates */
