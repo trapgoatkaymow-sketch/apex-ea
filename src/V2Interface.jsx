@@ -412,32 +412,41 @@ export default function V2Interface() {
           type="button"
           onClick={() => setV2View("home")}
         >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M4.5 11.2 12 4.8l7.5 6.4v8.5a1.3 1.3 0 0 1-1.3 1.3h-4.1v-5.2h-4.2v5.2H5.8A1.3 1.3 0 0 1 4.5 19.7v-8.5z" />
-          </svg>
-          <span>HOME</span>
+          <span className="v2-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3.2 3.6 10.3c-.3.2-.4.6-.4.9v7.5c0 .8.7 1.5 1.5 1.5H9.2v-5.3c0-.5.4-.9.9-.9h3.8c.5 0 .9.4.9.9v5.3h4.5c.8 0 1.5-.7 1.5-1.5v-7.5c0-.3-.1-.7-.4-.9L12 3.2z" />
+            </svg>
+          </span>
+          <span className="v2-tab-label">Home</span>
         </button>
         <button
           className={`v2-tab${v2View === "scanner" ? " is-active" : ""}`}
           type="button"
           onClick={() => setV2View("scanner")}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <rect x="3.5" y="5" width="17" height="14" rx="2.2" />
-            <path d="M7 15.5 10.2 11l2.6 2.8L16.5 8.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span>CHART SCANNER</span>
+          <span className="v2-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <circle cx="12" cy="12" r="3.1" />
+              <path
+                d="M12 4.2v2.2M12 17.6v2.2M4.2 12h2.2M17.6 12h2.2M6.5 6.5l1.6 1.6M15.9 15.9l1.6 1.6M17.5 6.5l-1.6 1.6M8.1 15.9l-1.6 1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <span className="v2-tab-label">Scanner</span>
         </button>
         <button
           className={`v2-tab${v2View === "metatrader" ? " is-active" : ""}`}
           type="button"
           onClick={() => setV2View("metatrader")}
         >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="12" cy="9" r="3.6" />
-            <path d="M5.2 19.2c.7-3.2 3.3-5 6.8-5s6.1 1.8 6.8 5" />
-          </svg>
-          <span>METATRADER</span>
+          <span className="v2-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6.2 6.2h2.1v11.6H6.2zM10.9 9.4h2.1v8.4h-2.1zM15.7 4.8h2.1v13H15.7z" />
+              <path d="M4.4 19.8h15.2v1.4H4.4z" opacity="0.55" />
+            </svg>
+          </span>
+          <span className="v2-tab-label">MetaTrader</span>
         </button>
       </nav>
 
