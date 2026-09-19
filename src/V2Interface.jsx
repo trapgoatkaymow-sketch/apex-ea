@@ -15,18 +15,23 @@ import V2ScannerPaywall from "./V2ScannerPaywall.jsx";
 
 const START_PARTICLE_COUNT = isNativeApp() ? 6 : 18;
 const TAB_PARTICLE_COUNT = isNativeApp() ? 4 : 8;
+const ROW_PARTICLE_COUNT = isNativeApp() ? 6 : 12;
 
-function V2TabParticles() {
+function V2EnergyBubbles({ count = TAB_PARTICLE_COUNT, energyClassName = "" }) {
   return (
     <>
-      <span className="stop-energy" aria-hidden="true">
-        {Array.from({ length: TAB_PARTICLE_COUNT }, (_, i) => (
+      <span className={`stop-energy${energyClassName ? ` ${energyClassName}` : ""}`} aria-hidden="true">
+        {Array.from({ length: count }, (_, i) => (
           <span key={i} className={`stop-particle stop-particle-${i + 1}`} />
         ))}
       </span>
       <span className="stop-core-glow" aria-hidden="true" />
     </>
   );
+}
+
+function V2TabParticles() {
+  return <V2EnergyBubbles count={TAB_PARTICLE_COUNT} />;
 }
 
 export default function V2Interface() {
@@ -242,6 +247,7 @@ export default function V2Interface() {
                         setFloatCycle(true);
                       }}
                     >
+                      <V2EnergyBubbles count={ROW_PARTICLE_COUNT} energyClassName="v2-row-energy" />
                       <BotAvatar
                         bot={bot}
                         width="40"
@@ -253,6 +259,7 @@ export default function V2Interface() {
                   ))
                 )}
                 <button className="v2-robot-row v2-robot-add" type="button" onClick={openLicense}>
+                  <V2EnergyBubbles count={ROW_PARTICLE_COUNT} energyClassName="v2-row-energy" />
                   <span className="v2-robot-add-icon" aria-hidden="true">
                     +
                   </span>

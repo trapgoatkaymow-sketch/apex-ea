@@ -5220,6 +5220,8 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-robot-row {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -5229,12 +5231,20 @@ html:has(.phone[data-interface="v2"]) body {
   padding: 12px 16px;
   min-height: 62px;
   border-radius: 18px;
-  background: linear-gradient(90deg, var(--pink-deep) 0%, var(--pink) 100%);
+  overflow: hidden;
   color: #fff;
   border: 0;
-  box-shadow: 0 8px 20px rgba(var(--pink-hot-rgb), 0.28);
+  background:
+    radial-gradient(ellipse 80% 120% at 18% 40%, rgba(255, 255, 255, 0.22), transparent 42%),
+    radial-gradient(ellipse 70% 100% at 78% 55%, rgba(var(--pink-hot-rgb), 0.35), transparent 48%),
+    linear-gradient(105deg, var(--pink-soft) 0%, var(--pink) 48%, var(--pink-deep) 100%);
+  box-shadow:
+    0 0 0 1px rgba(var(--pink-rgb), 0.35),
+    0 8px 22px rgba(var(--pink-hot-rgb), 0.32),
+    0 0 28px rgba(var(--pink-rgb), 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
   text-align: left;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.2s ease;
 }
 
 .v2-robot-row:active {
@@ -5243,10 +5253,38 @@ html:has(.phone[data-interface="v2"]) body {
 
 .v2-robot-row.is-active {
   outline: 0;
-  filter: brightness(1.06);
+  filter: brightness(1.05);
   box-shadow:
-    0 8px 22px rgba(var(--pink-hot-rgb), 0.36),
-    0 0 0 1.5px rgba(255, 255, 255, 0.28);
+    0 0 0 1.5px rgba(255, 255, 255, 0.32),
+    0 8px 24px rgba(var(--pink-hot-rgb), 0.4),
+    0 0 32px rgba(var(--pink-rgb), 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.v2-robot-row .v2-row-energy {
+  border-radius: inherit;
+  clip-path: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.v2-robot-row .stop-core-glow {
+  inset: 6px 10px;
+  border-radius: 14px;
+  z-index: 1;
+  opacity: 0.9;
+}
+
+.v2-robot-row .stop-particle {
+  --p-opacity: 0.82;
+  animation-duration: calc(var(--p-dur, 5.5s) * 0.9);
+}
+
+.v2-robot-row img,
+.v2-robot-row > span,
+.v2-robot-row .v2-robot-add-icon {
+  position: relative;
+  z-index: 2;
 }
 
 .v2-robot-row img {
@@ -5267,7 +5305,7 @@ html:has(.phone[data-interface="v2"]) body {
   text-transform: none;
   line-height: 1.15;
   color: #fff;
-  text-shadow: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   flex: 1;
   text-align: left;
 }
