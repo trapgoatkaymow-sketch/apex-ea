@@ -391,6 +391,7 @@ function writeLocalStore(mentors) {
                 contact: normalizePhone(m.contact),
                 role,
                 status: m.status || "pending",
+                statusUpdatedAt: Number(m.statusUpdatedAt) || null,
                 passwordHash: m.passwordHash,
                 salt: m.salt,
                 createdAt: Number(m.createdAt) || Date.now(),
@@ -400,6 +401,8 @@ function writeLocalStore(mentors) {
                   { role }
                 ),
                 licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
+                appColor: normalizeAppColor(m.appColor) || "",
+                appColorUpdatedAt: Number(m.appColorUpdatedAt) || null,
               };
             })
             .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt),
@@ -572,6 +575,7 @@ async function writeStore(mentors, sha, message) {
           contact: normalizePhone(m.contact),
           role,
           status: m.status || "pending",
+          statusUpdatedAt: Number(m.statusUpdatedAt) || null,
           passwordHash: m.passwordHash,
           salt: m.salt,
           createdAt: Number(m.createdAt) || Date.now(),
