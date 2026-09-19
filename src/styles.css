@@ -385,28 +385,30 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .phone[data-interface="v2"] .top {
-  z-index: 2;
-  /* Transparent so the robot ring glow is not sliced by a hard black bar */
-  background: transparent !important;
+  z-index: 30;
+  /* Solid black header strip — purple ring glow stays below KAMA */
+  background: #000 !important;
   background-image: none !important;
-  box-shadow: none;
+  box-shadow: 0 -24px 0 24px #000;
   pointer-events: none;
 }
 
 .phone[data-interface="v2"] .top .username {
-  z-index: 6;
+  z-index: 31;
   pointer-events: none;
+  color: #fff;
 }
 
 .phone[data-interface="v2"] .top .iface-toggle {
   position: relative;
-  z-index: 6;
+  z-index: 31;
   pointer-events: auto;
 }
 
 /* Legacy full-bleed hide — unused on circular APEX EA home (title stays visible) */
 .phone[data-interface="v2"] .top.is-v2-home {
-  background: transparent !important;
+  background: #000 !important;
+  background-image: none !important;
 }
 
 .stage {
@@ -4885,7 +4887,7 @@ html:has(.phone[data-interface="v2"]) body {
   min-height: 100%;
   box-sizing: border-box;
   align-self: flex-start;
-  /* Let the avatar ring glow extend past the header without a clipped hairline */
+  /* Solid black sheet under KAMA; avatar glow stays below the header bar */
   overflow: visible;
   /* Home stays solid — Powered by apexEA must never fade with view enter animation */
   animation: none !important;
@@ -4895,16 +4897,16 @@ html:has(.phone[data-interface="v2"]) body {
 /* Interface 2 dark circular home — matches reference: black sheet + pink ring avatar */
 .v2-hero {
   position: relative;
-  /* Above the transparent top bar so ring glow is not covered by a black curtain */
-  z-index: 3;
+  /* Sit under the solid black KAMA bar; ring glow renders below the header */
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   width: 100%;
-  /* Extra top room so breathe-ring glow is not clipped into a black line */
-  padding: 28px 16px 52px;
-  margin-top: -18px;
+  /* Clear the black header so breathe-ring glow is not clipped into a line */
+  padding: 36px 16px 52px;
+  margin-top: 0;
   overflow: visible;
   background: transparent;
   animation: none !important;
