@@ -737,10 +737,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <div className="cs-empty">
                 {variant === "v2" ? (
                   <div className="cs-v2-portal" aria-hidden="true">
-                    <span className="cs-v2-portal-radar" />
-                    <span className="cs-v2-portal-ring cs-v2-portal-ring--a" />
-                    <span className="cs-v2-portal-ring cs-v2-portal-ring--b" />
-                    <span className="cs-v2-portal-hex">
+                    <span className="cs-v2-portal-frame">
+                      <span className="cs-v2-portal-corner cs-v2-portal-corner--tl" />
+                      <span className="cs-v2-portal-corner cs-v2-portal-corner--tr" />
+                      <span className="cs-v2-portal-corner cs-v2-portal-corner--bl" />
+                      <span className="cs-v2-portal-corner cs-v2-portal-corner--br" />
+                    </span>
+                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--a" />
+                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--b" />
+                    <span className="cs-v2-portal-core">
                       <BotAvatar
                         className="cs-v2-portal-photo"
                         bot={activeBot}
@@ -748,14 +753,12 @@ export default function ChartScanner({ variant = "default", active = true }) {
                         width="160"
                         height="160"
                       />
-                      <span className="cs-v2-portal-grid" />
-                      <span className="cs-v2-portal-crosshair" />
+                      <span className="cs-v2-portal-scanline" />
                     </span>
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--n" />
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--e" />
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--s" />
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--w" />
-                    <span className="cs-v2-portal-label">SCAN LOCK</span>
+                    <span className="cs-v2-portal-badge">
+                      <i />
+                      Acquire target
+                    </span>
                   </div>
                 ) : (
                   <>
@@ -810,7 +813,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
             ) : null}
           </div>
 
-          <div className={`cs-capture-row${engineActive ? " is-scanning" : ""}`}>
+          <div
+            className={`cs-capture-row${variant === "v2" ? " cs-v2-intake" : ""}${
+              engineActive ? " is-scanning" : ""
+            }`}
+          >
             <button
               className="cs-capture-btn is-primary"
               type="button"
@@ -828,12 +835,14 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 </svg>
               </span>
               <span className="cs-capture-text">
-                <strong>Camera</strong>
-                <em>Open camera</em>
+                <strong>{variant === "v2" ? "Shoot" : "Camera"}</strong>
+                <em>{variant === "v2" ? "Live chart" : "Open camera"}</em>
               </span>
-              <span className="cs-capture-chevron" aria-hidden="true">
-                ›
-              </span>
+              {variant === "v2" ? null : (
+                <span className="cs-capture-chevron" aria-hidden="true">
+                  ›
+                </span>
+              )}
             </button>
             <button
               className="cs-capture-btn is-ghost"
@@ -859,12 +868,14 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 </svg>
               </span>
               <span className="cs-capture-text">
-                <strong>Upload</strong>
-                <em>Choose image</em>
+                <strong>{variant === "v2" ? "Import" : "Upload"}</strong>
+                <em>{variant === "v2" ? "From gallery" : "Choose image"}</em>
               </span>
-              <span className="cs-capture-chevron" aria-hidden="true">
-                ›
-              </span>
+              {variant === "v2" ? null : (
+                <span className="cs-capture-chevron" aria-hidden="true">
+                  ›
+                </span>
+              )}
             </button>
           </div>
         </div>

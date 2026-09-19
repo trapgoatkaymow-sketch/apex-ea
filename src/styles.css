@@ -7926,25 +7926,26 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-stage {
-  padding: 14px 12px;
-  border-radius: 24px;
-  gap: 12px;
+  padding: 12px 10px 14px;
+  border-radius: 4px;
+  gap: 10px;
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(255, 0, 60, 0.16), transparent 55%),
-    linear-gradient(180deg, rgba(14, 10, 18, 0.92), rgba(6, 6, 10, 0.96));
-  border: 1px solid rgba(255, 255, 255, 0.1);
+    linear-gradient(180deg, rgba(var(--pink-rgb), 0.1) 0%, transparent 28%),
+    linear-gradient(180deg, #0a060c 0%, #030305 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 2px solid rgba(var(--pink-rgb), 0.55);
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.28),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(14px);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 16px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: none;
 }
 
 .view-scanner.cs-v2 .cs-stage.is-running {
-  border-color: rgba(var(--pink-rgb), 0.45);
+  border-top-color: var(--pink);
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.28),
-    0 0 0 1px rgba(var(--pink-rgb), 0.18),
-    0 0 36px rgba(255, 0, 60, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(var(--pink-rgb), 0.2),
+    0 0 28px rgba(var(--pink-rgb), 0.22);
 }
 
 .view-scanner.cs-v2 .cs-stage-main {
@@ -7962,14 +7963,20 @@ html:has(.phone[data-interface="v2"]) body {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  max-height: min(42vh, 280px);
-  min-height: 200px;
-  border-radius: 20px;
+  max-height: min(40vh, 268px);
+  min-height: 196px;
+  border-radius: 2px;
   background:
-    radial-gradient(circle at 50% 42%, rgba(255, 0, 60, 0.12), transparent 55%),
-    #05060a;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  /* Empty-state robot glow must not get squared off at the bottom. */
+    radial-gradient(circle at 50% 46%, rgba(var(--pink-rgb), 0.14), transparent 52%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 11px,
+      rgba(255, 255, 255, 0.015) 11px,
+      rgba(255, 255, 255, 0.015) 12px
+    ),
+    #040508;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   overflow: visible;
 }
 
@@ -7982,15 +7989,15 @@ html:has(.phone[data-interface="v2"]) body {
   aspect-ratio: 16 / 11;
   max-height: min(36vh, 250px);
   min-height: 170px;
-  padding: 12px;
-  border-radius: 20px;
+  padding: 10px;
+  border-radius: 2px;
   background: #05060a;
   overflow: hidden;
 }
 
 .view-scanner.cs-v2 .cs-stage.has-chart .cs-chart,
 .view-scanner.cs-v2 .cs-stage:has(.cs-chart) .cs-chart {
-  border-radius: 12px;
+  border-radius: 2px;
 }
 
 .view-scanner.cs-v2 .cs-bracket {
@@ -8002,7 +8009,7 @@ html:has(.phone[data-interface="v2"]) body {
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: 22px 8px 34px;
+  padding: 18px 8px 40px;
   position: relative;
   z-index: 1;
   overflow: visible;
@@ -8016,152 +8023,159 @@ html:has(.phone[data-interface="v2"]) body {
   display: none;
 }
 
-/* Unique Interface 2 empty-state: hexagonal scan lock (not the circular bobble). */
+/* Unique Interface 2 empty-state: acquire HUD (not I1 bobble / not hex SCAN LOCK). */
 .view-scanner.cs-v2 .cs-v2-portal {
-  --cs-v2-portal: #ff1a4d;
+  --cs-v2-portal: var(--pink);
   position: relative;
-  width: clamp(168px, 48vw, 210px);
-  height: clamp(168px, 48vw, 210px);
+  width: clamp(176px, 50vw, 220px);
+  height: clamp(176px, 50vw, 220px);
   display: grid;
   place-items: center;
   isolation: isolate;
 }
 
-.view-scanner.cs-v2 .cs-v2-portal-radar {
+.view-scanner.cs-v2 .cs-v2-portal-frame {
   position: absolute;
-  inset: 6%;
+  inset: 10%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.view-scanner.cs-v2 .cs-v2-portal-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(var(--pink-rgb), 0.95);
+  filter: drop-shadow(0 0 6px rgba(var(--pink-rgb), 0.65));
+}
+
+.view-scanner.cs-v2 .cs-v2-portal-corner--tl {
+  top: 0;
+  left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-portal-corner--tr {
+  top: 0;
+  right: 0;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-portal-corner--bl {
+  bottom: 0;
+  left: 0;
+  border-right: 0;
+  border-top: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-portal-corner--br {
+  bottom: 0;
+  right: 0;
+  border-left: 0;
+  border-top: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-portal-orbit {
+  position: absolute;
+  inset: 4%;
   border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(255, 26, 77, 0.0) 40deg,
-    rgba(255, 26, 77, 0.35) 78deg,
-    transparent 110deg,
-    transparent 360deg
-  );
-  mask-image: radial-gradient(circle, transparent 42%, #000 46%, #000 68%, transparent 72%);
-  -webkit-mask-image: radial-gradient(circle, transparent 42%, #000 46%, #000 68%, transparent 72%);
-  animation: cs-v2-radar 4.2s linear infinite;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   pointer-events: none;
   z-index: 1;
-  opacity: 0.9;
 }
 
-.view-scanner.cs-v2 .cs-v2-portal-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px dashed rgba(255, 26, 77, 0.55);
-  box-shadow: 0 0 18px rgba(255, 26, 77, 0.25);
-  pointer-events: none;
-  z-index: 1;
+.view-scanner.cs-v2 .cs-v2-portal-orbit--a {
+  border-top-color: rgba(var(--pink-rgb), 0.9);
+  border-right-color: rgba(var(--pink-rgb), 0.25);
+  box-shadow: 0 0 16px rgba(var(--pink-rgb), 0.18);
+  animation: cs-v2-spin 11s linear infinite;
 }
 
-.view-scanner.cs-v2 .cs-v2-portal-ring--a {
-  animation: cs-v2-spin 14s linear infinite;
+.view-scanner.cs-v2 .cs-v2-portal-orbit--b {
+  inset: 14%;
+  border-style: dashed;
+  border-color: rgba(var(--pink-rgb), 0.35);
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+  animation: cs-v2-spin 7.5s linear infinite reverse;
 }
 
-.view-scanner.cs-v2 .cs-v2-portal-ring--b {
-  inset: 8%;
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 26, 77, 0.85);
-  border-right-color: rgba(255, 26, 77, 0.35);
-  animation: cs-v2-spin 9s linear infinite reverse;
-}
-
-.view-scanner.cs-v2 .cs-v2-portal-hex {
+.view-scanner.cs-v2 .cs-v2-portal-core {
   position: relative;
   z-index: 2;
-  width: 62%;
-  height: 62%;
+  width: 58%;
+  height: 58%;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
-  background:
-    linear-gradient(145deg, rgba(255, 26, 77, 0.35), rgba(8, 4, 10, 0.95) 45%, #050308);
-  box-shadow:
-    0 0 0 1px rgba(255, 26, 77, 0.75),
-    0 0 28px rgba(255, 26, 77, 0.45),
-    inset 0 0 22px rgba(255, 26, 77, 0.2);
   overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(var(--pink-rgb), 0.35), transparent 55%),
+    #07040a;
+  box-shadow:
+    0 0 0 2px rgba(var(--pink-rgb), 0.55),
+    0 0 26px rgba(var(--pink-rgb), 0.4),
+    inset 0 0 18px rgba(0, 0, 0, 0.55);
 }
 
 .view-scanner.cs-v2 .cs-v2-portal-photo {
-  width: 118%;
-  height: 118%;
+  width: 112%;
+  height: 112%;
   object-fit: cover;
   object-position: center 28%;
-  filter: saturate(1.15) contrast(1.08);
-  opacity: 0.92;
+  filter: saturate(1.12) contrast(1.06);
+  opacity: 0.94;
 }
 
-.view-scanner.cs-v2 .cs-v2-portal-grid {
+.view-scanner.cs-v2 .cs-v2-portal-scanline {
   position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(rgba(255, 26, 77, 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 26, 77, 0.18) 1px, transparent 1px);
-  background-size: 14px 14px;
+  left: 6%;
+  right: 6%;
+  height: 18%;
+  top: -20%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(var(--pink-rgb), 0.45),
+    transparent
+  );
   mix-blend-mode: screen;
-  opacity: 0.45;
+  animation: cs-v2-scanline 2.8s ease-in-out infinite;
   pointer-events: none;
 }
 
-.view-scanner.cs-v2 .cs-v2-portal-crosshair {
+.view-scanner.cs-v2 .cs-v2-portal-badge {
   position: absolute;
-  inset: 18%;
-  pointer-events: none;
-  background:
-    linear-gradient(#ff1a4d, #ff1a4d) center / 100% 1px no-repeat,
-    linear-gradient(#ff1a4d, #ff1a4d) center / 1px 100% no-repeat;
-  opacity: 0.7;
-  filter: drop-shadow(0 0 6px rgba(255, 26, 77, 0.8));
-}
-
-.view-scanner.cs-v2 .cs-v2-portal-tick {
-  position: absolute;
-  z-index: 3;
-  background: #ff1a4d;
-  box-shadow: 0 0 8px rgba(255, 26, 77, 0.9);
-  pointer-events: none;
-}
-
-.view-scanner.cs-v2 .cs-v2-portal-tick--n,
-.view-scanner.cs-v2 .cs-v2-portal-tick--s {
-  width: 2px;
-  height: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.view-scanner.cs-v2 .cs-v2-portal-tick--e,
-.view-scanner.cs-v2 .cs-v2-portal-tick--w {
-  width: 12px;
-  height: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.view-scanner.cs-v2 .cs-v2-portal-tick--n { top: 1%; }
-.view-scanner.cs-v2 .cs-v2-portal-tick--s { bottom: 1%; }
-.view-scanner.cs-v2 .cs-v2-portal-tick--e { right: 1%; }
-.view-scanner.cs-v2 .cs-v2-portal-tick--w { left: 1%; }
-
-.view-scanner.cs-v2 .cs-v2-portal-label {
-  position: absolute;
-  bottom: -2px;
+  bottom: -6px;
   left: 50%;
   transform: translate(-50%, 100%);
-  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 2px;
   font-family: var(--font-v2);
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  letter-spacing: 0.22em;
-  color: rgba(255, 255, 255, 0.72);
-  text-shadow: 0 0 12px rgba(255, 26, 77, 0.55);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(var(--pink-rgb), 0.45);
+  box-shadow: 0 0 14px rgba(var(--pink-rgb), 0.25);
   white-space: nowrap;
   pointer-events: none;
+  z-index: 4;
+}
+
+.view-scanner.cs-v2 .cs-v2-portal-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 8px rgba(var(--pink-rgb), 0.9);
+  animation: cs-v2-badge-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes cs-v2-spin {
@@ -8170,9 +8184,27 @@ html:has(.phone[data-interface="v2"]) body {
   }
 }
 
-@keyframes cs-v2-radar {
-  to {
-    transform: rotate(360deg);
+@keyframes cs-v2-scanline {
+  0%,
+  100% {
+    top: -18%;
+    opacity: 0.35;
+  }
+  50% {
+    top: 78%;
+    opacity: 1;
+  }
+}
+
+@keyframes cs-v2-badge-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
   }
 }
 
@@ -8188,16 +8220,23 @@ html:has(.phone[data-interface="v2"]) body {
   display: none;
 }
 
-.view-scanner.cs-v2 .cs-capture-row {
+/* Split intake rail — Shoot / Import (not Camera / Upload cards). */
+.view-scanner.cs-v2 .cs-capture-row,
+.view-scanner.cs-v2 .cs-v2-intake {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 0;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
 }
 
-.view-scanner.cs-v2 .cs-capture-btn {
-  min-height: 64px;
-  border-radius: 16px;
-  padding: 10px 12px;
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn {
+  min-height: 58px;
+  border-radius: 0;
+  padding: 11px 12px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -8205,13 +8244,18 @@ html:has(.phone[data-interface="v2"]) body {
   text-align: left;
   font-size: inherit;
   color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  background: transparent;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
-.view-scanner.cs-v2 .cs-capture-text {
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn:last-child {
+  border-right: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-text {
   display: grid;
   gap: 2px;
   text-align: left;
@@ -8219,94 +8263,81 @@ html:has(.phone[data-interface="v2"]) body {
   min-width: 0;
 }
 
-.view-scanner.cs-v2 .cs-capture-text strong {
-  font-size: 0.78rem;
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-text strong {
+  font-size: 0.76rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   line-height: 1.1;
   color: #fff;
 }
 
-.view-scanner.cs-v2 .cs-capture-text em {
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-text em {
   font-style: normal;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.48);
 }
 
-.view-scanner.cs-v2 .cs-capture-chevron {
-  margin-left: auto;
-  font-size: 1.2rem;
-  font-weight: 300;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.45);
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary {
+  background: linear-gradient(90deg, rgba(var(--pink-rgb), 0.28), rgba(var(--pink-rgb), 0.06));
+  box-shadow: inset 0 -2px 0 var(--pink);
 }
 
-.view-scanner.cs-v2 .cs-capture-btn.is-primary {
-  border-color: rgba(var(--pink-rgb), 0.55);
-  background: linear-gradient(180deg, rgba(255, 0, 60, 0.22), rgba(255, 255, 255, 0.04));
-  box-shadow:
-    0 10px 28px rgba(255, 0, 60, 0.28),
-    inset 0 0 0 1px rgba(var(--pink-rgb), 0.18);
-}
-
-.view-scanner.cs-v2 .cs-capture-btn.is-primary .cs-capture-icon,
-.view-scanner.cs-v2 .cs-capture-btn.is-primary .cs-capture-chevron {
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary .cs-capture-icon {
   color: var(--pink);
 }
 
-.view-scanner.cs-v2 .cs-capture-btn.is-ghost {
-  background: rgba(255, 255, 255, 0.04);
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost {
+  background: rgba(255, 255, 255, 0.02);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.view-scanner.cs-v2 .cs-capture-btn.is-ghost .cs-capture-icon,
-.view-scanner.cs-v2 .cs-capture-btn.is-ghost .cs-capture-chevron {
-  color: rgba(255, 255, 255, 0.85);
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost .cs-capture-icon {
+  color: rgba(255, 255, 255, 0.78);
 }
 
-.view-scanner.cs-v2 .cs-capture-btn.is-ghost .cs-capture-text em {
-  color: rgba(255, 255, 255, 0.5);
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn:active {
+  transform: none;
+  background: rgba(var(--pink-rgb), 0.18);
 }
 
-.view-scanner.cs-v2 .cs-capture-btn:active {
-  transform: scale(0.98);
-}
-
-.view-scanner.cs-v2 .cs-capture-icon {
-  width: 22px;
-  height: 22px;
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon {
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.85);
 }
 
-.view-scanner.cs-v2 .cs-capture-icon svg {
-  width: 22px;
-  height: 22px;
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon svg {
+  width: 15px;
+  height: 15px;
 }
 
-.view-scanner.cs-v2 .cs-capture-row.is-scanning .cs-capture-btn.is-primary {
-  animation: cs-v2-primary-pulse 1.3s ease-in-out infinite;
+.view-scanner.cs-v2 .cs-v2-intake.is-scanning .cs-capture-btn.is-primary {
+  animation: cs-v2-intake-pulse 1.25s ease-in-out infinite;
 }
 
-@keyframes cs-v2-primary-pulse {
+@keyframes cs-v2-intake-pulse {
   0%,
   100% {
-    box-shadow:
-      0 10px 28px rgba(255, 0, 60, 0.28),
-      inset 0 0 0 1px rgba(var(--pink-rgb), 0.18);
+    box-shadow: inset 0 -2px 0 var(--pink);
+    background: linear-gradient(90deg, rgba(var(--pink-rgb), 0.28), rgba(var(--pink-rgb), 0.06));
   }
   50% {
-    box-shadow:
-      0 14px 34px rgba(255, 0, 60, 0.5),
-      inset 0 0 0 1px rgba(var(--pink-rgb), 0.35);
+    box-shadow: inset 0 -2px 0 #fff;
+    background: linear-gradient(90deg, rgba(var(--pink-rgb), 0.42), rgba(var(--pink-rgb), 0.12));
   }
 }
 
 .view-scanner.cs-v2 .cs-v2-ops {
+
   display: grid;
   gap: 14px;
   margin-top: 4px;
@@ -8832,8 +8863,8 @@ html:has(.phone[data-interface="v2"]) body {
     height: clamp(150px, 44vw, 188px);
   }
 
-  .view-scanner.cs-v2 .cs-capture-btn {
-    min-height: 56px;
+  .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn {
+    min-height: 52px;
   }
 }
 
@@ -9370,9 +9401,10 @@ html.is-native .phone:has(#view-scanner:not([hidden])) > .glow-soft {
 }
 
 /* Keep V2 scanner portal spinning on Android like the web */
-html.is-native .view-scanner.cs-v2 .cs-v2-portal-radar,
-html.is-native .view-scanner.cs-v2 .cs-v2-portal-ring--a,
-html.is-native .view-scanner.cs-v2 .cs-v2-portal-ring--b {
+html.is-native .view-scanner.cs-v2 .cs-v2-portal-orbit--a,
+html.is-native .view-scanner.cs-v2 .cs-v2-portal-orbit--b,
+html.is-native .view-scanner.cs-v2 .cs-v2-portal-scanline,
+html.is-native .view-scanner.cs-v2 .cs-v2-portal-badge i {
   animation-play-state: running;
 }
 
@@ -9385,9 +9417,10 @@ html.is-native.is-paused .cs-robot-glow,
 html.is-native.is-paused .cs-robot-orb,
 html.is-native.is-paused .econ-cal-btn-ring,
 html.is-native.is-paused .econ-cal-btn-ring--outer,
-html.is-native.is-paused .cs-v2-portal-radar,
-html.is-native.is-paused .cs-v2-portal-ring--a,
-html.is-native.is-paused .cs-v2-portal-ring--b,
+html.is-native.is-paused .cs-v2-portal-orbit--a,
+html.is-native.is-paused .cs-v2-portal-orbit--b,
+html.is-native.is-paused .cs-v2-portal-scanline,
+html.is-native.is-paused .cs-v2-portal-badge i,
 html.is-native.is-paused .cs-scan-beam.is-on,
 html.is-native.is-paused .cs-scan-grid.is-on {
   animation-play-state: paused !important;

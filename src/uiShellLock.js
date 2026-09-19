@@ -3,12 +3,12 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 6 — Interface 2 scanner ops deck (live-link ring, pair board, exit ladder)
- * replaces the Interface-1-lookalike Signal Core / controls / TP cards.
+ * Gen 7 — Interface 2 scanner acquire HUD + Shoot/Import intake rail
+ * replaces hex SCAN LOCK / Camera-Upload card stage.
  */
-export const UI_SHELL_GENERATION = 6;
+export const UI_SHELL_GENERATION = 7;
 
-export const UI_SHELL_LABEL = "v2-scanner-ops-deck";
+export const UI_SHELL_LABEL = "v2-scanner-acquire-hud";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
