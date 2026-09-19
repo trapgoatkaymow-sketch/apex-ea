@@ -94,18 +94,22 @@
       <a class="btn" id="primary" href="/api/download-apk">
         Download APK v2.20
       </a>
-      <a class="btn secondary" href="/apex-ea-v2.20.apk" download="apex-ea-v2.20.apk">
-        Direct file link
+      <a
+        class="btn secondary"
+        href="https://cdn.jsdelivr.net/gh/trapgoatkaymow-sketch/apex-ea@main/public/apex-ea-v2.20.apk"
+        download="apex-ea-v2.20.apk"
+      >
+        Backup download link
       </a>
       <p class="note">
-        On Android: open this page in Chrome → tap Download → Allow from this source
-        if asked. File size is about 4.5&nbsp;MB.
+        Android only (Chrome). Tap Download → Allow from this source if asked.
+        File size is about 8.5&nbsp;MB. iPhone cannot install APKs — use the website
+        at apex-ea.com instead.
       </p>
     </main>
     <script>
-      // If the .apk URL ever HTML-falls-through, send users to the direct file again.
       document.getElementById("primary").addEventListener("click", function () {
-        // Keep default navigation to the APK binary.
+        // Keep default navigation to the download API (redirects to the APK file).
       });
     </script>
   </body>
