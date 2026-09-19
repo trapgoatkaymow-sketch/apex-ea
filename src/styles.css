@@ -5225,11 +5225,12 @@ html:has(.phone[data-interface="v2"]) body {
   isolation: isolate;
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: flex-start;
+  gap: 12px;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 14px 22px 14px 14px;
+  padding: 14px 20px 14px 14px;
   min-height: 68px;
   border-radius: 999px;
   overflow: hidden;
@@ -5297,6 +5298,14 @@ html:has(.phone[data-interface="v2"]) body {
 .v2-robot-row .v2-robot-add-icon {
   position: relative;
   z-index: 2;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.v2-robot-row .stop-energy,
+.v2-robot-row .stop-core-glow {
+  position: absolute;
+  pointer-events: none;
 }
 
 .v2-robot-row img {
@@ -5320,8 +5329,11 @@ html:has(.phone[data-interface="v2"]) body {
   line-height: 1.15;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  flex: 1;
-  text-align: center;
+  flex: 0 1 auto;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .v2-robot-add > span:last-child {
