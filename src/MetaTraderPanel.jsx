@@ -48,28 +48,28 @@ function normalizeEmail(email) {
     .toLowerCase();
 }
 
-function formatMoney(value, currency = "USD") {
+function formatMoney(value, currency = "") {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "—";
-  const code = String(currency || "USD").trim().toUpperCase() || "USD";
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: code,
-      currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    const sign = amount < 0 ? "-" : "";
-    return `${sign}${code} ${Math.abs(amount).toFixed(2)}`;
+  const code = String(currency || "").trim().toUpperCase();
+  // Only use currency style when broker reported a real ISO code (ZAR, USD, …).
+  if (/^[A-Z]{3}$/.test(code)) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: code,
+        currencyDisplay: "narrowSymbol",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${code} ${amount.toFixed(2)}`;
+    }
   }
-}
-
-function profitTone(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount === 0) return "";
-  return amount > 0 ? " is-profit" : " is-loss";
+  return amount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function MetaTraderPanel({ variant = "zeta" }) {
@@ -175,7 +175,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- heartbeat tied to live session
   }, [session?.accountId, session?.company, coverEmail, apiHealth?.online]);
 
-  // Broker API on/off — poll so clients see when 66.23.225.158 is down.
+  // Broker API on/off — poll so clients see when 159.203.191.196 is down.
   useEffect(() => {
     let cancelled = false;
     let timer = null;
@@ -214,7 +214,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     };
   }, []);
 
-  // Keep connected session fresh and pull live balance / floating profit.
+  // Keep connected session fresh and pull live balance.
   useEffect(() => {
     if (!session?.accountId) {
       setAccountMetrics(null);
@@ -268,7 +268,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             balance,
             equity,
             profit,
-            currency: status.currency || "USD",
+            currency: status.currency || "",
           });
         }
       } catch {
@@ -426,8 +426,25 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         subscriptionError: connected.subscriptionError,
         region: connected.region || null,
         connectedAt: Date.now(),
+        balance: connected.balance ?? null,
+        equity: connected.equity ?? null,
+        profit: connected.profit ?? null,
+        currency: connected.currency || "",
       };
       setMt5Session(nextSession);
+      if (
+        connected.balance != null ||
+        connected.equity != null ||
+        connected.profit != null ||
+        connected.currency
+      ) {
+        setAccountMetrics({
+          balance: connected.balance ?? null,
+          equity: connected.equity ?? null,
+          profit: connected.profit ?? null,
+          currency: connected.currency || "",
+        });
+      }
       await syncHostedAccount(nextSession, coverEmail);
       pushEngineLog("Trading engine armed · MT5 connected");
       showToast(`Connected ${nextSession.company}`);
@@ -627,17 +644,11 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                 Disconnect
               </button>
             </div>
-            <div className="mt-session-metrics" aria-label="Account balance and floating profit">
+            <div className="mt-session-metrics" aria-label="Account balance">
               <div className="mt-metric">
                 <span className="mt-metric-label">Balance</span>
                 <strong className="mt-metric-value">
                   {formatMoney(accountMetrics?.balance, accountMetrics?.currency)}
-                </strong>
-              </div>
-              <div className="mt-metric">
-                <span className="mt-metric-label">Floating profit</span>
-                <strong className={`mt-metric-value${profitTone(accountMetrics?.profit)}`}>
-                  {formatMoney(accountMetrics?.profit, accountMetrics?.currency)}
                 </strong>
               </div>
             </div>
