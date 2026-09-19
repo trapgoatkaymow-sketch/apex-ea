@@ -5203,10 +5203,10 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-robots-title {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   font-family: var(--font-v2);
   font-size: 0.95rem;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   font-weight: 700;
   color: #fff;
   text-transform: uppercase;
@@ -5215,34 +5215,37 @@ html:has(.phone[data-interface="v2"]) body {
 .v2-robot-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
 }
 
+/* Exact reference: solid hot-pink stadium pills + soft bloom + inner bubbles */
 .v2-robot-row {
   position: relative;
   isolation: isolate;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 12px 16px;
-  min-height: 62px;
-  border-radius: 18px;
+  padding: 14px 22px 14px 14px;
+  min-height: 68px;
+  border-radius: 999px;
   overflow: hidden;
   color: #fff;
   border: 0;
+  outline: 0;
   background:
-    radial-gradient(ellipse 80% 120% at 18% 40%, rgba(255, 255, 255, 0.22), transparent 42%),
-    radial-gradient(ellipse 70% 100% at 78% 55%, rgba(var(--pink-hot-rgb), 0.35), transparent 48%),
-    linear-gradient(105deg, var(--pink-soft) 0%, var(--pink) 48%, var(--pink-deep) 100%);
+    radial-gradient(ellipse 90% 140% at 12% 35%, rgba(255, 255, 255, 0.28), transparent 38%),
+    radial-gradient(circle at 72% 60%, rgba(255, 255, 255, 0.08), transparent 36%),
+    linear-gradient(180deg, var(--pink-soft) 0%, var(--pink) 55%, var(--pink-hot) 100%);
   box-shadow:
-    0 0 0 1px rgba(var(--pink-rgb), 0.35),
-    0 8px 22px rgba(var(--pink-hot-rgb), 0.32),
-    0 0 28px rgba(var(--pink-rgb), 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    0 0 18px rgba(var(--pink-rgb), 0.55),
+    0 0 36px rgba(var(--pink-hot-rgb), 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
   text-align: left;
   transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.2s ease;
 }
@@ -5252,13 +5255,13 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-robot-row.is-active {
-  outline: 0;
-  filter: brightness(1.05);
+  filter: brightness(1.04);
   box-shadow:
-    0 0 0 1.5px rgba(255, 255, 255, 0.32),
-    0 8px 24px rgba(var(--pink-hot-rgb), 0.4),
-    0 0 32px rgba(var(--pink-rgb), 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+    0 0 22px rgba(var(--pink-rgb), 0.65),
+    0 0 42px rgba(var(--pink-hot-rgb), 0.4),
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
 .v2-robot-row .v2-row-energy {
@@ -5269,15 +5272,24 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-robot-row .stop-core-glow {
-  inset: 6px 10px;
-  border-radius: 14px;
+  inset: 8px 16px;
+  border-radius: 999px;
   z-index: 1;
-  opacity: 0.9;
+  opacity: 0.75;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(var(--pink-soft-rgb), 0.12) 40%,
+    transparent 70%
+  );
 }
 
 .v2-robot-row .stop-particle {
-  --p-opacity: 0.82;
-  animation-duration: calc(var(--p-dur, 5.5s) * 0.9);
+  --p-opacity: 0.9;
+  animation-duration: calc(var(--p-dur, 5.5s) * 0.95);
+  box-shadow:
+    0 0 6px rgba(255, 255, 255, 0.85),
+    0 0 12px rgba(var(--pink-soft-rgb), 0.55);
 }
 
 .v2-robot-row img,
@@ -5288,36 +5300,44 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-robot-row img {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
-  background: #1a0610;
+  background: #12060c;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 0 3px rgba(255, 255, 255, 0.2);
 }
 
 .v2-robot-row > span {
   font-family: var(--font-v2);
-  font-size: 0.92rem;
-  letter-spacing: 0.02em;
-  font-weight: 700;
-  text-transform: none;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+  text-transform: uppercase;
   line-height: 1.15;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   flex: 1;
+  text-align: center;
+}
+
+.v2-robot-add > span:last-child {
+  text-transform: none;
+  letter-spacing: 0.02em;
   text-align: left;
 }
 
 .v2-robot-add-icon {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 500;
   line-height: 1;
   color: #fff;
