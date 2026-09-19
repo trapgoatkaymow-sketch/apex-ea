@@ -1059,6 +1059,9 @@ export function AppProvider({ children }) {
             const remotePhoto = photoByBotId.get(ea.id);
             if (!remotePhoto) return ea;
             const localPhoto = String(ea.photo || "");
+            if (!isRealProfilePhoto(localPhoto)) {
+              return { ...ea, photo: remotePhoto };
+            }
             // Tiny legacy data-URL embeds look blurry on Home — always prefer a
             // durable API path when remote has one (full bytes from GitHub).
             if (
@@ -1091,6 +1094,9 @@ export function AppProvider({ children }) {
             const remotePhoto = photoByBotId.get(bot.id);
             if (!remotePhoto) return bot;
             const localPhoto = String(bot.photo || "");
+            if (!isRealProfilePhoto(localPhoto)) {
+              return { ...bot, photo: remotePhoto };
+            }
             // Prefer full-quality API bytes over tiny local data-URL embeds.
             if (
               localPhoto.startsWith("data:image/") &&
@@ -1198,14 +1204,13 @@ export function AppProvider({ children }) {
 
   // If mentor uploaded a photo after the license was issued (still /logo.png on
   // the key), upgrade local bots/EAs when the photo API starts serving bytes.
-  // If an invented API path 404s, snap back to /logo.png so Home never waits.
+  // Never snap a real API path back to /logo.png on a flaky probe — that left
+  // Home stuck on the default robot even when Mentor Portal showed the picture.
   useEffect(() => {
     const botId = String(activeBot?.id || "").trim();
     const photo = String(activeBot?.photo || "").trim();
     if (!botId) return undefined;
-    const probingUpgrade = !isRealProfilePhoto(photo);
-    const probingStaleApi = photo.startsWith("/api/licenses/photo");
-    if (!probingUpgrade && !probingStaleApi) return undefined;
+    if (isRealProfilePhoto(photo)) return undefined;
     let cancelled = false;
     const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=${Date.now()}`;
     void fetch(mediaUrl(apiPath), { method: "GET", cache: "no-store" })
@@ -1213,42 +1218,22 @@ export function AppProvider({ children }) {
         if (cancelled) return;
         const type = String(response.headers.get("content-type") || "");
         const okImage = response.ok && type.startsWith("image/");
-        if (okImage) {
-          if (!probingUpgrade) return;
-          const nextPhoto = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`;
-          setBots((prev) =>
-            prev.map((bot) =>
-              bot.id === botId && !isRealProfilePhoto(bot.photo)
-                ? { ...bot, photo: nextPhoto }
-                : bot
-            )
-          );
-          setEas((prev) =>
-            prev.map((ea) =>
-              ea.id === botId && !isRealProfilePhoto(ea.photo)
-                ? { ...ea, photo: nextPhoto }
-                : ea
-            )
-          );
-          return;
-        }
-        // Stale / invented API path — restore packaged logo for instant paints.
-        if (probingStaleApi) {
-          setBots((prev) =>
-            prev.map((bot) =>
-              bot.id === botId && String(bot.photo || "").startsWith("/api/licenses/photo")
-                ? { ...bot, photo: "/logo.png" }
-                : bot
-            )
-          );
-          setEas((prev) =>
-            prev.map((ea) =>
-              ea.id === botId && String(ea.photo || "").startsWith("/api/licenses/photo")
-                ? { ...ea, photo: "/logo.png" }
-                : ea
-            )
-          );
-        }
+        if (!okImage) return;
+        const nextPhoto = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`;
+        setBots((prev) =>
+          prev.map((bot) =>
+            bot.id === botId && !isRealProfilePhoto(bot.photo)
+              ? { ...bot, photo: nextPhoto }
+              : bot
+          )
+        );
+        setEas((prev) =>
+          prev.map((ea) =>
+            ea.id === botId && !isRealProfilePhoto(ea.photo)
+              ? { ...ea, photo: nextPhoto }
+              : ea
+          )
+        );
       })
       .catch(() => {});
     return () => {

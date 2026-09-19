@@ -98,10 +98,11 @@ function blobToObjectUrl(blob) {
 
 async function cacheBlob(id, blob, mime = "image/jpeg") {
   if (!id || !blob) return "";
+  // First successful fetch wins — later race finishers must not revoke it.
+  const existing = memoryUrls.get(id);
+  if (existing) return existing;
   const url = blobToObjectUrl(blob);
   if (!url) return "";
-  const prev = memoryUrls.get(id);
-  if (prev && prev !== url) revokeIfBlob(prev);
   memoryUrls.set(id, url);
   await idbPut({
     id,
@@ -187,11 +188,16 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
     return photo;
   }
 
-  // Packaged logo / static asset — no network.
+  // Logo / empty photo: still race photo API + GitHub CDN by botId so a mentor
+  // upload after activation paints on Home (never stay stuck on /logo.png).
+  const logoOnly = !photo || photo === "/logo.png";
+
+  // Packaged static asset that is not the logo — no network.
   if (
-    !photo ||
-    photo === "/logo.png" ||
-    (remote === fb && !photo.startsWith("/api/") && !/^https?:\/\//i.test(photo))
+    !logoOnly &&
+    remote === fb &&
+    !photo.startsWith("/api/") &&
+    !/^https?:\/\//i.test(photo)
   ) {
     return remote && remote !== fb ? remote : fb;
   }
@@ -200,15 +206,19 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
 
   const task = (async () => {
     // Race GitHub raw CDN + durable API path — first successful image blob wins.
+    const apiFallback = id
+      ? mediaUrl(`/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`)
+      : "";
     const candidates = [
       ...rawPhotoCandidates(id),
-      remote && remote !== fb ? mediaUrl(remote) : "",
+      remote && remote !== fb && !logoOnly ? mediaUrl(remote) : "",
+      apiFallback,
     ].filter(Boolean);
 
     const tryUrl = async (url) => {
       const response = await fetch(url, {
         method: "GET",
-        cache: "force-cache",
+        cache: "no-store",
         credentials: "omit",
       });
       if (!response.ok) {
@@ -254,9 +264,7 @@ export function prefetchBotPhotos(bots = []) {
     const id = String(bot?.id || "").trim();
     if (!id) continue;
     if (memoryUrls.has(id) || inflight.has(id)) continue;
-    const photo = String(bot?.photo || "").trim();
-    // Skip network for logo-only bots — Home must stay instant.
-    if (!photo || photo === "/logo.png") continue;
+    // Always probe — logo-only bots may have a mentor upload on the photo API.
     resolveCachedBotPhoto(bot, "/logo.png").catch(() => {});
   }
 }
