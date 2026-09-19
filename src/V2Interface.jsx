@@ -8,11 +8,13 @@ import {
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
-import { useApp } from "./store.jsx";
+import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import TopBar from "./TopBar.jsx";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import V2ScannerPaywall from "./V2ScannerPaywall.jsx";
+
+const START_PARTICLE_COUNT = isNativeApp() ? 6 : 18;
 
 export default function V2Interface() {
   const {
@@ -124,51 +126,22 @@ export default function V2Interface() {
         {v2View !== "scanner" ? <TopBar /> : null}
         {v2View === "home" && (
           <section className="v2-view is-active v2-view-home">
-            <div className="v2-home-header">
-              <div className="v2-home-hero">
-                <EconomicCalendarButton variant="v2" />
-                <div className="v2-home-hero-media" aria-hidden="true">
-                  <BotAvatar
-                    className="v2-home-hero-img"
-                    bot={activeBot}
-                    fallback="/zeta-scalper-hero.jpg"
-                    fetchPriority="high"
-                    decoding="async"
-                  />
-                </div>
-                <div className="v2-home-hero-copy">
-                  <p className="v2-home-hero-kicker">You are trading with</p>
-                  <h1 className="v2-home-hero-name">{activeBot?.name || "No active bot"}</h1>
-                </div>
+            <div className="v2-hero">
+              <EconomicCalendarButton variant="v2" />
+              <div className="v2-avatar-wrap">
+                <BotAvatar
+                  className="v2-avatar"
+                  bot={activeBot}
+                  fallback="/logo.png"
+                  fetchPriority="high"
+                  decoding="async"
+                />
               </div>
+              <p className="v2-hero-kicker">You are trading with</p>
+              <h1 className="v2-bot-name">{activeBot?.name || "No active bot"}</h1>
+            </div>
 
-              <div className="v2-pill-bar">
-              <button
-                className={`v2-pill-btn${v2Running ? " is-running" : ""}`}
-                type="button"
-                id="v2-trade-btn"
-                onClick={() => {
-                  const next = !v2Running;
-                  setV2Running(next);
-                  setFloatCycle(next);
-                  if (!next) clearOrbTrade?.();
-                  showToast(next ? `${activeBot?.name || "Bot"} started` : "Bot stopped");
-                }}
-              >
-                <span className="v2-pill-icon is-trade" aria-hidden="true">
-                  {v2Running ? (
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <rect x="5" y="4.5" width="5.5" height="15" rx="1.3" />
-                      <rect x="13.5" y="4.5" width="5.5" height="15" rx="1.3" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M7.2 4.2v15.6L19.8 12 7.2 4.2z" />
-                    </svg>
-                  )}
-                </span>
-                <span className="v2-pill-label">{v2Running ? "STOP" : "TRADE"}</span>
-              </button>
+            <div className="v2-pill-bar">
               <button
                 className="v2-pill-btn"
                 type="button"
@@ -185,17 +158,48 @@ export default function V2Interface() {
                 </span>
                 <span className="v2-pill-label">QUOTES</span>
               </button>
+              <button
+                className={`v2-pill-btn${v2Running ? " is-running" : ""}`}
+                type="button"
+                id="v2-trade-btn"
+                onClick={() => {
+                  const next = !v2Running;
+                  setV2Running(next);
+                  setFloatCycle(next);
+                  if (!next) clearOrbTrade?.();
+                  showToast(next ? `${activeBot?.name || "Bot"} started` : "Bot stopped");
+                }}
+              >
+                <span className="stop-energy" aria-hidden="true">
+                  {Array.from({ length: START_PARTICLE_COUNT }, (_, i) => (
+                    <span key={i} className={`stop-particle stop-particle-${i + 1}`} />
+                  ))}
+                </span>
+                <span className="stop-core-glow" aria-hidden="true" />
+                <span className="v2-pill-icon is-trade" aria-hidden="true">
+                  {v2Running ? (
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="5" y="4.5" width="5.5" height="15" rx="1.3" />
+                      <rect x="13.5" y="4.5" width="5.5" height="15" rx="1.3" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.2 4.2v15.6L19.8 12 7.2 4.2z" />
+                    </svg>
+                  )}
+                </span>
+                <span className="v2-pill-label">{v2Running ? "STOP" : "TRADE"}</span>
+              </button>
               <button className="v2-pill-btn" type="button" onClick={removeActiveBot}>
                 <span className="v2-pill-icon is-remove" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9.2 3.5h5.6c.5 0 .9.4.9.9V6h3.1v2H5.2V6h3.1V4.4c0-.5.4-.9.9-.9zm1.2 2.5h3.2V5.5h-3.2V6z" />
                     <path d="M7.2 9h9.6l-.7 10.2a1.8 1.8 0 0 1-1.8 1.6H9.7a1.8 1.8 0 0 1-1.8-1.6L7.2 9z" />
-                    <path d="M10.2 12.2h1.4v5.2h-1.4zm2.2 0h1.4v5.2h-1.4z" fill="#fff" />
+                    <path d="M10.2 12.2h1.4v5.2h-1.4zm2.2 0h1.4v5.2h-1.4z" fill="#0a0a0c" />
                   </svg>
                 </span>
                 <span className="v2-pill-label">REMOVE</span>
               </button>
-              </div>
             </div>
 
             <p className="v2-powered-by" aria-label="Powered by apexEA">
@@ -232,7 +236,10 @@ export default function V2Interface() {
                   <span className="v2-robot-add-icon" aria-hidden="true">
                     +
                   </span>
-                  <span>Add New Trading Bot</span>
+                  <span className="v2-robot-add-copy">
+                    <strong>Add a new Robot</strong>
+                    <small>NEED A NEW LICENSE KEY</small>
+                  </span>
                 </button>
               </div>
             </section>
