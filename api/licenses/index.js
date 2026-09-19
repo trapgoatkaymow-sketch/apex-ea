@@ -96,6 +96,30 @@ export default async function handler(req, res) {
         return;
       }
       if (
+        action === "send-email" ||
+        action === "sendemail" ||
+        action === "resend-email" ||
+        action === "resend"
+      ) {
+        const key = String(body.key || body.licenseKey || "").trim();
+        let license = body.license || null;
+        if (!license?.key && key) {
+          license = await findLicense(key);
+        }
+        if (!license?.key) {
+          sendJson(res, 404, { error: "License not found" });
+          return;
+        }
+        const { sendLicenseKeyEmail } = await import("../_brevo.js");
+        const email = await sendLicenseKeyEmail(license);
+        sendJson(res, email.ok ? 200 : email.skipped ? 503 : 502, {
+          ok: Boolean(email.ok),
+          email,
+          license,
+        });
+        return;
+      }
+      if (
         action === "reconcile-commission" ||
         action === "reconcilecommission"
       ) {
@@ -128,7 +152,11 @@ export default async function handler(req, res) {
         return;
       }
       const license = await createLicense(body);
-      sendJson(res, 200, { license });
+      const email = license?._email || null;
+      if (license && Object.prototype.hasOwnProperty.call(license, "_email")) {
+        delete license._email;
+      }
+      sendJson(res, 200, { license, email });
       return;
     }
 

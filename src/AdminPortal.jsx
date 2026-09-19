@@ -23,6 +23,7 @@ import {
   normalizeLicenseKey,
   reconcileCommissionRemote,
   resolveLicenseExpiry,
+  resendLicenseEmailRemote,
 } from "./licensesApi.js";
 import {
   fetchEconomicEvents,
@@ -2551,6 +2552,10 @@ export default function AdminPortal() {
                     Generate License Key
                   </AdminBusyLabel>
                 </button>
+                <p className="ea-hint" style={{ marginTop: 10 }}>
+                  The client is emailed this key automatically via Brevo when server
+                  mail is configured.
+                </p>
               </form>
               {latestKey ? (
                 <div className="license-result">
@@ -4338,6 +4343,52 @@ export default function AdminPortal() {
               onClick={() => copyLicenseKey(latestKey)}
             >
               Copy license key
+            </button>
+            <button
+              className={`admin-btn admin-btn-outline admin-btn-block${
+                licenseActionBusy === `email:${latestKey}` ? " is-loading" : ""
+              }`}
+              type="button"
+              disabled={Boolean(licenseActionBusy) || !latestLicenseMeta?.email}
+              onClick={async () => {
+                if (!latestKey) return;
+                const actionKey = `email:${latestKey}`;
+                setLicenseActionBusy(actionKey);
+                try {
+                  const data = await resendLicenseEmailRemote({
+                    key: latestKey,
+                    clientEmail: latestLicenseMeta?.email,
+                    clientName: latestLicenseMeta?.name,
+                    botName: latestLicenseMeta?.botName,
+                    mentorName: latestLicenseMeta?.mentorName,
+                    mentorEmail: latestLicenseMeta?.mentorEmail,
+                    duration: latestLicenseMeta?.durationId || latestLicenseMeta?.duration,
+                    expiresAt: latestLicenseMeta?.expiresAt,
+                  });
+                  if (data?.ok || data?.email?.ok) {
+                    showToast(`License emailed to ${latestLicenseMeta?.email}`);
+                  } else if (data?.email?.skipped) {
+                    showToast(
+                      "Brevo not configured — add BREVO_API_KEY + BREVO_SENDER_EMAIL on Vercel"
+                    );
+                  } else {
+                    showToast(
+                      data?.email?.error || data?.error || "Could not send license email"
+                    );
+                  }
+                } catch (error) {
+                  showToast(error?.message || "Could not send license email");
+                } finally {
+                  setLicenseActionBusy("");
+                }
+              }}
+            >
+              <AdminBusyLabel
+                busy={licenseActionBusy === `email:${latestKey}`}
+                busyText="Sending…"
+              >
+                Email key to client
+              </AdminBusyLabel>
             </button>
             {isSuperAdmin ? (
               <>

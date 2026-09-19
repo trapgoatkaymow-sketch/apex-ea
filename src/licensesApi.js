@@ -469,7 +469,9 @@ export async function createLicenseRemote(payload) {
     method: "POST",
     body: payload,
   });
-  return normalizeLicense(data?.license);
+  const license = normalizeLicense(data?.license);
+  if (license) license._email = data?.email || data?.license?._email || null;
+  return license;
 }
 
 /** CSV migration — create many keys in one server write. */
@@ -487,7 +489,25 @@ export async function createLicensesBulkRemote(payload) {
     createdCount: Number(data?.createdCount) || 0,
     skippedCount: Number(data?.skippedCount) || 0,
     errorCount: Number(data?.errorCount) || 0,
+    email: data?.email || null,
   };
+}
+
+/** Resend the license key email via Brevo. */
+export async function resendLicenseEmailRemote(keyOrLicense) {
+  const key =
+    typeof keyOrLicense === "string"
+      ? keyOrLicense
+      : keyOrLicense?.key || "";
+  const data = await apiFetch("", {
+    method: "POST",
+    body: {
+      action: "resend-email",
+      key,
+      license: typeof keyOrLicense === "object" ? keyOrLicense : undefined,
+    },
+  });
+  return data;
 }
 
 /** Preview a mentor invite link (name only). */
