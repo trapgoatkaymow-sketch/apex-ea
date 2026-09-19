@@ -97,6 +97,12 @@ export default function TradeScriptOrb({
   const live = tradeLive && typeof tradeLive === "object" ? tradeLive : null;
   const isOpening = Boolean(openingTrades || live);
   const displayName = String(live?.botName || botName || "Bot").trim() || "Bot";
+  // Never leave the orb on the packaged logo when the bot has a real EA photo.
+  const incomingPhoto = String(photoSrc || "").trim();
+  const orbPhoto =
+    incomingPhoto && !/logo\.png(\?|$)/i.test(incomingPhoto)
+      ? incomingPhoto
+      : resolveBotPhotoSrc(bot, incomingPhoto || "/logo.png");
   const tradeComment =
     String(live?.comment || comment || buildBotTradeComment(displayName)).trim() ||
     buildBotTradeComment(displayName);
@@ -134,12 +140,14 @@ export default function TradeScriptOrb({
     const resolvedBotId = String(botId || bot?.id || "").trim();
     const botPhoto = String(bot?.photo || "").trim();
     const remoteSrc =
-      botPhoto && botPhoto !== "/logo.png"
+      botPhoto && !/logo\.png(\?|$)/i.test(botPhoto)
         ? resolveBotPhotoSrc(bot, "/logo.png")
-        : "";
+        : resolvedBotId
+          ? `https://www.apex-ea.com/api/licenses/photo?botId=${encodeURIComponent(resolvedBotId)}&v=full`
+          : "";
 
     const payload = () => ({
-      photoSrc,
+      photoSrc: orbPhoto,
       remoteSrc,
       botId: resolvedBotId,
       x: floatPos?.x ?? -1,
@@ -204,7 +212,7 @@ export default function TradeScriptOrb({
       }
       void hideFloatOverlay();
     };
-  }, [visible, photoSrc, floatPos, displayName, showToast, botId, bot, tradeHistory]);
+  }, [visible, orbPhoto, photoSrc, floatPos, displayName, showToast, botId, bot, tradeHistory]);
 
   useEffect(() => {
     if (!scriptOpen) {
@@ -416,7 +424,31 @@ export default function TradeScriptOrb({
         >
           <span className="trade-float-orb-ring" aria-hidden="true" />
           <span className="trade-float-orb-ring trade-float-orb-ring--outer" aria-hidden="true" />
-          <img className="trade-float-orb-photo" src={photoSrc} alt="" draggable={false} />
+          <img
+            className="trade-float-orb-photo"
+            src={orbPhoto}
+            alt=""
+            draggable={false}
+            onError={(event) => {
+              const node = event.currentTarget;
+              if (!node || node.dataset.fallbackApplied === "1") return;
+              const id = String(botId || bot?.id || "").trim();
+              const botPath = resolveBotPhotoSrc(bot, "");
+              if (
+                botPath &&
+                !/logo\.png(\?|$)/i.test(botPath) &&
+                node.src !== botPath &&
+                !node.src.includes(botPath)
+              ) {
+                node.src = botPath;
+                return;
+              }
+              if (id) {
+                node.dataset.fallbackApplied = "1";
+                node.src = `https://www.apex-ea.com/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`;
+              }
+            }}
+          />
         </button>
       ) : null}
 

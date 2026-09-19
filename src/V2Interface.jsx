@@ -57,24 +57,30 @@ export default function V2Interface() {
   useEffect(() => {
     let cancelled = false;
     const fallback = "/logo.png";
-    const instant =
-      getCachedBotPhotoSync(activeBot?.id) ||
-      resolveBotPhotoSrc(activeBot, fallback);
+    const cached = getCachedBotPhotoSync(activeBot?.id);
+    const resolved = resolveBotPhotoSrc(activeBot, fallback);
     const photo = String(activeBot?.photo || "").trim();
-    const start =
-      instant.startsWith("/api/") || /^https?:\/\//i.test(instant)
-        ? getCachedBotPhotoSync(activeBot?.id) || fallback
-        : instant;
+    // Same as BotAvatar: paint durable API / HTTPS paths immediately so the
+    // floating orb matches the hero EA picture on web + Android WebView.
+    const start = cached || resolved || fallback;
     setFloatSrc(start);
-    // Hydrate even when local photo is still /logo.png — mentor may have uploaded later.
-    if (
-      photo.startsWith("/api/licenses/photo") ||
-      /^https?:\/\//i.test(photo) ||
-      (activeBot?.id && (!photo || photo === "/logo.png"))
-    ) {
+
+    const needsHydrate =
+      Boolean(activeBot?.id) &&
+      (photo.startsWith("/api/licenses/photo") ||
+        /^https?:\/\//i.test(photo) ||
+        !photo ||
+        photo === "/logo.png" ||
+        start === fallback ||
+        /logo\.png(\?|$)/i.test(start));
+
+    if (needsHydrate) {
       resolveCachedBotPhoto(activeBot, fallback)
         .then((url) => {
-          if (!cancelled && url && url !== fallback) setFloatSrc(url);
+          if (cancelled || !url || url === fallback || /logo\.png(\?|$)/i.test(url)) {
+            return;
+          }
+          setFloatSrc(url);
         })
         .catch(() => {});
     }
