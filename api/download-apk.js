@@ -1,6 +1,6 @@
 /**
  * Guaranteed APK download — streams the sideload binary with Android MIME type.
- * Use when static /apex-ea-v2.18.apk is blocked by SPA fallback.
+ * Use when static /apex-ea-v2.20.apk is blocked by SPA fallback.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -11,11 +11,11 @@ export const config = {
 };
 
 const CANDIDATES = [
-  path.join(process.cwd(), "public", "apex-ea-v2.18.apk"),
+  path.join(process.cwd(), "public", "apex-ea-v2.20.apk"),
   path.join(process.cwd(), "public", "apex-ea.apk"),
-  path.join(process.cwd(), "apex-ea-v2.18.apk"),
+  path.join(process.cwd(), "apex-ea-v2.20.apk"),
   path.join(process.cwd(), "apex-ea.apk"),
-  path.join(process.cwd(), "dist", "apex-ea-v2.18.apk"),
+  path.join(process.cwd(), "dist", "apex-ea-v2.20.apk"),
   path.join(process.cwd(), "dist", "apex-ea.apk"),
 ];
 
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     res.end(
       JSON.stringify({
         error: "APK not found on server",
-        hint: "Redeploy with public/apex-ea-v2.18.apk included",
+        hint: "Redeploy with public/apex-ea-v2.20.apk included",
       })
     );
     return;
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/vnd.android.package-archive");
   res.setHeader(
     "Content-Disposition",
-    'attachment; filename="apex-ea-v2.18.apk"'
+    'attachment; filename="apex-ea-v2.20.apk"'
   );
   res.setHeader("Content-Length", String(stat.size));
   res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");

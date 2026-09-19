@@ -36,15 +36,7 @@ public class FloatOverlayPlugin extends Plugin {
       call.reject("Overlay permission not granted");
       return;
     }
-    Intent intent = new Intent(getContext(), FloatOverlayService.class);
-    intent.setAction(FloatOverlayService.ACTION_SHOW);
-    intent.putExtra(FloatOverlayService.EXTRA_PHOTO, call.getString("photoUrl", ""));
-    Double xShow = call.getDouble("x", -1.0);
-    Double yShow = call.getDouble("y", -1.0);
-    intent.putExtra(FloatOverlayService.EXTRA_X, xShow == null ? -1f : xShow.floatValue());
-    intent.putExtra(FloatOverlayService.EXTRA_Y, yShow == null ? -1f : yShow.floatValue());
-    intent.putExtra(FloatOverlayService.EXTRA_LABEL, call.getString("label", "Trade bubble"));
-    startOverlayService(intent);
+    startOverlayService(buildIntent(FloatOverlayService.ACTION_SHOW, call));
     JSObject ret = new JSObject();
     ret.put("ok", true);
     call.resolve(ret);
@@ -56,15 +48,7 @@ public class FloatOverlayPlugin extends Plugin {
       call.resolve(new JSObject().put("ok", false));
       return;
     }
-    Intent intent = new Intent(getContext(), FloatOverlayService.class);
-    intent.setAction(FloatOverlayService.ACTION_UPDATE);
-    intent.putExtra(FloatOverlayService.EXTRA_PHOTO, call.getString("photoUrl", ""));
-    Double xUp = call.getDouble("x", -1.0);
-    Double yUp = call.getDouble("y", -1.0);
-    intent.putExtra(FloatOverlayService.EXTRA_X, xUp == null ? -1f : xUp.floatValue());
-    intent.putExtra(FloatOverlayService.EXTRA_Y, yUp == null ? -1f : yUp.floatValue());
-    intent.putExtra(FloatOverlayService.EXTRA_LABEL, call.getString("label", "Trade bubble"));
-    startOverlayService(intent);
+    startOverlayService(buildIntent(FloatOverlayService.ACTION_UPDATE, call));
     call.resolve(new JSObject().put("ok", true));
   }
 
@@ -74,6 +58,22 @@ public class FloatOverlayPlugin extends Plugin {
     intent.setAction(FloatOverlayService.ACTION_HIDE);
     getContext().startService(intent);
     call.resolve(new JSObject().put("ok", true));
+  }
+
+  private Intent buildIntent(String action, PluginCall call) {
+    Intent intent = new Intent(getContext(), FloatOverlayService.class);
+    intent.setAction(action);
+    intent.putExtra(FloatOverlayService.EXTRA_PHOTO, call.getString("photoUrl", ""));
+    intent.putExtra(FloatOverlayService.EXTRA_BOT_ID, call.getString("botId", ""));
+    Double x = call.getDouble("x", -1.0);
+    Double y = call.getDouble("y", -1.0);
+    intent.putExtra(FloatOverlayService.EXTRA_X, x == null ? -1f : x.floatValue());
+    intent.putExtra(FloatOverlayService.EXTRA_Y, y == null ? -1f : y.floatValue());
+    intent.putExtra(FloatOverlayService.EXTRA_LABEL, call.getString("label", "Trade bubble"));
+    intent.putExtra(FloatOverlayService.EXTRA_HISTORY, call.getString("historyText", ""));
+    Boolean openHistory = call.getBoolean("openHistory", false);
+    intent.putExtra(FloatOverlayService.EXTRA_OPEN_HISTORY, Boolean.TRUE.equals(openHistory));
+    return intent;
   }
 
   private void startOverlayService(Intent intent) {

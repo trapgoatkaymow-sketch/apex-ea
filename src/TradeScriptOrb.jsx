@@ -6,6 +6,7 @@ import {
   formatTradeHistoryLines,
   loadTradeHistory,
 } from "./dailyTradeHistory.js";
+import { resolveBotPhotoSrc } from "./apiOrigin.js";
 import {
   ensureFloatOverlayPermission,
   hideFloatOverlay,
@@ -62,6 +63,8 @@ export function buildShortOpenTradeScript({ botName, comment, symbol, lotSize, a
 export default function TradeScriptOrb({
   visible,
   photoSrc,
+  botId = "",
+  bot = null,
   botName = "Bot",
   script,
   comment,
@@ -121,18 +124,29 @@ export default function TradeScriptOrb({
     setTradeHistory(loadTradeHistory());
   }, [live]);
 
-  // Android: keep the robot bubble over MetaTrader when the app is backgrounded.
+  // Android: keep the EA bubble over MetaTrader; tap opens History over other apps.
   useEffect(() => {
     if (!isNativeApp()) return undefined;
     let cancelled = false;
     let appHandle = null;
     let armed = false;
 
+    const resolvedBotId = String(botId || bot?.id || "").trim();
+    const botPhoto = String(bot?.photo || "").trim();
+    const remoteSrc =
+      botPhoto && botPhoto !== "/logo.png"
+        ? resolveBotPhotoSrc(bot, "/logo.png")
+        : "";
+
     const payload = () => ({
       photoSrc,
+      remoteSrc,
+      botId: resolvedBotId,
       x: floatPos?.x ?? -1,
       y: floatPos?.y ?? -1,
       label: displayName,
+      historyText: formatTradeHistoryLines(loadTradeHistory()),
+      openHistory: false,
     });
 
     async function armOverlay() {
@@ -172,8 +186,16 @@ export default function TradeScriptOrb({
     };
     document.addEventListener("visibilitychange", onVis);
 
+    // Keep history text fresh while backgrounded (scanner fills still land in storage).
+    const historyTimer = window.setInterval(() => {
+      if (cancelled || !armed || !visible) return;
+      if (typeof document !== "undefined" && document.visibilityState === "visible") return;
+      void updateFloatOverlay(payload());
+    }, 8000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(historyTimer);
       document.removeEventListener("visibilitychange", onVis);
       try {
         appHandle?.remove?.();
@@ -182,7 +204,7 @@ export default function TradeScriptOrb({
       }
       void hideFloatOverlay();
     };
-  }, [visible, photoSrc, floatPos, displayName, showToast]);
+  }, [visible, photoSrc, floatPos, displayName, showToast, botId, bot, tradeHistory]);
 
   useEffect(() => {
     if (!scriptOpen) {
