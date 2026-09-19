@@ -434,6 +434,8 @@ export default function V2Interface() {
       <TradeScriptOrb
         visible={(floatCycle || v2Running || Boolean(orbTradeLive)) && v2View === "home"}
         photoSrc={floatSrc}
+        botId={activeBot?.id || ""}
+        bot={activeBot}
         botName={activeBot?.name || "Bot"}
         script={openTradeScript}
         comment={tradeComment}
