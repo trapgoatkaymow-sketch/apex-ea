@@ -36,12 +36,26 @@ function resolveBuildId(env) {
 }
 
 function appVersionPlugin(buildId) {
+  // Keep in sync with src/uiShellLock.js — Vite config cannot import ESM app code
+  // reliably during config evaluation, so the number is duplicated here.
+  const shellGeneration = 5;
+  const shellLabel = "v2-circular-glass-tabs-robot-pills";
+
   const writeVersion = (outDir) => {
     try {
       mkdirSync(outDir, { recursive: true })
       writeFileSync(
         resolve(outDir, 'app-version.json'),
-        `${JSON.stringify({ buildId, builtAt: new Date().toISOString() }, null, 2)}\n`,
+        `${JSON.stringify(
+          {
+            buildId,
+            builtAt: new Date().toISOString(),
+            shellGeneration,
+            shellLabel,
+          },
+          null,
+          2
+        )}\n`,
         'utf8'
       )
     } catch {
@@ -56,6 +70,7 @@ function appVersionPlugin(buildId) {
       return {
         define: {
           'import.meta.env.VITE_APP_BUILD_ID': JSON.stringify(buildId),
+          'import.meta.env.VITE_UI_SHELL_GENERATION': JSON.stringify(shellGeneration),
         },
       }
     },

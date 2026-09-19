@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
-import { runBootGuard } from "./bootGuard.js";
+import { runBootGuard, startShellWatch } from "./bootGuard.js";
 import { warmBotPhotoCache } from "./botPhotoCache.js";
 import { AppProvider, isNativeApp } from "./store.jsx";
 import "./styles.css";
@@ -11,6 +11,9 @@ async function boot() {
   // is older than the live deploy (Safari used to keep old index.html forever).
   const reloading = await runBootGuard();
   if (reloading) return;
+
+  // Keep watching so a long-lived tab cannot paint a retired UI after a deploy.
+  startShellWatch();
 
   // Warm IndexedDB photo cache ASAP so robot list avatars paint instantly.
   warmBotPhotoCache().catch(() => {});
@@ -91,6 +94,7 @@ async function boot() {
 
 boot().catch(() => {
   // Last resort: still mount the app if the guard fails.
+  startShellWatch();
   createRoot(document.getElementById("root")).render(
     <StrictMode>
       <AppProvider>
@@ -99,4 +103,3 @@ boot().catch(() => {
     </StrictMode>
   );
 });
-

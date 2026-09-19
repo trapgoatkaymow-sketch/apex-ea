@@ -1,10 +1,20 @@
 /**
  * Keep clients on the latest deploy and protect against stale Safari / WebView
  * shells that used to serve old JS after apex-ea.com updated.
+ *
+ * Also enforces UI_SHELL_GENERATION so an older bundled shell cannot keep
+ * painting retired layouts once a newer generation is live.
  */
+import {
+  BUILD_ID_STORAGE_KEY,
+  RELOAD_SESSION_KEY,
+  SHELL_GEN_STORAGE_KEY,
+  UI_SHELL_GENERATION,
+  UI_SHELL_LABEL,
+} from "./uiShellLock.js";
+
 const BUILD_ID = String(import.meta.env.VITE_APP_BUILD_ID || "dev");
-const RELOAD_KEY = "apexea-build-reload-v1";
-const STORED_BUILD_KEY = "apexea-build-id-v1";
+const CHECK_INTERVAL_MS = 90_000;
 
 function versionUrl() {
   const stamp = Date.now();
@@ -41,6 +51,82 @@ async function clearRuntimeCaches() {
   }
 }
 
+function rememberLocalShell() {
+  try {
+    localStorage.setItem(BUILD_ID_STORAGE_KEY, BUILD_ID);
+    localStorage.setItem(SHELL_GEN_STORAGE_KEY, String(UI_SHELL_GENERATION));
+    document.documentElement.dataset.uiShell = UI_SHELL_LABEL;
+    document.documentElement.dataset.shellGen = String(UI_SHELL_GENERATION);
+  } catch {
+    // ignore quota / DOM
+  }
+}
+
+/**
+ * If this tab previously ran a NEWER shell, then somehow loaded older HTML/JS
+ * (bfcache, weird CDN, restored tab), force a network reload.
+ */
+function rejectDowngrade() {
+  try {
+    const seenGen = Number(localStorage.getItem(SHELL_GEN_STORAGE_KEY) || 0);
+    if (seenGen > UI_SHELL_GENERATION) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("_shell", String(seenGen));
+      url.searchParams.set("_t", String(Date.now()));
+      window.location.replace(url.toString());
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
+function forceReload(remoteId, remoteGen) {
+  const alreadyReloaded = sessionStorage.getItem(RELOAD_SESSION_KEY);
+  const token = `${remoteId || "build"}:${remoteGen || UI_SHELL_GENERATION}`;
+  if (alreadyReloaded === token) return false;
+  sessionStorage.setItem(RELOAD_SESSION_KEY, token);
+  const url = new URL(window.location.href);
+  url.searchParams.set("_build", String(remoteId || "next").slice(0, 12));
+  url.searchParams.set("_shell", String(remoteGen || UI_SHELL_GENERATION));
+  url.searchParams.set("_t", String(Date.now()));
+  window.location.replace(url.toString());
+  return true;
+}
+
+async function fetchRemoteVersion() {
+  const response = await fetch(versionUrl(), {
+    method: "GET",
+    cache: "no-store",
+    credentials: "omit",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+function isNativePlatform() {
+  try {
+    return Boolean(window.Capacitor?.isNativePlatform?.());
+  } catch {
+    return false;
+  }
+}
+
+function isProdHost() {
+  try {
+    const host = String(window.location.hostname || "");
+    return (
+      host === "apex-ea.com" ||
+      host === "www.apex-ea.com" ||
+      host.endsWith(".vercel.app")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * @returns {Promise<boolean>} true when a forced reload was triggered
  */
@@ -48,51 +134,79 @@ export async function runBootGuard() {
   await unregisterServiceWorkers();
   await clearRuntimeCaches();
 
-  try {
-    localStorage.setItem(STORED_BUILD_KEY, BUILD_ID);
-  } catch {
-    // ignore quota
-  }
+  if (rejectDowngrade()) return true;
+
+  rememberLocalShell();
 
   try {
-    const response = await fetch(versionUrl(), {
-      method: "GET",
-      cache: "no-store",
-      credentials: "omit",
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) return false;
-    const remote = await response.json();
+    const remote = await fetchRemoteVersion();
+    if (!remote) return false;
+
     const remoteId = String(remote?.buildId || "").trim();
-    if (!remoteId || remoteId === BUILD_ID || remoteId === "dev") return false;
+    const remoteGen = Number(remote?.shellGeneration || 0);
 
-    // Native APK embeds dist — cannot hot-swap JS; surface update once per build.
-    try {
-      if (window.Capacitor?.isNativePlatform?.()) {
+    const generationStale =
+      Number.isFinite(remoteGen) && remoteGen > 0 && remoteGen > UI_SHELL_GENERATION;
+    const buildStale =
+      isProdHost() &&
+      Boolean(remoteId) &&
+      remoteId !== BUILD_ID &&
+      remoteId !== "dev" &&
+      !String(remoteId).startsWith("local-");
+
+    if (!generationStale && !buildStale) return false;
+
+    if (isNativePlatform()) {
+      try {
         const seenNative = sessionStorage.getItem("apexea-native-update-hint");
         if (seenNative !== remoteId) {
           sessionStorage.setItem("apexea-native-update-hint", remoteId);
           window.__APEXEA_UPDATE_AVAILABLE__ = remoteId;
         }
-        return false;
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
+      return false;
     }
 
-    const alreadyReloaded = sessionStorage.getItem(RELOAD_KEY);
-    if (alreadyReloaded === remoteId) return false;
-    sessionStorage.setItem(RELOAD_KEY, remoteId);
-    // Hard navigation so Safari drops a stale index.html shell.
-    const url = new URL(window.location.href);
-    url.searchParams.set("_build", remoteId.slice(0, 12));
-    window.location.replace(url.toString());
-    return true;
+    return forceReload(remoteId, remoteGen || UI_SHELL_GENERATION);
   } catch {
     return false;
   }
 }
 
+/** Re-check while the app stays open so a long-lived tab cannot keep old UI. */
+export function startShellWatch() {
+  if (typeof window === "undefined") return () => {};
+
+  let timer = 0;
+  const check = () => {
+    runBootGuard().catch(() => {});
+  };
+
+  timer = window.setInterval(check, CHECK_INTERVAL_MS);
+
+  const onVisible = () => {
+    if (document.visibilityState === "visible") check();
+  };
+  const onPageShow = (event) => {
+    if (event?.persisted) check();
+  };
+
+  document.addEventListener("visibilitychange", onVisible);
+  window.addEventListener("pageshow", onPageShow);
+
+  return () => {
+    window.clearInterval(timer);
+    document.removeEventListener("visibilitychange", onVisible);
+    window.removeEventListener("pageshow", onPageShow);
+  };
+}
+
 export function getAppBuildId() {
   return BUILD_ID;
+}
+
+export function getUiShellGeneration() {
+  return UI_SHELL_GENERATION;
 }

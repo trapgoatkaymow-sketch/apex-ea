@@ -406,6 +406,7 @@ function clearAppStoragePressure() {
       "apexea-device-id",
       "apexea-device-access-v1",
       "apexea-build-id-v1",
+      "apexea-shell-gen-v1",
       "apexea-mt5-session",
       "apexea-trade-history-v2",
     ]);
