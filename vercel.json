@@ -86,7 +86,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.20.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.21.apk\""
         },
         {
           "key": "Cache-Control",
@@ -95,7 +95,7 @@
       ]
     },
     {
-      "source": "/apex-ea-v2.20.apk",
+      "source": "/apex-ea-v2.21.apk",
       "headers": [
         {
           "key": "Content-Type",
@@ -103,7 +103,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.20.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.21.apk\""
         },
         {
           "key": "Cache-Control",
@@ -120,7 +120,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.20.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.21.apk\""
         },
         {
           "key": "Cache-Control",
@@ -137,7 +137,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.20.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.21.apk\""
         },
         {
           "key": "Cache-Control",
@@ -154,7 +154,24 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.20.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.21.apk\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/apex-ea-v2.20.apk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"apex-ea-v2.21.apk\""
         },
         {
           "key": "Cache-Control",
@@ -195,11 +212,15 @@
       "destination": "/api/download-apk"
     },
     {
-      "source": "/apex-ea-v2.20.apk",
+      "source": "/apex-ea-v2.21.apk",
       "destination": "/api/download-apk"
     },
     {
       "source": "/ZETA-SCALPER-AI.apk",
+      "destination": "/api/download-apk"
+    },
+    {
+      "source": "/apex-ea-v2.20.apk",
       "destination": "/api/download-apk"
     },
     {
