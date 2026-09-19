@@ -5789,26 +5789,26 @@ html:has(.phone[data-interface="v2"]) body {
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin: 0 10px calc(10px + var(--safe-bottom));
-  padding: 8px 6px;
-  border-radius: 22px;
+  gap: 4px;
+  margin: 0 14px calc(12px + var(--safe-bottom));
+  padding: 7px 5px;
+  border-radius: 24px;
   background:
-    linear-gradient(180deg, rgba(28, 8, 18, 0.92) 0%, rgba(8, 2, 6, 0.96) 100%);
-  border: 1px solid rgba(var(--pink-rgb), 0.28);
+    linear-gradient(180deg, rgba(36, 12, 22, 0.96) 0%, rgba(10, 2, 8, 0.98) 100%);
+  border: 1px solid rgba(var(--pink-rgb), 0.34);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 12px 28px rgba(0, 0, 0, 0.55),
-    0 0 24px rgba(var(--pink-rgb), 0.12);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 10px 24px rgba(0, 0, 0, 0.55),
+    0 0 18px rgba(var(--pink-rgb), 0.1);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .v2-tabbar::before {
   content: "";
   position: absolute;
-  left: 16%;
-  right: 16%;
+  left: 18%;
+  right: 18%;
   top: 0;
   height: 1px;
   pointer-events: none;
@@ -5816,10 +5816,10 @@ html:has(.phone[data-interface="v2"]) body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(var(--pink-rgb), 0.85) 50%,
+    rgba(var(--pink-rgb), 0.8) 50%,
     transparent 100%
   );
-  box-shadow: 0 0 12px rgba(var(--pink-hot-rgb), 0.5);
+  box-shadow: 0 0 10px rgba(var(--pink-hot-rgb), 0.4);
 }
 
 .v2-tab {
@@ -5828,11 +5828,11 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-height: 56px;
-  padding: 7px 4px 6px;
-  border-radius: 16px;
-  color: rgba(255, 255, 255, 0.48);
+  gap: 4px;
+  min-height: 54px;
+  padding: 6px 4px 5px;
+  border-radius: 18px;
+  color: rgba(255, 255, 255, 0.5);
   background: transparent;
   border: 1px solid transparent;
   transition:
@@ -5848,14 +5848,14 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-tab-icon {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   color: inherit;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition:
     background 0.2s ease,
@@ -5866,16 +5866,16 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-tab-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   display: block;
 }
 
 .v2-tab-label {
   font-family: var(--font-v2);
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   font-weight: 400;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-align: center;
   line-height: 1.15;
   text-transform: uppercase;
@@ -5883,25 +5883,21 @@ html:has(.phone[data-interface="v2"]) body {
 
 .v2-tab.is-active {
   color: #fff;
-  background: rgba(var(--pink-rgb), 0.12);
-  border-color: rgba(var(--pink-rgb), 0.22);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 6px 14px rgba(var(--pink-hot-rgb), 0.12);
+  background: rgba(var(--pink-rgb), 0.1);
+  border-color: rgba(var(--pink-rgb), 0.2);
 }
 
 .v2-tab.is-active .v2-tab-icon {
   color: #fff;
   transform: translateY(-1px);
   background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.35), transparent 46%),
-    linear-gradient(160deg, var(--pink-soft), var(--pink) 52%, var(--pink-deep));
-  border-color: rgba(255, 255, 255, 0.32);
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.32), transparent 48%),
+    linear-gradient(160deg, var(--pink-soft), var(--pink) 55%, var(--pink-deep));
+  border-color: rgba(255, 255, 255, 0.28);
   box-shadow:
-    0 0 0 1px rgba(var(--pink-rgb), 0.4),
-    0 0 18px rgba(var(--pink-rgb), 0.65),
-    0 8px 16px rgba(var(--pink-hot-rgb), 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    0 0 0 1px rgba(var(--pink-rgb), 0.35),
+    0 4px 12px rgba(var(--pink-hot-rgb), 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .v2-tab.is-active .v2-tab-label {
@@ -8476,12 +8472,12 @@ html:has(.phone[data-interface="v2"]) body {
 /* Keep the floating glass dock on Interface 2 scanner */
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-tabbar {
   background:
-    linear-gradient(180deg, rgba(22, 10, 16, 0.94) 0%, rgba(6, 2, 6, 0.98) 100%);
-  border-color: rgba(var(--pink-rgb), 0.32);
+    linear-gradient(180deg, rgba(34, 12, 20, 0.97) 0%, rgba(8, 2, 8, 0.99) 100%);
+  border-color: rgba(var(--pink-rgb), 0.36);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 12px 28px rgba(0, 0, 0, 0.55),
-    0 0 28px rgba(var(--pink-rgb), 0.16);
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 10px 24px rgba(0, 0, 0, 0.55),
+    0 0 20px rgba(var(--pink-rgb), 0.14);
 }
 
 @media (max-height: 760px) {
