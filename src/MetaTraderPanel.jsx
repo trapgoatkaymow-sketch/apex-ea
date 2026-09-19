@@ -48,22 +48,28 @@ function normalizeEmail(email) {
     .toLowerCase();
 }
 
-function formatMoney(value, currency = "USD") {
+function formatMoney(value, currency = "") {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "—";
-  const code = String(currency || "USD").trim().toUpperCase() || "USD";
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: code,
-      currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    const sign = amount < 0 ? "-" : "";
-    return `${sign}${code} ${Math.abs(amount).toFixed(2)}`;
+  const code = String(currency || "").trim().toUpperCase();
+  // Only use currency style when broker reported a real ISO code (ZAR, USD, …).
+  if (/^[A-Z]{3}$/.test(code)) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: code,
+        currencyDisplay: "narrowSymbol",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${code} ${amount.toFixed(2)}`;
+    }
   }
+  return amount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function MetaTraderPanel({ variant = "zeta" }) {
@@ -262,7 +268,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             balance,
             equity,
             profit,
-            currency: status.currency || "USD",
+            currency: status.currency || "",
           });
         }
       } catch {
@@ -420,8 +426,25 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         subscriptionError: connected.subscriptionError,
         region: connected.region || null,
         connectedAt: Date.now(),
+        balance: connected.balance ?? null,
+        equity: connected.equity ?? null,
+        profit: connected.profit ?? null,
+        currency: connected.currency || "",
       };
       setMt5Session(nextSession);
+      if (
+        connected.balance != null ||
+        connected.equity != null ||
+        connected.profit != null ||
+        connected.currency
+      ) {
+        setAccountMetrics({
+          balance: connected.balance ?? null,
+          equity: connected.equity ?? null,
+          profit: connected.profit ?? null,
+          currency: connected.currency || "",
+        });
+      }
       await syncHostedAccount(nextSession, coverEmail);
       pushEngineLog("Trading engine armed · MT5 connected");
       showToast(`Connected ${nextSession.company}`);
