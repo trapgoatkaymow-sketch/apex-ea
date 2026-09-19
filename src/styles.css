@@ -385,15 +385,28 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .phone[data-interface="v2"] .top {
-  z-index: 4;
-  background: #000 !important;
+  z-index: 2;
+  /* Transparent so the robot ring glow is not sliced by a hard black bar */
+  background: transparent !important;
   background-image: none !important;
   box-shadow: none;
+  pointer-events: none;
+}
+
+.phone[data-interface="v2"] .top .username {
+  z-index: 6;
+  pointer-events: none;
+}
+
+.phone[data-interface="v2"] .top .iface-toggle {
+  position: relative;
+  z-index: 6;
+  pointer-events: auto;
 }
 
 /* Legacy full-bleed hide — unused on circular APEX EA home (title stays visible) */
 .phone[data-interface="v2"] .top.is-v2-home {
-  background: #000 !important;
+  background: transparent !important;
 }
 
 .stage {
@@ -4855,6 +4868,8 @@ html:has(.phone[data-interface="v2"]) body {
   min-height: 100%;
   box-sizing: border-box;
   align-self: flex-start;
+  /* Let the avatar ring glow extend past the header without a clipped hairline */
+  overflow: visible;
   /* Home stays solid — Powered by apexEA must never fade with view enter animation */
   animation: none !important;
   opacity: 1 !important;
@@ -4863,15 +4878,18 @@ html:has(.phone[data-interface="v2"]) body {
 /* Interface 2 dark circular home — matches reference: black sheet + pink ring avatar */
 .v2-hero {
   position: relative;
-  z-index: 1;
+  /* Above the transparent top bar so ring glow is not covered by a black curtain */
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   width: 100%;
-  padding: 18px 16px 52px;
+  /* Extra top room so breathe-ring glow is not clipped into a black line */
+  padding: 28px 16px 52px;
+  margin-top: -18px;
   overflow: visible;
-  background: #000;
+  background: transparent;
   animation: none !important;
   opacity: 1 !important;
 }
@@ -4882,7 +4900,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 .v2-avatar-wrap {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   width: min(58vw, 220px);
   aspect-ratio: 1;
   border-radius: 50%;
