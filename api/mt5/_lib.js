@@ -217,11 +217,23 @@ export async function pingBrokerApi() {
 
 /**
  * Brokers clients must not pick — broken / wrong catalog entries.
- * "Razor Markets (Pty) Ltd" (RazorMarkets-Live) fails for clients; keep "Razor Markets".
+ * Prefer renaming known aliases over hiding working live servers.
  */
-const BLOCKED_BROKER_COMPANIES = [
-  /^razor\s*markets\s*\(pty\)\s*ltd\.?$/i,
+const BLOCKED_BROKER_COMPANIES = [];
+
+/** Display-name fixes when MT5REST returns awkward legal titles. */
+const BROKER_COMPANY_ALIASES = [
+  [/^razor\s*markets\s*\(pty\)\s*ltd\.?$/i, "Razor Markets"],
 ];
+
+function normalizeBrokerCompany(company) {
+  const raw = String(company || "").trim();
+  if (!raw) return "";
+  for (const [re, label] of BROKER_COMPANY_ALIASES) {
+    if (re.test(raw)) return label;
+  }
+  return raw;
+}
 
 export function isBlockedBroker(broker) {
   const company = String(broker?.company || "").trim();
@@ -237,8 +249,9 @@ export function mapSearchResults(data, platform = "MT5") {
   data.forEach((companyEntry) => {
     // New MT5REST uses companyName; older hosts used company.
     const companyName =
-      String(companyEntry?.company || companyEntry?.companyName || "").trim() ||
-      "Unknown broker";
+      normalizeBrokerCompany(
+        companyEntry?.company || companyEntry?.companyName || ""
+      ) || "Unknown broker";
     if (isBlockedBroker({ company: companyName })) return;
     const results = Array.isArray(companyEntry?.results) ? companyEntry.results : [];
     results.forEach((result, index) => {
