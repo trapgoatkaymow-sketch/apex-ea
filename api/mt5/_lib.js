@@ -130,7 +130,10 @@ export function mapSearchResults(data, platform = "MT5") {
   const plat = String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5";
   const brokers = [];
   data.forEach((companyEntry) => {
-    const companyName = String(companyEntry?.company || "").trim() || "Unknown broker";
+    // New MT5REST uses companyName; older hosts used company.
+    const companyName =
+      String(companyEntry?.company || companyEntry?.companyName || "").trim() ||
+      "Unknown broker";
     if (isBlockedBroker({ company: companyName })) return;
     const results = Array.isArray(companyEntry?.results) ? companyEntry.results : [];
     results.forEach((result, index) => {
