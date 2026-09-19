@@ -7494,8 +7494,8 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 {
-  --cs-v2-neon: #ff003c;
-  --cs-v2-pink: #ff2d7a;
+  --cs-v2-neon: var(--pink-hot);
+  --cs-v2-pink: var(--pink);
   --cs-v2-ink: #ffffff;
   --cs-v2-muted: rgba(255, 255, 255, 0.5);
   --cs-v2-card: rgba(255, 255, 255, 0.045);
@@ -7515,7 +7515,7 @@ html:has(.phone[data-interface="v2"]) body {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(70% 90% at 50% 100%, rgba(255, 0, 60, 0.28), transparent 70%),
+    radial-gradient(70% 90% at 50% 100%, rgba(var(--pink-hot-rgb), 0.28), transparent 70%),
     linear-gradient(180deg, transparent, rgba(20, 0, 8, 0.55));
   clip-path: polygon(0 35%, 8% 55%, 18% 48%, 28% 70%, 42% 52%, 55% 78%, 68% 58%, 80% 82%, 92% 60%, 100% 75%, 100% 100%, 0 100%);
   opacity: 0.85;
@@ -7608,8 +7608,8 @@ html:has(.phone[data-interface="v2"]) body {
   min-height: 34px;
   padding: 0 14px 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 45, 122, 0.55);
-  background: linear-gradient(135deg, rgba(255, 0, 60, 0.42), rgba(255, 45, 122, 0.28));
+  border: 1px solid rgba(var(--pink-rgb), 0.55);
+  background: linear-gradient(135deg, rgba(var(--pink-hot-rgb), 0.42), rgba(var(--pink-rgb), 0.28));
   color: #fff;
   font-family: var(--font-body);
   font-size: 0.62rem;
@@ -7682,10 +7682,10 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-stage.is-running {
-  border-color: rgba(255, 45, 122, 0.45);
+  border-color: rgba(var(--pink-rgb), 0.45);
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.28),
-    0 0 0 1px rgba(255, 45, 122, 0.18),
+    0 0 0 1px rgba(var(--pink-rgb), 0.18),
     0 0 36px rgba(255, 0, 60, 0.18);
 }
 
@@ -7986,16 +7986,16 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-capture-btn.is-primary {
-  border-color: rgba(255, 45, 122, 0.55);
+  border-color: rgba(var(--pink-rgb), 0.55);
   background: linear-gradient(180deg, rgba(255, 0, 60, 0.22), rgba(255, 255, 255, 0.04));
   box-shadow:
     0 10px 28px rgba(255, 0, 60, 0.28),
-    inset 0 0 0 1px rgba(255, 45, 122, 0.18);
+    inset 0 0 0 1px rgba(var(--pink-rgb), 0.18);
 }
 
 .view-scanner.cs-v2 .cs-capture-btn.is-primary .cs-capture-icon,
 .view-scanner.cs-v2 .cs-capture-btn.is-primary .cs-capture-chevron {
-  color: #ff2d7a;
+  color: var(--pink);
 }
 
 .view-scanner.cs-v2 .cs-capture-btn.is-ghost {
@@ -8039,12 +8039,12 @@ html:has(.phone[data-interface="v2"]) body {
   100% {
     box-shadow:
       0 10px 28px rgba(255, 0, 60, 0.28),
-      inset 0 0 0 1px rgba(255, 45, 122, 0.18);
+      inset 0 0 0 1px rgba(var(--pink-rgb), 0.18);
   }
   50% {
     box-shadow:
       0 14px 34px rgba(255, 0, 60, 0.5),
-      inset 0 0 0 1px rgba(255, 45, 122, 0.35);
+      inset 0 0 0 1px rgba(var(--pink-rgb), 0.35);
   }
 }
 
@@ -8062,7 +8062,7 @@ html:has(.phone[data-interface="v2"]) body {
   background:
     radial-gradient(120% 100% at 0% 0%, rgba(255, 0, 60, 0.14), transparent 55%),
     rgba(12, 10, 18, 0.92);
-  border-color: rgba(255, 45, 122, 0.28);
+  border-color: rgba(var(--pink-rgb), 0.28);
   box-shadow: none;
 }
 
@@ -8086,9 +8086,9 @@ html:has(.phone[data-interface="v2"]) body {
   border-radius: 12px;
   display: grid;
   place-items: center;
-  color: #ff2d7a;
+  color: var(--pink);
   background: rgba(255, 0, 60, 0.14);
-  border: 1px solid rgba(255, 45, 122, 0.35);
+  border: 1px solid rgba(var(--pink-rgb), 0.35);
   flex-shrink: 0;
   box-shadow: none;
 }
@@ -8119,8 +8119,8 @@ html:has(.phone[data-interface="v2"]) body {
   font-family: var(--font-body);
   font-size: 0.95rem;
   font-weight: 800;
-  color: #ff2d7a;
-  text-shadow: 0 0 12px rgba(255, 45, 122, 0.55);
+  color: var(--pink);
+  text-shadow: 0 0 12px rgba(var(--pink-rgb), 0.55);
 }
 
 .view-scanner.cs-v2 .cs-engine-track {
@@ -8134,7 +8134,7 @@ html:has(.phone[data-interface="v2"]) body {
 .view-scanner.cs-v2 .cs-engine-fill {
   min-width: 8px;
   height: 100%;
-  background: linear-gradient(90deg, #ff003c, #ff2d7a);
+  background: linear-gradient(90deg, var(--pink-hot), var(--pink));
   box-shadow: 0 0 10px rgba(255, 0, 60, 0.55);
   border-radius: 999px;
 }
@@ -8174,7 +8174,7 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-field.is-from-scanner .cs-symbol-auto {
-  border-color: rgba(255, 45, 122, 0.45);
+  border-color: rgba(var(--pink-rgb), 0.45);
   box-shadow: 0 0 0 3px rgba(255, 0, 60, 0.12);
 }
 
@@ -8184,13 +8184,13 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-stepper button {
   background: rgba(255, 255, 255, 0.06);
-  color: #ff2d7a;
-  border: 1.5px solid rgba(255, 45, 122, 0.35);
+  color: var(--pink);
+  border: 1.5px solid rgba(var(--pink-rgb), 0.35);
   border-radius: 12px;
 }
 
 .view-scanner.cs-v2 .cs-stepper button:last-child {
-  background: linear-gradient(135deg, rgba(255, 0, 60, 0.85), rgba(255, 45, 122, 0.75));
+  background: linear-gradient(135deg, rgba(var(--pink-hot-rgb), 0.85), rgba(var(--pink-rgb), 0.75));
   color: #fff;
   border: 0;
   box-shadow: 0 8px 16px rgba(255, 0, 60, 0.28);
@@ -8219,7 +8219,7 @@ html:has(.phone[data-interface="v2"]) body {
 .view-scanner.cs-v2 .cs-tp-config-icon {
   width: 18px;
   height: 18px;
-  color: #ff2d7a;
+  color: var(--pink);
   display: grid;
   place-items: center;
 }
@@ -8241,7 +8241,7 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-tp-ratio strong {
-  color: #ff2d7a;
+  color: var(--pink);
   font-size: 1.15rem;
 }
 
@@ -8257,7 +8257,7 @@ html:has(.phone[data-interface="v2"]) body {
   height: 18px;
   margin: 0;
   border-radius: 5px;
-  border: 1.5px solid rgba(255, 45, 122, 0.45);
+  border: 1.5px solid rgba(var(--pink-rgb), 0.45);
   background: rgba(0, 0, 0, 0.35);
   display: grid;
   place-items: center;
@@ -8266,7 +8266,7 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-tp-toggle input:checked {
-  background: linear-gradient(135deg, #ff003c, #ff2d7a);
+  background: linear-gradient(135deg, var(--pink-hot), var(--pink));
   border-color: transparent;
   box-shadow: 0 4px 10px rgba(255, 0, 60, 0.3);
 }
@@ -8288,7 +8288,7 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #ff003c, #ff2d7a);
+  background: linear-gradient(135deg, var(--pink-hot), var(--pink));
   color: #fff;
   box-shadow: 0 14px 28px rgba(255, 0, 60, 0.35);
 }
@@ -8300,7 +8300,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-result {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 45, 122, 0.22);
+  border: 1px solid rgba(var(--pink-rgb), 0.22);
   color: #fff;
 }
 
@@ -8323,7 +8323,7 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-connect-link {
-  color: #ff2d7a;
+  color: var(--pink);
 }
 
 .view-scanner.cs-v2 .cs-detection-status {
@@ -8354,11 +8354,11 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-tab.is-active {
-  color: #ff2d7a;
+  color: var(--pink);
 }
 
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-tab.is-active span {
-  color: #ff2d7a;
+  color: var(--pink);
   font-weight: 800;
 }
 
@@ -8368,7 +8368,7 @@ html:has(.phone[data-interface="v2"]) body {
   padding: 5px;
   border-radius: 10px;
   color: #fff;
-  background: linear-gradient(135deg, #ff003c 0%, #ff2d7a 100%);
+  background: linear-gradient(135deg, var(--pink-hot) 0%, var(--pink) 100%);
   filter: none;
   box-shadow: 0 8px 16px rgba(255, 0, 60, 0.35);
 }
@@ -8381,8 +8381,8 @@ html:has(.phone[data-interface="v2"]) body {
   bottom: 2px;
   height: 3px;
   border-radius: 999px;
-  background: #ff2d7a;
-  box-shadow: 0 0 10px rgba(255, 45, 122, 0.85);
+  background: var(--pink);
+  box-shadow: 0 0 10px rgba(var(--pink-rgb), 0.85);
 }
 
 @media (max-height: 760px) {
@@ -8768,9 +8768,9 @@ html:has(.phone[data-interface="v2"]) body {
   cursor: pointer;
   opacity: 1;
   color: #fff;
-  border-color: color-mix(in srgb, var(--pink, #ff2d7a) 70%, #fff 10%);
-  background: color-mix(in srgb, var(--pink, #ff2d7a) 78%, #111 22%);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--pink, #ff2d7a) 35%, transparent);
+  border-color: color-mix(in srgb, var(--pink, var(--pink)) 70%, #fff 10%);
+  background: color-mix(in srgb, var(--pink, var(--pink)) 78%, #111 22%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--pink, var(--pink)) 35%, transparent);
 }
 
 .econ-cal-execute:disabled {

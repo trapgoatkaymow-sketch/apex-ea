@@ -10,6 +10,7 @@ import {
   setMentorStatus,
   updateMentorBanking,
   updateMentorProfile,
+  updateMentorAppColor,
 } from "./_lib.js";
 
 export const config = { maxDuration: 30 };
@@ -63,6 +64,15 @@ export default async function handler(req, res) {
         return;
       }
 
+      if (action === "app-color" || action === "appcolor" || action === "theme") {
+        const mentor = await updateMentorAppColor(
+          body.email,
+          body.appColor || body.color || body.theme
+        );
+        sendJson(res, 200, { mentor });
+        return;
+      }
+
       if (action === "license-keys" || action === "licensekeys" || action === "keys") {
         const mentor = await setMentorLicenseKeys(body.email, {
           set: body.set ?? body.licenseKeysAllowed ?? body.total,
@@ -103,6 +113,15 @@ export default async function handler(req, res) {
 
       if (action === "profile") {
         const mentor = await updateMentorProfile(body.email, body.profile || body);
+        sendJson(res, 200, { mentor });
+        return;
+      }
+
+      if (action === "app-color" || action === "appcolor" || action === "theme") {
+        const mentor = await updateMentorAppColor(
+          body.email,
+          body.appColor || body.color || body.theme
+        );
         sendJson(res, 200, { mentor });
         return;
       }
