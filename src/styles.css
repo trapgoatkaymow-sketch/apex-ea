@@ -5790,9 +5790,9 @@ html:has(.phone[data-interface="v2"]) body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px;
-  margin: 0 12px calc(10px + var(--safe-bottom));
-  padding: 6px 4px;
-  border-radius: 26px;
+  margin: 0 16px calc(10px + var(--safe-bottom));
+  padding: 5px 4px;
+  border-radius: 22px;
   overflow: visible;
   background: rgba(12, 4, 10, 0.72);
   border: 1px solid rgba(var(--pink-rgb), 0.22);
@@ -5809,10 +5809,10 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-height: 58px;
-  padding: 6px 4px 5px;
-  border-radius: 20px;
+  gap: 3px;
+  min-height: 48px;
+  padding: 4px 2px 3px;
+  border-radius: 16px;
   color: rgba(255, 255, 255, 0.52);
   background: transparent;
   border: 0;
@@ -5829,8 +5829,8 @@ html:has(.phone[data-interface="v2"]) body {
 .v2-tab-icon {
   position: relative;
   isolation: isolate;
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -5854,7 +5854,7 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .v2-tab-icon .stop-core-glow {
-  inset: 7px;
+  inset: 6px;
   z-index: 1;
   opacity: 0;
   transition: opacity 0.25s ease;
@@ -5863,8 +5863,8 @@ html:has(.phone[data-interface="v2"]) body {
 .v2-tab-icon svg {
   position: relative;
   z-index: 2;
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   display: block;
 }
 
@@ -5872,11 +5872,11 @@ html:has(.phone[data-interface="v2"]) body {
   position: relative;
   z-index: 2;
   font-family: var(--font-v2);
-  font-size: 0.54rem;
+  font-size: 0.5rem;
   font-weight: 400;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.1;
   text-transform: uppercase;
 }
 
