@@ -251,7 +251,8 @@ async function githubPut({ repo, branch, filePath, raw, sha, message }) {
  * Incoming (intended) wins field-level updates for the same email; remote-only
  * rows are always kept. Credentials are never blanked out.
  */
-function mergeMentorsDocuments(remoteRaw, intendedRaw) {
+function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
+  const forceIncomingStatus = opts.forceIncomingStatus !== false;
   let remote;
   let intended;
   try {
@@ -278,8 +279,9 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw) {
         row?.createdAt ||
         0
     ) || 0;
-  const statusStamp = (row) =>
-    Number(row?.statusUpdatedAt || row?.createdAt || 0) || 0;
+  // Only real status writes count — never fall back to createdAt (that made
+  // stale approved rows beat a fresh Decline during multi-store reads).
+  const statusStamp = (row) => Number(row?.statusUpdatedAt) || 0;
   const statusRank = (status) => {
     const s = String(status || "pending").toLowerCase();
     if (s === "approved") return 3;
@@ -301,17 +303,19 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw) {
     const takeIncoming = preferIncoming || incomingNewer;
     const primary = takeIncoming ? row : prev;
     const secondary = takeIncoming ? prev : row;
-    // Prefer explicit admin writes, else the newer statusUpdatedAt, else rank.
     let nextStatus = prev.status || row.status || "pending";
     let nextStatusAt = Math.max(statusStamp(prev), statusStamp(row)) || null;
-    if (preferIncoming && row.status) {
+    if (preferIncoming && forceIncomingStatus && row.status) {
+      // Write path: the intended document's status always wins.
       nextStatus = row.status;
       nextStatusAt = Math.max(statusStamp(row), Date.now());
-    } else if (statusStamp(row) !== statusStamp(prev)) {
+    } else if (statusStamp(row) || statusStamp(prev)) {
       const newer = statusStamp(row) >= statusStamp(prev) ? row : prev;
       nextStatus = newer.status || nextStatus;
       nextStatusAt = statusStamp(newer) || nextStatusAt;
-    } else if (statusRank(row.status) >= statusRank(prev.status)) {
+    } else if (statusRank(row.status) > statusRank(prev.status)) {
+      // Neither stamped — keep stronger status only when strictly greater so we
+      // do not flip declined→approved when ranks are compared carelessly.
       nextStatus = row.status || prev.status || nextStatus;
     }
     map.set(email, {
@@ -737,7 +741,11 @@ export async function durableRead(opts = {}) {
     if (pieces.length) {
       let merged = pieces[0];
       for (let i = 1; i < pieces.length; i += 1) {
-        merged = mergeMentorsDocuments(merged, pieces[i]);
+        // Read-path union: never force later store status over an earlier
+        // stamped Decline/Approve — only statusUpdatedAt (or rank) decides.
+        merged = mergeMentorsDocuments(merged, pieces[i], {
+          forceIncomingStatus: false,
+        });
       }
       return seedFirebaseFrom(
         {
