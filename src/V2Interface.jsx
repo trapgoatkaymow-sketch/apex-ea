@@ -14,6 +14,20 @@ import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx"
 import V2ScannerPaywall from "./V2ScannerPaywall.jsx";
 
 const START_PARTICLE_COUNT = isNativeApp() ? 6 : 18;
+const TAB_PARTICLE_COUNT = isNativeApp() ? 4 : 8;
+
+function V2TabParticles() {
+  return (
+    <>
+      <span className="stop-energy" aria-hidden="true">
+        {Array.from({ length: TAB_PARTICLE_COUNT }, (_, i) => (
+          <span key={i} className={`stop-particle stop-particle-${i + 1}`} />
+        ))}
+      </span>
+      <span className="stop-core-glow" aria-hidden="true" />
+    </>
+  );
+}
 
 export default function V2Interface() {
   const {
@@ -413,6 +427,7 @@ export default function V2Interface() {
           onClick={() => setV2View("home")}
         >
           <span className="v2-tab-icon" aria-hidden="true">
+            <V2TabParticles />
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 3.2 3.6 10.3c-.3.2-.4.6-.4.9v7.5c0 .8.7 1.5 1.5 1.5H9.2v-5.3c0-.5.4-.9.9-.9h3.8c.5 0 .9.4.9.9v5.3h4.5c.8 0 1.5-.7 1.5-1.5v-7.5c0-.3-.1-.7-.4-.9L12 3.2z" />
             </svg>
@@ -425,6 +440,7 @@ export default function V2Interface() {
           onClick={() => setV2View("scanner")}
         >
           <span className="v2-tab-icon" aria-hidden="true">
+            <V2TabParticles />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
               <circle cx="12" cy="12" r="3.1" />
               <path
@@ -441,6 +457,7 @@ export default function V2Interface() {
           onClick={() => setV2View("metatrader")}
         >
           <span className="v2-tab-icon" aria-hidden="true">
+            <V2TabParticles />
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M6.2 6.2h2.1v11.6H6.2zM10.9 9.4h2.1v8.4h-2.1zM15.7 4.8h2.1v13H15.7z" />
               <path d="M4.4 19.8h15.2v1.4H4.4z" opacity="0.55" />

@@ -5789,37 +5789,18 @@ html:has(.phone[data-interface="v2"]) body {
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  margin: 0 14px calc(12px + var(--safe-bottom));
-  padding: 7px 5px;
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(36, 12, 22, 0.96) 0%, rgba(10, 2, 8, 0.98) 100%);
-  border: 1px solid rgba(var(--pink-rgb), 0.34);
+  gap: 2px;
+  margin: 0 12px calc(10px + var(--safe-bottom));
+  padding: 6px 4px;
+  border-radius: 26px;
+  overflow: visible;
+  background: rgba(12, 4, 10, 0.72);
+  border: 1px solid rgba(var(--pink-rgb), 0.22);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-    0 10px 24px rgba(0, 0, 0, 0.55),
-    0 0 18px rgba(var(--pink-rgb), 0.1);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-.v2-tabbar::before {
-  content: "";
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  top: 0;
-  height: 1px;
-  pointer-events: none;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(var(--pink-rgb), 0.8) 50%,
-    transparent 100%
-  );
-  box-shadow: 0 0 10px rgba(var(--pink-hot-rgb), 0.4);
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 8px 22px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .v2-tab {
@@ -5828,52 +5809,70 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: 54px;
+  gap: 5px;
+  min-height: 58px;
   padding: 6px 4px 5px;
-  border-radius: 18px;
-  color: rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.52);
   background: transparent;
-  border: 1px solid transparent;
+  border: 0;
+  overflow: visible;
   transition:
     color 0.2s ease,
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
     transform 0.15s ease;
 }
 
 .v2-tab:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }
 
 .v2-tab-icon {
-  width: 34px;
-  height: 34px;
+  position: relative;
+  isolation: isolate;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: grid;
   place-items: center;
+  overflow: visible;
   color: inherit;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+    background 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    color 0.22s ease,
+    transform 0.22s ease;
+}
+
+.v2-tab-icon .stop-energy {
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.v2-tab-icon .stop-core-glow {
+  inset: 7px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
 
 .v2-tab-icon svg {
-  width: 17px;
-  height: 17px;
+  position: relative;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
   display: block;
 }
 
 .v2-tab-label {
+  position: relative;
+  z-index: 2;
   font-family: var(--font-v2);
-  font-size: 0.55rem;
+  font-size: 0.54rem;
   font-weight: 400;
   letter-spacing: 0.05em;
   text-align: center;
@@ -5883,25 +5882,44 @@ html:has(.phone[data-interface="v2"]) body {
 
 .v2-tab.is-active {
   color: #fff;
-  background: rgba(var(--pink-rgb), 0.1);
-  border-color: rgba(var(--pink-rgb), 0.2);
 }
 
 .v2-tab.is-active .v2-tab-icon {
   color: #fff;
   transform: translateY(-1px);
   background:
-    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.32), transparent 48%),
-    linear-gradient(160deg, var(--pink-soft), var(--pink) 55%, var(--pink-deep));
-  border-color: rgba(255, 255, 255, 0.28);
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.4), transparent 36%),
+    radial-gradient(circle at 50% 42%, rgba(var(--pink-rgb), 0.3), transparent 58%),
+    linear-gradient(160deg, var(--pink-soft), var(--pink) 48%, var(--pink-deep));
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
   box-shadow:
-    0 0 0 1px rgba(var(--pink-rgb), 0.35),
-    0 4px 12px rgba(var(--pink-hot-rgb), 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 0 0 1px rgba(var(--pink-rgb), 0.4),
+    0 0 18px rgba(var(--pink-rgb), 0.55),
+    0 0 28px rgba(var(--pink-hot-rgb), 0.28),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 10px rgba(var(--pink-rgb), 0.12);
+  animation: breathe-stop 6s ease-in-out infinite;
+}
+
+.v2-tab.is-active .v2-tab-icon .stop-energy,
+.v2-tab.is-active .v2-tab-icon .stop-core-glow {
+  opacity: 1;
+}
+
+.v2-tab.is-active .v2-tab-icon .stop-energy {
+  transform: scale(0.78);
+  transform-origin: center;
+}
+
+.v2-tab.is-active .v2-tab-icon .stop-particle {
+  --p-opacity: 0.9;
+  animation-duration: calc(var(--p-dur, 5.5s) * 0.85);
 }
 
 .v2-tab.is-active .v2-tab-label {
   color: var(--pink-soft);
+  text-shadow: 0 0 10px rgba(var(--pink-rgb), 0.45);
 }
 
 .v2-screen-top {
@@ -8471,13 +8489,11 @@ html:has(.phone[data-interface="v2"]) body {
 
 /* Keep the floating glass dock on Interface 2 scanner */
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-tabbar {
-  background:
-    linear-gradient(180deg, rgba(34, 12, 20, 0.97) 0%, rgba(8, 2, 8, 0.99) 100%);
-  border-color: rgba(var(--pink-rgb), 0.36);
+  background: rgba(10, 4, 8, 0.82);
+  border-color: rgba(var(--pink-rgb), 0.26);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-    0 10px 24px rgba(0, 0, 0, 0.55),
-    0 0 20px rgba(var(--pink-rgb), 0.14);
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
 @media (max-height: 760px) {
