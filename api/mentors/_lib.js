@@ -626,6 +626,9 @@ function ensureSuperAdminRecord(mentors) {
     salt,
     createdAt: idx >= 0 ? list[idx].createdAt || Date.now() : Date.now(),
     banking: idx >= 0 ? normalizeBanking(list[idx].banking) : normalizeBanking(),
+    appColor: idx >= 0 ? normalizeAppColor(list[idx].appColor) : "",
+    appColorUpdatedAt:
+      idx >= 0 ? Number(list[idx].appColorUpdatedAt) || null : null,
   };
   if (idx >= 0) list[idx] = { ...list[idx], ...record };
   else list.unshift(record);
