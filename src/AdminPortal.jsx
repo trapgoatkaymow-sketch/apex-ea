@@ -541,7 +541,8 @@ export default function AdminPortal() {
       adminPage === "mentors" ||
       adminPage === "commissions" ||
       adminPage === "commission" ||
-      adminPage === "mentor-keys"
+      adminPage === "mentor-keys" ||
+      adminPage === "top-mentors"
         ? 5000
         : 12000;
     const timer = setInterval(loadMentors, ms);
@@ -1635,6 +1636,48 @@ export default function AdminPortal() {
         b.sold - a.sold ||
         String(a.mentor.username || "").localeCompare(String(b.mentor.username || ""))
     );
+
+  const topMentorRows = useMemo(() => {
+    const rows = mentors
+      .filter((m) => String(m.role || "").toLowerCase() !== "superadmin")
+      .map((mentor) => {
+        const email = normalizeAdminEmail(mentor.email);
+        const id = String(mentor.id || "");
+        const owned = (licenseKeys || []).filter((row) => {
+          const owner = normalizeAdminEmail(row.mentorEmail);
+          const ownerId = String(row.mentorId || "");
+          return (email && owner === email) || (id && ownerId === id);
+        });
+        const clients = new Set();
+        let used = 0;
+        for (const row of owned) {
+          if (row?.used) used += 1;
+          const client = normalizeAdminEmail(row.clientEmail);
+          if (client) clients.add(client);
+        }
+        const sold = countSoldKeysForMentor(mentor);
+        return {
+          mentor,
+          email,
+          status: String(mentor.status || "pending").toLowerCase(),
+          keys: owned.length,
+          used,
+          clients: clients.size,
+          sold,
+        };
+      });
+    rows.sort(
+      (a, b) =>
+        b.clients - a.clients ||
+        b.used - a.used ||
+        b.sold - a.sold ||
+        b.keys - a.keys ||
+        String(a.mentor.username || a.email).localeCompare(
+          String(b.mentor.username || b.email)
+        )
+    );
+    return rows;
+  }, [mentors, licenseKeys, signups]);
 
   const commissionQuery = String(commissionSearch || "")
     .trim()
@@ -4028,11 +4071,83 @@ export default function AdminPortal() {
           </section>
         )}
 
-        {isSuperAdmin && ["top-mentors", "emails"].includes(adminPage) && (
+        {isSuperAdmin && adminPage === "top-mentors" && (
           <section className="admin-page is-active">
-            <h2 className="admin-h1">
-              {adminPage === "top-mentors" ? "Top Mentors" : "Email Management"}
-            </h2>
+            <h2 className="admin-h1">Top Mentors</h2>
+            <p className="admin-sub">
+              Ranked by clients unlocked, keys used, and paid unlocks.
+            </p>
+            <div className="admin-card">
+              <div className="admin-card-head">
+                <h3>
+                  Leaderboard ·{" "}
+                  <span className="admin-muted">{topMentorRows.length}</span>
+                </h3>
+                <button
+                  className={`admin-btn admin-btn-outline admin-btn-sm${
+                    refreshBusy === "mentors" ? " is-loading" : ""
+                  }`}
+                  type="button"
+                  disabled={refreshBusy === "mentors"}
+                  onClick={() => {
+                    void refreshMentorsList();
+                    void refreshLicenses?.();
+                  }}
+                >
+                  <AdminBusyLabel busy={refreshBusy === "mentors"} busyText="Refreshing…">
+                    Refresh
+                  </AdminBusyLabel>
+                </button>
+              </div>
+              {topMentorRows.length === 0 ? (
+                <p className="admin-empty">No mentors yet</p>
+              ) : (
+                <div className="admin-top-list">
+                  {topMentorRows.map((row, index) => {
+                    const initials = String(row.mentor.username || row.email || "?")
+                      .trim()
+                      .slice(0, 2)
+                      .toUpperCase();
+                    return (
+                      <div className="admin-top-card" key={row.mentor.id || row.email}>
+                        <div className="admin-avatar-circle" aria-hidden="true">
+                          {initials}
+                        </div>
+                        <div className="top-mentor-main">
+                          <div className="top-mentor-title-row">
+                            <strong>
+                              #{index + 1} · {row.mentor.username || "Mentor"}
+                            </strong>
+                            <span
+                              className={`admin-badge${
+                                row.status === "approved"
+                                  ? " is-approved"
+                                  : row.status === "declined"
+                                    ? " is-declined"
+                                    : " is-pending"
+                              }`}
+                            >
+                              {row.status}
+                            </span>
+                          </div>
+                          <p className="admin-card-meta">{row.email}</p>
+                          <p className="admin-card-meta">
+                            {row.clients} client{row.clients === 1 ? "" : "s"} ·{" "}
+                            {row.used}/{row.keys} keys used · {row.sold} paid
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {isSuperAdmin && adminPage === "emails" && (
+          <section className="admin-page is-active">
+            <h2 className="admin-h1">Email Management</h2>
             <p className="admin-sub">Starts empty — new data appears as clients sign up.</p>
             <div className="admin-card">
               <p className="admin-empty">No records yet</p>
