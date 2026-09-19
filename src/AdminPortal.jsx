@@ -781,21 +781,16 @@ export default function AdminPortal() {
     setProfileContact(String(mine?.contact || "").trim());
   }, [mentors, adminSession?.email, adminSession?.username]);
 
-  // Hydrate portal App color from the mentor record once per session.
-  const appColorHydratedRef = useRef("");
+  // Keep portal App color in sync whenever the mentor record changes.
   useEffect(() => {
-    if (!adminSession?.email) {
-      appColorHydratedRef.current = "";
-      return;
-    }
+    if (!adminSession?.email) return;
     const sessionKey = normalizeAdminEmail(adminSession.email);
-    if (appColorHydratedRef.current === sessionKey) return;
     const mine = mentors.find((m) => normalizeAdminEmail(m.email) === sessionKey);
-    if (!mine) return;
-    appColorHydratedRef.current = sessionKey;
-    const color = normalizeHexColor(mine.appColor || "", "");
-    if (color) setAppColor(color, { silent: true });
-  }, [mentors, adminSession?.email, setAppColor]);
+    const color = normalizeHexColor(mine?.appColor || "", "");
+    if (!color) return;
+    if (normalizeHexColor(appColor) === color) return;
+    setAppColor(color, { silent: true });
+  }, [mentors, adminSession?.email, appColor, setAppColor]);
 
   const colorPersistTimerRef = useRef(0);
   const applyPortalAppColor = (next, { debounce = false } = {}) => {

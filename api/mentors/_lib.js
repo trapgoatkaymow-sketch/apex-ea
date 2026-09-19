@@ -452,6 +452,21 @@ async function readStore() {
             salt: local.salt,
           };
         }
+        // Keep a newer local app color when durable remote hasn't caught up yet.
+        const localColor = normalizeAppColor(local.appColor);
+        const remoteColor = normalizeAppColor(m.appColor);
+        const localColorAt = Number(local.appColorUpdatedAt) || 0;
+        const remoteColorAt = Number(m.appColorUpdatedAt) || 0;
+        if (
+          localColor &&
+          (!remoteColor || localColorAt > remoteColorAt)
+        ) {
+          next = {
+            ...next,
+            appColor: localColor,
+            appColorUpdatedAt: localColorAt || Date.now(),
+          };
+        }
         return next;
       });
       // Keep local-only mentors (with credentials) that remote briefly omitted.
@@ -515,6 +530,7 @@ async function writeStore(mentors, sha, message) {
     mentors: durableRows
       .map((m) => {
         const role = m.role || "mentor";
+        const appColor = normalizeAppColor(m.appColor);
         return {
           id: m.id,
           username: m.username,
@@ -531,6 +547,10 @@ async function writeStore(mentors, sha, message) {
             { role }
           ),
           licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
+          appColor: appColor || "",
+          appColorUpdatedAt: appColor
+            ? Number(m.appColorUpdatedAt) || Date.now()
+            : Number(m.appColorUpdatedAt) || null,
         };
       })
       .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt)
@@ -606,6 +626,9 @@ function ensureSuperAdminRecord(mentors) {
     salt,
     createdAt: idx >= 0 ? list[idx].createdAt || Date.now() : Date.now(),
     banking: idx >= 0 ? normalizeBanking(list[idx].banking) : normalizeBanking(),
+    appColor: idx >= 0 ? normalizeAppColor(list[idx].appColor) : "",
+    appColorUpdatedAt:
+      idx >= 0 ? Number(list[idx].appColorUpdatedAt) || null : null,
   };
   if (idx >= 0) list[idx] = { ...list[idx], ...record };
   else list.unshift(record);
