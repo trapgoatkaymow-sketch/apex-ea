@@ -1168,6 +1168,7 @@ export async function createLicense(payload = {}) {
   }
 
   let result = null;
+  let createdNew = false;
   const write = await mutateStore((licenses, api) => {
     if (api?.isDeleted?.(key)) {
       const err = new Error("This license key was permanently deleted");
@@ -1189,6 +1190,7 @@ export async function createLicense(payload = {}) {
     }
 
     if (existing) {
+      createdNew = false;
       const prevBot = existing.bot || null;
       const prevPhoto = String(prevBot?.photo || "");
       const replacePhoto = shouldReplacePhoto(prevPhoto, bot?.photo);
@@ -1227,6 +1229,7 @@ export async function createLicense(payload = {}) {
       licenses[idx] = result;
       return licenses;
     }
+    createdNew = true;
     result = {
       key,
       botId,
@@ -1263,7 +1266,21 @@ export async function createLicense(payload = {}) {
     err.status = 503;
     throw err;
   }
-  return result;
+
+  let email = { ok: false, skipped: true, error: "not attempted" };
+  const skipEmail =
+    payload.sendEmail === false ||
+    String(payload.sendEmail || "").toLowerCase() === "false";
+  if (createdNew && !skipEmail) {
+    try {
+      const { sendLicenseKeyEmail } = await import("../_brevo.js");
+      email = await sendLicenseKeyEmail(result);
+    } catch (error) {
+      email = { ok: false, error: error?.message || "Email send failed" };
+    }
+  }
+
+  return { ...result, _email: email };
 }
 
 function randomLicenseKeyServer(existingKeys = new Set()) {
@@ -1467,6 +1484,32 @@ export async function createLicensesBulk(payload = {}) {
     console.warn("bulk signup approve failed", error.message || error);
   }
 
+  let email = {
+    sentCount: 0,
+    failedCount: 0,
+    skippedCount: 0,
+    results: [],
+  };
+  const skipEmail =
+    payload.sendEmail === false ||
+    String(payload.sendEmail || "").toLowerCase() === "false";
+  if (!skipEmail && created.length) {
+    try {
+      const { sendLicenseKeyEmails } = await import("../_brevo.js");
+      email = await sendLicenseKeyEmails(created, { concurrency: 4 });
+    } catch (error) {
+      email = {
+        sentCount: 0,
+        failedCount: created.length,
+        skippedCount: 0,
+        results: [],
+        error: error?.message || "Bulk email failed",
+      };
+    }
+  } else if (skipEmail) {
+    email.skippedCount = created.length;
+  }
+
   return {
     created,
     skipped,
@@ -1474,6 +1517,7 @@ export async function createLicensesBulk(payload = {}) {
     createdCount: created.length,
     skippedCount: skipped.length,
     errorCount: errors.length,
+    email,
   };
 }
 

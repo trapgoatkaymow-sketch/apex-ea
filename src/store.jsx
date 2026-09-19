@@ -2057,7 +2057,20 @@ export function AppProvider({ children }) {
               )
             );
           }
-          showToast(`License ready for ${name} · ${email}`);
+          const mail = remote?._email || null;
+          if (mail?.ok) {
+            showToast(`License ready for ${name} · emailed ${email}`);
+          } else if (mail?.skipped) {
+            showToast(
+              `License ready for ${name} · email not configured (add Brevo keys on Vercel)`
+            );
+          } else if (mail && !mail.ok) {
+            showToast(
+              `License ready for ${name} · email failed (${mail.error || "Brevo"})`
+            );
+          } else {
+            showToast(`License ready for ${name} · ${email}`);
+          }
           return saved.key;
         } catch (error) {
           lastError = error;
@@ -2148,7 +2161,14 @@ export function AppProvider({ children }) {
         showToast(
           `Imported ${result.createdCount} key${result.createdCount === 1 ? "" : "s"}` +
             (result.skippedCount ? ` · ${result.skippedCount} already existed` : "") +
-            (result.errorCount ? ` · ${result.errorCount} row error(s)` : "")
+            (result.errorCount ? ` · ${result.errorCount} row error(s)` : "") +
+            (result.email?.sentCount
+              ? ` · emailed ${result.email.sentCount}`
+              : result.email?.skippedCount
+                ? ` · email not configured`
+                : result.email?.failedCount
+                  ? ` · ${result.email.failedCount} email(s) failed`
+                  : "")
         );
         return result;
       } catch (error) {
