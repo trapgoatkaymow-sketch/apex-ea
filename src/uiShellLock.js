@@ -3,12 +3,12 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 5 — Interface 2 circular home + EA photo, glass tab dock with energy
- * bubbles, robot-list stadium pills with bubbles, header no longer clips glow.
+ * Gen 6 — Interface 2 scanner ops deck (live-link ring, pair board, exit ladder)
+ * replaces the Interface-1-lookalike Signal Core / controls / TP cards.
  */
-export const UI_SHELL_GENERATION = 5;
+export const UI_SHELL_GENERATION = 6;
 
-export const UI_SHELL_LABEL = "v2-circular-glass-tabs-robot-pills";
+export const UI_SHELL_LABEL = "v2-scanner-ops-deck";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
