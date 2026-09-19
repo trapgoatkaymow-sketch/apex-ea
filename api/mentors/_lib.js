@@ -44,6 +44,20 @@ function normalizeEmail(email) {
     .toLowerCase();
 }
 
+/** Find a mentor by email with normalized comparison (handles legacy unnormalized rows). */
+function findMentorIndex(list, email) {
+  const key = normalizeEmail(email);
+  if (!key) return -1;
+  return (Array.isArray(list) ? list : []).findIndex(
+    (m) => normalizeEmail(m?.email) === key
+  );
+}
+
+function findMentor(list, email) {
+  const idx = findMentorIndex(list, email);
+  return idx < 0 ? null : list[idx];
+}
+
 export function normalizeLicenseKeysAllowed(value, { role } = {}) {
   if (String(role || "").toLowerCase() === "superadmin") {
     return null;
@@ -260,6 +274,7 @@ function decodeMentorsJson(raw, sha = null) {
             String(m.role || "mentor").toLowerCase() === "superadmin"
               ? "superadmin"
               : "mentor";
+          const appColor = normalizeAppColor(m.appColor);
           return {
             id: String(m.id || normalizeEmail(m.email) || crypto.randomUUID()),
             username: String(m.username || "").trim() || "Mentor",
@@ -275,6 +290,10 @@ function decodeMentorsJson(raw, sha = null) {
               role,
             }),
             licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
+            appColor,
+            appColorUpdatedAt: appColor
+              ? Number(m.appColorUpdatedAt) || Date.now()
+              : Number(m.appColorUpdatedAt) || null,
           };
         })
         .filter((m) => m.email && m.email.includes("@")),
@@ -714,7 +733,7 @@ export async function registerMentor({ username, email, contact, password }) {
   let created = null;
   await mutateStore((mentors) => {
     const list = ensureSuperAdminRecord(mentors);
-    if (list.some((m) => m.email === key)) {
+    if (findMentorIndex(list, key) >= 0) {
       const err = new Error("An account with this email already exists");
       err.status = 409;
       throw err;
@@ -769,7 +788,7 @@ export async function loginMentor({ email, password }) {
       ensureSuperAdminRecord(storeEarly.mentors || []),
       credentialBackupPool()
     );
-    const existing = mentorsEarly.find((m) => m.email === key);
+    const existing = findMentor(mentorsEarly, key);
     if (
       existing?.passwordHash &&
       existing?.salt &&
@@ -780,7 +799,7 @@ export async function loginMentor({ email, password }) {
         try {
           await mutateStore((mentors) => {
             const list = ensureSuperAdminRecord(mentors);
-            const idx = list.findIndex((m) => m.email === key);
+            const idx = findMentorIndex(list, key);
             if (idx >= 0) list[idx] = { ...list[idx], status: "approved" };
             return list;
           }, `chore: approve durable mentor ${key}`);
@@ -795,7 +814,7 @@ export async function loginMentor({ email, password }) {
     try {
       await mutateStore((mentors) => {
         const list = ensureSuperAdminRecord(mentors);
-        const idx = list.findIndex((m) => m.email === key);
+        const idx = findMentorIndex(list, key);
         const salt = createSalt();
         const passwordHash = hashPassword(pass, salt);
         if (idx >= 0) {
@@ -825,7 +844,7 @@ export async function loginMentor({ email, password }) {
       ensureSuperAdminRecord(store.mentors || []),
       credentialBackupPool()
     );
-    const repaired = mentors.find((m) => m.email === key);
+    const repaired = findMentor(mentors, key);
     if (repaired) return publicMentor({ ...repaired, status: "approved" });
     return {
       id: existing?.id || "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
@@ -843,7 +862,7 @@ export async function loginMentor({ email, password }) {
     ensureSuperAdminRecord(store.mentors),
     credentialBackupPool()
   );
-  const mentor = mentors.find((m) => m.email === key);
+  const mentor = findMentor(mentors, key);
   if (!mentor) {
     const err = new Error("Invalid email or password");
     err.status = 401;
@@ -890,13 +909,15 @@ export async function setMentorStatus(email, status) {
   let updated = null;
   await mutateStore((mentors) => {
     const list = ensureSuperAdminRecord(mentors);
-    const idx = list.findIndex((m) => m.email === key);
+    const idx = findMentorIndex(list, key);
     if (idx < 0) {
-      const err = new Error("Mentor not found");
+      const err = new Error(
+        "Mentor not found on server — use Set password to restore this account, then approve"
+      );
       err.status = 404;
       throw err;
     }
-    list[idx] = { ...list[idx], status: nextStatus };
+    list[idx] = { ...list[idx], status: nextStatus, email: key };
     updated = list[idx];
     return list;
   }, `chore: set mentor ${key} to ${nextStatus}`);
@@ -939,7 +960,7 @@ export async function updateMentorProfile(email, profileInput = {}) {
   try {
     await mutateStore((mentors) => {
       const list = ensureSuperAdminRecord(mentors);
-      const idx = list.findIndex((m) => m.email === key);
+      const idx = findMentorIndex(list, key);
       if (idx < 0) {
         const err = new Error("Mentor not found");
         err.status = 404;
@@ -957,7 +978,7 @@ export async function updateMentorProfile(email, profileInput = {}) {
     if (error.status === 400 || error.status === 404) throw error;
     const store = await readStore().catch(() => readLocalStore());
     const list = ensureSuperAdminRecord(store.mentors || []);
-    const idx = list.findIndex((m) => m.email === key);
+    const idx = findMentorIndex(list, key);
     if (idx < 0) {
       const err = new Error("Mentor not found");
       err.status = 404;
@@ -991,7 +1012,7 @@ function brandThemeLinkedEmails() {
 
 function applyAppColorToMentorList(list, key, appColor) {
   const now = Date.now();
-  const idx = list.findIndex((m) => m.email === key);
+  const idx = findMentorIndex(list, key);
   if (idx < 0) {
     const err = new Error("Mentor not found");
     err.status = 404;
@@ -1006,7 +1027,7 @@ function applyAppColorToMentorList(list, key, appColor) {
   // accounts so license.mentorEmail lookups (gmail) match the portal choice.
   if (key === SUPER_ADMIN_EMAIL) {
     for (const linked of brandThemeLinkedEmails()) {
-      const li = list.findIndex((m) => m.email === linked);
+      const li = findMentorIndex(list, linked);
       if (li < 0) continue;
       list[li] = {
         ...list[li],
@@ -1071,7 +1092,7 @@ export async function updateMentorBanking(email, bankingInput = {}) {
   try {
     await mutateStore((mentors) => {
       const list = ensureSuperAdminRecord(mentors);
-      const idx = list.findIndex((m) => m.email === key);
+      const idx = findMentorIndex(list, key);
       if (idx < 0) {
         const err = new Error("Mentor not found");
         err.status = 404;
@@ -1087,7 +1108,7 @@ export async function updateMentorBanking(email, bankingInput = {}) {
     // successful save even when GitHub is unreachable / unauthorized.
     const store = await readStore().catch(() => readLocalStore());
     const list = ensureSuperAdminRecord(store.mentors || []);
-    const idx = list.findIndex((m) => m.email === key);
+    const idx = findMentorIndex(list, key);
     if (idx < 0) {
       if (error.status === 404) throw error;
       const err = new Error("Mentor not found");
@@ -1112,7 +1133,7 @@ export async function getMentorLicenseKeysAllowed(email) {
   try {
     const store = await readStore();
     const mentors = ensureSuperAdminRecord(store.mentors);
-    const mentor = mentors.find((m) => m.email === key);
+    const mentor = findMentor(mentors, key);
     if (!mentor) return DEFAULT_MENTOR_LICENSE_KEYS;
     return normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role: mentor.role,
@@ -1127,11 +1148,19 @@ export async function setMentorPassword({
   email,
   password,
   currentPassword,
+  username,
+  contact,
+  status,
 } = {}) {
   const key = normalizeEmail(email);
   const pass = String(password || "");
   const admin = normalizeEmail(adminEmail);
   const current = String(currentPassword || "");
+  const restoreName = String(username || "").trim();
+  const restoreContact = normalizePhone(contact);
+  const restoreStatus = String(status || "")
+    .trim()
+    .toLowerCase();
 
   if (!key || !key.includes("@")) {
     const err = new Error("Enter a valid email");
@@ -1162,7 +1191,7 @@ export async function setMentorPassword({
     }
     const store = await readStore();
     const mentors = ensureSuperAdminRecord(store.mentors);
-    const me = mentors.find((m) => m.email === key);
+    const me = findMentor(mentors, key);
     if (!me?.passwordHash || !me?.salt) {
       const err = new Error("Account password is missing — ask super admin to set it");
       err.status = 400;
@@ -1178,19 +1207,42 @@ export async function setMentorPassword({
   let updated = null;
   await mutateStore((mentors) => {
     const list = ensureSuperAdminRecord(mentors);
-    const idx = list.findIndex((m) => m.email === key);
-    if (idx < 0) {
-      const err = new Error("Mentor not found");
-      err.status = 404;
-      throw err;
-    }
-    // Super admin keeps the configured bootstrap password in code — allow override
-    // in the store too so portal login stays consistent.
+    const idx = findMentorIndex(list, key);
     const salt = createSalt();
+    const passwordHash = hashPassword(pass, salt);
+    if (idx < 0) {
+      // Super admin can restore mentors wiped from durable storage by setting
+      // a password — recreates the row so Approve / Decline work again.
+      if (!isSuperAdmin) {
+        const err = new Error("Mentor not found");
+        err.status = 404;
+        throw err;
+      }
+      const nextStatus = ["pending", "approved", "declined"].includes(restoreStatus)
+        ? restoreStatus
+        : "approved";
+      updated = {
+        id: crypto.randomUUID(),
+        username: restoreName || key.split("@")[0] || "Mentor",
+        email: key,
+        contact: restoreContact || "",
+        role: "mentor",
+        status: nextStatus,
+        passwordHash,
+        salt,
+        createdAt: Date.now(),
+        licenseKeysAllowed: DEFAULT_MENTOR_LICENSE_KEYS,
+      };
+      list.unshift(updated);
+      return list;
+    }
     list[idx] = {
       ...list[idx],
+      email: key,
       salt,
-      passwordHash: hashPassword(pass, salt),
+      passwordHash,
+      ...(restoreName ? { username: restoreName } : {}),
+      ...(restoreContact ? { contact: restoreContact } : {}),
     };
     updated = list[idx];
     return list;
@@ -1227,7 +1279,7 @@ export async function setMentorLicenseKeys(email, { set, add } = {}) {
 
   let updated = null;
   const applyKeys = (list) => {
-    const idx = list.findIndex((m) => m.email === key);
+    const idx = findMentorIndex(list, key);
     if (idx < 0) {
       const err = new Error("Mentor not found");
       err.status = 404;

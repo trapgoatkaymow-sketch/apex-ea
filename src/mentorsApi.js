@@ -318,7 +318,23 @@ export async function fetchMentors() {
   try {
     const data = await apiFetch();
     const remote = Array.isArray(data?.mentors) ? data.mentors : [];
-    const merged = mergeMentorLists(local, remote).map((m) => ({
+    const remoteEmails = new Set(
+      remote.map((m) => normalizeEmail(m?.email)).filter(Boolean)
+    );
+    // Keep only local-only rows that still have a plaintext password from a
+    // just-completed register (not yet visible on remote). Drop durable ghosts
+    // that make Approve / Set password show "Mentor not found".
+    const localKeep = local.filter((m) => {
+      const email = normalizeEmail(m?.email);
+      if (!email) return false;
+      if (remoteEmails.has(email)) return true;
+      if (email === normalizeEmail(SUPER_ADMIN_EMAIL)) return true;
+      const pass = String(m?.password || "").trim();
+      if (pass.length < 6) return false;
+      const age = Date.now() - (Number(m.createdAt) || 0);
+      return age >= 0 && age < 1000 * 60 * 60 * 24;
+    });
+    const merged = mergeMentorLists(localKeep, remote).map((m) => ({
       ...m,
       banking: pickBanking(m, { banking: bankingFromCache(m.email) }),
     }));
@@ -328,7 +344,9 @@ export async function fetchMentors() {
         password:
           normalizeEmail(m.email) === normalizeEmail(SUPER_ADMIN_EMAIL)
             ? SUPER_ADMIN_PASSWORD
-            : m.password,
+            : remoteEmails.has(normalizeEmail(m.email))
+              ? undefined
+              : m.password,
       }))
     );
     return merged.map(publicLocal);
@@ -686,6 +704,9 @@ export async function setMentorAccountPassword({
   email,
   password,
   currentPassword,
+  username,
+  contact,
+  status,
 } = {}) {
   const key = normalizeEmail(email);
   const actor = normalizeEmail(adminEmail);
@@ -701,6 +722,9 @@ export async function setMentorAccountPassword({
       email: key,
       password: pass,
       currentPassword: currentPassword || "",
+      username: username || "",
+      contact: contact || "",
+      status: status || "",
     },
   });
   const mentor = data?.mentor || null;

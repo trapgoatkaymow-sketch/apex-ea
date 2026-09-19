@@ -514,13 +514,12 @@ export default function AdminPortal() {
               m,
             ])
           );
+          // Preserve banking details already typed in this session, but do not
+          // re-add mentors missing from the server (those cause "Mentor not found").
           for (const m of prev) {
             const key = normalizeAdminEmail(m.email);
             const incoming = map.get(key);
-            if (!incoming) {
-              map.set(key, m);
-              continue;
-            }
+            if (!incoming) continue;
             const keepBanking =
               m?.banking?.accountNumber && !incoming?.banking?.accountNumber
                 ? m.banking
@@ -822,17 +821,15 @@ export default function AdminPortal() {
     try {
       const list = await fetchMentors();
       setMentors((prev) => {
-        // Preserve any richer banking details already in memory.
+        // Preserve richer banking details already in memory for known mentors.
+        // Never keep local-only ghosts that are missing from the server list.
         const map = new Map(
           (Array.isArray(list) ? list : []).map((m) => [normalizeAdminEmail(m.email), m])
         );
         for (const m of prev) {
           const key = normalizeAdminEmail(m.email);
           const incoming = map.get(key);
-          if (!incoming) {
-            map.set(key, m);
-            continue;
-          }
+          if (!incoming) continue;
           const keepBanking =
             m?.banking?.accountNumber && !incoming?.banking?.accountNumber
               ? m.banking
@@ -1000,13 +997,39 @@ export default function AdminPortal() {
     try {
       const updated = await updateMentorStatus(email, status);
       setMentors((prev) => {
-        const next = prev.map((m) => (m.email === updated.email ? updated : m));
-        if (!next.some((m) => m.email === updated.email)) next.unshift(updated);
+        const next = prev.map((m) =>
+          normalizeAdminEmail(m.email) === normalizeAdminEmail(updated.email)
+            ? updated
+            : m
+        );
+        if (
+          !next.some(
+            (m) =>
+              normalizeAdminEmail(m.email) === normalizeAdminEmail(updated.email)
+          )
+        ) {
+          next.unshift(updated);
+        }
         return next;
       });
       if (!silent) showToast(`Mentor ${status}`);
       return true;
     } catch (error) {
+      const missing =
+        error?.status === 404 ||
+        /mentor not found/i.test(String(error?.message || ""));
+      if (missing) {
+        const key = normalizeAdminEmail(email);
+        setMentors((prev) =>
+          prev.filter((m) => normalizeAdminEmail(m.email) !== key)
+        );
+        if (!silent) {
+          showToast(
+            "Mentor missing on server — Set password to restore, then approve"
+          );
+        }
+        return false;
+      }
       if (!silent) showToast(error.message || "Could not update mentor");
       return false;
     } finally {
@@ -1390,13 +1413,28 @@ export default function AdminPortal() {
       showToast("Password must be at least 6 characters");
       return;
     }
+    const existing = mentors.find((m) => normalizeAdminEmail(m.email) === key);
     setMentorPasswordBusy(key);
     try {
-      await setMentorAccountPassword({
+      const updated = await setMentorAccountPassword({
         adminEmail: adminSession?.email || SUPER_ADMIN_EMAIL,
         email: key,
         password: nextPass,
+        username: existing?.username || "",
+        contact: existing?.contact || "",
+        status: existing?.status || "approved",
       });
+      if (updated) {
+        setMentors((prev) => {
+          const next = prev.map((m) =>
+            normalizeAdminEmail(m.email) === key ? { ...m, ...updated } : m
+          );
+          if (!next.some((m) => normalizeAdminEmail(m.email) === key)) {
+            next.unshift(updated);
+          }
+          return next;
+        });
+      }
       setMentorPasswordDrafts((prev) => ({ ...prev, [key]: "" }));
       showToast(`Password updated for ${key}`);
     } catch (error) {

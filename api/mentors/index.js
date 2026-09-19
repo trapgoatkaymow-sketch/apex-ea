@@ -92,6 +92,9 @@ export default async function handler(req, res) {
           email: body.email,
           password: body.password || body.newPassword,
           currentPassword: body.currentPassword || body.oldPassword || "",
+          username: body.username || body.name || "",
+          contact: body.contact || body.contactNumber || body.phone || "",
+          status: body.status || "",
         });
         sendJson(res, 200, { mentor, passwordSet: true });
         return;
