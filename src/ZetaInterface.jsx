@@ -6,7 +6,6 @@ import {
 } from "./botPhotoCache.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import ChartScanner from "./ChartScanner.jsx";
-import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import TopBar from "./TopBar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
@@ -107,7 +106,6 @@ export default function ZetaInterface() {
         {zetaView === "home" && (
           <section className="view is-active view-home">
             <div className="hero">
-              <EconomicCalendarButton variant="zeta" />
               <div className="avatar-wrap">
                 <BotAvatar
                   className="avatar"

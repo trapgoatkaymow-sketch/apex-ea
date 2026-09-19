@@ -66,12 +66,6 @@ function formatMoney(value, currency = "USD") {
   }
 }
 
-function profitTone(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount === 0) return "";
-  return amount > 0 ? " is-profit" : " is-loss";
-}
-
 export default function MetaTraderPanel({ variant = "zeta" }) {
   const {
     showToast,
@@ -214,7 +208,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     };
   }, []);
 
-  // Keep connected session fresh and pull live balance / floating profit.
+  // Keep connected session fresh and pull live balance only (no floating profit).
   useEffect(() => {
     if (!session?.accountId) {
       setAccountMetrics(null);
@@ -251,23 +245,9 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           showToast("MetaTrader session ended");
           return;
         }
-        if (
-          status &&
-          (status.balance != null || status.profit != null || status.equity != null)
-        ) {
-          const balance = status.balance;
-          const equity = status.equity;
-          let profit = status.profit;
-          const balN = Number(balance);
-          const eqN = Number(equity);
-          // Client-side safety: floating P/L = equity − balance (matches MT5).
-          if (Number.isFinite(balN) && Number.isFinite(eqN)) {
-            profit = Number((eqN - balN).toFixed(8));
-          }
+        if (status && status.balance != null) {
           setAccountMetrics({
-            balance,
-            equity,
-            profit,
+            balance: status.balance,
             currency: status.currency || "USD",
           });
         }
@@ -627,17 +607,11 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                 Disconnect
               </button>
             </div>
-            <div className="mt-session-metrics" aria-label="Account balance and floating profit">
+            <div className="mt-session-metrics" aria-label="Account balance">
               <div className="mt-metric">
                 <span className="mt-metric-label">Balance</span>
                 <strong className="mt-metric-value">
                   {formatMoney(accountMetrics?.balance, accountMetrics?.currency)}
-                </strong>
-              </div>
-              <div className="mt-metric">
-                <span className="mt-metric-label">Floating profit</span>
-                <strong className={`mt-metric-value${profitTone(accountMetrics?.profit)}`}>
-                  {formatMoney(accountMetrics?.profit, accountMetrics?.currency)}
                 </strong>
               </div>
             </div>
