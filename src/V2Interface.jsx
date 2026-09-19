@@ -6,7 +6,6 @@ import {
   resolveCachedBotPhoto,
 } from "./botPhotoCache.js";
 import ChartScanner from "./ChartScanner.jsx";
-import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
@@ -127,7 +126,6 @@ export default function V2Interface() {
         {v2View === "home" && (
           <section className="v2-view is-active v2-view-home">
             <div className="v2-hero">
-              <EconomicCalendarButton variant="v2" />
               <div className="v2-avatar-wrap">
                 <BotAvatar
                   className="v2-avatar"
