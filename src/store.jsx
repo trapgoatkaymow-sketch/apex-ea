@@ -942,6 +942,8 @@ export function AppProvider({ children }) {
 
       // Mentor photo updates sync live onto local EAs/bots.
       // Always keep the freshest photo (versioned API path beats stale data URLs).
+      // Also: if ANY remote license for a botId carries a real photo, upgrade local
+      // bots still stuck on /logo.png (common after mentor uploads post-activate).
       const photoByBotId = new Map();
       remote.forEach((row) => {
         const id = String(row.botId || row.bot?.id || "").trim();
@@ -956,6 +958,9 @@ export function AppProvider({ children }) {
             const remotePhoto = photoByBotId.get(ea.id);
             if (!remotePhoto) return ea;
             const localPhoto = String(ea.photo || "");
+            if (!isRealProfilePhoto(localPhoto)) {
+              return { ...ea, photo: remotePhoto };
+            }
             // Tiny legacy data-URL embeds look blurry on Home — always prefer a
             // durable API path when remote has one (full bytes from GitHub).
             if (
@@ -988,6 +993,9 @@ export function AppProvider({ children }) {
             const remotePhoto = photoByBotId.get(bot.id);
             if (!remotePhoto) return bot;
             const localPhoto = String(bot.photo || "");
+            if (!isRealProfilePhoto(localPhoto)) {
+              return { ...bot, photo: remotePhoto };
+            }
             // Prefer full-quality API bytes over tiny local data-URL embeds.
             if (
               localPhoto.startsWith("data:image/") &&
@@ -1094,60 +1102,39 @@ export function AppProvider({ children }) {
   }, [refreshLicenses]);
 
   // If mentor uploaded a photo after the license was issued (still /logo.png on
-  // the key), upgrade local bots/EAs when the photo API starts serving bytes.
-  // If an invented API path 404s, snap back to /logo.png so Home never waits.
+  // the key), upgrade local bots/EAs once when the photo API serves bytes.
+  // Do not keep rewriting photo URLs (that re-mounted avatars and made pictures
+  // flicker / disappear).
   useEffect(() => {
     const botId = String(activeBot?.id || "").trim();
     const photo = String(activeBot?.photo || "").trim();
     if (!botId) return undefined;
-    const probingUpgrade = !isRealProfilePhoto(photo);
-    const probingStaleApi = photo.startsWith("/api/licenses/photo");
-    if (!probingUpgrade && !probingStaleApi) return undefined;
+    if (isRealProfilePhoto(photo)) return undefined;
+
     let cancelled = false;
-    const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=${Date.now()}`;
+    const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=hq`;
     void fetch(mediaUrl(apiPath), { method: "GET", cache: "no-store" })
       .then(async (response) => {
         if (cancelled) return;
         const type = String(response.headers.get("content-type") || "");
-        const okImage = response.ok && type.startsWith("image/");
-        if (okImage) {
-          if (!probingUpgrade) return;
-          const nextPhoto = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`;
-          setBots((prev) =>
-            prev.map((bot) =>
-              bot.id === botId && !isRealProfilePhoto(bot.photo)
-                ? { ...bot, photo: nextPhoto }
-                : bot
-            )
-          );
-          setEas((prev) =>
-            prev.map((ea) =>
-              ea.id === botId && !isRealProfilePhoto(ea.photo)
-                ? { ...ea, photo: nextPhoto }
-                : ea
-            )
-          );
-          return;
-        }
-        // Stale / invented API path — restore packaged logo for instant paints.
-        if (probingStaleApi) {
-          setBots((prev) =>
-            prev.map((bot) =>
-              bot.id === botId && String(bot.photo || "").startsWith("/api/licenses/photo")
-                ? { ...bot, photo: "/logo.png" }
-                : bot
-            )
-          );
-          setEas((prev) =>
-            prev.map((ea) =>
-              ea.id === botId && String(ea.photo || "").startsWith("/api/licenses/photo")
-                ? { ...ea, photo: "/logo.png" }
-                : ea
-            )
-          );
-        }
+        if (!(response.ok && type.startsWith("image/"))) return;
+        setBots((prev) =>
+          prev.map((bot) =>
+            bot.id === botId && !isRealProfilePhoto(bot.photo)
+              ? { ...bot, photo: apiPath }
+              : bot
+          )
+        );
+        setEas((prev) =>
+          prev.map((ea) =>
+            ea.id === botId && !isRealProfilePhoto(ea.photo)
+              ? { ...ea, photo: apiPath }
+              : ea
+          )
+        );
       })
       .catch(() => {});
+
     return () => {
       cancelled = true;
     };
@@ -2201,7 +2188,10 @@ export function AppProvider({ children }) {
             method: "GET",
             cache: "no-store",
           });
-          if (check.ok) activationPhoto = apiPath;
+          const type = String(check.headers.get("content-type") || "");
+          if (check.ok && type.startsWith("image/")) {
+            activationPhoto = apiPath;
+          }
         } catch {
           // keep logo / existing
         }

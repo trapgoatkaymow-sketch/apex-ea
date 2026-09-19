@@ -1,10 +1,10 @@
 import { applyCorsHeaders } from "../_cors.js";
 
-/** Self-hosted MT5API RESTful — https://66.23.225.158/swagger/index.html */
+/** Self-hosted MT5API RESTful — http://159.203.191.196/swagger/index.html */
 export const MT5_API_BASE = (
   process.env.MT5_API_BASE ||
   process.env.MT5_API_TARGET ||
-  "http://66.23.225.158"
+  "http://159.203.191.196"
 ).replace(/\/$/, "");
 
 export function sendJson(res, status, payload) {
@@ -27,6 +27,24 @@ export async function readJsonBody(req) {
     err.status = 400;
     throw err;
   }
+}
+
+/** MT5REST often returns ExceptionResult with HTTP 201 (still "ok" for fetch). */
+function isMt5ExceptionResult(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+  const code = String(data.code || "").trim();
+  if (!code) return false;
+  // Real account payloads have balance/equity/currency — exceptions do not.
+  if (
+    data.balance != null ||
+    data.equity != null ||
+    data.currency ||
+    data.login != null ||
+    data.accountNumber != null
+  ) {
+    return false;
+  }
+  return data.message != null || data.stackTrace != null || Boolean(code);
 }
 
 async function mt5Fetch(path, { method = "GET", signal, timeoutMs = 45000 } = {}) {
@@ -52,15 +70,23 @@ async function mt5Fetch(path, { method = "GET", signal, timeoutMs = 45000 } = {}
       // Connect returns a bare token string (often quoted).
       data = String(text || "").trim().replace(/^"|"$/g, "");
     }
-    if (!response.ok) {
+    // New bridge: errors are often HTTP 201 + { code, message }.
+    if (!response.ok || isMt5ExceptionResult(data) || (response.status === 201 && data?.code)) {
       const message =
         (typeof data === "string" && data) ||
         data?.message ||
         data?.title ||
         data?.error ||
+        data?.code ||
         `MT5 API error ${response.status}`;
       const err = new Error(typeof message === "string" ? message : JSON.stringify(message));
-      err.status = response.status >= 400 && response.status < 600 ? response.status : 502;
+      err.status =
+        response.status >= 400 && response.status < 600
+          ? response.status
+          : isMt5ExceptionResult(data) || response.status === 201
+            ? 400
+            : 502;
+      err.code = data?.code || "";
       err.data = data;
       throw err;
     }
@@ -79,6 +105,40 @@ async function mt5Fetch(path, { method = "GET", signal, timeoutMs = 45000 } = {}
     clearTimeout(timer);
     if (signal) signal.removeEventListener("abort", onAbort);
   }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Pull AccountSummary, retrying briefly until broker snapshot is synced. */
+async function fetchAccountSummary(accountId, { timeoutMs = 15000, tries = 8 } = {}) {
+  const id = String(accountId || "").trim();
+  if (!id) return null;
+  let last = null;
+  for (let i = 0; i < tries; i += 1) {
+    try {
+      last = await mt5Fetch(`/AccountSummary?id=${encodeURIComponent(id)}`, {
+        timeoutMs,
+      });
+      if (last && typeof last === "object") {
+        if (last.synced === true) return last;
+        if (
+          last.synced !== false &&
+          (last.currency ||
+            Number.isFinite(Number(last.balance)) ||
+            Number.isFinite(Number(last.equity)))
+        ) {
+          // Usable snapshot even if synced flag is missing on older hosts.
+          if (i >= 2 || last.currency) return last;
+        }
+      }
+    } catch {
+      last = null;
+    }
+    await sleep(400);
+  }
+  return last;
 }
 
 /** Lightweight health check — MT5API GET /Ping returns "OK" when online. */
@@ -130,7 +190,10 @@ export function mapSearchResults(data, platform = "MT5") {
   const plat = String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5";
   const brokers = [];
   data.forEach((companyEntry) => {
-    const companyName = String(companyEntry?.company || "").trim() || "Unknown broker";
+    // New MT5REST uses companyName; older hosts used company.
+    const companyName =
+      String(companyEntry?.company || companyEntry?.companyName || "").trim() ||
+      "Unknown broker";
     if (isBlockedBroker({ company: companyName })) return;
     const results = Array.isArray(companyEntry?.results) ? companyEntry.results : [];
     results.forEach((result, index) => {
@@ -165,6 +228,25 @@ export async function searchBrokers(query, platform = "MT5") {
   return mapSearchResults(data, platform);
 }
 
+function pickNumber(...values) {
+  for (const value of values) {
+    if (value == null || value === "") continue;
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function pickCurrency(...values) {
+  for (const value of values) {
+    const code = String(value || "")
+      .trim()
+      .toUpperCase();
+    if (code && /^[A-Z]{3}$/.test(code)) return code;
+  }
+  return "";
+}
+
 function sessionFromConnect({
   token,
   login,
@@ -173,20 +255,37 @@ function sessionFromConnect({
   company = "",
   summary = null,
   details = null,
+  account = null,
 }) {
   const id = String(token || "").trim();
-  const balance = summary?.balance;
-  const equity = summary?.equity;
-  const profit =
-    summary?.profit != null
-      ? Number(summary.profit)
-      : Number.isFinite(Number(balance)) && Number.isFinite(Number(equity))
-        ? Number(equity) - Number(balance)
-        : null;
+  const balance = pickNumber(
+    summary?.balance,
+    summary?.Balance,
+    account?.balance,
+    details?.balance
+  );
+  const equity = pickNumber(
+    summary?.equity,
+    summary?.Equity,
+    account?.equity,
+    details?.equity
+  );
+  const profit = pickNumber(
+    summary?.profit,
+    summary?.Profit,
+    Number.isFinite(balance) && Number.isFinite(equity) ? equity - balance : null
+  );
+  const currency = pickCurrency(
+    summary?.currency,
+    summary?.Currency,
+    account?.currency,
+    details?.currency,
+    details?.Currency
+  );
   return {
     accountId: id,
     provider: "mt5api",
-    login: String(login || details?.accountNumber || details?.login || "").trim(),
+    login: String(login || details?.accountNumber || details?.login || account?.login || "").trim(),
     server: String(server || details?.serverName || "").trim(),
     platform: String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5",
     company: String(company || details?.company || "").trim(),
@@ -195,11 +294,13 @@ function sessionFromConnect({
     connectionStatus: "CONNECTED",
     pending: false,
     connectedAt: Date.now(),
-    currency: summary?.currency || details?.currency || "USD",
-    balance: Number.isFinite(Number(balance)) ? Number(balance) : null,
-    equity: Number.isFinite(Number(equity)) ? Number(equity) : null,
-    profit: Number.isFinite(Number(profit)) ? Number(profit) : null,
-    leverage: summary?.leverage ?? details?.leverage ?? null,
+    // Empty until broker reports currency — never invent USD/$ for ZAR accounts.
+    currency,
+    balance,
+    equity,
+    profit,
+    leverage: summary?.leverage ?? details?.leverage ?? account?.leverage ?? null,
+    synced: summary?.synced === true,
   };
 }
 
@@ -243,13 +344,18 @@ export async function connectAccount({
     throw error;
   }
 
-  const id =
-    typeof token === "string"
-      ? token.trim().replace(/^"|"$/g, "")
-      : String(token || "").trim();
+  // Token may be a bare string or { id / token } object depending on host build.
+  let id = "";
+  if (typeof token === "string") {
+    id = token.trim().replace(/^"|"$/g, "");
+  } else if (token && typeof token === "object") {
+    id = String(token.id || token.token || token.accountId || "").trim();
+  } else {
+    id = String(token || "").trim();
+  }
 
   // MT5API often returns HTTP 200 with bodies like "[error]:INVALID_ACCOUNT".
-  if (!id || /^\[error\]/i.test(id) || /^error[:\s]/i.test(id)) {
+  if (!id || /^\[error\]/i.test(id) || /^error[:\s]/i.test(id) || id === "[object Object]") {
     const hint = id.replace(/^\[error\]:?\s*/i, "").trim() || "INVALID_ACCOUNT";
     const friendly =
       /invalid_account|invalid_password|password|login|auth/i.test(hint)
@@ -257,16 +363,15 @@ export async function connectAccount({
         : `Broker connection failed (${hint})`;
     const err = new Error(friendly);
     err.status = 400;
-    err.data = { raw: id };
+    err.data = { raw: token };
     throw err;
   }
 
   let summary = null;
   let details = null;
+  let account = null;
   try {
-    summary = await mt5Fetch(`/AccountSummary?id=${encodeURIComponent(id)}`, {
-      timeoutMs: 20000,
-    });
+    summary = await fetchAccountSummary(id, { timeoutMs: 20000, tries: 10 });
   } catch {
     summary = null;
   }
@@ -277,6 +382,13 @@ export async function connectAccount({
   } catch {
     details = null;
   }
+  try {
+    account = await mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
+      timeoutMs: 20000,
+    });
+  } catch {
+    account = null;
+  }
 
   return sessionFromConnect({
     token: id,
@@ -286,6 +398,7 @@ export async function connectAccount({
     company,
     summary,
     details,
+    account,
   });
 }
 
@@ -308,7 +421,7 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
     balance: null,
     equity: null,
     profit: null,
-    currency: "USD",
+    currency: "",
   };
 
   // When the broker host is unreachable, do NOT mark the account disconnected —
@@ -325,7 +438,7 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
     balance: null,
     equity: null,
     profit: null,
-    currency: "USD",
+    currency: "",
   };
 
   try {
@@ -348,7 +461,8 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
         live &&
         !/^\[error\]/i.test(raw) &&
         live.connected !== false &&
-        live.ok !== false);
+        live.ok !== false &&
+        !live.code);
     if (!ok || /^\[error\]/i.test(raw) || live === false || raw === "false") {
       // Broker host flaky / gateway errors — keep the session sticky.
       if (
@@ -360,16 +474,17 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
       }
       return dead;
     }
-  } catch {
+  } catch (error) {
+    const msg = String(error?.message || error?.code || "");
+    if (/INVALID_TOKEN|not found|CLIENT|session/i.test(msg)) return dead;
     return transient;
   }
 
   let summary = null;
   let details = null;
+  let account = null;
   try {
-    summary = await mt5Fetch(`/AccountSummary?id=${encodeURIComponent(id)}`, {
-      timeoutMs: 15000,
-    });
+    summary = await fetchAccountSummary(id, { timeoutMs: 15000, tries: 6 });
   } catch {
     summary = null;
   }
@@ -380,15 +495,23 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
   } catch {
     details = null;
   }
+  try {
+    account = await mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
+      timeoutMs: 15000,
+    });
+  } catch {
+    account = null;
+  }
 
   return sessionFromConnect({
     token: id,
-    login: details?.accountNumber || details?.login || "",
+    login: details?.accountNumber || details?.login || account?.login || "",
     server: details?.serverName || "",
     platform: "MT5",
     company: company || details?.company || "",
     summary,
     details,
+    account,
   });
 }
 
