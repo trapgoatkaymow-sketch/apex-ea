@@ -2914,6 +2914,23 @@ html:has(.phone[data-interface="v2"]) body {
   padding: 14px;
 }
 
+.top-mentor-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.top-mentor-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.top-mentor-title-row strong {
+  font-size: 0.95rem;
+}
+
 .admin-avatar-circle {
   width: 44px;
   height: 44px;
