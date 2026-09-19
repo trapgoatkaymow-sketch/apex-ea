@@ -907,13 +907,19 @@ export default function ChartScanner({ variant = "default", active = true }) {
               </svg>
             </span>
             <div>
-              <p className="cs-engine-kicker">Trading Engine</p>
+              <p className="cs-engine-kicker">
+                {isPremiumScanner ? "Signal Core" : "Trading Engine"}
+              </p>
               <p className="cs-engine-status">
                 {engineActive
                   ? activeStepLabel
                   : setupReady
-                    ? "Setup ready — waiting for Execute Trade"
-                    : "Armed and ready"}
+                    ? isPremiumScanner
+                      ? "Signal locked — tap Execute Trade"
+                      : "Setup ready — waiting for Execute Trade"
+                    : isPremiumScanner
+                      ? "Standing by for chart"
+                      : "Armed and ready"}
               </p>
             </div>
           </div>
