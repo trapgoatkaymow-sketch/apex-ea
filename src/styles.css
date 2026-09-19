@@ -8287,236 +8287,448 @@ html:has(.phone[data-interface="v2"]) body {
   }
 }
 
-.view-scanner.cs-v2 .cs-engine {
-  margin-top: 2px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  box-shadow: none;
-}
-
-.view-scanner.cs-v2 .cs-engine.is-open {
-  background:
-    radial-gradient(120% 100% at 0% 0%, rgba(255, 0, 60, 0.14), transparent 55%),
-    rgba(12, 10, 18, 0.92);
-  border-color: rgba(var(--pink-rgb), 0.28);
-  box-shadow: none;
-}
-
-.view-scanner.cs-v2 .cs-engine-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.view-scanner.cs-v2 .cs-engine-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.view-scanner.cs-v2 .cs-engine-gear {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
+.view-scanner.cs-v2 .cs-v2-ops {
   display: grid;
-  place-items: center;
-  color: var(--pink);
-  background: rgba(255, 0, 60, 0.14);
-  border: 1px solid rgba(var(--pink-rgb), 0.35);
-  flex-shrink: 0;
-  box-shadow: none;
+  gap: 14px;
+  margin-top: 4px;
+  animation: v2-fade 0.36s ease both;
 }
 
-.view-scanner.cs-v2 .cs-engine-gear svg {
-  width: 18px;
-  height: 18px;
-}
-
-.view-scanner.cs-v2 .cs-engine-kicker {
-  margin: 0;
-  font-family: var(--font-body);
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #ff6aa8;
-}
-
-.view-scanner.cs-v2 .cs-engine-status {
-  margin: 2px 0 0;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.view-scanner.cs-v2 .cs-engine-pct {
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--pink);
-  text-shadow: 0 0 12px rgba(var(--pink-rgb), 0.55);
-}
-
-.view-scanner.cs-v2 .cs-engine-track {
-  height: 5px;
-  margin-top: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
+/* —— Live link strip (replaces Signal Core card) —— */
+.view-scanner.cs-v2 .cs-v2-link {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid rgba(var(--pink-rgb), 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(90deg, rgba(var(--pink-rgb), 0.16), transparent 42%),
+    rgba(0, 0, 0, 0.45);
   overflow: hidden;
 }
 
-.view-scanner.cs-v2 .cs-engine-fill {
-  min-width: 8px;
-  height: 100%;
-  background: linear-gradient(90deg, var(--pink-hot), var(--pink));
-  box-shadow: 0 0 10px rgba(255, 0, 60, 0.55);
-  border-radius: 999px;
+.view-scanner.cs-v2 .cs-v2-link.is-live {
+  border-top-color: var(--pink);
+  background:
+    linear-gradient(90deg, rgba(var(--pink-rgb), 0.28), transparent 55%),
+    rgba(8, 4, 12, 0.75);
 }
 
-.view-scanner.cs-v2 .cs-engine-log {
-  color: rgba(255, 255, 255, 0.55);
+.view-scanner.cs-v2 .cs-v2-link.is-locked {
+  border-top-color: var(--pink-soft);
 }
 
-.view-scanner.cs-v2 .cs-controls {
+.view-scanner.cs-v2 .cs-v2-link-ring {
+  --cs-v2-ring: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   display: grid;
-  grid-template-columns: 1.15fr 1.2fr 1fr;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: none;
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: center;
+  flex-shrink: 0;
+  background:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 58%, transparent 59%),
+    conic-gradient(
+      from -90deg,
+      var(--pink) calc(var(--cs-v2-ring) * 1%),
+      rgba(255, 255, 255, 0.1) 0
+    );
+  box-shadow:
+    0 0 0 1px rgba(var(--pink-rgb), 0.25),
+    0 0 18px rgba(var(--pink-rgb), 0.22);
 }
 
-.view-scanner.cs-v2 .cs-field {
+.view-scanner.cs-v2 .cs-v2-link-ring strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.view-scanner.cs-v2 .cs-v2-link-ring em {
+  font-style: normal;
+  font-size: 0.55rem;
+  font-weight: 700;
   color: rgba(255, 255, 255, 0.55);
+  margin-top: 1px;
+}
+
+.view-scanner.cs-v2 .cs-v2-link-copy {
+  min-width: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-link-kicker {
+  margin: 0;
   font-family: var(--font-body);
   font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 800;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-}
-
-.view-scanner.cs-v2 .cs-field select,
-.view-scanner.cs-v2 .cs-lot,
-.view-scanner.cs-v2 .cs-stepper input {
-  color: #fff;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.view-scanner.cs-v2 .cs-field.is-from-scanner .cs-symbol-auto {
-  border-color: rgba(var(--pink-rgb), 0.45);
-  box-shadow: 0 0 0 3px rgba(255, 0, 60, 0.12);
-}
-
-.view-scanner.cs-v2 .cs-stepper {
-  gap: 6px;
-}
-
-.view-scanner.cs-v2 .cs-stepper button {
-  background: rgba(255, 255, 255, 0.06);
   color: var(--pink);
-  border: 1.5px solid rgba(var(--pink-rgb), 0.35);
-  border-radius: 12px;
 }
 
-.view-scanner.cs-v2 .cs-stepper button:last-child {
-  background: linear-gradient(135deg, rgba(var(--pink-hot-rgb), 0.85), rgba(var(--pink-rgb), 0.75));
-  color: #fff;
+.view-scanner.cs-v2 .cs-v2-link-status {
+  margin: 3px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.2;
+}
+
+.view-scanner.cs-v2 .cs-v2-link-log {
+  margin: 4px 0 0;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.view-scanner.cs-v2 .cs-v2-link-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+  padding-right: 2px;
+  opacity: 0.85;
+}
+
+.view-scanner.cs-v2 .cs-v2-link-wave i {
+  display: block;
+  width: 3px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--pink-soft), var(--pink-deep));
+  animation: cs-v2-wave 1.2s ease-in-out infinite;
+}
+
+.view-scanner.cs-v2 .cs-v2-link-wave i:nth-child(1) { height: 8px; animation-delay: 0s; }
+.view-scanner.cs-v2 .cs-v2-link-wave i:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+.view-scanner.cs-v2 .cs-v2-link-wave i:nth-child(3) { height: 22px; animation-delay: 0.2s; }
+.view-scanner.cs-v2 .cs-v2-link-wave i:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+.view-scanner.cs-v2 .cs-v2-link-wave i:nth-child(5) { height: 26px; animation-delay: 0.15s; }
+.view-scanner.cs-v2 .cs-v2-link-wave i:nth-child(6) { height: 10px; animation-delay: 0.25s; }
+.view-scanner.cs-v2 .cs-v2-link-wave i:nth-child(7) { height: 18px; animation-delay: 0.05s; }
+
+.view-scanner.cs-v2 .cs-v2-link:not(.is-live) .cs-v2-link-wave i {
+  animation-play-state: paused;
+  opacity: 0.35;
+}
+
+@keyframes cs-v2-wave {
+  0%,
+  100% { transform: scaleY(0.55); }
+  50% { transform: scaleY(1); }
+}
+
+/* —— Pair board (replaces 3-column controls card) —— */
+.view-scanner.cs-v2 .cs-v2-pairboard {
+  display: grid;
+  gap: 0;
+  border-left: 3px solid var(--pink);
+  background: rgba(255, 255, 255, 0.03);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+
+.view-scanner.cs-v2 .cs-v2-pair {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.view-scanner.cs-v2 .cs-v2-pair-tag {
+  font-family: var(--font-body);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.view-scanner.cs-v2 .cs-v2-pair-input {
+  width: 100%;
+  min-height: 48px;
   border: 0;
-  box-shadow: 0 8px 16px rgba(255, 0, 60, 0.28);
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  padding: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  outline: none;
 }
 
-.view-scanner.cs-v2 .cs-tp-config {
-  gap: 10px;
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.view-scanner.cs-v2 .cs-v2-pair-input::placeholder {
+  color: rgba(255, 255, 255, 0.22);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 1.05rem;
+}
+
+.view-scanner.cs-v2 .cs-v2-pair.is-from-scanner .cs-v2-pair-input {
+  color: var(--pink-soft);
+  text-shadow: 0 0 18px rgba(var(--pink-rgb), 0.35);
+}
+
+.view-scanner.cs-v2 .cs-v2-meters {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-meter {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  text-align: left;
+}
+
+.view-scanner.cs-v2 .cs-v2-meter + .cs-v2-meter {
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.view-scanner.cs-v2 .cs-v2-meter-tag {
+  font-family: var(--font-body);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.view-scanner.cs-v2 .cs-v2-meter-ctrl {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  gap: 6px;
+  align-items: center;
+}
+
+.view-scanner.cs-v2 .cs-v2-meter-ctrl button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--pink-rgb), 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--pink);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-meter-ctrl button:last-of-type {
+  background: var(--pink);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(var(--pink-rgb), 0.45);
+}
+
+.view-scanner.cs-v2 .cs-v2-meter-ctrl button:disabled {
+  opacity: 0.35;
   box-shadow: none;
 }
 
-.view-scanner.cs-v2 .cs-tp-config-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.view-scanner.cs-v2 .cs-v2-meter-ctrl input,
+.view-scanner.cs-v2 .cs-v2-meter-lot {
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #fff;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.view-scanner.cs-v2 .cs-v2-meter-ctrl input::-webkit-outer-spin-button,
+.view-scanner.cs-v2 .cs-v2-meter-ctrl input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-meter-lot {
+  text-align: left;
+  padding: 0 4px;
+  border-bottom: 1px solid rgba(var(--pink-rgb), 0.35);
+}
+
+/* —— Exit ladder (replaces TP target boxes) —— */
+.view-scanner.cs-v2 .cs-v2-ladder {
+  display: grid;
+  gap: 10px;
+  padding: 4px 2px 2px;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-title {
   font-family: var(--font-body);
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
 }
 
-.view-scanner.cs-v2 .cs-tp-config-icon {
-  width: 18px;
-  height: 18px;
-  color: var(--pink);
-  display: grid;
-  place-items: center;
+.view-scanner.cs-v2 .cs-v2-ladder-sub {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.38);
 }
 
-.view-scanner.cs-v2 .cs-tp-config-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.view-scanner.cs-v2 .cs-tp-ratio {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 10px 8px;
-}
-
-.view-scanner.cs-v2 .cs-tp-ratio span {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.view-scanner.cs-v2 .cs-tp-ratio strong {
-  color: var(--pink);
-  font-size: 1.15rem;
-}
-
-.view-scanner.cs-v2 .cs-tp-toggle {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.8rem;
-}
-
-.view-scanner.cs-v2 .cs-tp-toggle input {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
+.view-scanner.cs-v2 .cs-v2-ladder-list {
+  list-style: none;
   margin: 0;
-  border-radius: 5px;
-  border: 1.5px solid rgba(var(--pink-rgb), 0.45);
-  background: rgba(0, 0, 0, 0.35);
+  padding: 0;
   display: grid;
-  place-items: center;
-  flex-shrink: 0;
+  gap: 0;
+  position: relative;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-list::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    var(--pink),
+    rgba(var(--pink-rgb), 0.35) 55%,
+    rgba(255, 255, 255, 0.12)
+  );
+  border-radius: 99px;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-list li {
+  display: grid;
+  grid-template-columns: 16px auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-dot {
+  width: 12px;
+  height: 12px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 0 3px rgba(var(--pink-rgb), 0.22), 0 0 12px rgba(var(--pink-rgb), 0.55);
+  z-index: 1;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-list li:nth-child(2) .cs-v2-ladder-dot {
+  background: var(--pink-soft);
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-list li:nth-child(3) .cs-v2-ladder-dot {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-name {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-rail {
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.22) 0 4px,
+    transparent 4px 8px
+  );
+  opacity: 0.7;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-list li strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pink);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.4em;
+  text-align: right;
+}
+
+.view-scanner.cs-v2 .cs-v2-ladder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.view-scanner.cs-v2 .cs-v2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin: 0;
   cursor: pointer;
 }
 
-.view-scanner.cs-v2 .cs-tp-toggle input:checked {
-  background: linear-gradient(135deg, var(--pink-hot), var(--pink));
-  border-color: transparent;
-  box-shadow: 0 4px 10px rgba(255, 0, 60, 0.3);
+.view-scanner.cs-v2 .cs-v2-chip input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
-.view-scanner.cs-v2 .cs-tp-toggle input:checked::after {
-  content: "";
-  width: 5px;
-  height: 9px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg) translate(-1px, -1px);
+.view-scanner.cs-v2 .cs-v2-chip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.view-scanner.cs-v2 .cs-v2-chip input:checked + span {
+  border-color: rgba(var(--pink-rgb), 0.55);
+  background: rgba(var(--pink-rgb), 0.18);
+  color: #fff;
+  box-shadow: 0 0 14px rgba(var(--pink-rgb), 0.25);
+}
+
+.view-scanner.cs-v2 .cs-v2-chip input:disabled + span {
+  opacity: 0.45;
 }
 
 .view-scanner.cs-v2 .cs-run-btn {
