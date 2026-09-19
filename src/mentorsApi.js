@@ -231,13 +231,31 @@ function mergeMentorLists(localList = [], remoteList = []) {
       )
         .trim()
         .toUpperCase(),
-      appColor:
-        normalizeLocalAppColor(item.appColor) ||
-        normalizeLocalAppColor(prev?.appColor) ||
-        "",
-      appColorUpdatedAt: Number(
-        item.appColorUpdatedAt || prev?.appColorUpdatedAt || 0
-      ) || 0,
+      appColor: (() => {
+        const incoming = normalizeLocalAppColor(item.appColor);
+        const previous = normalizeLocalAppColor(prev?.appColor);
+        if (!incoming) return previous || "";
+        if (!previous) return incoming;
+        if (incoming === previous) return incoming;
+        const incomingAt = Number(item.appColorUpdatedAt || 0) || 0;
+        const previousAt = Number(prev?.appColorUpdatedAt || 0) || 0;
+        // Prefer the newer stamp; if remote omitted the stamp, still take remote
+        // when it is the current `item` (remote wins pass).
+        if (incomingAt || previousAt) {
+          return incomingAt >= previousAt ? incoming : previous;
+        }
+        return incoming;
+      })(),
+      appColorUpdatedAt: (() => {
+        const incoming = normalizeLocalAppColor(item.appColor);
+        const previous = normalizeLocalAppColor(prev?.appColor);
+        const incomingAt = Number(item.appColorUpdatedAt || 0) || 0;
+        const previousAt = Number(prev?.appColorUpdatedAt || 0) || 0;
+        if (incoming && previous && incoming !== previous) {
+          return Math.max(incomingAt, previousAt) || Date.now();
+        }
+        return Math.max(incomingAt, previousAt) || 0;
+      })(),
     });
   }
   return Array.from(map.values()).sort(
@@ -545,6 +563,15 @@ export async function updateMentorAppColor(email, rawColor) {
     const mentor = data?.mentor || null;
     if (mentor) {
       cacheMentorLocally(mentor);
+      // Superadmin brand color is mirrored server-side onto linked operator
+      // emails — refresh local cache so client theme maps stay in sync.
+      if (key === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+        try {
+          await fetchMentors();
+        } catch {
+          /* ignore — remote already saved */
+        }
+      }
       return publicLocal(mentor);
     }
   } catch (error) {
@@ -556,11 +583,24 @@ export async function updateMentorAppColor(email, rawColor) {
   const mentors = ensureLocalSuperAdmin(readLocalMentors());
   const idx = mentors.findIndex((m) => m.email === key);
   if (idx < 0) throw new Error("Mentor not found");
+  const now = Date.now();
   mentors[idx] = {
     ...mentors[idx],
     appColor,
-    appColorUpdatedAt: Date.now(),
+    appColorUpdatedAt: now,
   };
+  // Offline / local fallback: mirror brand color onto the operating gmail mentor.
+  if (key === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+    const linked = "trapgoatkaymow@gmail.com";
+    const li = mentors.findIndex((m) => m.email === linked);
+    if (li >= 0) {
+      mentors[li] = {
+        ...mentors[li],
+        appColor,
+        appColorUpdatedAt: now,
+      };
+    }
+  }
   writeLocalMentors(mentors);
   return publicLocal(mentors[idx]);
 }

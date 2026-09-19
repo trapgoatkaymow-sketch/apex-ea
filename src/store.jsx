@@ -640,7 +640,14 @@ export function AppProvider({ children }) {
         portalThemeOwnerRef.current = persistEmail;
         try {
           await updateMentorAppColor(persistEmail, color);
-          setMentorThemes((prev) => ({ ...prev, [persistEmail]: color }));
+          setMentorThemes((prev) => {
+            const nextThemes = { ...prev, [persistEmail]: color };
+            // Brand color also drives license mentors that inherit it.
+            if (persistEmail === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+              nextThemes["trapgoatkaymow@gmail.com"] = color;
+            }
+            return nextThemes;
+          });
         } catch (error) {
           showToast(error?.message || "Could not save app color");
           return color;
@@ -979,11 +986,18 @@ export function AppProvider({ children }) {
     const eaList = Array.isArray(eas) ? eas : [];
     const account = normalizeEmail(coverEmail);
     const botId = String(activeBot?.id || "").trim();
+    const brandEmail = normalizeEmail(SUPER_ADMIN_EMAIL);
+    const brandTheme = normalizeHexColor(mentorThemes[brandEmail] || "", "");
 
     const pickTheme = (email) => {
       const key = normalizeEmail(email);
       if (!key) return "";
-      return normalizeHexColor(mentorThemes[key] || "", "");
+      const own = normalizeHexColor(mentorThemes[key] || "", "");
+      if (own) return own;
+      // Licenses usually store the operating mentor email (gmail). When that
+      // mentor has no custom color, inherit the Admin Portal brand color.
+      if (key !== brandEmail && brandTheme) return brandTheme;
+      return "";
     };
 
     let themeColor = "";
@@ -1038,6 +1052,9 @@ export function AppProvider({ children }) {
     if (!themeColor && portalThemeOwnerRef.current) {
       themeColor = pickTheme(portalThemeOwnerRef.current);
     }
+
+    // Last resort: Admin Portal brand color (superadmin App color).
+    if (!themeColor && brandTheme) themeColor = brandTheme;
 
     if (!themeColor) return undefined;
     if (normalizeHexColor(appColor) === themeColor) return undefined;

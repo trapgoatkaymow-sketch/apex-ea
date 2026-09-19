@@ -175,6 +175,7 @@ export function publicMentor(mentor) {
   const banking = normalizeBanking(mentor.banking);
   const role = mentor.role || "mentor";
   const appColor = normalizeAppColor(mentor.appColor);
+  const appColorUpdatedAt = Number(mentor.appColorUpdatedAt) || null;
   return {
     id: mentor.id,
     username: mentor.username,
@@ -189,6 +190,8 @@ export function publicMentor(mentor) {
     }),
     inviteCode: mentorInviteCode(mentor),
     appColor,
+    // Clients need the stamp so newer portal colors win over stale local cache.
+    appColorUpdatedAt: appColor ? appColorUpdatedAt || Date.now() : appColorUpdatedAt,
   };
 }
 
@@ -968,6 +971,42 @@ export async function updateMentorProfile(email, profileInput = {}) {
   return publicMentor(updated);
 }
 
+/** Operating mentor emails that inherit the superadmin portal brand color. */
+function brandThemeLinkedEmails() {
+  return Object.keys(DURABLE_MENTOR_PASSWORDS || {})
+    .map(normalizeEmail)
+    .filter((email) => email && email.includes("@") && email !== SUPER_ADMIN_EMAIL);
+}
+
+function applyAppColorToMentorList(list, key, appColor) {
+  const now = Date.now();
+  const idx = list.findIndex((m) => m.email === key);
+  if (idx < 0) {
+    const err = new Error("Mentor not found");
+    err.status = 404;
+    throw err;
+  }
+  list[idx] = {
+    ...list[idx],
+    appColor,
+    appColorUpdatedAt: now,
+  };
+  // Superadmin App color is the brand theme — mirror onto linked operator
+  // accounts so license.mentorEmail lookups (gmail) match the portal choice.
+  if (key === SUPER_ADMIN_EMAIL) {
+    for (const linked of brandThemeLinkedEmails()) {
+      const li = list.findIndex((m) => m.email === linked);
+      if (li < 0) continue;
+      list[li] = {
+        ...list[li],
+        appColor,
+        appColorUpdatedAt: now,
+      };
+    }
+  }
+  return list[idx];
+}
+
 export async function updateMentorAppColor(email, rawColor) {
   const key = normalizeEmail(email);
   if (!key || !key.includes("@")) {
@@ -986,37 +1025,15 @@ export async function updateMentorAppColor(email, rawColor) {
   try {
     await mutateStore((mentors) => {
       const list = ensureSuperAdminRecord(mentors);
-      const idx = list.findIndex((m) => m.email === key);
-      if (idx < 0) {
-        const err = new Error("Mentor not found");
-        err.status = 404;
-        throw err;
-      }
-      list[idx] = {
-        ...list[idx],
-        appColor,
-        appColorUpdatedAt: Date.now(),
-      };
-      updated = list[idx];
+      updated = applyAppColorToMentorList(list, key, appColor);
       return list;
     }, `chore: update app color for ${key}`);
   } catch (error) {
     if (error.status === 400 || error.status === 404) throw error;
     const store = await readStore().catch(() => readLocalStore());
     const list = ensureSuperAdminRecord(store.mentors || []);
-    const idx = list.findIndex((m) => m.email === key);
-    if (idx < 0) {
-      const err = new Error("Mentor not found");
-      err.status = 404;
-      throw err;
-    }
-    list[idx] = {
-      ...list[idx],
-      appColor,
-      appColorUpdatedAt: Date.now(),
-    };
+    updated = applyAppColorToMentorList(list, key, appColor);
     writeLocalStore(list);
-    updated = list[idx];
   }
 
   return publicMentor(updated);
