@@ -174,6 +174,7 @@ export function publicMentor(mentor) {
   if (!mentor) return null;
   const banking = normalizeBanking(mentor.banking);
   const role = mentor.role || "mentor";
+  const appColor = normalizeAppColor(mentor.appColor);
   return {
     id: mentor.id,
     username: mentor.username,
@@ -187,7 +188,21 @@ export function publicMentor(mentor) {
       role,
     }),
     inviteCode: mentorInviteCode(mentor),
+    appColor,
   };
+}
+
+function normalizeAppColor(raw) {
+  let value = String(raw || "")
+    .trim()
+    .toLowerCase();
+  if (!value) return "";
+  if (!value.startsWith("#")) value = `#${value}`;
+  if (/^#[0-9a-f]{3}$/.test(value)) {
+    value = `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+  }
+  if (!/^#[0-9a-f]{6}$/.test(value)) return "";
+  return value;
 }
 
 export async function findMentorByInviteCode(rawCode) {
@@ -925,6 +940,60 @@ export async function updateMentorProfile(email, profileInput = {}) {
     await syncMentorNameToLicenses(key, username);
   } catch (error) {
     console.warn("mentor name license sync failed", error.message);
+  }
+
+  return publicMentor(updated);
+}
+
+export async function updateMentorAppColor(email, rawColor) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("Enter a valid email");
+    err.status = 400;
+    throw err;
+  }
+  const appColor = normalizeAppColor(rawColor);
+  if (!appColor) {
+    const err = new Error("Enter a valid color like #ff2d7a");
+    err.status = 400;
+    throw err;
+  }
+
+  let updated = null;
+  try {
+    await mutateStore((mentors) => {
+      const list = ensureSuperAdminRecord(mentors);
+      const idx = list.findIndex((m) => m.email === key);
+      if (idx < 0) {
+        const err = new Error("Mentor not found");
+        err.status = 404;
+        throw err;
+      }
+      list[idx] = {
+        ...list[idx],
+        appColor,
+        appColorUpdatedAt: Date.now(),
+      };
+      updated = list[idx];
+      return list;
+    }, `chore: update app color for ${key}`);
+  } catch (error) {
+    if (error.status === 400 || error.status === 404) throw error;
+    const store = await readStore().catch(() => readLocalStore());
+    const list = ensureSuperAdminRecord(store.mentors || []);
+    const idx = list.findIndex((m) => m.email === key);
+    if (idx < 0) {
+      const err = new Error("Mentor not found");
+      err.status = 404;
+      throw err;
+    }
+    list[idx] = {
+      ...list[idx],
+      appColor,
+      appColorUpdatedAt: Date.now(),
+    };
+    writeLocalStore(list);
+    updated = list[idx];
   }
 
   return publicMentor(updated);

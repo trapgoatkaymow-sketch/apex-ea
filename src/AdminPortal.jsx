@@ -44,7 +44,7 @@ import {
   listMentorHostedAccounts,
 } from "./mt5AccountsApi.js";
 import { STRATEGY_LABELS, useApp } from "./store.jsx";
-import { APP_COLOR_PRESETS, DEFAULT_APP_COLOR } from "./theme.js";
+import { APP_COLOR_PRESETS, DEFAULT_APP_COLOR, normalizeHexColor } from "./theme.js";
 
 const ADMIN_SESSION_KEY = "apexea-admin-session";
 const PORTAL_THEME_KEY = "apexea-portal-theme";
@@ -780,6 +780,45 @@ export default function AdminPortal() {
     setProfileUsername(String(mine?.username || adminSession.username || "").trim());
     setProfileContact(String(mine?.contact || "").trim());
   }, [mentors, adminSession?.email, adminSession?.username]);
+
+  // Hydrate portal App color from the mentor record once per session.
+  const appColorHydratedRef = useRef("");
+  useEffect(() => {
+    if (!adminSession?.email) {
+      appColorHydratedRef.current = "";
+      return;
+    }
+    const sessionKey = normalizeAdminEmail(adminSession.email);
+    if (appColorHydratedRef.current === sessionKey) return;
+    const mine = mentors.find((m) => normalizeAdminEmail(m.email) === sessionKey);
+    if (!mine) return;
+    appColorHydratedRef.current = sessionKey;
+    const color = normalizeHexColor(mine.appColor || "", "");
+    if (color) setAppColor(color, { silent: true });
+  }, [mentors, adminSession?.email, setAppColor]);
+
+  const colorPersistTimerRef = useRef(0);
+  const applyPortalAppColor = (next, { debounce = false } = {}) => {
+    const email = adminSession?.email || "";
+    if (!email) {
+      setAppColor(next);
+      return;
+    }
+    if (!debounce) {
+      if (colorPersistTimerRef.current) {
+        clearTimeout(colorPersistTimerRef.current);
+        colorPersistTimerRef.current = 0;
+      }
+      setAppColor(next, { persistEmail: email });
+      return;
+    }
+    setAppColor(next, { silent: true });
+    if (colorPersistTimerRef.current) clearTimeout(colorPersistTimerRef.current);
+    colorPersistTimerRef.current = setTimeout(() => {
+      colorPersistTimerRef.current = 0;
+      setAppColor(next, { persistEmail: email, silent: true });
+    }, 450);
+  };
 
   async function refreshMentorsList() {
     if (refreshBusy === "mentors") return;
@@ -2685,7 +2724,7 @@ export default function AdminPortal() {
           <section className="admin-page is-active">
             <h2 className="admin-h1">Settings</h2>
             <p className="admin-sub">
-              Change the app accent color. Buttons, highlights, and scanner accents update live.
+              Change the app accent color. Home robot, buttons, highlights, and scanner accents update live for your clients.
             </p>
             <div className="admin-card">
               <div className="admin-card-title-row">
@@ -2696,7 +2735,7 @@ export default function AdminPortal() {
                 <div className="app-color-preview-orb" aria-hidden="true" />
                 <div>
                   <strong>Live preview</strong>
-                  <p className="ea-hint">This color drives the app theme on home, lock, and scanner.</p>
+                  <p className="ea-hint">This color drives the app theme on home (robot), lock, and scanner.</p>
                 </div>
               </div>
               <label className="ea-field" style={{ marginTop: 14 }}>
@@ -2706,20 +2745,20 @@ export default function AdminPortal() {
                     className="app-color-swatch"
                     type="color"
                     value={appColor || DEFAULT_APP_COLOR}
-                    onChange={(e) => setAppColor(e.target.value)}
+                    onChange={(e) => applyPortalAppColor(e.target.value, { debounce: true })}
                     aria-label="Choose app color"
                   />
                   <input
                     className="admin-input"
                     type="text"
                     value={appColor || DEFAULT_APP_COLOR}
-                    onChange={(e) => setAppColor(e.target.value)}
+                    onChange={(e) => applyPortalAppColor(e.target.value, { debounce: true })}
                     placeholder="#ff2d7a"
                   />
                   <button
                     className="admin-btn admin-btn-outline"
                     type="button"
-                    onClick={() => setAppColor(DEFAULT_APP_COLOR)}
+                    onClick={() => applyPortalAppColor(DEFAULT_APP_COLOR)}
                   >
                     Reset
                   </button>
@@ -2735,7 +2774,7 @@ export default function AdminPortal() {
                       String(appColor).toLowerCase() === preset.color ? " is-active" : ""
                     }`}
                     style={{ ["--swatch"]: preset.color }}
-                    onClick={() => setAppColor(preset.color)}
+                    onClick={() => applyPortalAppColor(preset.color)}
                     title={preset.label}
                   >
                     <span className="app-color-preset-dot" aria-hidden="true" />

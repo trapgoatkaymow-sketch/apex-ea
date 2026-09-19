@@ -49,6 +49,7 @@ import {
   fetchMentors,
   SUPER_ADMIN_EMAIL,
   SUPER_ADMIN_USERNAME,
+  updateMentorAppColor,
 } from "./mentorsApi.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import {
@@ -477,6 +478,8 @@ export function AppProvider({ children }) {
   });
   /** mentorEmail → portal username (for client header) */
   const [mentorDirectory, setMentorDirectory] = useState({});
+  const [mentorThemes, setMentorThemes] = useState({});
+  const portalThemeOwnerRef = useRef("");
   const [toast, setToast] = useState("");
   const [adminOpen, setAdminOpenState] = useState(() =>
     typeof window !== "undefined" ? isAdminPath() && !isNativeApp() : false
@@ -589,11 +592,23 @@ export function AppProvider({ children }) {
   }, [appColor]);
 
   const setAppColor = useCallback(
-    (next) => {
+    async (next, options = {}) => {
       const color = normalizeHexColor(next);
       setAppColorState(color);
       applyAppTheme(color);
-      showToast(`App color updated`);
+      const persistEmail = normalizeEmail(options.persistEmail || "");
+      if (persistEmail) {
+        portalThemeOwnerRef.current = persistEmail;
+        try {
+          await updateMentorAppColor(persistEmail, color);
+          setMentorThemes((prev) => ({ ...prev, [persistEmail]: color }));
+        } catch (error) {
+          showToast(error?.message || "Could not save app color");
+          return color;
+        }
+      }
+      if (!options.silent) showToast("App color updated");
+      return color;
     },
     [showToast]
   );
@@ -856,12 +871,16 @@ export function AppProvider({ children }) {
     try {
       const list = await fetchMentors();
       const map = {};
+      const themes = {};
       for (const mentor of list || []) {
         const email = normalizeEmail(mentor?.email);
         const username = String(mentor?.username || "").trim();
         if (email && username) map[email] = username;
+        const color = normalizeHexColor(mentor?.appColor || "", "");
+        if (email && color) themes[email] = color;
       }
       setMentorDirectory(map);
+      setMentorThemes(themes);
       return map;
     } catch {
       return null;
@@ -911,6 +930,90 @@ export function AppProvider({ children }) {
     });
     return undefined;
   }, [mentorDirectory]);
+
+  // Apply the mentor's portal App color to home / lock / scanner (robot accents).
+  useEffect(() => {
+    if (adminOpen) return undefined;
+    if (!Object.keys(mentorThemes).length) return undefined;
+
+    const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
+    const eaList = Array.isArray(eas) ? eas : [];
+    const account = normalizeEmail(coverEmail);
+    const botId = String(activeBot?.id || "").trim();
+
+    const pickTheme = (email) => {
+      const key = normalizeEmail(email);
+      if (!key) return "";
+      return normalizeHexColor(mentorThemes[key] || "", "");
+    };
+
+    let themeColor = "";
+
+    if (account) {
+      const bound = keys.filter((row) => {
+        const client = normalizeEmail(row.clientEmail || row.email || row.boundEmail);
+        const usedBy = normalizeEmail(row.usedByEmail || row.usedBy);
+        return client === account || usedBy === account;
+      });
+      bound.sort(
+        (a, b) =>
+          Number(b.usedAt || b.updatedAt || 0) - Number(a.usedAt || a.updatedAt || 0)
+      );
+      for (const row of bound) {
+        themeColor = pickTheme(row.mentorEmail || row.ownerEmail);
+        if (themeColor) break;
+      }
+    }
+
+    if (!themeColor && botId) {
+      const forBot = keys.filter(
+        (row) =>
+          String(row.botId || "").trim() === botId ||
+          String(row.bot?.id || "").trim() === botId
+      );
+      forBot.sort(
+        (a, b) =>
+          Number(b.usedAt || b.updatedAt || 0) - Number(a.usedAt || a.updatedAt || 0)
+      );
+      for (const row of forBot) {
+        themeColor = pickTheme(row.mentorEmail || row.ownerEmail);
+        if (themeColor) break;
+      }
+      if (!themeColor) {
+        const ea = eaList.find((item) => item.id === botId);
+        themeColor = pickTheme(ea?.ownerEmail);
+      }
+    }
+
+    if (!themeColor) {
+      const anyKey = keys.find((row) => pickTheme(row.mentorEmail || row.ownerEmail));
+      if (anyKey) themeColor = pickTheme(anyKey.mentorEmail || anyKey.ownerEmail);
+    }
+
+    if (!themeColor) {
+      const owned = eaList.find((item) => pickTheme(item.ownerEmail));
+      if (owned) themeColor = pickTheme(owned.ownerEmail);
+    }
+
+    // Portal owner previewing as themselves (web) — use their saved theme.
+    if (!themeColor && portalThemeOwnerRef.current) {
+      themeColor = pickTheme(portalThemeOwnerRef.current);
+    }
+
+    if (!themeColor) return undefined;
+    if (normalizeHexColor(appColor) === themeColor) return undefined;
+    setAppColorState(themeColor);
+    applyAppTheme(themeColor);
+    return undefined;
+  }, [
+    adminOpen,
+    mentorThemes,
+    licenseKeys,
+    eas,
+    coverEmail,
+    activeBot,
+    appColor,
+  ]);
 
   const refreshLicenses = useCallback(async () => {
     try {

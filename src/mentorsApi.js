@@ -109,7 +109,21 @@ function publicLocal(mentor) {
       role,
     }),
     inviteCode: String(mentor.inviteCode || inviteFromId || "").trim().toUpperCase(),
+    appColor: normalizeLocalAppColor(mentor.appColor),
   };
+}
+
+function normalizeLocalAppColor(raw) {
+  let value = String(raw || "")
+    .trim()
+    .toLowerCase();
+  if (!value) return "";
+  if (!value.startsWith("#")) value = `#${value}`;
+  if (/^#[0-9a-f]{3}$/.test(value)) {
+    value = `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+  }
+  if (!/^#[0-9a-f]{6}$/.test(value)) return "";
+  return value;
 }
 
 function ensureLocalSuperAdmin(list) {
@@ -217,6 +231,13 @@ function mergeMentorLists(localList = [], remoteList = []) {
       )
         .trim()
         .toUpperCase(),
+      appColor:
+        normalizeLocalAppColor(item.appColor) ||
+        normalizeLocalAppColor(prev?.appColor) ||
+        "",
+      appColorUpdatedAt: Number(
+        item.appColorUpdatedAt || prev?.appColorUpdatedAt || 0
+      ) || 0,
     });
   }
   return Array.from(map.values()).sort(
@@ -243,6 +264,13 @@ function cacheMentorLocally(mentor) {
     licenseKeysAllowed: normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role: mentor.role || "mentor",
     }),
+    appColor:
+      normalizeLocalAppColor(mentor.appColor) ||
+      normalizeLocalAppColor(mentors[idx]?.appColor) ||
+      "",
+    appColorUpdatedAt: Number(
+      mentor.appColorUpdatedAt || mentors[idx]?.appColorUpdatedAt || 0
+    ) || 0,
   };
   if (idx >= 0) mentors[idx] = { ...mentors[idx], ...next };
   else mentors.unshift(next);
@@ -494,6 +522,44 @@ export async function updateMentorProfile(email, profileInput = {}) {
     ...mentors[idx],
     username,
     ...(contact ? { contact } : {}),
+  };
+  writeLocalMentors(mentors);
+  return publicLocal(mentors[idx]);
+}
+
+export async function updateMentorAppColor(email, rawColor) {
+  const key = normalizeEmail(email);
+  const appColor = normalizeLocalAppColor(rawColor);
+  if (!key.includes("@")) throw new Error("Enter a valid email");
+  if (!appColor) throw new Error("Enter a valid color like #ff2d7a");
+
+  try {
+    const data = await apiFetch("", {
+      method: "POST",
+      body: {
+        action: "app-color",
+        email: key,
+        appColor,
+      },
+    });
+    const mentor = data?.mentor || null;
+    if (mentor) {
+      cacheMentorLocally(mentor);
+      return publicLocal(mentor);
+    }
+  } catch (error) {
+    if (error.status && error.status < 500 && error.status !== 401 && error.status !== 403) {
+      throw error;
+    }
+  }
+
+  const mentors = ensureLocalSuperAdmin(readLocalMentors());
+  const idx = mentors.findIndex((m) => m.email === key);
+  if (idx < 0) throw new Error("Mentor not found");
+  mentors[idx] = {
+    ...mentors[idx],
+    appColor,
+    appColorUpdatedAt: Date.now(),
   };
   writeLocalMentors(mentors);
   return publicLocal(mentors[idx]);
