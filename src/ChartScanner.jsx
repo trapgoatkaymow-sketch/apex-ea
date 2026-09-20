@@ -838,7 +838,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
           <div className={`cs-capture-row${engineActive ? " is-scanning" : ""}`}>
             <button
-              className="cs-capture-btn is-primary"
+              className="cs-capture-btn is-primary is-camera"
               type="button"
               onClick={openCamera}
               disabled={busy || !connected}
@@ -854,15 +854,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 </svg>
               </span>
               <span className="cs-capture-text">
-                <strong>Camera</strong>
-                <em>Open camera</em>
+                <strong>Shoot</strong>
+                <em>Live camera</em>
               </span>
-              <span className="cs-capture-chevron" aria-hidden="true">
-                ›
-              </span>
+              <span className="cs-capture-shutter" aria-hidden="true" />
             </button>
             <button
-              className="cs-capture-btn is-ghost"
+              className="cs-capture-btn is-ghost is-upload"
               type="button"
               onClick={openUpload}
               disabled={busy || !connected}
@@ -870,26 +868,23 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <span className="cs-capture-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
                   <path
-                    d="M5 7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5v9A1.5 1.5 0 0 1 17.5 18h-11A1.5 1.5 0 0 1 5 16.5v-9Z"
+                    d="M12 16V7.5M12 7.5 8.8 10.6M12 7.5l3.2 3.1"
                     stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M8 14.5 10.2 12l2.1 2.1L15.5 11l2.5 3.5"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
+                    strokeWidth="1.7"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                  <circle cx="9.2" cy="9.2" r="1.1" fill="currentColor" />
+                  <path
+                    d="M5.5 14.5v2A2.5 2.5 0 0 0 8 19h8a2.5 2.5 0 0 0 2.5-2.5v-2"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </span>
               <span className="cs-capture-text">
-                <strong>Upload</strong>
-                <em>Choose image</em>
-              </span>
-              <span className="cs-capture-chevron" aria-hidden="true">
-                ›
+                <strong>Import</strong>
+                <em>From gallery</em>
               </span>
             </button>
           </div>

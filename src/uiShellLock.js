@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 27 — Circular SCAN LOCK sweep/orbit portal animation.
+ * Gen 28 — Unique Shoot / Import scanner capture buttons.
  */
-export const UI_SHELL_GENERATION = 27;
+export const UI_SHELL_GENERATION = 28;
 
-export const UI_SHELL_LABEL = "scan-lock-orbit-sweep";
+export const UI_SHELL_LABEL = "capture-btns-unique";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
