@@ -102,17 +102,18 @@ export default function TrapScannerResult({
         </span>
         <div
           className="tg-confidence"
-          style={{ ["--tg-conf"]: `${confidence}` }}
+          style={{ ["--tg-conf"]: confidence }}
           aria-label={`Confidence ${confidence}%`}
+          title={`Confidence ${confidence}%`}
         >
           <svg viewBox="0 0 36 36" aria-hidden="true">
             <circle className="tg-conf-track" cx="18" cy="18" r="15" />
             <circle className="tg-conf-val" cx="18" cy="18" r="15" />
           </svg>
-          <div className="tg-conf-copy">
-            <em>Confidence</em>
-            <strong>{confidence}%</strong>
-          </div>
+          <span className="tg-conf-in">
+            <strong>{confidence}</strong>
+            <em>%</em>
+          </span>
         </div>
       </div>
 

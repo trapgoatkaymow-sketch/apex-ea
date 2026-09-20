@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
+import ScanEye from "./ScanEye.jsx";
 import TrapScannerResult from "./TrapScannerResult.jsx";
 import {
   CHART_DETECTION_STATUS,
@@ -834,6 +835,12 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 <span>{engineMode === "scanning" ? "Scanning" : "Trading"}</span>
               </div>
             ) : null}
+            {engineMode === "scanning" ? (
+              <div className="cs-scan-eye-stage" aria-live="polite">
+                <ScanEye size="lg" label="Looking for a signal" />
+                <span className="cs-scan-eye-caption">Looking for signal</span>
+              </div>
+            ) : null}
           </div>
 
           <div className={`cs-capture-row${engineActive ? " is-scanning" : ""}`}>
@@ -917,18 +924,40 @@ export default function ChartScanner({ variant = "default", active = true }) {
           {useTrapResult ? (
             <>
               <div
-                className="cs-engine-ring"
+                className={`cs-engine-ring${engineMode === "scanning" ? " is-hunting" : ""}${
+                  setupReady && !engineActive ? " is-confidence" : ""
+                }`}
                 style={{
                   ["--cs-engine-ring"]: `${
-                    engineActive ? engineProgress : setupReady ? 100 : 0
+                    engineActive
+                      ? engineProgress
+                      : setupReady
+                        ? Math.max(
+                            0,
+                            Math.min(100, Math.round(Number(signal?.confidence) || 100))
+                          )
+                        : 0
                   }`,
                 }}
                 aria-hidden="true"
               >
-                <strong>
-                  {engineActive ? `${engineProgress}` : setupReady ? "100" : "0"}
-                </strong>
-                <em>%</em>
+                {engineMode === "scanning" ? (
+                  <ScanEye size="sm" label="Looking for a signal" />
+                ) : (
+                  <>
+                    <strong>
+                      {engineActive
+                        ? `${engineProgress}`
+                        : setupReady
+                          ? `${Math.max(
+                              0,
+                              Math.min(100, Math.round(Number(signal?.confidence) || 100))
+                            )}`
+                          : "0"}
+                    </strong>
+                    <em>%</em>
+                  </>
+                )}
               </div>
               <div className="cs-engine-copy">
                 <p className="cs-engine-kicker">

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
+import ScanEye from "./ScanEye.jsx";
 
 function formatPrice(value) {
   if (value == null || value === "") return "—";
@@ -251,6 +252,12 @@ export default function V2TrapScannerView({
                     ? "Ready to scan"
                     : "Awaiting chart"}
             </div>
+            {scanning ? (
+              <div className="tg-scan-eye-stage" aria-live="polite">
+                <ScanEye size="lg" label="Looking for a signal" />
+                <span className="tg-scan-eye-caption">Looking for signal</span>
+              </div>
+            ) : null}
           </div>
         </div>
         <EqBars side="right" />
@@ -427,17 +434,18 @@ export default function V2TrapScannerView({
             </span>
             <div
               className="tg-confidence"
-              style={{ ["--tg-conf"]: `${confidence}` }}
+              style={{ ["--tg-conf"]: confidence }}
               aria-label={`Confidence ${confidence}%`}
+              title={`Confidence ${confidence}%`}
             >
               <svg viewBox="0 0 36 36" aria-hidden="true">
                 <circle className="tg-conf-track" cx="18" cy="18" r="15" />
                 <circle className="tg-conf-val" cx="18" cy="18" r="15" />
               </svg>
-              <div className="tg-conf-copy">
-                <em>Confidence</em>
-                <strong>{confidence}%</strong>
-              </div>
+              <span className="tg-conf-in">
+                <strong>{confidence}</strong>
+                <em>%</em>
+              </span>
             </div>
           </div>
 

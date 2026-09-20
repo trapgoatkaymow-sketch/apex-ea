@@ -7383,13 +7383,138 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   font-variant-numeric: tabular-nums;
 }
 
-.cs-engine.is-desk .cs-engine-ring em {
-  font-style: normal;
-  font-size: 0.5rem;
+.cs-engine.is-desk .cs-engine-ring.is-hunting {
+  place-content: center;
+  align-content: center;
+}
+
+.cs-engine.is-desk .cs-engine-ring.is-hunting .cs-scan-eye {
+  width: 30px;
+  height: 20px;
+}
+
+.cs-engine.is-desk .cs-engine-ring.is-confidence strong {
+  color: #fff;
+}
+
+/* Slow-blinking hunt eye (scanning) */
+.cs-scan-eye-stage,
+.tg-scan-eye-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(12, 4, 18, 0.18), rgba(0, 0, 0, 0.55) 70%);
+}
+
+.cs-scan-eye-caption,
+.tg-scan-eye-caption {
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.5);
-  margin-top: 1px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 0 12px rgba(232, 121, 249, 0.55);
+}
+
+.cs-scan-eye {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.cs-scan-eye--lg {
+  width: min(52vw, 168px);
+  height: auto;
+}
+
+.cs-scan-eye--sm {
+  width: 30px;
+  height: 20px;
+}
+
+.cs-scan-eye-orbit {
+  width: 100%;
+  filter: drop-shadow(0 0 14px rgba(232, 121, 249, 0.55));
+  animation: cs-scan-eye-look 4.8s ease-in-out infinite;
+}
+
+.cs-scan-eye-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.cs-scan-eye-outline {
+  stroke: rgba(232, 121, 249, 0.55);
+  stroke-width: 1.4;
+}
+
+.cs-scan-eye-white {
+  fill: #f8f4ff;
+}
+
+.cs-scan-eye-pupil {
+  fill: #120018;
+}
+
+.cs-scan-eye-glint {
+  fill: #fff;
+  opacity: 0.9;
+}
+
+.cs-scan-eye-lid {
+  fill: #0a0610;
+  transform-origin: 32px 20px;
+  transform-box: fill-box;
+  animation: cs-scan-eye-blink 3.4s ease-in-out infinite;
+}
+
+@keyframes cs-scan-eye-blink {
+  0%,
+  38%,
+  48%,
+  100% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  42%,
+  44% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cs-scan-eye-look {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  30% {
+    transform: translateX(-4%);
+  }
+  65% {
+    transform: translateX(5%);
+  }
+}
+
+html.is-native.is-paused .cs-scan-eye-lid,
+html.is-native.is-paused .cs-scan-eye-orbit {
+  animation: none;
+}
+
+.tg-orb {
+  position: relative;
+}
+
+.tg-scan-eye-stage {
+  border-radius: inherit;
 }
 
 .cs-engine.is-desk .cs-engine-copy {
@@ -11185,51 +11310,68 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-confidence {
   --tg-conf: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
 }
 
 .tg-confidence svg {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   transform: rotate(-90deg);
+  overflow: visible;
 }
 
 .tg-conf-track,
 .tg-conf-val {
   fill: none;
-  stroke-width: 3.5;
+  stroke-width: 3.8;
 }
 
 .tg-conf-track {
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: rgba(255, 255, 255, 0.14);
 }
 
 .tg-conf-val {
-  stroke: var(--tg-purple-hot);
+  stroke: var(--tg-purple-hot, #e879f9);
   stroke-linecap: round;
   stroke-dasharray: 94.2;
   stroke-dashoffset: calc(94.2 - (94.2 * var(--tg-conf)) / 100);
-  filter: drop-shadow(0 0 4px rgba(var(--tg-purple-rgb), 0.65));
+  filter: drop-shadow(0 0 5px rgba(var(--tg-purple-rgb, 232, 121, 249), 0.75));
+}
+
+.tg-conf-in {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.tg-conf-in strong {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.tg-conf-in em {
+  font-style: normal;
+  font-size: 0.42rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 1px;
 }
 
 .tg-conf-copy {
-  display: grid;
-  line-height: 1.1;
-}
-
-.tg-conf-copy em {
-  font-style: normal;
-  font-size: 0.5rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.tg-conf-copy strong {
-  font-size: 0.85rem;
-  font-weight: 800;
+  display: none;
 }
 
 .tg-levels {

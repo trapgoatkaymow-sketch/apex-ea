@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 29 — Compact Shoot / Import scanner capture chips.
+ * Gen 30 — Confidence in-ring + scanning blink eye.
  */
-export const UI_SHELL_GENERATION = 29;
+export const UI_SHELL_GENERATION = 30;
 
-export const UI_SHELL_LABEL = "capture-btns-compact";
+export const UI_SHELL_LABEL = "confidence-eye-blink";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
