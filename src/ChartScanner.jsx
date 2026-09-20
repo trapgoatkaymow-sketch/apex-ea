@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
-import V2TrapScannerView from "./V2TrapScannerView.jsx";
+import TrapScannerResult from "./TrapScannerResult.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
@@ -676,69 +676,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
     detectionStatus !== CHART_DETECTION_STATUS.SYMBOL_UNCLEAR &&
     scansLeft > 0;
 
-  if (variant === "v2") {
-    return (
-      <section
-        className="view is-active view-scanner cs-v2 cs-tg"
-        hidden={!active ? true : undefined}
-        aria-hidden={!active ? true : undefined}
-      >
-        <V2TrapScannerView
-          activeBot={activeBot}
-          connected={connected}
-          mt5Login={mt5Session?.login}
-          scansLeft={scansLeft}
-          preview={preview}
-          symbol={symbol}
-          setSymbol={setSymbol}
-          setSymbolSource={setSymbolSource}
-          symbolSource={symbolSource}
-          signal={signal}
-          setupReady={setupReady}
-          engineActive={engineActive}
-          detectingSymbol={detectingSymbol}
-          busy={busy}
-          canScan={canScan}
-          engineMode={engineMode}
-          openCamera={openCamera}
-          openUpload={openUpload}
-          runScan={runScan}
-          executeTrade={executeTrade}
-          toggleInterface={toggleInterface}
-          setDetectionStatus={setDetectionStatus}
-          setDetectionMessage={setDetectionMessage}
-          setDetectionHint={setDetectionHint}
-          CHART_DETECTION_STATUS={CHART_DETECTION_STATUS}
-          trades={trades}
-          setTrades={setTrades}
-          lotSize={lotSize}
-          setLotSize={setLotSize}
-          clampTrades={clampTrades}
-          clampLot={clampLot}
-          normalizeLot={normalizeLot}
-          saveSymbolMeta={saveSymbolMeta}
-          tradeManagement={tradeManagement}
-          updateTradeManagement={updateTradeManagement}
-          fills={fills}
-        />
-        <input
-          ref={cameraRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          hidden
-          onChange={onFile}
-        />
-        <input
-          ref={uploadRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={onFile}
-        />
-      </section>
-    );
-  }
+  // I2 uses the same ZETA Chart Scanner chrome as I1; only the setup result card differs.
+  const useTrapResult = variant === "v2";
 
   return (
     <section
@@ -802,30 +741,27 @@ export default function ChartScanner({ variant = "default", active = true }) {
               </div>
             ) : (
               <div className="cs-empty">
-                {variant === "v2" ? (
+                {useTrapResult ? (
                   <div className="cs-v2-portal" aria-hidden="true">
-                    <span className="cs-v2-portal-frame">
-                      <span className="cs-v2-portal-corner cs-v2-portal-corner--tl" />
-                      <span className="cs-v2-portal-corner cs-v2-portal-corner--tr" />
-                      <span className="cs-v2-portal-corner cs-v2-portal-corner--bl" />
-                      <span className="cs-v2-portal-corner cs-v2-portal-corner--br" />
-                    </span>
-                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--a" />
-                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--b" />
-                    <span className="cs-v2-portal-core">
+                    <span className="cs-v2-portal-radar" />
+                    <span className="cs-v2-portal-ring cs-v2-portal-ring--a" />
+                    <span className="cs-v2-portal-ring cs-v2-portal-ring--b" />
+                    <span className="cs-v2-portal-hex">
                       <BotAvatar
                         className="cs-v2-portal-photo"
                         bot={activeBot}
-                        fallback="/logo.png"
+                        fallback="/zeta-fire-portal.jpg"
                         width="160"
                         height="160"
                       />
-                      <span className="cs-v2-portal-scanline" />
+                      <span className="cs-v2-portal-grid" />
+                      <span className="cs-v2-portal-crosshair" />
                     </span>
-                    <span className="cs-v2-portal-badge">
-                      <i />
-                      Acquire target
-                    </span>
+                    <span className="cs-v2-portal-tick cs-v2-portal-tick--n" />
+                    <span className="cs-v2-portal-tick cs-v2-portal-tick--e" />
+                    <span className="cs-v2-portal-tick cs-v2-portal-tick--s" />
+                    <span className="cs-v2-portal-tick cs-v2-portal-tick--w" />
+                    <span className="cs-v2-portal-label">SCAN LOCK</span>
                   </div>
                 ) : (
                   <>
@@ -849,7 +785,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
                         <BotAvatar
                           className="cs-robot-photo"
                           bot={activeBot}
-                          fallback="/logo.png"
+                          fallback="/zeta-fire-portal.jpg"
                           width="160"
                           height="160"
                         />
@@ -880,11 +816,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             ) : null}
           </div>
 
-          <div
-            className={`cs-capture-row${variant === "v2" ? " cs-v2-intake" : ""}${
-              engineActive ? " is-scanning" : ""
-            }`}
-          >
+          <div className={`cs-capture-row${engineActive ? " is-scanning" : ""}`}>
             <button
               className="cs-capture-btn is-primary"
               type="button"
@@ -892,37 +824,22 @@ export default function ChartScanner({ variant = "default", active = true }) {
               disabled={busy || !connected}
             >
               <span className="cs-capture-icon" aria-hidden="true">
-                {variant === "v2" ? (
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.4" />
-                    <circle cx="12" cy="12" r="3.4" stroke="currentColor" strokeWidth="1.6" />
-                    <path
-                      d="M12 2.8v2.2M12 19v2.2M2.8 12h2.2M19 12h2.2"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8A1.5 1.5 0 0 1 10.9 3.5h2.2a1.5 1.5 0 0 1 1.2.7L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="1.6" />
-                  </svg>
-                )}
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8A1.5 1.5 0 0 1 10.9 3.5h2.2a1.5 1.5 0 0 1 1.2.7L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+                </svg>
               </span>
               <span className="cs-capture-text">
-                <strong>{variant === "v2" ? "Shoot" : "Camera"}</strong>
-                <em>{variant === "v2" ? "Live chart" : "Open camera"}</em>
+                <strong>Camera</strong>
+                <em>Open camera</em>
               </span>
-              {variant === "v2" ? null : (
-                <span className="cs-capture-chevron" aria-hidden="true">
-                  ›
-                </span>
-              )}
+              <span className="cs-capture-chevron" aria-hidden="true">
+                ›
+              </span>
             </button>
             <button
               className="cs-capture-btn is-ghost"
@@ -931,55 +848,29 @@ export default function ChartScanner({ variant = "default", active = true }) {
               disabled={busy || !connected}
             >
               <span className="cs-capture-icon" aria-hidden="true">
-                {variant === "v2" ? (
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M4.5 7.2h15v9.6h-15V7.2Z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M7 14.2 9.6 11l2.4 2.5L15.4 9.8 18 13.6"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="8.6" cy="9.4" r="1" fill="currentColor" />
-                    <path
-                      d="M12 4.2v2.2"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M5 7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5v9A1.5 1.5 0 0 1 17.5 18h-11A1.5 1.5 0 0 1 5 16.5v-9Z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <path
-                      d="M8 14.5 10.2 12l2.1 2.1L15.5 11l2.5 3.5"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="9.2" cy="9.2" r="1.1" fill="currentColor" />
-                  </svg>
-                )}
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M5 7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5v9A1.5 1.5 0 0 1 17.5 18h-11A1.5 1.5 0 0 1 5 16.5v-9Z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <path
+                    d="M8 14.5 10.2 12l2.1 2.1L15.5 11l2.5 3.5"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="9.2" cy="9.2" r="1.1" fill="currentColor" />
+                </svg>
               </span>
               <span className="cs-capture-text">
-                <strong>{variant === "v2" ? "Import" : "Upload"}</strong>
-                <em>{variant === "v2" ? "From gallery" : "Choose image"}</em>
+                <strong>Upload</strong>
+                <em>Choose image</em>
               </span>
-              {variant === "v2" ? null : (
-                <span className="cs-capture-chevron" aria-hidden="true">
-                  ›
-                </span>
-              )}
+              <span className="cs-capture-chevron" aria-hidden="true">
+                ›
+              </span>
             </button>
           </div>
         </div>
@@ -1001,418 +892,207 @@ export default function ChartScanner({ variant = "default", active = true }) {
         />
       </div>
 
-      {variant === "v2" ? (
-        <div className="cs-v2-ops cs-v2-ops-deck" aria-label="Scanner operations deck">
-          <div
-            className={`cs-v2-link${engineActive ? " is-live" : ""}${setupReady ? " is-locked" : ""}`}
-            aria-live="polite"
-          >
-            <div
-              className="cs-v2-link-ring"
-              style={{
-                ["--cs-v2-ring"]: `${engineActive ? engineProgress : setupReady ? 100 : 0}`,
-              }}
-              aria-hidden="true"
-            >
-              <strong>
-                {engineActive ? `${engineProgress}` : setupReady ? "100" : "0"}
-              </strong>
-              <em>%</em>
-            </div>
-            <div className="cs-v2-link-copy">
-              <p className="cs-v2-link-kicker">
-                <i aria-hidden="true" />
-                {isPremiumScanner ? "Live link" : "Engine link"}
-              </p>
-              <p className="cs-v2-link-status">
-                {engineActive
-                  ? activeStepLabel
-                  : setupReady
-                    ? isPremiumScanner
-                      ? "Signal locked — tap Execute Trade"
-                      : "Setup ready — waiting for Execute Trade"
-                    : isPremiumScanner
-                      ? "Standing by for chart"
-                      : "Armed and ready"}
-              </p>
-              {engineActive && engineLogs.length ? (
-                <p className="cs-v2-link-log">{engineLogs[engineLogs.length - 1]}</p>
-              ) : null}
-            </div>
-            <span className="cs-v2-link-wave" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
-          </div>
 
-          <div className="cs-v2-pairboard">
-            <label
-              className={`cs-v2-pair${symbolSource === "scanner" ? " is-from-scanner" : ""}`}
-            >
-              <span className="cs-v2-pair-tag">
-                Pair
-                {detectingSymbol
-                  ? " · reading"
-                  : symbolSource === "scanner"
-                    ? " · scanner"
-                    : symbol
-                      ? " · edit"
-                      : " · auto"}
-              </span>
-              <input
-                className="cs-v2-pair-input"
-                value={detectingSymbol ? "" : symbol}
-                disabled={busy || detectingSymbol}
-                placeholder={detectingSymbol ? "Analyzing…" : "e.g. US30"}
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                onChange={(e) => {
-                  const next = String(e.target.value || "")
-                    .trim()
-                    .toUpperCase()
-                    .replace(/\s+/g, "");
-                  setSymbol(next);
-                  setSymbolSource(next ? "manual" : "");
-                  if (next) {
-                    setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
-                    setDetectionMessage(`Symbol: ${next}`);
-                    setDetectionHint("");
-                  }
-                }}
-              />
-            </label>
-            <div className="cs-v2-meters" role="group" aria-label="Trade size">
-              <div className="cs-v2-meter">
-                <span className="cs-v2-meter-tag">Trades</span>
-                <div className="cs-v2-meter-ctrl">
-                  <button
-                    type="button"
-                    aria-label="Fewer trades"
-                    disabled={busy || trades <= 1}
-                    onClick={() => {
-                      const next = clampTrades(trades - 1);
-                      setTrades(next);
-                      persistTradeSettings(next, lotSize);
-                    }}
-                  >
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={trades}
-                    disabled={busy}
-                    onChange={(e) => setTrades(clampTrades(e.target.value))}
-                    onBlur={() => persistTradeSettings(trades, lotSize)}
+        <div className={`cs-engine${engineActive ? " is-open" : ""}`} aria-live="polite">
+          <div className="cs-engine-top">
+            <div className="cs-engine-label">
+              <span className="cs-engine-gear" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="4.5"
+                    y="4.5"
+                    width="15"
+                    height="15"
+                    rx="2.2"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
                   />
-                  <button
-                    type="button"
-                    aria-label="More trades"
-                    disabled={busy || trades >= 20}
-                    onClick={() => {
-                      const next = clampTrades(trades + 1);
-                      setTrades(next);
-                      persistTradeSettings(next, lotSize);
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              <div className="cs-v2-meter">
-                <span className="cs-v2-meter-tag">Lot</span>
-                <input
-                  className="cs-v2-meter-lot"
-                  type="text"
-                  inputMode="decimal"
-                  enterKeyHint="done"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  placeholder="0.01"
-                  value={lotSize}
-                  disabled={busy}
-                  onChange={(e) => {
-                    const next = e.target.value.replace(/[^\d.,]/g, "");
-                    setLotSize(next);
-                  }}
-                  onBlur={() => {
-                    const next = clampLot(lotSize);
-                    setLotSize(String(next));
-                    persistTradeSettings(trades, next);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="cs-v2-ladder" aria-label="Take-profit risk reward ladder">
-            <div className="cs-v2-ladder-head">
-              <span className="cs-v2-ladder-title">Exit ladder</span>
-              <span className="cs-v2-ladder-sub">Fixed RR · TP1 → TP3</span>
-            </div>
-            <ol className="cs-v2-ladder-list">
-              <li>
-                <span className="cs-v2-ladder-dot" aria-hidden="true" />
-                <span className="cs-v2-ladder-name">TP1</span>
-                <span className="cs-v2-ladder-rail" aria-hidden="true" />
-                <strong>1:1</strong>
-              </li>
-              <li>
-                <span className="cs-v2-ladder-dot" aria-hidden="true" />
-                <span className="cs-v2-ladder-name">TP2</span>
-                <span className="cs-v2-ladder-rail" aria-hidden="true" />
-                <strong>1:2</strong>
-              </li>
-              <li>
-                <span className="cs-v2-ladder-dot" aria-hidden="true" />
-                <span className="cs-v2-ladder-name">TP3</span>
-                <span className="cs-v2-ladder-rail" aria-hidden="true" />
-                <strong>1:3</strong>
-              </li>
-            </ol>
-            <div className="cs-v2-ladder-chips">
-              <label className="cs-v2-chip">
-                <input
-                  type="checkbox"
-                  checked={tradeManagement.moveSlToBreakevenAfterTp1}
-                  disabled={busy}
-                  onChange={(e) =>
-                    updateTradeManagement({ moveSlToBreakevenAfterTp1: e.target.checked })
-                  }
-                />
-                <span>BE after TP1</span>
-              </label>
-              <label className="cs-v2-chip">
-                <input
-                  type="checkbox"
-                  checked={tradeManagement.protectProfitAfterTp2}
-                  disabled={busy}
-                  onChange={(e) =>
-                    updateTradeManagement({ protectProfitAfterTp2: e.target.checked })
-                  }
-                />
-                <span>Protect after TP2</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className={`cs-engine${engineActive ? " is-open" : ""}`} aria-live="polite">
-            <div className="cs-engine-top">
-              <div className="cs-engine-label">
-                <span className="cs-engine-gear" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <rect
-                      x="4.5"
-                      y="4.5"
-                      width="15"
-                      height="15"
-                      rx="2.2"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <path
-                      d="M8 8h3.2v3.2H8V8Zm4.8 0H16v3.2h-3.2V8ZM8 12.8h3.2V16H8v-3.2Zm4.8 0H16V16h-3.2v-3.2Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </span>
-                <div>
-                  <p className="cs-engine-kicker">
-                    {isPremiumScanner ? "Signal Core" : "Trading Engine"}
-                  </p>
+                  <path
+                    d="M8 8h3.2v3.2H8V8Zm4.8 0H16v3.2h-3.2V8ZM8 12.8h3.2V16H8v-3.2Zm4.8 0H16V16h-3.2v-3.2Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+              <div>
+                  <p className="cs-engine-kicker">Trading Engine</p>
                   <p className="cs-engine-status">
                     {engineActive
                       ? activeStepLabel
                       : setupReady
-                        ? isPremiumScanner
-                          ? "Signal locked — tap Execute Trade"
-                          : "Setup ready — waiting for Execute Trade"
-                        : isPremiumScanner
-                          ? "Standing by for chart"
-                          : "Armed and ready"}
+                        ? "Setup ready — waiting for Execute Trade"
+                        : "Armed and ready"}
                   </p>
-                </div>
               </div>
-              <span className="cs-engine-pct">
-                {engineActive ? `${engineProgress}%` : setupReady ? "100%" : "0%"}
-              </span>
             </div>
-            <div className="cs-engine-track">
-              <span
-                className="cs-engine-fill"
-                style={{
-                  width: `${engineActive ? engineProgress : setupReady ? 100 : 0}%`,
-                }}
-              />
-            </div>
-            {engineActive && engineLogs.length ? (
-              <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
-            ) : null}
+            <span className="cs-engine-pct">
+              {engineActive ? `${engineProgress}%` : setupReady ? "100%" : "0%"}
+            </span>
           </div>
-
-          <div className="cs-controls">
-            <label
-              className={`cs-field${symbolSource === "scanner" ? " is-from-scanner" : ""}`}
-            >
-              <span>
-                Symbol
-                {detectingSymbol
-                  ? " · scanner reading…"
-                  : symbolSource === "scanner"
-                    ? " · from scanner"
-                    : symbol
-                      ? " · edit if needed"
-                      : " · auto from chart"}
-              </span>
-              <input
-                className="cs-lot cs-symbol-auto"
-                value={detectingSymbol ? "" : symbol}
-                disabled={busy || detectingSymbol}
-                placeholder={detectingSymbol ? "Analyzing image…" : "Symbol (e.g. US30)"}
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                onChange={(e) => {
-                  const next = String(e.target.value || "")
-                    .trim()
-                    .toUpperCase()
-                    .replace(/\s+/g, "");
-                  setSymbol(next);
-                  setSymbolSource(next ? "manual" : "");
-                  if (next) {
-                    setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
-                    setDetectionMessage(`Symbol: ${next}`);
-                    setDetectionHint("");
-                  }
-                }}
-              />
-            </label>
-
-            <label className="cs-field">
-              <span>Trades</span>
-              <div className="cs-stepper">
-                <button
-                  type="button"
-                  aria-label="Fewer trades"
-                  disabled={busy || trades <= 1}
-                  onClick={() => {
-                    const next = clampTrades(trades - 1);
-                    setTrades(next);
-                    persistTradeSettings(next, lotSize);
-                  }}
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={trades}
-                  disabled={busy}
-                  onChange={(e) => setTrades(clampTrades(e.target.value))}
-                  onBlur={() => persistTradeSettings(trades, lotSize)}
-                />
-                <button
-                  type="button"
-                  aria-label="More trades"
-                  disabled={busy || trades >= 20}
-                  onClick={() => {
-                    const next = clampTrades(trades + 1);
-                    setTrades(next);
-                    persistTradeSettings(next, lotSize);
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            </label>
-
-            <label className="cs-field">
-              <span>Lot size</span>
-              <input
-                className="cs-lot"
-                type="text"
-                inputMode="decimal"
-                enterKeyHint="done"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="0.01"
-                value={lotSize}
-                disabled={busy}
-                onChange={(e) => {
-                  const next = e.target.value.replace(/[^\d.,]/g, "");
-                  setLotSize(next);
-                }}
-                onBlur={() => {
-                  const next = clampLot(lotSize);
-                  setLotSize(String(next));
-                  persistTradeSettings(trades, next);
-                }}
-              />
-            </label>
+          <div className="cs-engine-track">
+            <span
+              className="cs-engine-fill"
+              style={{
+                width: `${engineActive ? engineProgress : setupReady ? 100 : 0}%`,
+              }}
+            />
           </div>
+          {engineActive && engineLogs.length ? (
+            <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
+          ) : null}
+        </div>
 
-          <div className="cs-tp-config" aria-label="Take-profit risk reward ratios">
-            <p className="cs-tp-config-label">
-              <span className="cs-tp-config-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.7" />
-                  <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.7" />
-                  <circle cx="12" cy="12" r="1.2" fill="currentColor" />
-                </svg>
-              </span>
-              TP targets
-            </p>
-            <div className="cs-tp-config-row" role="group" aria-label="Fixed TP ratios">
-              <div className="cs-tp-ratio">
-                <span>TP1</span>
-                <strong>1:1</strong>
-              </div>
-              <div className="cs-tp-ratio">
-                <span>TP2</span>
-                <strong>1:2</strong>
-              </div>
-              <div className="cs-tp-ratio">
-                <span>TP3</span>
-                <strong>1:3</strong>
-              </div>
-            </div>
-            <label className="cs-tp-toggle">
-              <input
-                type="checkbox"
-                checked={tradeManagement.moveSlToBreakevenAfterTp1}
-                disabled={busy}
-                onChange={(e) =>
-                  updateTradeManagement({ moveSlToBreakevenAfterTp1: e.target.checked })
+        <div className="cs-controls">
+          <label
+            className={`cs-field${symbolSource === "scanner" ? " is-from-scanner" : ""}`}
+          >
+            <span>
+              Symbol
+              {detectingSymbol
+                ? " · scanner reading…"
+                : symbolSource === "scanner"
+                  ? " · from scanner"
+                  : symbol
+                    ? " · edit if needed"
+                    : " · auto from chart"}
+            </span>
+            <input
+              className="cs-lot cs-symbol-auto"
+              value={detectingSymbol ? "" : symbol}
+              disabled={busy || detectingSymbol}
+              placeholder={detectingSymbol ? "Analyzing image…" : "Symbol (e.g. US30)"}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(e) => {
+                const next = String(e.target.value || "")
+                  .trim()
+                  .toUpperCase()
+                  .replace(/\s+/g, "");
+                setSymbol(next);
+                setSymbolSource(next ? "manual" : "");
+                if (next) {
+                  setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
+                  setDetectionMessage(`Symbol: ${next}`);
+                  setDetectionHint("");
                 }
-              />
-              <span>Move SL to breakeven after TP1</span>
-            </label>
-            <label className="cs-tp-toggle">
+              }}
+            />
+          </label>
+
+          <label className="cs-field">
+            <span>Trades</span>
+            <div className="cs-stepper">
+              <button
+                type="button"
+                aria-label="Fewer trades"
+                disabled={busy || trades <= 1}
+                onClick={() => {
+                  const next = clampTrades(trades - 1);
+                  setTrades(next);
+                  persistTradeSettings(next, lotSize);
+                }}
+              >
+                −
+              </button>
               <input
-                type="checkbox"
-                checked={tradeManagement.protectProfitAfterTp2}
+                type="number"
+                min="1"
+                max="20"
+                value={trades}
                 disabled={busy}
-                onChange={(e) =>
-                  updateTradeManagement({ protectProfitAfterTp2: e.target.checked })
-                }
+                onChange={(e) => setTrades(clampTrades(e.target.value))}
+                onBlur={() => persistTradeSettings(trades, lotSize)}
               />
-              <span>Protect profit after TP2</span>
-            </label>
+              <button
+                type="button"
+                aria-label="More trades"
+                disabled={busy || trades >= 20}
+                onClick={() => {
+                  const next = clampTrades(trades + 1);
+                  setTrades(next);
+                  persistTradeSettings(next, lotSize);
+                }}
+              >
+                +
+              </button>
+            </div>
+          </label>
+
+          <label className="cs-field">
+            <span>Lot size</span>
+            <input
+              className="cs-lot"
+              type="text"
+              inputMode="decimal"
+              enterKeyHint="done"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="0.01"
+              value={lotSize}
+              disabled={busy}
+              onChange={(e) => {
+                const next = e.target.value.replace(/[^\d.,]/g, "");
+                setLotSize(next);
+              }}
+              onBlur={() => {
+                const next = clampLot(lotSize);
+                setLotSize(String(next));
+                persistTradeSettings(trades, next);
+              }}
+            />
+          </label>
+        </div>
+
+        <div className="cs-tp-config" aria-label="Take-profit risk reward ratios">
+          <p className="cs-tp-config-label">
+            <span className="cs-tp-config-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.7" />
+                <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.7" />
+                <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+              </svg>
+            </span>
+            TP targets
+          </p>
+          <div className="cs-tp-config-row" role="group" aria-label="Fixed TP ratios">
+            <div className="cs-tp-ratio">
+              <span>TP1</span>
+              <strong>1:1</strong>
+            </div>
+            <div className="cs-tp-ratio">
+              <span>TP2</span>
+              <strong>1:2</strong>
+            </div>
+            <div className="cs-tp-ratio">
+              <span>TP3</span>
+              <strong>1:3</strong>
+            </div>
           </div>
-        </>
-      )}
+          <label className="cs-tp-toggle">
+            <input
+              type="checkbox"
+              checked={tradeManagement.moveSlToBreakevenAfterTp1}
+              disabled={busy}
+              onChange={(e) =>
+                updateTradeManagement({ moveSlToBreakevenAfterTp1: e.target.checked })
+              }
+            />
+            <span>Move SL to breakeven after TP1</span>
+          </label>
+          <label className="cs-tp-toggle">
+            <input
+              type="checkbox"
+              checked={tradeManagement.protectProfitAfterTp2}
+              disabled={busy}
+              onChange={(e) =>
+                updateTradeManagement({ protectProfitAfterTp2: e.target.checked })
+              }
+            />
+            <span>Protect profit after TP2</span>
+          </label>
+        </div>
+        
 
       {detectionMessage &&
       !detectingSymbol &&
@@ -1454,7 +1134,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
                       ? "Waiting for symbol…"
                       : "Scan Chart"}
         </button>
-      ) : (
+      ) : useTrapResult ? null : (
         <button
           className="cs-run-btn"
           type="button"
@@ -1469,7 +1149,21 @@ export default function ChartScanner({ variant = "default", active = true }) {
         </button>
       )}
 
-      {setupReady && !engineActive ? (
+      {setupReady && useTrapResult ? (
+        <TrapScannerResult
+          activeBot={activeBot}
+          signal={signal}
+          connected={connected}
+          busy={busy}
+          engineMode={engineMode}
+          executeTrade={executeTrade}
+          tradeManagement={tradeManagement}
+          updateTradeManagement={updateTradeManagement}
+          fills={fills}
+        />
+      ) : null}
+
+      {setupReady && !engineActive && !useTrapResult ? (
         <div className={`cs-result cs-result--${String(signal.side).toLowerCase()}`}>
           <p className="cs-result-kicker">Trade Signal</p>
           <strong>
