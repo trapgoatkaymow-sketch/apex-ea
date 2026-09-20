@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 13 — Interface 2 TrapGoat scanner exact redesign.
+ * Gen 16 — I2 scanner portal redesign (glass bubbles + neon portrait).
  */
-export const UI_SHELL_GENERATION = 15;
+export const UI_SHELL_GENERATION = 16;
 
-export const UI_SHELL_LABEL = "v2-orb-ea-bubbles";
+export const UI_SHELL_LABEL = "v2-portal-glass-bubbles";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

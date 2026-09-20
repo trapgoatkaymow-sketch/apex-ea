@@ -9829,50 +9829,65 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 .tg-hero {
   position: relative;
   display: grid;
-  grid-template-columns: 22px 1fr 22px;
+  grid-template-columns: 26px minmax(0, 1fr) 26px;
   align-items: center;
-  gap: 4px;
-  min-height: 210px;
-  margin: 2px 0 4px;
+  justify-items: center;
+  gap: 8px;
+  min-height: 250px;
+  margin: 6px 0 8px;
+  padding: 8px 0 12px;
 }
 
 .tg-eq {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
-  height: 150px;
+  gap: 5px;
+  height: 180px;
+  width: 100%;
 }
 
 .tg-eq i {
   display: block;
   width: 100%;
-  height: var(--tg-bar, 40%);
+  height: 9px;
+  max-height: var(--tg-bar, 40%);
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(var(--tg-purple-rgb), 0.15), rgba(var(--tg-purple-rgb), 0.95));
-  box-shadow: 0 0 10px rgba(var(--tg-purple-rgb), 0.45);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--tg-purple-rgb), 0.08),
+    rgba(192, 38, 211, 0.85) 55%,
+    rgba(232, 121, 249, 0.95)
+  );
+  box-shadow: 0 0 12px rgba(var(--tg-purple-rgb), 0.5);
   transform-origin: center;
-  animation: tg-eq-pulse 1.1s ease-in-out infinite;
+  animation: tg-eq-pulse 1.25s ease-in-out infinite;
   animation-delay: var(--tg-delay, 0s);
+  opacity: 0.85;
 }
 
 .tg-eq--right i {
-  background: linear-gradient(270deg, rgba(var(--tg-purple-rgb), 0.15), rgba(236, 72, 153, 0.95));
+  background: linear-gradient(
+    270deg,
+    rgba(var(--tg-purple-rgb), 0.08),
+    rgba(236, 72, 153, 0.75) 50%,
+    rgba(232, 121, 249, 0.95)
+  );
 }
 
 .tg-hero:not(.is-scanning) .tg-eq i {
   animation-play-state: paused;
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 @keyframes tg-eq-pulse {
   0%,
   100% {
-    transform: scaleY(0.55);
-    opacity: 0.55;
+    transform: scaleX(0.55);
+    opacity: 0.45;
   }
   50% {
-    transform: scaleY(1);
+    transform: scaleX(1);
     opacity: 1;
   }
 }
@@ -9882,20 +9897,25 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   display: grid;
   place-items: center;
   overflow: visible;
+  width: 100%;
+  max-width: 220px;
 }
 
 .tg-orb-glow {
   position: absolute;
-  inset: 6% 12%;
-  border-radius: 18px;
-  background: radial-gradient(ellipse at 50% 40%, rgba(var(--tg-purple-rgb), 0.5), transparent 68%);
-  filter: blur(16px);
+  inset: -6% -10%;
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(232, 121, 249, 0.45), transparent 58%),
+    radial-gradient(ellipse at 50% 80%, rgba(192, 38, 211, 0.28), transparent 60%);
+  filter: blur(22px);
   pointer-events: none;
+  z-index: 0;
 }
 
 .tg-bubbles {
   position: absolute;
-  inset: -8% -18%;
+  inset: -22% -34%;
   pointer-events: none;
   z-index: 0;
 }
@@ -9903,77 +9923,82 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 .tg-bubble {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(255, 255, 255, 0.55),
-    rgba(232, 121, 249, 0.35) 45%,
-    rgba(192, 38, 211, 0.05) 70%,
-    transparent 72%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 0 10px rgba(var(--tg-purple-rgb), 0.35);
-  animation: tg-bubble-rise 5.5s ease-in-out infinite;
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.55), transparent 26%),
+    radial-gradient(circle at 68% 72%, rgba(255, 255, 255, 0.08), transparent 34%),
+    radial-gradient(circle at 50% 55%, rgba(140, 110, 170, 0.28), rgba(55, 30, 80, 0.42) 62%, rgba(20, 10, 30, 0.12) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 -4px 8px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.12),
+    0 0 18px rgba(var(--tg-purple-rgb), 0.18);
+  backdrop-filter: blur(1.5px);
+  animation: tg-bubble-float 7.5s ease-in-out infinite;
 }
 
-.tg-bubble--1 { width: 8px; height: 8px; left: 8%; bottom: 12%; animation-delay: 0s; }
-.tg-bubble--2 { width: 12px; height: 12px; left: 18%; bottom: 28%; animation-delay: 0.4s; }
-.tg-bubble--3 { width: 6px; height: 6px; left: 28%; bottom: 8%; animation-delay: 1.1s; }
-.tg-bubble--4 { width: 10px; height: 10px; left: 72%; bottom: 18%; animation-delay: 0.7s; }
-.tg-bubble--5 { width: 14px; height: 14px; left: 82%; bottom: 32%; animation-delay: 1.6s; }
-.tg-bubble--6 { width: 7px; height: 7px; left: 90%; bottom: 10%; animation-delay: 2.2s; }
-.tg-bubble--7 { width: 9px; height: 9px; left: 4%; bottom: 42%; animation-delay: 2.8s; }
-.tg-bubble--8 { width: 11px; height: 11px; left: 94%; bottom: 48%; animation-delay: 0.9s; }
-.tg-bubble--9 { width: 5px; height: 5px; left: 38%; bottom: 4%; animation-delay: 3.1s; }
-.tg-bubble--10 { width: 13px; height: 13px; left: 62%; bottom: 6%; animation-delay: 1.9s; }
-.tg-bubble--11 { width: 8px; height: 8px; left: 48%; bottom: 2%; animation-delay: 2.5s; }
-.tg-bubble--12 { width: 6px; height: 6px; left: 14%; bottom: 55%; animation-delay: 3.4s; }
-.tg-bubble--13 { width: 10px; height: 10px; left: 78%; bottom: 58%; animation-delay: 0.2s; }
-.tg-bubble--14 { width: 7px; height: 7px; left: 55%; bottom: 62%; animation-delay: 4s; }
+.tg-bubble--1 { width: 18px; height: 18px; left: 2%; top: 18%; animation-delay: 0s; }
+.tg-bubble--2 { width: 28px; height: 28px; left: -4%; top: 42%; animation-delay: 0.6s; }
+.tg-bubble--3 { width: 12px; height: 12px; left: 10%; top: 68%; animation-delay: 1.2s; }
+.tg-bubble--4 { width: 22px; height: 22px; right: 0%; top: 22%; left: auto; animation-delay: 0.3s; }
+.tg-bubble--5 { width: 34px; height: 34px; right: -8%; top: 48%; left: auto; animation-delay: 1.5s; }
+.tg-bubble--6 { width: 14px; height: 14px; right: 6%; top: 72%; left: auto; animation-delay: 2.1s; }
+.tg-bubble--7 { width: 10px; height: 10px; left: 18%; top: 8%; animation-delay: 2.8s; }
+.tg-bubble--8 { width: 16px; height: 16px; right: 16%; top: 6%; left: auto; animation-delay: 0.9s; }
+.tg-bubble--9 { width: 24px; height: 24px; left: -2%; top: 78%; animation-delay: 3.2s; }
+.tg-bubble--10 { width: 20px; height: 20px; right: -2%; top: 82%; left: auto; animation-delay: 1.8s; }
+.tg-bubble--11 { width: 8px; height: 8px; left: 42%; top: 2%; animation-delay: 2.4s; }
+.tg-bubble--12 { width: 11px; height: 11px; left: 55%; top: 92%; animation-delay: 3.6s; }
+.tg-bubble--13 { width: 15px; height: 15px; left: 78%; top: 38%; animation-delay: 0.4s; }
+.tg-bubble--14 { width: 9px; height: 9px; left: 22%; top: 52%; animation-delay: 4.1s; }
+.tg-bubble--15 { width: 26px; height: 26px; left: 86%; top: 58%; animation-delay: 2.6s; }
+.tg-bubble--16 { width: 13px; height: 13px; left: 6%; top: 30%; animation-delay: 3.9s; }
 
-@keyframes tg-bubble-rise {
-  0% {
-    transform: translateY(12px) scale(0.7);
-    opacity: 0;
-  }
-  18% {
-    opacity: 0.85;
-  }
-  70% {
+@keyframes tg-bubble-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
     opacity: 0.55;
   }
-  100% {
-    transform: translateY(-110px) scale(1.05);
-    opacity: 0;
+  40% {
+    transform: translateY(-14px) scale(1.06);
+    opacity: 0.9;
+  }
+  70% {
+    transform: translateY(-6px) scale(0.96);
+    opacity: 0.7;
   }
 }
 
 .tg-orb {
   position: relative;
   z-index: 1;
-  width: min(42vw, 148px);
+  width: min(50vw, 176px);
   aspect-ratio: 3 / 4;
-  max-height: min(32vh, 210px);
+  max-height: min(38vh, 252px);
   display: grid;
   place-items: center;
+  isolation: isolate;
 }
 
 .tg-orb-ring {
   position: absolute;
-  inset: 0;
-  border-radius: 18px;
-  border: 2px solid rgba(var(--tg-purple-rgb), 0.55);
+  inset: -1px;
+  border-radius: 22px;
+  border: 3px solid rgba(232, 121, 249, 0.95);
   box-shadow:
-    0 0 0 4px rgba(var(--tg-purple-rgb), 0.08),
-    0 0 22px rgba(var(--tg-purple-rgb), 0.55),
-    inset 0 0 18px rgba(var(--tg-purple-rgb), 0.2);
+    0 0 0 2px rgba(192, 38, 211, 0.45),
+    0 0 28px rgba(var(--tg-purple-rgb), 0.75),
+    0 0 56px rgba(192, 38, 211, 0.35),
+    0 0 80px rgba(168, 85, 247, 0.18),
+    inset 0 0 22px rgba(var(--tg-purple-rgb), 0.22);
   pointer-events: none;
 }
 
 .tg-orb-ring--b {
-  inset: 6px;
-  border-radius: 14px;
-  border-color: rgba(232, 121, 249, 0.35);
-  box-shadow: 0 0 14px rgba(232, 121, 249, 0.25);
+  inset: 5px;
+  border-radius: 17px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.4);
   animation: none;
 }
 
@@ -9981,33 +10006,29 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   animation: tg-ring-pulse 1.6s ease-in-out infinite;
 }
 
-@keyframes tg-ring-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes tg-ring-pulse {
   0%,
   100% {
     box-shadow:
-      0 0 0 4px rgba(var(--tg-purple-rgb), 0.08),
-      0 0 18px rgba(var(--tg-purple-rgb), 0.45);
+      0 0 0 1px rgba(192, 38, 211, 0.35),
+      0 0 22px rgba(var(--tg-purple-rgb), 0.55),
+      0 0 40px rgba(192, 38, 211, 0.22);
   }
   50% {
     box-shadow:
-      0 0 0 7px rgba(var(--tg-purple-rgb), 0.14),
-      0 0 28px rgba(var(--tg-purple-rgb), 0.75);
+      0 0 0 2px rgba(232, 121, 249, 0.55),
+      0 0 34px rgba(var(--tg-purple-rgb), 0.85),
+      0 0 60px rgba(192, 38, 211, 0.4);
   }
 }
 
 .tg-orb-core {
   position: absolute;
-  inset: 9px;
-  border-radius: 12px;
+  inset: 8px;
+  border-radius: 15px;
   overflow: hidden;
   background: #050508;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .tg-orb-chart,
@@ -10020,11 +10041,10 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 }
 
 .tg-orb-empty {
+  position: relative;
   display: grid;
-  place-items: center;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(var(--tg-purple-rgb), 0.28), transparent 60%),
-    #08060e;
+  place-items: stretch;
+  background: #08060e;
 }
 
 .tg-orb-empty .tg-orb-ea,
@@ -10040,6 +10060,15 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   display: block;
 }
 
+.tg-orb-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(8, 4, 16, 0.15) 0%, transparent 28%, transparent 62%, rgba(8, 4, 16, 0.55) 100%),
+    radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(0, 0, 0, 0.28) 100%);
+}
+
 .tg-result-ea {
   width: 28px !important;
   height: 28px !important;
@@ -10049,14 +10078,14 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-orb-symbol {
   position: absolute;
-  top: 14px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 3;
   display: grid;
   justify-items: center;
   gap: 1px;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -10078,19 +10107,19 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-orb-badge {
   position: absolute;
-  bottom: 12px;
+  bottom: 11px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 24px;
-  padding: 0 10px;
+  min-height: 26px;
+  padding: 0 11px;
   border-radius: 999px;
-  background: rgba(124, 31, 160, 0.72);
-  border: 1px solid rgba(232, 121, 249, 0.45);
-  box-shadow: 0 0 18px rgba(var(--tg-purple-rgb), 0.45);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.92), rgba(124, 31, 160, 0.95));
+  border: 1px solid rgba(232, 121, 249, 0.55);
+  box-shadow: 0 0 18px rgba(var(--tg-purple-rgb), 0.5);
   font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -10605,8 +10634,8 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   }
 
   .tg-orb {
-    width: min(40vw, 132px);
-    max-height: min(30vh, 190px);
+    width: min(46vw, 152px);
+    max-height: min(34vh, 220px);
   }
 
   .tg-result-head {

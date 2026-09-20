@@ -29,15 +29,26 @@ function levelPct(entry, level, side, kind) {
 }
 
 function EqBars({ side }) {
-  const heights = side === "left"
-    ? [28, 46, 34, 58, 40, 52, 30, 44]
-    : [42, 30, 55, 36, 48, 32, 60, 38];
+  const heights =
+    side === "left"
+      ? [22, 38, 30, 48, 34, 44, 26, 40, 28]
+      : [36, 24, 46, 32, 42, 28, 50, 34, 30];
   return (
     <div className={`tg-eq tg-eq--${side}`} aria-hidden="true">
       {heights.map((h, i) => (
-        <i key={i} style={{ ["--tg-bar"]: `${h}%`, ["--tg-delay"]: `${i * 0.08}s` }} />
+        <i key={i} style={{ ["--tg-bar"]: `${h}%`, ["--tg-delay"]: `${i * 0.09}s` }} />
       ))}
     </div>
+  );
+}
+
+function PortalBubbles() {
+  return (
+    <span className="tg-bubbles" aria-hidden="true">
+      {Array.from({ length: 16 }, (_, i) => (
+        <i key={i} className={`tg-bubble tg-bubble--${i + 1}`} />
+      ))}
+    </span>
   );
 }
 
@@ -199,11 +210,7 @@ export default function V2TrapScannerView({
         <EqBars side="left" />
         <div className="tg-orb-wrap">
           <div className="tg-orb-glow" aria-hidden="true" />
-          <span className="tg-bubbles" aria-hidden="true">
-            {Array.from({ length: 14 }, (_, i) => (
-              <i key={i} className={`tg-bubble tg-bubble--${i + 1}`} />
-            ))}
-          </span>
+          <PortalBubbles />
           <div className="tg-orb">
             <div className="tg-orb-ring tg-orb-ring--a" aria-hidden="true" />
             <div className="tg-orb-ring tg-orb-ring--b" aria-hidden="true" />
@@ -216,9 +223,10 @@ export default function V2TrapScannerView({
                     className="tg-orb-ea"
                     bot={activeBot}
                     fallback="/logo.png"
-                    width="160"
-                    height="160"
+                    width="200"
+                    height="260"
                   />
+                  <span className="tg-orb-vignette" aria-hidden="true" />
                 </div>
               )}
             </div>
