@@ -8,7 +8,7 @@
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 46;
+export const UI_SHELL_GENERATION = 47;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-locked-mentor-reset";
@@ -18,7 +18,7 @@ export const UI_SHELL_LABEL = "product-locked-mentor-reset";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 45;
+export const UI_SHELL_FLOOR = 46;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
