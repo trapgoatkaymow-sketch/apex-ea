@@ -431,6 +431,8 @@ function writeLocalStore(mentors) {
                 licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
                 appColor: normalizeAppColor(m.appColor) || "",
                 appColorUpdatedAt: Number(m.appColorUpdatedAt) || null,
+                withdrawalRequests: pruneWithdrawalRequests(m.withdrawalRequests),
+                withdrawalRequestedAt: Number(m.withdrawalRequestedAt) || null,
               };
             })
             .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt),
@@ -617,6 +619,8 @@ async function writeStore(mentors, sha, message) {
           appColorUpdatedAt: appColor
             ? Number(m.appColorUpdatedAt) || Date.now()
             : Number(m.appColorUpdatedAt) || null,
+          withdrawalRequests: pruneWithdrawalRequests(m.withdrawalRequests),
+          withdrawalRequestedAt: Number(m.withdrawalRequestedAt) || null,
         };
       })
       .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt)
