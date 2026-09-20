@@ -8610,157 +8610,192 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
   display: none;
 }
 
-/* Unique Interface 2 empty-state: hexagonal scan lock (not the circular bobble). */
+/* Interface 2 empty-state — circular scan lock with sweep + orbit sparks */
 .view-scanner .cs-v2-portal {
-  --cs-v2-portal: #ff1a4d;
+  --cs-v2-portal: var(--pink, #c026d3);
+  --cs-v2-portal-hot: var(--pink-soft, #e879f9);
+  --cs-v2-portal-rgb: var(--pink-rgb, 192, 38, 211);
   position: relative;
-  width: clamp(168px, 48vw, 210px);
-  height: clamp(168px, 48vw, 210px);
+  width: clamp(176px, 50vw, 220px);
+  height: clamp(176px, 50vw, 220px);
   display: grid;
   place-items: center;
   isolation: isolate;
 }
 
-.view-scanner .cs-v2-portal-radar {
+.view-scanner .cs-v2-portal-aura {
   position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(255, 26, 77, 0.0) 40deg,
-    rgba(255, 26, 77, 0.35) 78deg,
-    transparent 110deg,
-    transparent 360deg
-  );
-  mask-image: radial-gradient(circle, transparent 42%, #000 46%, #000 68%, transparent 72%);
-  -webkit-mask-image: radial-gradient(circle, transparent 42%, #000 46%, #000 68%, transparent 72%);
-  animation: cs-v2-radar 4.2s linear infinite;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.9;
-}
-
-.view-scanner .cs-v2-portal-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px dashed rgba(255, 26, 77, 0.55);
-  box-shadow: 0 0 18px rgba(255, 26, 77, 0.25);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.view-scanner .cs-v2-portal-ring--a {
-  animation: cs-v2-spin 14s linear infinite;
-}
-
-.view-scanner .cs-v2-portal-ring--b {
   inset: 8%;
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 26, 77, 0.85);
-  border-right-color: rgba(255, 26, 77, 0.35);
-  animation: cs-v2-spin 9s linear infinite reverse;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(var(--cs-v2-portal-rgb), 0.42),
+    rgba(var(--cs-v2-portal-rgb), 0.08) 48%,
+    transparent 72%
+  );
+  animation: cs-v2-breathe 2.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(2px);
 }
 
-.view-scanner .cs-v2-portal-hex {
+.view-scanner .cs-v2-portal-orbit {
+  position: absolute;
+  inset: 2%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  border: 1.5px solid rgba(var(--cs-v2-portal-rgb), 0.18);
+  border-top-color: var(--cs-v2-portal-hot);
+  border-right-color: rgba(var(--cs-v2-portal-rgb), 0.55);
+  box-shadow: 0 0 22px rgba(var(--cs-v2-portal-rgb), 0.28);
+}
+
+.view-scanner .cs-v2-portal-orbit--a {
+  animation: cs-v2-spin 5.5s linear infinite;
+}
+
+.view-scanner .cs-v2-portal-orbit--b {
+  inset: 12%;
+  animation: cs-v2-spin 8.5s linear infinite reverse;
+  opacity: 0.75;
+}
+
+.view-scanner .cs-v2-portal-spark {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cs-v2-portal-hot);
+  box-shadow:
+    0 0 10px rgba(var(--cs-v2-portal-rgb), 1),
+    0 0 18px rgba(var(--cs-v2-portal-rgb), 0.7);
+  z-index: 3;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  margin: -3.5px 0 0 -3.5px;
+}
+
+.view-scanner .cs-v2-portal-spark--1 {
+  animation: cs-v2-orbit-1 4.2s linear infinite;
+}
+
+.view-scanner .cs-v2-portal-spark--2 {
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  animation: cs-v2-orbit-2 6.1s linear infinite;
+  opacity: 0.85;
+}
+
+.view-scanner .cs-v2-portal-spark--3 {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  animation: cs-v2-orbit-3 3.4s linear infinite reverse;
+  opacity: 0.7;
+}
+
+.view-scanner .cs-v2-portal-core {
   position: relative;
   z-index: 2;
-  width: 62%;
-  height: 62%;
+  width: 58%;
+  height: 58%;
+  border-radius: 50%;
+  overflow: hidden;
   display: grid;
   place-items: center;
-  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
   background:
-    linear-gradient(145deg, rgba(255, 26, 77, 0.35), rgba(8, 4, 10, 0.95) 45%, #050308);
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.16), transparent 42%),
+    #08060c;
+  border: 1.5px solid rgba(var(--cs-v2-portal-rgb), 0.65);
   box-shadow:
-    0 0 0 1px rgba(255, 26, 77, 0.75),
-    0 0 28px rgba(255, 26, 77, 0.45),
-    inset 0 0 22px rgba(255, 26, 77, 0.2);
-  overflow: hidden;
+    0 0 0 4px rgba(var(--cs-v2-portal-rgb), 0.12),
+    0 0 28px rgba(var(--cs-v2-portal-rgb), 0.4),
+    inset 0 0 18px rgba(0, 0, 0, 0.45);
+  animation: cs-v2-core-pulse 2.8s ease-in-out infinite;
 }
 
 .view-scanner .cs-v2-portal-photo {
-  width: 118% !important;
-  height: 118% !important;
+  width: 100% !important;
+  height: 100% !important;
   max-width: none !important;
   max-height: none !important;
   object-fit: cover !important;
   object-position: center 28% !important;
-  filter: saturate(1.15) contrast(1.08);
-  opacity: 0.92;
-  border-radius: 0 !important;
+  filter: saturate(1.12) contrast(1.06);
+  border-radius: 50% !important;
 }
 
-.view-scanner .cs-v2-portal-grid {
+.view-scanner .cs-v2-portal-sweep {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  height: 22%;
+  top: -30%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(var(--cs-v2-portal-rgb), 0.08),
+    rgba(255, 255, 255, 0.35),
+    rgba(var(--cs-v2-portal-rgb), 0.18),
+    transparent
+  );
+  mix-blend-mode: screen;
+  animation: cs-v2-sweep 2.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.view-scanner .cs-v2-portal-shine {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(rgba(255, 26, 77, 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 26, 77, 0.18) 1px, transparent 1px);
-  background-size: 14px 14px;
-  mix-blend-mode: screen;
-  opacity: 0.45;
+  border-radius: 50%;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    transparent 38%,
+    transparent 62%,
+    rgba(var(--cs-v2-portal-rgb), 0.18) 100%
+  );
   pointer-events: none;
-}
-
-.view-scanner .cs-v2-portal-crosshair {
-  position: absolute;
-  inset: 18%;
-  pointer-events: none;
-  background:
-    linear-gradient(#ff1a4d, #ff1a4d) center / 100% 1px no-repeat,
-    linear-gradient(#ff1a4d, #ff1a4d) center / 1px 100% no-repeat;
-  opacity: 0.7;
-  filter: drop-shadow(0 0 6px rgba(255, 26, 77, 0.8));
-}
-
-.view-scanner .cs-v2-portal-tick {
-  position: absolute;
   z-index: 3;
-  background: #ff1a4d;
-  box-shadow: 0 0 8px rgba(255, 26, 77, 0.9);
-  pointer-events: none;
 }
-
-.view-scanner .cs-v2-portal-tick--n,
-.view-scanner .cs-v2-portal-tick--s {
-  width: 2px;
-  height: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.view-scanner .cs-v2-portal-tick--e,
-.view-scanner .cs-v2-portal-tick--w {
-  width: 12px;
-  height: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.view-scanner .cs-v2-portal-tick--n { top: 1%; }
-.view-scanner .cs-v2-portal-tick--s { bottom: 1%; }
-.view-scanner .cs-v2-portal-tick--e { right: 1%; }
-.view-scanner .cs-v2-portal-tick--w { left: 1%; }
 
 .view-scanner .cs-v2-portal-label {
   position: absolute;
-  bottom: 4%;
+  bottom: -2%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--cs-v2-portal-rgb), 0.45);
+  background: rgba(8, 4, 12, 0.82);
+  box-shadow:
+    0 0 16px rgba(var(--cs-v2-portal-rgb), 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   font-family: var(--font-v2, Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.18em;
-  color: #ff1a4d;
-  text-shadow:
-    0 0 10px rgba(255, 26, 77, 0.95),
-    0 0 22px rgba(255, 26, 77, 0.55);
+  letter-spacing: 0.16em;
+  color: var(--cs-v2-portal-hot);
+  text-shadow: 0 0 12px rgba(var(--cs-v2-portal-rgb), 0.85);
   white-space: nowrap;
   pointer-events: none;
+}
+
+.view-scanner .cs-v2-portal-label i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cs-v2-portal-hot);
+  box-shadow: 0 0 10px rgba(var(--cs-v2-portal-rgb), 1);
+  animation: cs-v2-dot 1.4s ease-in-out infinite;
 }
 
 @keyframes cs-v2-spin {
@@ -8769,10 +8804,98 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
   }
 }
 
-@keyframes cs-v2-radar {
-  to {
-    transform: rotate(360deg);
+@keyframes cs-v2-breathe {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.55;
   }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes cs-v2-core-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 4px rgba(var(--cs-v2-portal-rgb), 0.1),
+      0 0 22px rgba(var(--cs-v2-portal-rgb), 0.32),
+      inset 0 0 18px rgba(0, 0, 0, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(var(--cs-v2-portal-rgb), 0.18),
+      0 0 34px rgba(var(--cs-v2-portal-rgb), 0.55),
+      inset 0 0 18px rgba(0, 0, 0, 0.45);
+  }
+}
+
+@keyframes cs-v2-sweep {
+  0% {
+    top: -28%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 108%;
+    opacity: 0;
+  }
+}
+
+@keyframes cs-v2-orbit-1 {
+  from {
+    transform: rotate(0deg) translateX(82px) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(82px) rotate(-360deg);
+  }
+}
+
+@keyframes cs-v2-orbit-2 {
+  from {
+    transform: rotate(40deg) translateX(68px) rotate(-40deg);
+  }
+  to {
+    transform: rotate(400deg) translateX(68px) rotate(-400deg);
+  }
+}
+
+@keyframes cs-v2-orbit-3 {
+  from {
+    transform: rotate(120deg) translateX(94px) rotate(-120deg);
+  }
+  to {
+    transform: rotate(480deg) translateX(94px) rotate(-480deg);
+  }
+}
+
+@keyframes cs-v2-dot {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Legacy portal parts no longer used — keep harmless if cached HTML mentions them */
+.view-scanner .cs-v2-portal-radar,
+.view-scanner .cs-v2-portal-ring,
+.view-scanner .cs-v2-portal-hex,
+.view-scanner .cs-v2-portal-grid,
+.view-scanner .cs-v2-portal-crosshair,
+.view-scanner .cs-v2-portal-tick {
+  display: none !important;
 }
 
 
@@ -10081,9 +10204,14 @@ html.is-native .phone:has(#view-scanner:not([hidden])) > .glow-soft {
 }
 
 /* Keep V2 scanner portal spinning on Android like the web */
-html.is-native .view-scanner .cs-v2-portal-ring--a,
-html.is-native .view-scanner .cs-v2-portal-ring--b,
-html.is-native .view-scanner .cs-v2-portal-radar {
+html.is-native .view-scanner .cs-v2-portal-orbit--a,
+html.is-native .view-scanner .cs-v2-portal-orbit--b,
+html.is-native .view-scanner .cs-v2-portal-aura,
+html.is-native .view-scanner .cs-v2-portal-sweep,
+html.is-native .view-scanner .cs-v2-portal-spark--1,
+html.is-native .view-scanner .cs-v2-portal-spark--2,
+html.is-native .view-scanner .cs-v2-portal-spark--3,
+html.is-native .view-scanner .cs-v2-portal-core {
   animation-play-state: running;
 }
 
@@ -10096,9 +10224,15 @@ html.is-native.is-paused .cs-robot-glow,
 html.is-native.is-paused .cs-robot-orb,
 html.is-native.is-paused .econ-cal-btn-ring,
 html.is-native.is-paused .econ-cal-btn-ring--outer,
-html.is-native.is-paused .cs-v2-portal-ring--a,
-html.is-native.is-paused .cs-v2-portal-ring--b,
-html.is-native.is-paused .cs-v2-portal-radar,
+html.is-native.is-paused .cs-v2-portal-orbit--a,
+html.is-native.is-paused .cs-v2-portal-orbit--b,
+html.is-native.is-paused .cs-v2-portal-aura,
+html.is-native.is-paused .cs-v2-portal-sweep,
+html.is-native.is-paused .cs-v2-portal-spark--1,
+html.is-native.is-paused .cs-v2-portal-spark--2,
+html.is-native.is-paused .cs-v2-portal-spark--3,
+html.is-native.is-paused .cs-v2-portal-core,
+html.is-native.is-paused .cs-v2-portal-label i,
 html.is-native.is-paused .cs-scan-beam.is-on,
 html.is-native.is-paused .cs-scan-grid.is-on {
   animation-play-state: paused !important;

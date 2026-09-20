@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 26 — Broker mark only beside Brokers title (not TopBar / session card).
+ * Gen 27 — Circular SCAN LOCK sweep/orbit portal animation.
  */
-export const UI_SHELL_GENERATION = 26;
+export const UI_SHELL_GENERATION = 27;
 
-export const UI_SHELL_LABEL = "broker-mark-title-only";
+export const UI_SHELL_LABEL = "scan-lock-orbit-sweep";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

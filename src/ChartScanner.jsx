@@ -761,10 +761,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <div className="cs-empty">
                 {useTrapResult ? (
                   <div className="cs-v2-portal" aria-hidden="true">
-                    <span className="cs-v2-portal-radar" />
-                    <span className="cs-v2-portal-ring cs-v2-portal-ring--a" />
-                    <span className="cs-v2-portal-ring cs-v2-portal-ring--b" />
-                    <span className="cs-v2-portal-hex">
+                    <span className="cs-v2-portal-aura" />
+                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--a" />
+                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--b" />
+                    <span className="cs-v2-portal-spark cs-v2-portal-spark--1" />
+                    <span className="cs-v2-portal-spark cs-v2-portal-spark--2" />
+                    <span className="cs-v2-portal-spark cs-v2-portal-spark--3" />
+                    <span className="cs-v2-portal-core">
                       <BotAvatar
                         className="cs-v2-portal-photo"
                         bot={activeBot}
@@ -772,14 +775,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
                         width="160"
                         height="160"
                       />
-                      <span className="cs-v2-portal-grid" />
-                      <span className="cs-v2-portal-crosshair" />
+                      <span className="cs-v2-portal-sweep" />
+                      <span className="cs-v2-portal-shine" />
                     </span>
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--n" />
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--e" />
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--s" />
-                    <span className="cs-v2-portal-tick cs-v2-portal-tick--w" />
-                    <span className="cs-v2-portal-label">SCAN LOCK</span>
+                    <span className="cs-v2-portal-label">
+                      <i />
+                      SCAN LOCK
+                    </span>
                   </div>
                 ) : (
                   <>
