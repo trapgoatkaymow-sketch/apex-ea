@@ -4,13 +4,14 @@
  *
  * Gen 40 — PRODUCT LOCK. Current Interface 1 + Interface 2 + admin/mentor
  * portals are frozen. Clients on any older shell must reload to live.
+ * Gen 41 — Brevo license-key emails when mentors generate keys.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 40;
+export const UI_SHELL_GENERATION = 41;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked";
+export const UI_SHELL_LABEL = "product-locked-brevo";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
