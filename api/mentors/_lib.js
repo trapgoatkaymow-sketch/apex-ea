@@ -323,6 +323,10 @@ function decodeMentorsJson(raw, sha = null) {
               ? Number(m.appColorUpdatedAt) || Date.now()
               : Number(m.appColorUpdatedAt) || null,
             withdrawalRequests: pruneWithdrawalRequests(m.withdrawalRequests),
+            withdrawalRequestedAt: Number(m.withdrawalRequestedAt) || null,
+            passwordResetTokenHash: String(m.passwordResetTokenHash || ""),
+            passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
+            passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
           };
         })
         .filter((m) => m.email && m.email.includes("@")),
@@ -433,6 +437,9 @@ function writeLocalStore(mentors) {
                 appColorUpdatedAt: Number(m.appColorUpdatedAt) || null,
                 withdrawalRequests: pruneWithdrawalRequests(m.withdrawalRequests),
                 withdrawalRequestedAt: Number(m.withdrawalRequestedAt) || null,
+                passwordResetTokenHash: String(m.passwordResetTokenHash || ""),
+                passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
+                passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
               };
             })
             .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt),
@@ -643,6 +650,9 @@ async function writeStore(mentors, sha, message) {
             : Number(m.appColorUpdatedAt) || null,
           withdrawalRequests: pruneWithdrawalRequests(m.withdrawalRequests),
           withdrawalRequestedAt: Number(m.withdrawalRequestedAt) || null,
+          passwordResetTokenHash: String(m.passwordResetTokenHash || ""),
+          passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
+          passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
         };
       })
       .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt)
@@ -1376,6 +1386,199 @@ export async function setMentorPassword({
     updated = list[idx];
     return list;
   }, `chore: set password for mentor ${key}`);
+
+  return publicMentor(updated);
+}
+
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
+const PASSWORD_RESET_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes between emails
+
+function hashResetToken(token) {
+  return crypto.createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+function passwordResetGenericResult() {
+  return {
+    ok: true,
+    sent: false,
+    message:
+      "If that email belongs to an approved mentor, a reset link was sent.",
+  };
+}
+
+/**
+ * Email a password-reset link — approved mentors (and super admin) only.
+ * Always returns a generic success message to avoid account enumeration.
+ */
+export async function requestMentorPasswordReset(email) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("Enter a valid email");
+    err.status = 400;
+    throw err;
+  }
+
+  const store = await readStore().catch(() => readLocalStore());
+  const mentor = findMentor(ensureSuperAdminRecord(store.mentors || []), key);
+  const role = String(mentor?.role || "").toLowerCase();
+  const status = String(mentor?.status || "").toLowerCase();
+  const eligible =
+    mentor &&
+    (role === "superadmin" || status === "approved") &&
+    mentor.passwordHash &&
+    mentor.salt;
+
+  if (!eligible) {
+    return passwordResetGenericResult();
+  }
+
+  const lastAt = Number(mentor.passwordResetRequestedAt) || 0;
+  if (lastAt && Date.now() - lastAt < PASSWORD_RESET_COOLDOWN_MS) {
+    return {
+      ...passwordResetGenericResult(),
+      cooldown: true,
+    };
+  }
+
+  const { brevoConfigured, sendBrevoEmail } = await import("../_brevo.js");
+  if (!brevoConfigured()) {
+    const err = new Error("Email service is not configured");
+    err.status = 503;
+    throw err;
+  }
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = hashResetToken(token);
+  const expiresAt = Date.now() + PASSWORD_RESET_TTL_MS;
+  const requestedAt = Date.now();
+
+  await mutateStore((mentors) => {
+    const list = ensureSuperAdminRecord(mentors);
+    const idx = findMentorIndex(list, key);
+    if (idx < 0) return list;
+    list[idx] = {
+      ...list[idx],
+      email: key,
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpiresAt: expiresAt,
+      passwordResetRequestedAt: requestedAt,
+    };
+    return list;
+  }, `chore: mentor password reset request ${key}`);
+
+  const appUrl = String(process.env.PUBLIC_APP_URL || "https://www.apex-ea.com")
+    .trim()
+    .replace(/\/+$/, "");
+  const resetUrl = `${appUrl}/admin?reset=${encodeURIComponent(token)}`;
+  const username = String(mentor.username || "Mentor").trim() || "Mentor";
+  const safeName = username
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+  const subject = "Reset your ApexEA mentor password";
+  const textContent = [
+    `Hi ${username},`,
+    "",
+    "We received a request to reset your ApexEA mentor password.",
+    "",
+    "Open this link to choose a new password (expires in 1 hour):",
+    resetUrl,
+    "",
+    "If you did not ask for this, you can ignore this email.",
+    "",
+    "— ApexEA",
+  ].join("\n");
+
+  const htmlContent = `<!DOCTYPE html>
+<html><body style="margin:0;padding:24px;background:#0b0b0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f5f5f7;">
+  <div style="max-width:520px;margin:0 auto;background:#16161d;border:1px solid #2a2a35;border-radius:16px;padding:24px;">
+    <p style="margin:0 0 6px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#ff7ab5;">ApexEA mentor</p>
+    <h1 style="margin:0 0 16px;font-size:22px;color:#fff;">Reset your password</h1>
+    <p style="margin:0 0 14px;color:#c8c8d0;font-size:15px;line-height:1.5;">Hi ${safeName},</p>
+    <p style="margin:0 0 18px;color:#c8c8d0;font-size:15px;line-height:1.5;">We received a request to reset your mentor portal password. This link expires in 1 hour.</p>
+    <p style="margin:0 0 22px;text-align:center;">
+      <a href="${resetUrl}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#ff2d7a;color:#fff;font-weight:700;text-decoration:none;">Choose new password</a>
+    </p>
+    <p style="margin:0;font-size:12px;line-height:1.45;color:#7a7a88;">If you did not ask for this, ignore this email.</p>
+  </div>
+</body></html>`;
+
+  const sent = await sendBrevoEmail({
+    toEmail: key,
+    toName: username,
+    subject,
+    htmlContent,
+    textContent,
+    tags: ["mentor-password-reset"],
+  });
+
+  if (!sent.ok) {
+    const err = new Error(sent.error || "Could not send reset email");
+    err.status = sent.skipped ? 503 : 502;
+    throw err;
+  }
+
+  return {
+    ok: true,
+    sent: true,
+    message:
+      "If that email belongs to an approved mentor, a reset link was sent.",
+  };
+}
+
+/** Complete password reset with the emailed token (approved mentors). */
+export async function completeMentorPasswordReset({ token, password } = {}) {
+  const rawToken = String(token || "").trim();
+  const pass = String(password || "");
+  if (!rawToken || rawToken.length < 20) {
+    const err = new Error("Reset link is invalid or expired");
+    err.status = 400;
+    throw err;
+  }
+  if (pass.length < 6) {
+    const err = new Error("Password must be at least 6 characters");
+    err.status = 400;
+    throw err;
+  }
+
+  const tokenHash = hashResetToken(rawToken);
+  const now = Date.now();
+  let updated = null;
+
+  await mutateStore((mentors) => {
+    const list = ensureSuperAdminRecord(mentors);
+    const idx = list.findIndex(
+      (m) =>
+        String(m.passwordResetTokenHash || "") === tokenHash &&
+        Number(m.passwordResetExpiresAt) > now
+    );
+    if (idx < 0) {
+      const err = new Error("Reset link is invalid or expired");
+      err.status = 400;
+      throw err;
+    }
+    const role = String(list[idx].role || "").toLowerCase();
+    const status = String(list[idx].status || "").toLowerCase();
+    if (role !== "superadmin" && status !== "approved") {
+      const err = new Error("Only approved mentors can reset passwords");
+      err.status = 403;
+      throw err;
+    }
+    const salt = createSalt();
+    list[idx] = {
+      ...list[idx],
+      salt,
+      passwordHash: hashPassword(pass, salt),
+      passwordResetTokenHash: "",
+      passwordResetExpiresAt: null,
+      passwordResetRequestedAt:
+        Number(list[idx].passwordResetRequestedAt) || null,
+    };
+    updated = list[idx];
+    return list;
+  }, "chore: complete mentor password reset");
 
   return publicMentor(updated);
 }

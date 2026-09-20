@@ -1,9 +1,11 @@
 import { endOptions } from "../_cors.js";
 import {
+  completeMentorPasswordReset,
   listMentors,
   loginMentor,
   readJsonBody,
   registerMentor,
+  requestMentorPasswordReset,
   sendJson,
   setMentorLicenseKeys,
   setMentorPassword,
@@ -49,6 +51,30 @@ export default async function handler(req, res) {
           password: body.password,
         });
         sendJson(res, 200, { mentor });
+        return;
+      }
+
+      if (
+        action === "forgot-password" ||
+        action === "forgotpassword" ||
+        action === "request-password-reset" ||
+        action === "request-reset"
+      ) {
+        const result = await requestMentorPasswordReset(body.email);
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (
+        action === "complete-password-reset" ||
+        action === "reset-password-token" ||
+        action === "password-reset-complete"
+      ) {
+        const mentor = await completeMentorPasswordReset({
+          token: body.token || body.resetToken || body.code,
+          password: body.password || body.newPassword,
+        });
+        sendJson(res, 200, { ok: true, mentor });
         return;
       }
 

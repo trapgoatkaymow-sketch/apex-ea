@@ -732,6 +732,31 @@ export async function setMentorAccountPassword({
   return publicLocal(mentor);
 }
 
+/** Request a password-reset email (approved mentors only). */
+export async function requestMentorPasswordResetRemote(email) {
+  const key = normalizeEmail(email);
+  if (!key.includes("@")) throw new Error("Enter a valid email");
+  return apiFetch("", {
+    method: "POST",
+    body: { action: "forgot-password", email: key },
+  });
+}
+
+/** Complete password reset using the emailed token. */
+export async function completeMentorPasswordResetRemote({ token, password } = {}) {
+  const pass = String(password || "");
+  if (pass.length < 6) throw new Error("Password must be at least 6 characters");
+  const data = await apiFetch("", {
+    method: "POST",
+    body: {
+      action: "complete-password-reset",
+      token: String(token || "").trim(),
+      password: pass,
+    },
+  });
+  return data?.mentor || null;
+}
+
 export const COMMISSION_USD = 3.08;
 export const COMMISSION_ZAR = 50;
 /** Mentor commission as % of the lifetime subscription price ($35.60). */
