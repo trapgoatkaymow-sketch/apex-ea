@@ -16,6 +16,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/mentors.json");
 const TMP_FILE = path.join("/tmp", "apexea-mentors.json");
 
+export const WITHDRAW_MAX_PER_WEEK = 2;
+export const WITHDRAW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 export const SUPER_ADMIN_EMAIL = String(
   process.env.SUPER_ADMIN_EMAIL || "trapgoatkaymow22@icloud.com"
 )
@@ -26,6 +29,30 @@ export const SUPER_ADMIN_PASSWORD =
 export const SUPER_ADMIN_USERNAME = "APEX EA";
 /** Default license-key allotment every mentor starts with. */
 export const DEFAULT_MENTOR_LICENSE_KEYS = 1500;
+
+function pruneWithdrawalRequests(list, now = Date.now()) {
+  const floor = now - WITHDRAW_WINDOW_MS;
+  return (Array.isArray(list) ? list : [])
+    .map((t) => Number(t))
+    .filter((t) => Number.isFinite(t) && t >= floor)
+    .sort((a, b) => a - b);
+}
+
+function withdrawalQuotaFromList(email, list, now = Date.now()) {
+  const recent = pruneWithdrawalRequests(list, now);
+  const used = recent.length;
+  const remaining = Math.max(0, WITHDRAW_MAX_PER_WEEK - used);
+  const oldest = recent[0] || null;
+  return {
+    email: normalizeEmail(email),
+    used,
+    remaining,
+    max: WITHDRAW_MAX_PER_WEEK,
+    windowDays: 7,
+    resetsAt: oldest ? oldest + WITHDRAW_WINDOW_MS : null,
+    allowed: remaining > 0,
+  };
+}
 
 /**
  * Known durable portal passwords. Used only to repair wiped hashes so mentors
@@ -295,6 +322,7 @@ function decodeMentorsJson(raw, sha = null) {
             appColorUpdatedAt: appColor
               ? Number(m.appColorUpdatedAt) || Date.now()
               : Number(m.appColorUpdatedAt) || null,
+            withdrawalRequests: pruneWithdrawalRequests(m.withdrawalRequests),
           };
         })
         .filter((m) => m.email && m.email.includes("@")),
@@ -1133,6 +1161,69 @@ export async function updateMentorBanking(email, bankingInput = {}) {
   }
 
   return publicMentor(updated);
+}
+
+/** Rolling weekly withdrawal-request quota for a mentor (max 2 / 7 days). */
+export async function getMentorWithdrawalQuota(email) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("Mentor email is required");
+    err.status = 400;
+    throw err;
+  }
+  const store = await readStore().catch(() => readLocalStore());
+  const mentor = findMentor(ensureSuperAdminRecord(store.mentors || []), key);
+  if (!mentor) {
+    const err = new Error("Mentor account not found");
+    err.status = 404;
+    throw err;
+  }
+  return withdrawalQuotaFromList(key, mentor.withdrawalRequests);
+}
+
+/**
+ * Atomically append a withdrawal-request timestamp if under the weekly cap.
+ * Returns the updated quota. Throws 429 when the limit is already hit.
+ */
+export async function recordMentorWithdrawalRequest(email) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("Mentor email is required");
+    err.status = 400;
+    throw err;
+  }
+
+  let quota = null;
+  await mutateStore((mentors) => {
+    const list = ensureSuperAdminRecord(mentors);
+    const idx = findMentorIndex(list, key);
+    if (idx < 0) {
+      const err = new Error("Mentor account not found");
+      err.status = 404;
+      throw err;
+    }
+    const now = Date.now();
+    const recent = pruneWithdrawalRequests(list[idx].withdrawalRequests, now);
+    if (recent.length >= WITHDRAW_MAX_PER_WEEK) {
+      const err = new Error(
+        `Withdrawal limit reached — max ${WITHDRAW_MAX_PER_WEEK} requests per week`
+      );
+      err.status = 429;
+      err.data = { quota: withdrawalQuotaFromList(key, recent, now) };
+      throw err;
+    }
+    const nextStamps = [...recent, now];
+    list[idx] = {
+      ...list[idx],
+      email: key,
+      withdrawalRequests: nextStamps,
+      withdrawalRequestedAt: now,
+    };
+    quota = withdrawalQuotaFromList(key, nextStamps, now);
+    return list;
+  }, `chore: mentor withdrawal request ${key}`);
+
+  return quota;
 }
 
 /**
