@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 23 — Compact full chart previews on both scanners.
+ * Gen 24 — MT5 trade comments are ea~APEXEA only (no |TPx).
  */
-export const UI_SHELL_GENERATION = 23;
+export const UI_SHELL_GENERATION = 24;
 
-export const UI_SHELL_LABEL = "scanner-chart-compact-full";
+export const UI_SHELL_LABEL = "mt-comment-no-tp";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
