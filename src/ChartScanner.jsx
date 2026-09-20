@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
+import V2TrapScannerView from "./V2TrapScannerView.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
@@ -675,36 +676,81 @@ export default function ChartScanner({ variant = "default", active = true }) {
     detectionStatus !== CHART_DETECTION_STATUS.SYMBOL_UNCLEAR &&
     scansLeft > 0;
 
+  if (variant === "v2") {
+    return (
+      <section
+        className="view is-active view-scanner cs-v2 cs-tg"
+        hidden={!active ? true : undefined}
+        aria-hidden={!active ? true : undefined}
+      >
+        <V2TrapScannerView
+          activeBot={activeBot}
+          connected={connected}
+          mt5Login={mt5Session?.login}
+          scansLeft={scansLeft}
+          preview={preview}
+          symbol={symbol}
+          setSymbol={setSymbol}
+          setSymbolSource={setSymbolSource}
+          symbolSource={symbolSource}
+          signal={signal}
+          setupReady={setupReady}
+          engineActive={engineActive}
+          detectingSymbol={detectingSymbol}
+          busy={busy}
+          canScan={canScan}
+          engineMode={engineMode}
+          openCamera={openCamera}
+          openUpload={openUpload}
+          runScan={runScan}
+          executeTrade={executeTrade}
+          toggleInterface={toggleInterface}
+          setDetectionStatus={setDetectionStatus}
+          setDetectionMessage={setDetectionMessage}
+          setDetectionHint={setDetectionHint}
+          CHART_DETECTION_STATUS={CHART_DETECTION_STATUS}
+          trades={trades}
+          setTrades={setTrades}
+          lotSize={lotSize}
+          setLotSize={setLotSize}
+          clampTrades={clampTrades}
+          clampLot={clampLot}
+          normalizeLot={normalizeLot}
+          saveSymbolMeta={saveSymbolMeta}
+          tradeManagement={tradeManagement}
+          updateTradeManagement={updateTradeManagement}
+          fills={fills}
+        />
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={onFile}
+        />
+        <input
+          ref={uploadRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={onFile}
+        />
+      </section>
+    );
+  }
+
   return (
     <section
-      className={`view is-active view-scanner${variant === "v2" ? " cs-v2" : ""}`}
+      className="view is-active view-scanner"
       hidden={!active ? true : undefined}
       aria-hidden={!active ? true : undefined}
     >
-      <header className={`cs-head${variant === "v2" ? " cs-v2-mission" : ""}`}>
+      <header className="cs-head">
         <div className="cs-head-main">
-          {variant === "v2" ? (
-            <p className="cs-kicker">
-              <i className="cs-v2-mission-pip" aria-hidden="true" />
-              Premium · {activeBot?.name || "ApexEA"}
-            </p>
-          ) : (
-            <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
-          )}
-          <h2 className="cs-title">
-            {variant === "v2" ? "Private Scanner" : "Chart Scanner"}
-          </h2>
-          <p className="cs-tagline">
-            {variant === "v2" ? (
-              <>
-                <span>Capture</span>
-                <span>Confirm</span>
-                <span>Execute</span>
-              </>
-            ) : (
-              "Scan · Analyze · Trade Smarter"
-            )}
-          </p>
+          <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
+          <h2 className="cs-title">Chart Scanner</h2>
+          <p className="cs-tagline">Scan · Analyze · Trade Smarter</p>
         </div>
         <div className="cs-head-meta">
           <button
