@@ -164,8 +164,11 @@ export default async function handler(req, res) {
         return;
       }
 
-      const mentor = await setMentorStatus(body.email, body.status);
-      sendJson(res, 200, { mentor });
+      const result = await setMentorStatus(body.email, body.status);
+      sendJson(res, 200, {
+        mentor: result?.mentor || result,
+        approvalEmailSent: Boolean(result?.approvalEmailSent),
+      });
       return;
     }
 

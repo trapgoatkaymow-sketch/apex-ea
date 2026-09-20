@@ -315,6 +315,73 @@ export async function sendBroadcastEmail(recipient = {}, { subject, message } = 
   });
 }
 
+/**
+ * Notify a mentor that the super admin approved their account.
+ * Does not throw — approval must succeed even if mail fails.
+ */
+export async function sendMentorApprovedEmail({
+  toEmail,
+  toName = "",
+} = {}) {
+  const email = String(toEmail || "")
+    .trim()
+    .toLowerCase();
+  const username = String(toName || "").trim() || "Mentor";
+  if (!email.includes("@")) {
+    return { ok: false, error: "Missing recipient email" };
+  }
+
+  const appUrl = env("PUBLIC_APP_URL", "https://www.apex-ea.com").replace(
+    /\/+$/,
+    ""
+  );
+  const portalUrl = `${appUrl}/admin`;
+  const subject = "Your ApexEA mentor account is approved";
+  const textContent = [
+    `Hi ${username},`,
+    "",
+    "Good news — your ApexEA mentor account has been approved by the super admin.",
+    "",
+    "You can sign in to the mentor portal here:",
+    portalUrl,
+    "",
+    "— ApexEA",
+  ].join("\n");
+
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#0b0b0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f5f5f7;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b0b0f;padding:28px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:520px;background:#16161d;border:1px solid #2a2a35;border-radius:16px;padding:28px 24px;">
+        <tr><td>
+          <p style="margin:0 0 6px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#ff7ab5;">ApexEA mentor</p>
+          <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;color:#fff;">You're approved</h1>
+          <p style="margin:0 0 14px;font-size:15px;line-height:1.5;color:#c8c8d0;">Hi ${escapeHtml(username)},</p>
+          <p style="margin:0 0 18px;font-size:15px;line-height:1.55;color:#c8c8d0;">
+            Your mentor account has been approved by the super admin. You can now sign in and manage your clients.
+          </p>
+          <p style="margin:0 0 22px;text-align:center;">
+            <a href="${escapeHtml(portalUrl)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#ff2d7a;color:#fff;font-weight:700;text-decoration:none;">Open mentor portal</a>
+          </p>
+          <p style="margin:0;font-size:12px;line-height:1.45;color:#7a7a88;">If you did not register as a mentor, you can ignore this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return sendBrevoEmail({
+    toEmail: email,
+    toName: username,
+    subject,
+    htmlContent,
+    textContent,
+    tags: ["mentor-approved"],
+  });
+}
+
 /** Send custom emails to many recipients with light concurrency. */
 export async function sendBroadcastEmails(
   recipients = [],

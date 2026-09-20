@@ -1256,7 +1256,15 @@ export default function AdminPortal() {
         }
         return next;
       });
-      if (!silent) showToast(`Mentor ${status}`);
+      if (!silent) {
+        if (status === "approved" && updated?.approvalEmailSent) {
+          showToast("Mentor approved — email sent");
+        } else if (status === "approved") {
+          showToast("Mentor approved");
+        } else {
+          showToast(`Mentor ${status}`);
+        }
+      }
       return true;
     } catch (error) {
       const missing =
@@ -1303,7 +1311,7 @@ export default function AdminPortal() {
       }
       showToast(
         ok === list.length
-          ? `Approved ${ok} mentor${ok === 1 ? "" : "s"}`
+          ? `Approved ${ok} mentor${ok === 1 ? "" : "s"} — emails sent`
           : `Approved ${ok} of ${list.length} mentors`
       );
     } finally {

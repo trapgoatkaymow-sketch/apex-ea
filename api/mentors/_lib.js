@@ -976,6 +976,7 @@ export async function setMentorStatus(email, status) {
   }
 
   let updated = null;
+  let previousStatus = "";
   await mutateStore((mentors) => {
     const list = ensureSuperAdminRecord(mentors);
     const idx = findMentorIndex(list, key);
@@ -986,6 +987,7 @@ export async function setMentorStatus(email, status) {
       err.status = 404;
       throw err;
     }
+    previousStatus = String(list[idx].status || "").toLowerCase();
     list[idx] = {
       ...list[idx],
       status: nextStatus,
@@ -996,7 +998,37 @@ export async function setMentorStatus(email, status) {
     return list;
   }, `chore: set mentor ${key} to ${nextStatus}`);
 
-  return publicMentor(updated);
+  const newlyApproved =
+    nextStatus === "approved" && previousStatus !== "approved";
+  let approvalEmailSent = false;
+  if (newlyApproved) {
+    try {
+      const { sendMentorApprovedEmail } = await import("../_brevo.js");
+      const sent = await sendMentorApprovedEmail({
+        toEmail: key,
+        toName: updated?.username || "",
+      });
+      approvalEmailSent = Boolean(sent?.ok);
+      if (!sent?.ok) {
+        console.warn(
+          "mentor approval email failed",
+          key,
+          sent?.error || sent?.skipped || "unknown"
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "mentor approval email error",
+        key,
+        error?.message || error
+      );
+    }
+  }
+
+  return {
+    mentor: publicMentor(updated),
+    approvalEmailSent,
+  };
 }
 
 export async function updateMentorProfile(email, profileInput = {}) {

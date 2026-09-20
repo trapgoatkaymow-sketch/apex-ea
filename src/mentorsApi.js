@@ -465,7 +465,11 @@ export async function updateMentorStatus(email, status) {
       method: "PATCH",
       body: { email, status },
     });
-    return data?.mentor || null;
+    const mentor = data?.mentor || null;
+    if (mentor && typeof data?.approvalEmailSent === "boolean") {
+      mentor.approvalEmailSent = data.approvalEmailSent;
+    }
+    return mentor;
   } catch (error) {
     if (error.status && error.status < 500) throw error;
     const key = normalizeEmail(email);
