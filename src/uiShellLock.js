@@ -5,7 +5,7 @@
  *
  * Gen 36 — Super-admin daily scan reset for clients.
  */
-export const UI_SHELL_GENERATION = 36;
+export const UI_SHELL_GENERATION = 37;
 
 export const UI_SHELL_LABEL = "admin-reset-scans";
 

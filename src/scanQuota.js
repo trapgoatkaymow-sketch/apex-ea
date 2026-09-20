@@ -115,16 +115,36 @@ function writeAppliedGrant(payload) {
   }
 }
 
+function localDayFromTs(ts) {
+  const d = new Date(Number(ts) || 0);
+  if (!Number.isFinite(d.getTime()) || d.getTime() <= 0) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** True when a scanReset grant is meant for the client's local "today". */
+function grantIsForToday(grant) {
+  if (!grant || typeof grant !== "object") return false;
+  const resetAt = Number(grant.resetAt) || 0;
+  if (!resetAt) return false;
+  const today = todayKey();
+  const stamped = String(grant.day || "").trim();
+  // Accept either the stamped day or the local calendar day of resetAt so
+  // UTC server stamps still apply for SA (UTC+2) overnight windows.
+  return stamped === today || localDayFromTs(resetAt) === today;
+}
+
 /**
  * Apply a super-admin daily scan reset grant from the license record.
  * Refills both Interface 1 and Interface 2 quotas for today.
  * Returns { applied, zeta, v2 } or null when nothing changed.
  */
 export function applyRemoteScanGrant(grant) {
-  if (!grant || typeof grant !== "object") return null;
-  const day = String(grant.day || "").trim();
+  if (!grantIsForToday(grant)) return null;
   const resetAt = Number(grant.resetAt) || 0;
-  if (!day || !resetAt || day !== todayKey()) return null;
+  const day = todayKey();
 
   const token = `${day}:${resetAt}`;
   const prev = readAppliedGrant();
@@ -137,7 +157,7 @@ export function applyRemoteScanGrant(grant) {
   }
 
   const fresh = {
-    day: todayKey(),
+    day,
     zeta: SCAN_QUOTA_ZETA,
     v2: SCAN_QUOTA_V2,
   };
@@ -148,13 +168,11 @@ export function applyRemoteScanGrant(grant) {
 
 /** Pick the newest same-day scanReset from a list of licenses. */
 export function pickLatestScanGrant(licenses = []) {
-  const day = todayKey();
   let best = null;
   for (const row of Array.isArray(licenses) ? licenses : []) {
     const grant = row?.scanReset;
-    if (!grant || grant.day !== day) continue;
+    if (!grantIsForToday(grant)) continue;
     const resetAt = Number(grant.resetAt) || 0;
-    if (!resetAt) continue;
     if (!best || resetAt > Number(best.resetAt || 0)) best = grant;
   }
   return best;

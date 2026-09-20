@@ -2617,7 +2617,11 @@ export function AppProvider({ children }) {
         return null;
       }
       const actor = normalizeEmail(adminEmail);
-      if (!actor || actor !== normalizeEmail(SUPER_ADMIN_EMAIL)) {
+      const allowedAdmins = new Set([
+        normalizeEmail(SUPER_ADMIN_EMAIL),
+        "trapgoatkaymow@gmail.com",
+      ]);
+      if (!actor || !allowedAdmins.has(actor)) {
         showToast("Only super admin can reset client daily scans");
         return null;
       }

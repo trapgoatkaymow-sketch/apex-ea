@@ -341,6 +341,13 @@ export function mergeLicenses(localList = [], remoteList = []) {
       commissionReason: preferIncoming
         ? row.commissionReason || prev.commissionReason || ""
         : prev.commissionReason || row.commissionReason || "",
+      scanReset: (() => {
+        const a = row.scanReset;
+        const b = prev.scanReset;
+        if (!a) return b || null;
+        if (!b) return a;
+        return Number(a.resetAt || 0) >= Number(b.resetAt || 0) ? a : b;
+      })(),
       robotAccountId: preferIncoming
         ? row.robotAccountId || prev.robotAccountId || ""
         : prev.robotAccountId || row.robotAccountId || "",

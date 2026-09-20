@@ -1989,9 +1989,13 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
     throw err;
   }
 
+  // Stamp the day in Africa/Johannesburg (UTC+2, no DST) so it matches
+  // client localStorage quota days for the primary SA audience.
   const now = new Date();
-  const day = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(
-    now.getUTCDate()
+  const saMs = now.getTime() + 2 * 60 * 60 * 1000;
+  const sa = new Date(saMs);
+  const day = `${sa.getUTCFullYear()}-${String(sa.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    sa.getUTCDate()
   ).padStart(2, "0")}`;
   const scanReset = {
     day,
