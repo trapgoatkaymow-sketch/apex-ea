@@ -516,7 +516,7 @@ export default function AdminPortal() {
     refreshSignups?.();
     const timer = setInterval(() => {
       refreshSignups?.();
-    }, 8000);
+    }, 15000);
     return () => clearInterval(timer);
   }, [adminOpen, adminPage, refreshSignups]);
 
@@ -555,15 +555,16 @@ export default function AdminPortal() {
       }
     }
     loadMentors();
-    // Poll faster on Mentors page so new signups show in Pending quickly.
+    // Poll mentors only on pages that need live approval / commission updates.
+    // License Keys + Dashboard reuse the shared license store — avoid hammering.
     const ms =
       adminPage === "mentors" ||
       adminPage === "commissions" ||
       adminPage === "commission" ||
       adminPage === "mentor-keys" ||
       adminPage === "top-mentors"
-        ? 5000
-        : 12000;
+        ? 8000
+        : 25000;
     const timer = setInterval(loadMentors, ms);
     return () => {
       cancelled = true;

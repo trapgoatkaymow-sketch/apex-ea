@@ -979,6 +979,7 @@ export async function updateMentorProfile(email, profileInput = {}) {
       list[idx] = {
         ...list[idx],
         username,
+        usernameUpdatedAt: Date.now(),
         ...(contact != null ? { contact } : {}),
       };
       updated = list[idx];
@@ -997,6 +998,7 @@ export async function updateMentorProfile(email, profileInput = {}) {
     list[idx] = {
       ...list[idx],
       username,
+      usernameUpdatedAt: Date.now(),
       ...(contact != null ? { contact } : {}),
     };
     writeLocalStore(list);

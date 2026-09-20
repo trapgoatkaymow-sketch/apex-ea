@@ -33,6 +33,9 @@ let memoryLicenses = null;
 let memoryDeletedKeys = null;
 /** botId → { mime, buffer } when GitHub photo upload/read is unavailable. */
 const memoryPhotos = new Map();
+/** Warm cache timestamp — skips Blob/GitHub on rapid portal polls. */
+let memoryLicensesAt = 0;
+const MEMORY_LICENSES_TTL_MS = 20_000;
 
 function normalizeDeletedKeys(raw) {
   const out = {};
@@ -864,6 +867,23 @@ function writeLocalStore(licenses, deletedKeys = memoryDeletedKeys) {
 }
 
 async function readStore(options = {}) {
+  const preferFresh = Boolean(options.preferFresh);
+  if (
+    !preferFresh &&
+    Array.isArray(memoryLicenses) &&
+    memoryLicenses.length > 0 &&
+    memoryLicensesAt > 0 &&
+    Date.now() - memoryLicensesAt < MEMORY_LICENSES_TTL_MS
+  ) {
+    return {
+      sha: null,
+      licenses: memoryLicenses.map((row) => ({ ...row })),
+      deletedKeys: normalizeDeletedKeys(memoryDeletedKeys),
+      remote: true,
+      source: "memory-cache",
+    };
+  }
+
   let remote = null;
   let remoteSource = "empty";
 
@@ -875,7 +895,7 @@ async function readStore(options = {}) {
     githubBranch: BRANCH,
     snapshotEnv: "LICENSES_SNAPSHOT_B64",
     localPaths: [TMP_FILE, BUNDLED_FILE],
-    preferFresh: Boolean(options.preferFresh),
+    preferFresh,
   });
   if (durable.raw != null) {
     try {
@@ -911,6 +931,7 @@ async function readStore(options = {}) {
   ) {
     memoryLicenses = [];
     memoryDeletedKeys = normalizeDeletedKeys(remote.deletedKeys);
+    memoryLicensesAt = Date.now();
     return {
       sha: remote.sha ?? null,
       licenses: [],
@@ -939,6 +960,7 @@ async function readStore(options = {}) {
   );
   memoryLicenses = merged.map((row) => ({ ...row }));
   memoryDeletedKeys = deletedKeys;
+  memoryLicensesAt = Date.now();
   return {
     sha: remote?.sha ?? null,
     licenses: memoryLicenses.map((row) => ({ ...row })),
@@ -994,6 +1016,7 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
   if (durable.durable) {
     memoryLicenses = normalized.map((row) => ({ ...row }));
     memoryDeletedKeys = nextDeleted;
+    memoryLicensesAt = Date.now();
     return { durable: true, source: durable.source, sha: durable.sha || sha };
   }
 

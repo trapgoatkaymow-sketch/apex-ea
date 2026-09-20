@@ -272,7 +272,8 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
       .toLowerCase();
   const stamp = (row) =>
     Number(
-      row?.statusUpdatedAt ||
+      row?.usernameUpdatedAt ||
+        row?.statusUpdatedAt ||
         row?.appColorUpdatedAt ||
         row?.licenseKeysUpdatedAt ||
         row?.banking?.updatedAt ||
@@ -326,7 +327,24 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
       statusUpdatedAt: nextStatusAt,
       passwordHash: primary.passwordHash || secondary.passwordHash || "",
       salt: primary.salt || secondary.salt || "",
-      username: primary.username || secondary.username || "",
+      username: (() => {
+        const a = String(primary.username || "").trim();
+        const b = String(secondary.username || "").trim();
+        const aAt = Number(primary.usernameUpdatedAt) || 0;
+        const bAt = Number(secondary.usernameUpdatedAt) || 0;
+        // Profile saves stamp usernameUpdatedAt — newest portal username wins
+        // across Firebase / Blob / GitHub merges (fixes sticky "Kamogelo").
+        if (aAt || bAt) {
+          if (aAt >= bAt && a) return a;
+          if (bAt > aAt && b) return b;
+        }
+        return a || b || "";
+      })(),
+      usernameUpdatedAt:
+        Math.max(
+          Number(primary.usernameUpdatedAt) || 0,
+          Number(secondary.usernameUpdatedAt) || 0
+        ) || null,
       contact: primary.contact || secondary.contact || "",
       createdAt: (() => {
         const a = Number(primary.createdAt) || 0;

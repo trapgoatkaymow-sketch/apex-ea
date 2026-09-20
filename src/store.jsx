@@ -953,7 +953,9 @@ export function AppProvider({ children }) {
     };
   }, [refreshMentorDirectory]);
 
-  // Stamp mentor portal usernames onto license rows (fill empty / replace brand stamp).
+  // Fill empty / brand mentorName stamps from the portal directory.
+  // Do not overwrite a different real stamp here — Profile save syncs licenses
+  // server-side; overwriting locally made sticky personal names beat brands.
   useEffect(() => {
     if (!Object.keys(mentorDirectory).length) return undefined;
     const brand = String(SUPER_ADMIN_USERNAME || "APEX EA").trim().toLowerCase();
@@ -964,12 +966,9 @@ export function AppProvider({ children }) {
         const username = email ? String(mentorDirectory[email] || "").trim() : "";
         if (!username) return row;
         const current = String(row.mentorName || "").trim();
-        const currentIsBrand = !current || current.toLowerCase() === brand;
-        const usernameIsBrand = username.toLowerCase() === brand;
-        // Keep a real mentor name; fill empties; replace APEX EA brand with a real username.
-        if (current && !currentIsBrand) return row;
-        if (currentIsBrand && usernameIsBrand && current === username) return row;
         if (current === username) return row;
+        const currentIsBrand = !current || current.toLowerCase() === brand;
+        if (current && !currentIsBrand) return row;
         changed = true;
         return { ...row, mentorName: username };
       });
@@ -1239,13 +1238,13 @@ export function AppProvider({ children }) {
   }, [licenseKeys, refreshLicenses]);
 
   useEffect(() => {
-    // Keep license refresh reasonably fresh on Android without 5s thrash.
-    const pollMs = isNativeApp() ? 20000 : 5000;
+    // Keep licenses fresh without thrashing the 800KB+ shared store every few seconds.
+    const pollMs = isNativeApp() ? 30000 : 20000;
     const tick = () => {
       if (typeof document !== "undefined" && document.hidden) return;
       refreshLicenses();
     };
-    const bootDelay = isNativeApp() ? 700 : 0;
+    const bootDelay = isNativeApp() ? 700 : 120;
     const bootTimer = setTimeout(tick, bootDelay);
     const timer = setInterval(tick, pollMs);
     const onVis = () => {
@@ -1546,16 +1545,40 @@ export function AppProvider({ children }) {
       return value.toLowerCase() === brandName.toLowerCase();
     };
 
+    /** True when a candidate header name is really the client's own name. */
+    const looksLikeClientName = (name, row) => {
+      const value = String(name || "").trim().toLowerCase();
+      if (!value) return false;
+      const clientName = String(row?.clientName || row?.mainText || "")
+        .trim()
+        .toLowerCase();
+      if (clientName && (value === clientName || clientName.startsWith(`${value} `))) {
+        return true;
+      }
+      if (account) {
+        const local = account.split("@")[0] || "";
+        if (local && value === local) return true;
+      }
+      return false;
+    };
+
     const resolveMentorUsername = (row) => {
       if (!row) return "";
       const mentorEmail = normalizeEmail(row.mentorEmail);
       const fromDir = mentorEmail ? String(mentorDirectory[mentorEmail] || "").trim() : "";
       const named = String(row.mentorName || "").trim();
-      // Prefer the live mentor portal username over a stale license stamp.
-      if (fromDir && !isBrandStamp(fromDir)) return fromDir;
+
+      const dirOk =
+        fromDir && !isBrandStamp(fromDir) && !looksLikeClientName(fromDir, row);
+      const namedOk =
+        named && !isBrandStamp(named) && !looksLikeClientName(named, row);
+
+      // Prefer the license mentor stamp (set at key-gen / Profile sync). The live
+      // mentor directory can lag behind multi-store merges with a personal name.
+      if (namedOk) return named;
+      if (dirOk) return fromDir;
       if (named && !isBrandStamp(named)) return named;
-      if (fromDir) return fromDir;
-      if (named) return named;
+      if (fromDir && !isBrandStamp(fromDir)) return fromDir;
       return "";
     };
 
