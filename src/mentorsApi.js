@@ -108,6 +108,7 @@ function publicLocal(mentor) {
     licenseKeysAllowed: normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role,
     }),
+    licenseKeysUpdatedAt: Number(mentor.licenseKeysUpdatedAt) || null,
     inviteCode: String(mentor.inviteCode || inviteFromId || "").trim().toUpperCase(),
     appColor: normalizeLocalAppColor(mentor.appColor),
   };

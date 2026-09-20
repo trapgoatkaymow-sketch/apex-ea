@@ -1088,6 +1088,14 @@ export function AppProvider({ children }) {
         );
         const merged = filterOutDeletedLicenses(mergeLicenses(keptLocal, remote));
         if (!remoteKeySet.size) return merged;
+        // If the remote payload is suspiciously smaller than what we already
+        // have, keep the merge as-is — a partial/cold durable read was flipping
+        // mentor dashboard counts to "error" / zero quota mid-session.
+        const prevCount = keptLocal.length;
+        const remoteCount = remoteKeySet.size;
+        if (prevCount >= 50 && remoteCount < Math.floor(prevCount * 0.6)) {
+          return merged;
+        }
         const now = Date.now();
         return merged.filter((row) => {
           const key = normalizeLicenseKey(row.key);

@@ -356,8 +356,32 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
       banking: primary.banking?.accountNumber
         ? primary.banking
         : secondary.banking || primary.banking,
-      licenseKeysAllowed:
-        primary.licenseKeysAllowed ?? secondary.licenseKeysAllowed,
+      licenseKeysAllowed: (() => {
+        const aAt = Number(primary.licenseKeysUpdatedAt) || 0;
+        const bAt = Number(secondary.licenseKeysUpdatedAt) || 0;
+        const aRaw = primary.licenseKeysAllowed;
+        const bRaw = secondary.licenseKeysAllowed;
+        const a =
+          aRaw == null || aRaw === ""
+            ? null
+            : Math.floor(Number(aRaw));
+        const b =
+          bRaw == null || bRaw === ""
+            ? null
+            : Math.floor(Number(bRaw));
+        const aOk = a != null && Number.isFinite(a);
+        const bOk = b != null && Number.isFinite(b);
+        if (aAt > bAt && aOk) return a;
+        if (bAt > aAt && bOk) return b;
+        // Same stamp / missing stamps: never silently shrink an allotment.
+        if (aOk && bOk) return Math.max(a, b);
+        return aOk ? a : bOk ? b : aRaw ?? bRaw ?? null;
+      })(),
+      licenseKeysUpdatedAt:
+        Math.max(
+          Number(primary.licenseKeysUpdatedAt) || 0,
+          Number(secondary.licenseKeysUpdatedAt) || 0
+        ) || null,
       appColor: primary.appColor || secondary.appColor || "",
       appColorUpdatedAt: Math.max(
         Number(primary.appColorUpdatedAt) || 0,

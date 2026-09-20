@@ -229,6 +229,7 @@ export function publicMentor(mentor) {
     licenseKeysAllowed: normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role,
     }),
+    licenseKeysUpdatedAt: Number(mentor.licenseKeysUpdatedAt) || null,
     inviteCode: mentorInviteCode(mentor),
     appColor,
     // Clients need the stamp so newer portal colors win over stale local cache.
@@ -495,16 +496,39 @@ async function readStore() {
         });
         const localUpdated = Number(local.licenseKeysUpdatedAt) || 0;
         const remoteUpdated = Number(m.licenseKeysUpdatedAt) || 0;
-        if (
-          localKeys != null &&
-          (m.licenseKeysAllowed == null ||
-            localUpdated > remoteUpdated ||
-            (localUpdated === remoteUpdated && localKeys !== remoteKeys))
+        let chosenKeys = remoteKeys;
+        let chosenAt = remoteUpdated;
+        if (localKeys != null && remoteKeys == null) {
+          chosenKeys = localKeys;
+          chosenAt = localUpdated || Date.now();
+        } else if (localKeys != null && remoteKeys != null) {
+          if (localUpdated > remoteUpdated) {
+            chosenKeys = localKeys;
+            chosenAt = localUpdated;
+          } else if (remoteUpdated > localUpdated) {
+            chosenKeys = remoteKeys;
+            chosenAt = remoteUpdated;
+          } else {
+            // Equal stamps — keep the higher allotment so a warm instance
+            // cannot shrink keys another instance just raised.
+            chosenKeys = Math.max(localKeys, remoteKeys);
+            chosenAt = Math.max(localUpdated, remoteUpdated) || Date.now();
+          }
+        }
+        if (chosenKeys != null && chosenKeys !== remoteKeys) {
+          next = {
+            ...next,
+            licenseKeysAllowed: chosenKeys,
+            licenseKeysUpdatedAt: chosenAt || Date.now(),
+          };
+        } else if (
+          chosenKeys != null &&
+          Number(m.licenseKeysAllowed) !== chosenKeys
         ) {
           next = {
             ...next,
-            licenseKeysAllowed: localKeys,
-            licenseKeysUpdatedAt: localUpdated || Date.now(),
+            licenseKeysAllowed: chosenKeys,
+            licenseKeysUpdatedAt: chosenAt || Date.now(),
           };
         }
         // Never let a local row without credentials blank out durable hashes.
@@ -678,20 +702,14 @@ async function writeStore(mentors, sha, message) {
     throw err;
   } catch (error) {
     writeLocalStore(durableRows);
-    // Auth / rate-limit failures must surface for password + register writes —
-    // otherwise callers think the change is durable when only /tmp was updated.
-    if (
-      error.status === 401 ||
-      error.status === 403 ||
-      error.status === 429 ||
-      error.status === 503 ||
-      /bad credentials|rate limit|firebase|not configured/i.test(
-        String(error.message || "")
-      )
-    ) {
-      throw error;
-    }
-    return { local: true };
+    // Auth / rate-limit / backend failures must surface — otherwise callers
+    // think key allotments / passwords are durable when only /tmp was updated.
+    const err = error?.status
+      ? error
+      : Object.assign(new Error(error?.message || "Mentor store write failed"), {
+          status: 503,
+        });
+    throw err;
   }
 }
 
@@ -1296,6 +1314,8 @@ export async function recordMentorWithdrawalRequest(email) {
 
 /**
  * Returns the key allotment for a mentor email, or null for unlimited (super admin / missing).
+ * Prefers the highest known allotment across durable + in-memory overlays so
+ * license create never uses a stale lower cap after super admin raised keys.
  */
 export async function getMentorLicenseKeysAllowed(email) {
   const key = normalizeEmail(email);
@@ -1305,10 +1325,49 @@ export async function getMentorLicenseKeysAllowed(email) {
     const store = await readStore();
     const mentors = ensureSuperAdminRecord(store.mentors);
     const mentor = findMentor(mentors, key);
-    if (!mentor) return DEFAULT_MENTOR_LICENSE_KEYS;
-    return normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
+    if (!mentor) {
+      // Fall back to bundled/local file when durable briefly omits the row.
+      try {
+        const local = readLocalStore();
+        const localMentor = findMentor(
+          ensureSuperAdminRecord(local.mentors || []),
+          key
+        );
+        if (localMentor) {
+          return normalizeLicenseKeysAllowed(localMentor.licenseKeysAllowed, {
+            role: localMentor.role,
+          });
+        }
+      } catch {
+        // ignore
+      }
+      return DEFAULT_MENTOR_LICENSE_KEYS;
+    }
+    const fromStore = normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role: mentor.role,
     });
+    // Also consider bundled/local in case durable is stale lower.
+    try {
+      const local = readLocalStore();
+      const localMentor = findMentor(
+        ensureSuperAdminRecord(local.mentors || []),
+        key
+      );
+      const fromLocal = localMentor
+        ? normalizeLicenseKeysAllowed(localMentor.licenseKeysAllowed, {
+            role: localMentor.role,
+          })
+        : null;
+      if (fromStore == null) return fromLocal;
+      if (fromLocal == null) return fromStore;
+      const storeAt = Number(mentor.licenseKeysUpdatedAt) || 0;
+      const localAt = Number(localMentor.licenseKeysUpdatedAt) || 0;
+      if (localAt > storeAt) return fromLocal;
+      if (storeAt > localAt) return fromStore;
+      return Math.max(fromStore, fromLocal);
+    } catch {
+      return fromStore;
+    }
   } catch {
     return DEFAULT_MENTOR_LICENSE_KEYS;
   }
@@ -1687,12 +1746,22 @@ export async function setMentorLicenseKeys(email, { set, add } = {}) {
     );
   } catch (error) {
     if (error.status === 400 || error.status === 404) throw error;
-    // Keep allotment locally when GitHub auth fails ("Bad credentials") so Save
-    // total still works for the admin UI.
-    const store = await readStore().catch(() => readLocalStore());
-    const list = ensureSuperAdminRecord(store.mentors || []);
-    applyKeys(list);
-    writeLocalStore(list);
+    // Still apply locally so this instance is consistent, but surface the
+    // durable failure so admins do not think the allotment is saved globally.
+    try {
+      const store = await readStore().catch(() => readLocalStore());
+      const list = ensureSuperAdminRecord(store.mentors || []);
+      applyKeys(list);
+      writeLocalStore(list);
+    } catch {
+      // ignore secondary local failure
+    }
+    const err = new Error(
+      error?.message ||
+        "Could not save key allotment to the shared store — tap Save again"
+    );
+    err.status = error?.status || 503;
+    throw err;
   }
 
   return publicMentor(updated);

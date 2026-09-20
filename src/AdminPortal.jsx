@@ -664,7 +664,33 @@ export default function AdminPortal() {
                 : incoming.banking?.accountNumber
                   ? incoming.banking
                   : m.banking || incoming.banking;
-            map.set(key, { ...incoming, banking: keepBanking });
+            const prevKeys = Number(m.licenseKeysAllowed);
+            const nextKeys = Number(incoming.licenseKeysAllowed);
+            const prevAt = Number(m.licenseKeysUpdatedAt) || 0;
+            const nextAt = Number(incoming.licenseKeysUpdatedAt) || 0;
+            let licenseKeysAllowed = incoming.licenseKeysAllowed;
+            let licenseKeysUpdatedAt = incoming.licenseKeysUpdatedAt;
+            if (Number.isFinite(prevKeys) && Number.isFinite(nextKeys)) {
+              if (prevAt > nextAt) {
+                licenseKeysAllowed = prevKeys;
+                licenseKeysUpdatedAt = prevAt;
+              } else if (nextAt > prevAt) {
+                licenseKeysAllowed = nextKeys;
+                licenseKeysUpdatedAt = nextAt;
+              } else {
+                licenseKeysAllowed = Math.max(prevKeys, nextKeys);
+                licenseKeysUpdatedAt = Math.max(prevAt, nextAt) || Date.now();
+              }
+            } else if (Number.isFinite(prevKeys) && !Number.isFinite(nextKeys)) {
+              licenseKeysAllowed = prevKeys;
+              licenseKeysUpdatedAt = prevAt || Date.now();
+            }
+            map.set(key, {
+              ...incoming,
+              banking: keepBanking,
+              licenseKeysAllowed,
+              licenseKeysUpdatedAt,
+            });
           }
           return Array.from(map.values());
         });
@@ -680,7 +706,9 @@ export default function AdminPortal() {
       adminPage === "commissions" ||
       adminPage === "commission" ||
       adminPage === "mentor-keys" ||
-      adminPage === "top-mentors"
+      adminPage === "top-mentors" ||
+      adminPage === "dashboard" ||
+      adminPage === "licenses"
         ? 8000
         : 25000;
     const timer = setInterval(loadMentors, ms);
@@ -973,7 +1001,33 @@ export default function AdminPortal() {
             m?.banking?.accountNumber && !incoming?.banking?.accountNumber
               ? m.banking
               : incoming.banking || m.banking;
-          map.set(key, { ...incoming, banking: keepBanking });
+          const prevKeys = Number(m.licenseKeysAllowed);
+          const nextKeys = Number(incoming.licenseKeysAllowed);
+          const prevAt = Number(m.licenseKeysUpdatedAt) || 0;
+          const nextAt = Number(incoming.licenseKeysUpdatedAt) || 0;
+          let licenseKeysAllowed = incoming.licenseKeysAllowed;
+          let licenseKeysUpdatedAt = incoming.licenseKeysUpdatedAt;
+          if (Number.isFinite(prevKeys) && Number.isFinite(nextKeys)) {
+            if (prevAt > nextAt) {
+              licenseKeysAllowed = prevKeys;
+              licenseKeysUpdatedAt = prevAt;
+            } else if (nextAt > prevAt) {
+              licenseKeysAllowed = nextKeys;
+              licenseKeysUpdatedAt = nextAt;
+            } else {
+              licenseKeysAllowed = Math.max(prevKeys, nextKeys);
+              licenseKeysUpdatedAt = Math.max(prevAt, nextAt) || Date.now();
+            }
+          } else if (Number.isFinite(prevKeys) && !Number.isFinite(nextKeys)) {
+            licenseKeysAllowed = prevKeys;
+            licenseKeysUpdatedAt = prevAt || Date.now();
+          }
+          map.set(key, {
+            ...incoming,
+            banking: keepBanking,
+            licenseKeysAllowed,
+            licenseKeysUpdatedAt,
+          });
         }
         return Array.from(map.values());
       });
