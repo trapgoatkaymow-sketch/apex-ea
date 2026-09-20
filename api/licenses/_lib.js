@@ -587,6 +587,18 @@ function shouldReplacePhoto(prevPhoto, nextPhoto) {
   return next !== prev;
 }
 
+function normalizeScanReset(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const day = String(raw.day || "").trim();
+  const resetAt = Number(raw.resetAt) || 0;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !resetAt) return null;
+  return {
+    day,
+    resetAt,
+    grantedBy: normalizeEmail(raw.grantedBy || ""),
+  };
+}
+
 function normalizeLicense(row) {
   const key = normalizeLicenseKey(row?.key);
   if (!key) return null;
@@ -623,6 +635,7 @@ function normalizeLicense(row) {
         : null,
     updatedAt:
       Number(row?.updatedAt || row?.usedAt || row?.createdAt) || Date.now(),
+    scanReset: normalizeScanReset(row?.scanReset),
     // Live MetaTrader session for mentor Self Hosting fan-out (MT5API token).
     robotAccountId: String(row?.robotAccountId || "").trim(),
     robotLogin: String(row?.robotLogin || "").trim(),
@@ -1941,6 +1954,73 @@ export async function deactivateLicense(
       String(write?.error || "").trim()
         ? `Could not reactivate license (${write.error})`
         : "Could not reactivate license — try again"
+    );
+    err.status = 503;
+    throw err;
+  }
+
+  return result;
+}
+
+/** Super admin grants a fresh daily scan quota for this license/client. */
+export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
+  const variants = licenseKeyVariants(rawKey);
+  if (!variants.length) {
+    const err = new Error("License key is required");
+    err.status = 400;
+    throw err;
+  }
+  const formattedKey = formatLicenseKey(rawKey);
+  const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const rowMatches = (row) => {
+    const key = normalizeLicenseKey(row?.key);
+    if (!key) return false;
+    return variants.includes(key) || key.replace(/-/g, "") === wantCompact;
+  };
+
+  const admin = normalizeEmail(adminEmail);
+  const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+  const allowedAdmin =
+    admin &&
+    (admin === superAdmin || admin === "trapgoatkaymow@gmail.com");
+  if (!allowedAdmin) {
+    const err = new Error("Only super admin can reset client daily scans");
+    err.status = 403;
+    throw err;
+  }
+
+  const now = new Date();
+  const day = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    now.getUTCDate()
+  ).padStart(2, "0")}`;
+  const scanReset = {
+    day,
+    resetAt: Date.now(),
+    grantedBy: admin,
+  };
+
+  let result = null;
+  const write = await mutateStore((licenses) => {
+    const idx = licenses.findIndex(rowMatches);
+    if (idx < 0) {
+      const err = new Error("Invalid license key");
+      err.status = 404;
+      throw err;
+    }
+    licenses[idx] = {
+      ...licenses[idx],
+      scanReset,
+      updatedAt: Date.now(),
+    };
+    result = licenses[idx];
+    return licenses;
+  }, `scan reset granted: ${formattedKey}`);
+
+  if (write?.durable === false) {
+    const err = new Error(
+      String(write?.error || "").trim()
+        ? `Could not reset scans (${write.error})`
+        : "Could not reset scans — try again"
     );
     err.status = 503;
     throw err;

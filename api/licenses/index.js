@@ -8,6 +8,7 @@ import {
   deleteLicense,
   findLicense,
   findLicensesByEmail,
+  grantScanReset,
   listDeletedKeys,
   listLicenses,
   markLicenseUsed,
@@ -145,6 +146,18 @@ export default async function handler(req, res) {
       }
       const shouldDeactivate =
         action === "deactivate" || body.used === false || body.deactivate === true;
+      if (
+        action === "reset-scans" ||
+        action === "resetscans" ||
+        action === "scan-reset" ||
+        body.resetScans === true
+      ) {
+        const license = await grantScanReset(body.key, {
+          adminEmail: body.adminEmail || body.email || "",
+        });
+        sendJson(res, 200, { license, scanReset: license?.scanReset || null });
+        return;
+      }
       const license = shouldDeactivate
         ? await deactivateLicense(body.key, {
             adminEmail: body.adminEmail || body.email || "",

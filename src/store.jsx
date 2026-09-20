@@ -37,6 +37,7 @@ import {
   rememberDeletedLicenseKey,
   isRememberedDeletedLicenseKey,
   filterOutDeletedLicenses,
+  resetClientScansRemote,
 } from "./licensesApi.js";
 import { getOrCreateDeviceId } from "./deviceId.js";
 import {
@@ -2608,6 +2609,31 @@ export function AppProvider({ children }) {
     [licenseKeys, showToast]
   );
 
+  const resetClientScans = useCallback(
+    async (rawKey, { adminEmail = "" } = {}) => {
+      const key = normalizeLicenseKey(rawKey);
+      if (!key) {
+        showToast("Missing license key");
+        return null;
+      }
+      const actor = normalizeEmail(adminEmail);
+      if (!actor || actor !== normalizeEmail(SUPER_ADMIN_EMAIL)) {
+        showToast("Only super admin can reset client daily scans");
+        return null;
+      }
+      try {
+        const remote = await resetClientScansRemote(key, { adminEmail: actor });
+        if (remote) setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
+        showToast("Daily scans reset for today — client can scan again");
+        return remote;
+      } catch (error) {
+        showToast(error.message || "Could not reset daily scans");
+        return null;
+      }
+    },
+    [showToast]
+  );
+
   const deleteLicense = useCallback(
     async (rawKey) => {
       const key = normalizeLicenseKey(rawKey);
@@ -2838,6 +2864,7 @@ export function AppProvider({ children }) {
     activateLicense,
     restoreLicensesByEmail,
     deactivateLicense,
+    resetClientScans,
     deleteLicense,
     refreshLicenses,
     catalog,

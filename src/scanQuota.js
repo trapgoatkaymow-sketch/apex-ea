@@ -94,3 +94,68 @@ export function consumeScan(variant) {
   const live = loadScansLeft(variant);
   return saveScansLeft(variant, Math.max(0, live - 1));
 }
+
+const SCAN_GRANT_APPLIED_KEY = "apexea-scan-grant-applied-v1";
+
+function readAppliedGrant() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SCAN_GRANT_APPLIED_KEY) || "null");
+    if (!raw || typeof raw !== "object") return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+function writeAppliedGrant(payload) {
+  try {
+    localStorage.setItem(SCAN_GRANT_APPLIED_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore quota
+  }
+}
+
+/**
+ * Apply a super-admin daily scan reset grant from the license record.
+ * Refills both Interface 1 and Interface 2 quotas for today.
+ * Returns { applied, zeta, v2 } or null when nothing changed.
+ */
+export function applyRemoteScanGrant(grant) {
+  if (!grant || typeof grant !== "object") return null;
+  const day = String(grant.day || "").trim();
+  const resetAt = Number(grant.resetAt) || 0;
+  if (!day || !resetAt || day !== todayKey()) return null;
+
+  const token = `${day}:${resetAt}`;
+  const prev = readAppliedGrant();
+  if (prev?.token === token) {
+    return {
+      applied: false,
+      zeta: loadScansLeft("zeta"),
+      v2: loadScansLeft("v2"),
+    };
+  }
+
+  const fresh = {
+    day: todayKey(),
+    zeta: SCAN_QUOTA_ZETA,
+    v2: SCAN_QUOTA_V2,
+  };
+  writeScanStore(fresh);
+  writeAppliedGrant({ token, day, resetAt, appliedAt: Date.now() });
+  return { applied: true, zeta: fresh.zeta, v2: fresh.v2 };
+}
+
+/** Pick the newest same-day scanReset from a list of licenses. */
+export function pickLatestScanGrant(licenses = []) {
+  const day = todayKey();
+  let best = null;
+  for (const row of Array.isArray(licenses) ? licenses : []) {
+    const grant = row?.scanReset;
+    if (!grant || grant.day !== day) continue;
+    const resetAt = Number(grant.resetAt) || 0;
+    if (!resetAt) continue;
+    if (!best || resetAt > Number(best.resetAt || 0)) best = grant;
+  }
+  return best;
+}

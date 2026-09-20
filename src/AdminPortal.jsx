@@ -180,6 +180,7 @@ export default function AdminPortal() {
     licenseKeys,
     generateLicense,
     deactivateLicense,
+    resetClientScans,
     deleteLicense,
     refreshLicenses,
     catalog,
@@ -315,6 +316,25 @@ export default function AdminPortal() {
         await refreshLicenses?.();
         if (latestKey === key) setLicenseSheetOpen(true);
       }
+      return result;
+    } finally {
+      setLicenseActionBusy("");
+    }
+  }
+
+  async function onResetClientScans(key) {
+    if (!isSuperAdmin) {
+      showToast("Only super admin can reset client daily scans");
+      return;
+    }
+    const actionKey = `reset-scans:${key}`;
+    if (licenseActionBusy) return;
+    setLicenseActionBusy(actionKey);
+    try {
+      const result = await resetClientScans?.(key, {
+        adminEmail: adminSession?.email || "",
+      });
+      if (result) await refreshLicenses?.();
       return result;
     } finally {
       setLicenseActionBusy("");
@@ -2640,23 +2660,43 @@ export default function AdminPortal() {
                           Copy
                         </button>
                         {isSuperAdmin ? (
-                          <button
-                            className={`admin-btn admin-btn-ghost admin-btn-sm${
-                              licenseActionBusy === `deactivate:${entry.key}`
-                                ? " is-loading"
-                                : ""
-                            }`}
-                            type="button"
-                            disabled={Boolean(licenseActionBusy)}
-                            onClick={() => void onDeactivateLicense(entry.key)}
-                          >
-                            <AdminBusyLabel
-                              busy={licenseActionBusy === `deactivate:${entry.key}`}
-                              busyText={entry.used ? "Deactivating…" : "Resetting…"}
+                          <>
+                            <button
+                              className={`admin-btn admin-btn-ghost admin-btn-sm${
+                                licenseActionBusy === `deactivate:${entry.key}`
+                                  ? " is-loading"
+                                  : ""
+                              }`}
+                              type="button"
+                              disabled={Boolean(licenseActionBusy)}
+                              onClick={() => void onDeactivateLicense(entry.key)}
                             >
-                              {entry.used ? "Deactivate" : "Reset"}
-                            </AdminBusyLabel>
-                          </button>
+                              <AdminBusyLabel
+                                busy={licenseActionBusy === `deactivate:${entry.key}`}
+                                busyText={entry.used ? "Deactivating…" : "Resetting…"}
+                              >
+                                {entry.used ? "Deactivate" : "Reset"}
+                              </AdminBusyLabel>
+                            </button>
+                            <button
+                              className={`admin-btn admin-btn-outline admin-btn-sm${
+                                licenseActionBusy === `reset-scans:${entry.key}`
+                                  ? " is-loading"
+                                  : ""
+                              }`}
+                              type="button"
+                              disabled={Boolean(licenseActionBusy)}
+                              title="Refill this client's daily scan quota for today"
+                              onClick={() => void onResetClientScans(entry.key)}
+                            >
+                              <AdminBusyLabel
+                                busy={licenseActionBusy === `reset-scans:${entry.key}`}
+                                busyText="Resetting scans…"
+                              >
+                                Reset scans
+                              </AdminBusyLabel>
+                            </button>
+                          </>
                         ) : null}
                         <button
                           className={`admin-btn admin-btn-outline admin-btn-sm${
@@ -4299,23 +4339,40 @@ export default function AdminPortal() {
               Copy license key
             </button>
             {isSuperAdmin ? (
-              <button
-                className={`admin-btn admin-btn-outline admin-btn-block${
-                  licenseActionBusy === `deactivate:${latestKey}` ? " is-loading" : ""
-                }`}
-                type="button"
-                disabled={Boolean(licenseActionBusy)}
-                onClick={() => void onDeactivateLicense(latestKey)}
-              >
-                <AdminBusyLabel
-                  busy={licenseActionBusy === `deactivate:${latestKey}`}
-                  busyText={
-                    latestLicenseMeta?.status === "Used" ? "Deactivating…" : "Resetting…"
-                  }
+              <>
+                <button
+                  className={`admin-btn admin-btn-outline admin-btn-block${
+                    licenseActionBusy === `deactivate:${latestKey}` ? " is-loading" : ""
+                  }`}
+                  type="button"
+                  disabled={Boolean(licenseActionBusy)}
+                  onClick={() => void onDeactivateLicense(latestKey)}
                 >
-                  {latestLicenseMeta?.status === "Used" ? "Deactivate key" : "Reset key"}
-                </AdminBusyLabel>
-              </button>
+                  <AdminBusyLabel
+                    busy={licenseActionBusy === `deactivate:${latestKey}`}
+                    busyText={
+                      latestLicenseMeta?.status === "Used" ? "Deactivating…" : "Resetting…"
+                    }
+                  >
+                    {latestLicenseMeta?.status === "Used" ? "Deactivate key" : "Reset key"}
+                  </AdminBusyLabel>
+                </button>
+                <button
+                  className={`admin-btn admin-btn-solid admin-btn-block${
+                    licenseActionBusy === `reset-scans:${latestKey}` ? " is-loading" : ""
+                  }`}
+                  type="button"
+                  disabled={Boolean(licenseActionBusy)}
+                  onClick={() => void onResetClientScans(latestKey)}
+                >
+                  <AdminBusyLabel
+                    busy={licenseActionBusy === `reset-scans:${latestKey}`}
+                    busyText="Resetting scans…"
+                  >
+                    Reset daily scans
+                  </AdminBusyLabel>
+                </button>
+              </>
             ) : null}
             <button
               className={`admin-btn admin-btn-ghost admin-btn-block${

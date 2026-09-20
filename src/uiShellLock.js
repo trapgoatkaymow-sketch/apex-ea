@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 35 — Interface 2 robot sniper scan animation.
+ * Gen 36 — Super-admin daily scan reset for clients.
  */
-export const UI_SHELL_GENERATION = 35;
+export const UI_SHELL_GENERATION = 36;
 
-export const UI_SHELL_LABEL = "v2-sniper-scan";
+export const UI_SHELL_LABEL = "admin-reset-scans";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

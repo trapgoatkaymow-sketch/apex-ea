@@ -15,9 +15,12 @@ import { BrokerMark } from "./ConnectedBrokerBadge.jsx";
 import { buildBotTradeComment, buildScannerFillComment, placeTrade } from "./metaApi.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import { isNativeApp, useApp } from "./store.jsx";
+import { fetchLicensesByEmail } from "./licensesApi.js";
 import {
+  applyRemoteScanGrant,
   consumeScan,
   loadScansLeft,
+  pickLatestScanGrant,
   scanQuota,
 } from "./scanQuota.js";
 import {
@@ -125,6 +128,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
     publishOrbTrade,
     clearOrbTrade,
     activeInterface,
+    coverEmail,
+    licenseKeys,
   } = useApp();
 
   /** Interface 2 Chart Scanner = premium — tag MT5 comments with "premium". */
@@ -161,25 +166,61 @@ export default function ChartScanner({ variant = "default", active = true }) {
     if (active) setScansLeft(loadScansLeft(variant));
   }, [variant, active]);
 
-  // Refresh quota when the app returns to the foreground (new calendar day).
+  // Refresh quota when the app returns to the foreground (new calendar day),
+  // and apply any super-admin daily scan reset grant for this client.
   useEffect(() => {
     if (!active) return undefined;
-    function refreshQuota() {
+    let cancelled = false;
+
+    async function refreshQuotaAndGrants() {
+      const email = String(coverEmail || "")
+        .trim()
+        .toLowerCase();
+      let grant = pickLatestScanGrant(licenseKeys);
+      if (email.includes("@")) {
+        try {
+          const remote = await fetchLicensesByEmail(email);
+          if (cancelled) return;
+          const remoteGrant = pickLatestScanGrant(remote);
+          if (
+            remoteGrant &&
+            (!grant || Number(remoteGrant.resetAt) > Number(grant.resetAt || 0))
+          ) {
+            grant = remoteGrant;
+          }
+        } catch {
+          // offline — still try local licenseKeys grant
+        }
+      }
+      if (cancelled) return;
+      if (grant) {
+        const result = applyRemoteScanGrant(grant);
+        if (result?.applied) {
+          setScansLeft(loadScansLeft(variant));
+          showToast(
+            `Daily scans restored · I1 ${result.zeta} · I2 ${result.v2}`
+          );
+          return;
+        }
+      }
       setScansLeft(loadScansLeft(variant));
     }
+
+    void refreshQuotaAndGrants();
+    const onFocus = () => void refreshQuotaAndGrants();
     const onVisible = () => {
-      if (document.visibilityState === "visible") refreshQuota();
+      if (document.visibilityState === "visible") void refreshQuotaAndGrants();
     };
-    window.addEventListener("focus", refreshQuota);
+    window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
-    // Cheap midnight check while the scanner tab stays open overnight.
-    const timer = window.setInterval(refreshQuota, 60_000);
+    const timer = window.setInterval(() => void refreshQuotaAndGrants(), 45_000);
     return () => {
-      window.removeEventListener("focus", refreshQuota);
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
       window.clearInterval(timer);
     };
-  }, [active, variant]);
+  }, [active, coverEmail, licenseKeys, showToast, variant]);
 
   useEffect(() => {
     if (!symbol) return;

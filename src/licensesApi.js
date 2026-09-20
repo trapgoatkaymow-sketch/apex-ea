@@ -251,6 +251,20 @@ export function normalizeLicense(row) {
         ? Number(row?.usedAt) || null
         : null,
     updatedAt: Number(row?.updatedAt || row?.usedAt || row?.createdAt) || Date.now(),
+    scanReset: (() => {
+      const raw = row?.scanReset;
+      if (!raw || typeof raw !== "object") return null;
+      const day = String(raw.day || "").trim();
+      const resetAt = Number(raw.resetAt) || 0;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !resetAt) return null;
+      return {
+        day,
+        resetAt,
+        grantedBy: String(raw.grantedBy || "")
+          .trim()
+          .toLowerCase(),
+      };
+    })(),
     robotAccountId: String(row?.robotAccountId || "").trim(),
     robotLogin: String(row?.robotLogin || "").trim(),
     robotServer: String(row?.robotServer || "").trim(),
@@ -560,6 +574,21 @@ export async function deactivateLicenseRemote(
       clientName: String(clientName || "").trim(),
       ...(botId ? { botId: String(botId).trim() } : {}),
       ...(botName ? { botName: String(botName).trim() } : {}),
+    },
+  });
+  return normalizeLicense(data?.license);
+}
+
+/** Super admin — refill a client's daily scan quota for today. */
+export async function resetClientScansRemote(key, { adminEmail = "" } = {}) {
+  const data = await apiFetch("", {
+    method: "PATCH",
+    body: {
+      key: normalizeLicenseKey(key),
+      action: "reset-scans",
+      adminEmail: String(adminEmail || "")
+        .trim()
+        .toLowerCase(),
     },
   });
   return normalizeLicense(data?.license);
