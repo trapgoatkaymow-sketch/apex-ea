@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 34 — Remove scan beam; Scan Again on both scanners.
+ * Gen 35 — Interface 2 robot sniper scan animation.
  */
-export const UI_SHELL_GENERATION = 34;
+export const UI_SHELL_GENERATION = 35;
 
-export const UI_SHELL_LABEL = "scan-again-no-beam";
+export const UI_SHELL_LABEL = "v2-sniper-scan";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

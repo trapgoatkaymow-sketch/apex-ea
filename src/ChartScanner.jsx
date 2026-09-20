@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
 import ScanEye from "./ScanEye.jsx";
+import SniperScan from "./SniperScan.jsx";
 import TrapScannerResult from "./TrapScannerResult.jsx";
 import {
   CHART_DETECTION_STATUS,
@@ -838,9 +839,21 @@ export default function ChartScanner({ variant = "default", active = true }) {
               </div>
             ) : null}
             {engineMode === "scanning" ? (
-              <div className="cs-scan-eye-stage" aria-live="polite">
-                <ScanEye size="lg" label="Looking for a signal" />
-                <span className="cs-scan-eye-caption">Looking for signal</span>
+              <div
+                className={`cs-scan-eye-stage${useTrapResult ? " is-sniper" : ""}`}
+                aria-live="polite"
+              >
+                {useTrapResult ? (
+                  <>
+                    <SniperScan size="lg" label="Robot sniper scanning" />
+                    <span className="cs-scan-eye-caption">Sniper lock · hunting signal</span>
+                  </>
+                ) : (
+                  <>
+                    <ScanEye size="lg" label="Looking for a signal" />
+                    <span className="cs-scan-eye-caption">Looking for signal</span>
+                  </>
+                )}
               </div>
             ) : null}
           </div>
@@ -944,7 +957,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 aria-hidden="true"
               >
                 {engineMode === "scanning" ? (
-                  <ScanEye size="sm" label="Looking for a signal" />
+                  useTrapResult ? (
+                    <SniperScan size="sm" label="Robot sniper scanning" />
+                  ) : (
+                    <ScanEye size="sm" label="Looking for a signal" />
+                  )
                 ) : (
                   <>
                     <strong>

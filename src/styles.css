@@ -7622,6 +7622,260 @@ html.is-native.is-paused .cs-scan-eye-beam {
   border-radius: inherit;
 }
 
+/* Interface 2 — robot sniper scope HUD */
+.cs-scan-eye-stage.is-sniper {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.62) 72%);
+}
+
+.cs-sniper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: #f9a8d4;
+}
+
+.cs-sniper--lg {
+  width: min(58vw, 200px);
+  aspect-ratio: 1;
+}
+
+.cs-sniper--sm {
+  width: 26px;
+  height: 26px;
+}
+
+.cs-sniper-scope {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  animation: cs-sniper-breathe 2.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(232, 121, 249, 0.45));
+}
+
+.cs-sniper-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(244, 114, 182, 0.55);
+  pointer-events: none;
+}
+
+.cs-sniper-ring--outer {
+  inset: 2%;
+  border-style: dashed;
+  border-color: rgba(232, 121, 249, 0.4);
+  animation: cs-sniper-spin 8s linear infinite;
+}
+
+.cs-sniper-ring--mid {
+  inset: 16%;
+  border-color: rgba(251, 207, 232, 0.55);
+  animation: cs-sniper-spin-rev 5.5s linear infinite;
+}
+
+.cs-sniper-ring--inner {
+  inset: 34%;
+  border-width: 1px;
+  border-color: rgba(244, 114, 182, 0.85);
+}
+
+.cs-sniper-cross {
+  position: absolute;
+  background: rgba(251, 207, 232, 0.85);
+  box-shadow: 0 0 8px rgba(232, 121, 249, 0.65);
+}
+
+.cs-sniper-cross--h {
+  left: 8%;
+  right: 8%;
+  top: 50%;
+  height: 1.5px;
+  transform: translateY(-50%);
+}
+
+.cs-sniper-cross--v {
+  top: 8%;
+  bottom: 8%;
+  left: 50%;
+  width: 1.5px;
+  transform: translateX(-50%);
+}
+
+.cs-sniper-tick {
+  position: absolute;
+  background: rgba(244, 114, 182, 0.9);
+}
+
+.cs-sniper-tick--n,
+.cs-sniper-tick--s {
+  left: 50%;
+  width: 2px;
+  height: 7%;
+  transform: translateX(-50%);
+}
+
+.cs-sniper-tick--n { top: 7%; }
+.cs-sniper-tick--s { bottom: 7%; }
+
+.cs-sniper-tick--e,
+.cs-sniper-tick--w {
+  top: 50%;
+  width: 7%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.cs-sniper-tick--e { right: 7%; }
+.cs-sniper-tick--w { left: 7%; }
+
+.cs-sniper-corner {
+  position: absolute;
+  width: 14%;
+  height: 14%;
+  border: 2px solid rgba(244, 114, 182, 0.85);
+  animation: cs-sniper-brackets 2.4s ease-in-out infinite;
+}
+
+.cs-sniper-corner--tl {
+  top: 10%;
+  left: 10%;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.cs-sniper-corner--tr {
+  top: 10%;
+  right: 10%;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.cs-sniper-corner--bl {
+  bottom: 10%;
+  left: 10%;
+  border-right: 0;
+  border-top: 0;
+}
+
+.cs-sniper-corner--br {
+  bottom: 10%;
+  right: 10%;
+  border-left: 0;
+  border-top: 0;
+}
+
+.cs-sniper-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7%;
+  height: 7%;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: #fb7185;
+  box-shadow:
+    0 0 0 2px rgba(15, 5, 20, 0.85),
+    0 0 12px rgba(244, 63, 94, 0.9);
+}
+
+.cs-sniper-pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18%;
+  height: 18%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(251, 113, 133, 0.75);
+  animation: cs-sniper-lock 1.6s ease-out infinite;
+}
+
+.cs-sniper-readout {
+  position: absolute;
+  font-size: 0.42rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(251, 207, 232, 0.8);
+  text-shadow: 0 0 8px rgba(232, 121, 249, 0.55);
+  white-space: nowrap;
+}
+
+.cs-sniper--sm .cs-sniper-readout {
+  display: none;
+}
+
+.cs-sniper--sm .cs-sniper-corner {
+  width: 18%;
+  height: 18%;
+  border-width: 1.5px;
+}
+
+.cs-sniper-readout--tl { top: 0; left: 0; }
+.cs-sniper-readout--tr { top: 0; right: 0; color: #fb7185; }
+.cs-sniper-readout--bl { bottom: 0; left: 0; }
+.cs-sniper-readout--br { bottom: 0; right: 0; }
+
+.cs-sniper-readout--tr {
+  animation: cs-sniper-lock-text 1.2s steps(2, end) infinite;
+}
+
+@keyframes cs-sniper-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cs-sniper-spin-rev {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes cs-sniper-breathe {
+  0%,
+  100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes cs-sniper-brackets {
+  0%,
+  100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(0.94); }
+}
+
+@keyframes cs-sniper-lock {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.55);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.1);
+  }
+}
+
+@keyframes cs-sniper-lock-text {
+  0%,
+  49% { opacity: 1; }
+  50%,
+  100% { opacity: 0.35; }
+}
+
+html.is-native.is-paused .cs-sniper-scope,
+html.is-native.is-paused .cs-sniper-ring--outer,
+html.is-native.is-paused .cs-sniper-ring--mid,
+html.is-native.is-paused .cs-sniper-corner,
+html.is-native.is-paused .cs-sniper-pulse,
+html.is-native.is-paused .cs-sniper-readout--tr {
+  animation: none;
+}
+
+.cs-engine.is-desk .cs-engine-ring.is-hunting .cs-sniper {
+  width: 26px;
+  height: 26px;
+}
+
 .cs-engine.is-desk .cs-engine-copy {
   min-width: 0;
 }
