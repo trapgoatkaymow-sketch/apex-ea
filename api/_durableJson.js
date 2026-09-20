@@ -272,7 +272,8 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
       .toLowerCase();
   const stamp = (row) =>
     Number(
-      row?.usernameUpdatedAt ||
+      row?.withdrawalRequestedAt ||
+        row?.usernameUpdatedAt ||
         row?.statusUpdatedAt ||
         row?.appColorUpdatedAt ||
         row?.licenseKeysUpdatedAt ||
@@ -362,6 +363,24 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
         Number(primary.appColorUpdatedAt) || 0,
         Number(secondary.appColorUpdatedAt) || 0
       ) || null,
+      withdrawalRequests: (() => {
+        const a = Array.isArray(primary.withdrawalRequests)
+          ? primary.withdrawalRequests
+          : [];
+        const b = Array.isArray(secondary.withdrawalRequests)
+          ? secondary.withdrawalRequests
+          : [];
+        const floor = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const merged = [...a, ...b]
+          .map((t) => Number(t))
+          .filter((t) => Number.isFinite(t) && t >= floor);
+        return Array.from(new Set(merged)).sort((x, y) => x - y);
+      })(),
+      withdrawalRequestedAt:
+        Math.max(
+          Number(primary.withdrawalRequestedAt) || 0,
+          Number(secondary.withdrawalRequestedAt) || 0
+        ) || null,
     });
   };
 
