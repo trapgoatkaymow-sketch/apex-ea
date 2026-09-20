@@ -2034,6 +2034,7 @@ export default function AdminPortal() {
         commissionUsd: row?.usd || 0,
         commissionZar: row?.zar || 0,
         banking: row?.banking || {},
+        paidAt: Date.now(),
       });
       showToast(`Payout email sent to ${email}`);
     } catch (error) {

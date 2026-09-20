@@ -201,7 +201,24 @@ async function handlePayoutDone(body) {
   const commissionUsd = Number(body.commissionUsd ?? body.usd ?? 0) || 0;
   const commissionZar = Number(body.commissionZar ?? body.zar ?? 0) || 0;
   const banking = body.banking || mentor.banking || {};
-  const hasAmount = commissionUsd > 0 || commissionZar > 0;
+  const paidAtMs = Number(body.paidAt || body.paidAtMs || Date.now()) || Date.now();
+  const paidAtDate = new Date(paidAtMs);
+  const amountLabel = `$${commissionUsd.toFixed(2)} (R${commissionZar})`;
+  let paidAtLabel = paidAtDate.toISOString();
+  try {
+    paidAtLabel = paidAtDate.toLocaleString("en-ZA", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    paidAtLabel = paidAtDate.toISOString();
+  }
 
   const subject = "Your ApexEA commission payout was sent";
   const textContent = [
@@ -209,9 +226,8 @@ async function handlePayoutDone(body) {
     "",
     "Your ApexEA mentor commission payout has been completed.",
     "",
-    hasAmount
-      ? `Amount: $${commissionUsd.toFixed(2)} (R${commissionZar})`
-      : null,
+    `Amount paid: ${amountLabel}`,
+    `Paid at: ${paidAtLabel} (SAST)`,
     paidUnlocks > 0 ? `Paid unlocks: ${paidUnlocks}` : null,
     banking?.bankName || banking?.accountNumber
       ? `Paid to: ${escapeText(banking.bankName)}${
@@ -235,11 +251,8 @@ async function handlePayoutDone(body) {
     <p style="margin:0 0 18px;color:#c8c8d0;font-size:15px;line-height:1.55;">
       Your mentor commission payout has been completed.
     </p>
-    ${
-      hasAmount
-        ? `<p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Amount:</strong> $${commissionUsd.toFixed(2)} (R${commissionZar})</p>`
-        : ""
-    }
+    <p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Amount paid:</strong> ${escapeHtml(amountLabel)}</p>
+    <p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Paid at:</strong> ${escapeHtml(paidAtLabel)} (SAST)</p>
     ${
       paidUnlocks > 0
         ? `<p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Paid unlocks:</strong> ${paidUnlocks}</p>`
@@ -279,6 +292,9 @@ async function handlePayoutDone(body) {
     ok: true,
     to: mentorEmail,
     messageId: email.messageId || "",
+    amountPaid: amountLabel,
+    paidAt: paidAtMs,
+    paidAtLabel,
   };
 }
 
