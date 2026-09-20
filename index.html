@@ -128,13 +128,15 @@
           }
         } catch (e) {}
 
-        /* If React never mounts, show Retry and auto-recover once. */
+        /* If the app module never executes, show Retry and auto-recover once.
+           Skip when dataset.apexeaBoot is set (module started) even if paint is slow. */
         window.addEventListener("DOMContentLoaded", function () {
           var boot = document.getElementById("apexea-boot");
           if (!boot) return;
           var retryBtn = document.getElementById("apexea-boot-retry");
           setTimeout(function () {
             if (!document.getElementById("apexea-boot")) return;
+            if (document.documentElement.getAttribute("data-apexea-boot") === "1") return;
             if (retryBtn) retryBtn.hidden = false;
             var already = false;
             try { already = sessionStorage.getItem(BOOT_RETRY) === "1"; } catch (e) {}
@@ -143,7 +145,7 @@
               nukeCaches();
               hardReload("watchdog");
             }
-          }, 4500);
+          }, 8000);
         });
       })();
     </script>

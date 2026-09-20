@@ -6,6 +6,13 @@ import { warmBotPhotoCache } from "./botPhotoCache.js";
 import { AppProvider, isNativeApp } from "./store.jsx";
 import "./styles.css";
 
+// Signal to the inline HTML watchdog that the app module executed.
+try {
+  document.documentElement.dataset.apexeaBoot = "1";
+} catch {
+  // ignore
+}
+
 function mountApp() {
   createRoot(document.getElementById("root")).render(
     <StrictMode>
