@@ -149,16 +149,21 @@ export function priceToY(price, geometry) {
   return yNorm * 100;
 }
 
-export function buildLevelRows(signal, geometry) {
+export function buildLevelRows(signal, geometry, options = {}) {
   const side = String(signal?.side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
   const defs = [
-    { key: "stopLoss", label: "SL", tone: "sl", price: signal?.stopLoss },
-    { key: "entry", label: "ENTRY", tone: "entry", price: signal?.entry },
-    { key: "takeProfit1", label: "TP1", tone: "tp", price: signal?.takeProfit1 },
-    { key: "takeProfit2", label: "TP2", tone: "tp", price: signal?.takeProfit2 },
-    { key: "takeProfit3", label: "TP3", tone: "tp", price: signal?.takeProfit3 },
+    { key: "stopLoss", label: "SL", tone: "sl", price: signal?.stopLoss, primary: true },
+    { key: "entry", label: "ENTRY", tone: "entry", price: signal?.entry, primary: true },
+    { key: "takeProfit1", label: "TP1", tone: "tp", price: signal?.takeProfit1, primary: false },
+    { key: "takeProfit2", label: "TP2", tone: "tp", price: signal?.takeProfit2, primary: false },
+    { key: "takeProfit3", label: "TP3", tone: "tp", price: signal?.takeProfit3, primary: true },
   ];
   return defs
+    .filter((row) => {
+      if (options.primaryOnly) return row.primary;
+      if (options.secondaryOnly) return !row.primary;
+      return true;
+    })
     .map((row) => {
       const y = priceToY(row.price, geometry);
       if (y == null) return null;

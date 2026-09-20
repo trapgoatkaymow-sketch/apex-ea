@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 8 — Interface 2 scanner mission header + ops telemetry deck restyle.
+ * Gen 10 — I2 scan overlay RR style + fullscreen zoom viewer.
  */
-export const UI_SHELL_GENERATION = 9;
+export const UI_SHELL_GENERATION = 10;
 
-export const UI_SHELL_LABEL = "v2-scan-overlay-analysis";
+export const UI_SHELL_LABEL = "v2-scan-overlay-zoom";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

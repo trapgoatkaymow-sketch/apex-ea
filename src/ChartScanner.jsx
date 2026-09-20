@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
 import ChartAnalysisOverlay from "./ChartAnalysisOverlay.jsx";
+import ChartFullscreenViewer from "./ChartFullscreenViewer.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
@@ -148,6 +149,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [lotSize, setLotSize] = useState(0.01);
   const [scansLeft, setScansLeft] = useState(() => loadScansLeft(variant));
   const [signal, setSignal] = useState(null);
+  const [chartLightboxOpen, setChartLightboxOpen] = useState(false);
   const [fills, setFills] = useState([]);
   const [busy, setBusy] = useState(false);
   const [engineProgress, setEngineProgress] = useState(0);
@@ -156,6 +158,10 @@ export default function ChartScanner({ variant = "default", active = true }) {
   useEffect(() => {
     if (active) setScansLeft(loadScansLeft(variant));
   }, [variant, active]);
+
+  useEffect(() => {
+    if (!preview) setChartLightboxOpen(false);
+  }, [preview]);
 
   // Refresh quota when the app returns to the foreground (new calendar day).
   useEffect(() => {
@@ -750,16 +756,28 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <div className="cs-stage-main">
           <div className="cs-viewport" aria-label="Chart preview">
             {preview ? (
-              <div
-                className={`cs-chart-frame${
-                  variant === "v2" && setupReady ? " has-analysis" : ""
-                }`}
-              >
-                <img className="cs-chart" src={preview} alt="Chart to scan" />
-                {variant === "v2" && setupReady && signal ? (
-                  <ChartAnalysisOverlay signal={signal} visible />
-                ) : null}
-              </div>
+              variant === "v2" ? (
+                <button
+                  type="button"
+                  className={`cs-chart-frame is-expandable${
+                    setupReady ? " has-analysis" : ""
+                  }`}
+                  onClick={() => setChartLightboxOpen(true)}
+                  aria-label="Open full chart analysis — tap to zoom"
+                >
+                  <img className="cs-chart" src={preview} alt="Chart to scan" />
+                  {setupReady && signal ? (
+                    <ChartAnalysisOverlay signal={signal} visible />
+                  ) : null}
+                  <span className="cs-chart-expand-hint" aria-hidden="true">
+                    Tap to view full · zoom
+                  </span>
+                </button>
+              ) : (
+                <div className="cs-chart-frame">
+                  <img className="cs-chart" src={preview} alt="Chart to scan" />
+                </div>
+              )
             ) : (
               <div className="cs-empty">
                 {variant === "v2" ? (
@@ -1462,6 +1480,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
         >
           Connect a trading account to unlock the scanner →
         </button>
+      ) : null}
+
+      {variant === "v2" ? (
+        <ChartFullscreenViewer
+          open={chartLightboxOpen}
+          preview={preview}
+          signal={setupReady ? signal : null}
+          onClose={() => setChartLightboxOpen(false)}
+        />
       ) : null}
     </section>
   );
