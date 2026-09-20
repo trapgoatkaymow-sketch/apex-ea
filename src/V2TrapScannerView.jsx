@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import BotAvatar from "./BotAvatar.jsx";
 
 function formatPrice(value) {
   if (value == null || value === "") return "—";
@@ -198,6 +199,11 @@ export default function V2TrapScannerView({
         <EqBars side="left" />
         <div className="tg-orb-wrap">
           <div className="tg-orb-glow" aria-hidden="true" />
+          <span className="tg-bubbles" aria-hidden="true">
+            {Array.from({ length: 14 }, (_, i) => (
+              <i key={i} className={`tg-bubble tg-bubble--${i + 1}`} />
+            ))}
+          </span>
           <div className="tg-orb">
             <div className="tg-orb-ring tg-orb-ring--a" aria-hidden="true" />
             <div className="tg-orb-ring tg-orb-ring--b" aria-hidden="true" />
@@ -206,7 +212,13 @@ export default function V2TrapScannerView({
                 <img className="tg-orb-chart" src={preview} alt="Chart preview" />
               ) : (
                 <div className="tg-orb-empty">
-                  <img src="/logo.png" alt="" width="72" height="72" />
+                  <BotAvatar
+                    className="tg-orb-ea"
+                    bot={activeBot}
+                    fallback="/logo.png"
+                    width="160"
+                    height="160"
+                  />
                 </div>
               )}
             </div>
@@ -390,7 +402,13 @@ export default function V2TrapScannerView({
         <div className={`tg-result tg-result--${side.toLowerCase()}`}>
           <div className="tg-result-head">
             <div className="tg-result-sym">
-              <img src="/logo.png" alt="" width="28" height="28" />
+              <BotAvatar
+                className="tg-result-ea"
+                bot={activeBot}
+                fallback="/logo.png"
+                width="28"
+                height="28"
+              />
               <div>
                 <strong>{displaySymbol || "SETUP"}</strong>
                 <em>{signal?.timeframe || "M15"} · Entry {formatPrice(signal?.entry)}</em>
