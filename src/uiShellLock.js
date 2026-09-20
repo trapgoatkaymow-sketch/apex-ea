@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 38 — Faster portal boot + mentor portal username on client header.
+ * Gen 39 — Unstick mentor portal Loading splash (SW/cache boot recovery).
  */
-export const UI_SHELL_GENERATION = 38;
+export const UI_SHELL_GENERATION = 39;
 
-export const UI_SHELL_LABEL = "portal-speed-mentor-name";
+export const UI_SHELL_LABEL = "portal-boot-recover";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

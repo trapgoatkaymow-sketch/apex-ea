@@ -5,6 +5,10 @@
  * Upgrade path is remote app-version.json only (buildId / shellGeneration).
  * We never reload solely because localStorage remembers a newer generation —
  * that caused infinite loops when the CDN kept serving older HTML.
+ *
+ * Important: do NOT clear Cache Storage / unregister SW on every boot. That
+ * races Safari while the module is still settling and can leave mentors stuck
+ * on the Loading splash. Only nuke caches when we are about to force-reload.
  */
 import {
   BUILD_ID_STORAGE_KEY,
@@ -64,12 +68,14 @@ function rememberLocalShell() {
     );
     document.documentElement.dataset.uiShell = UI_SHELL_LABEL;
     document.documentElement.dataset.shellGen = String(UI_SHELL_GENERATION);
+    // App mounted — clear one-shot boot retry flag.
+    sessionStorage.removeItem("apexea-boot-retry-v1");
   } catch {
     // ignore quota / DOM
   }
 }
 
-function forceReload(remoteId, remoteGen) {
+async function forceReload(remoteId, remoteGen) {
   const alreadyReloaded = sessionStorage.getItem(RELOAD_SESSION_KEY);
   const token = `${remoteId || "build"}:${remoteGen || UI_SHELL_GENERATION}`;
   if (alreadyReloaded === token) return false;
@@ -79,6 +85,8 @@ function forceReload(remoteId, remoteGen) {
   } catch {
     // ignore
   }
+  await unregisterServiceWorkers();
+  await clearRuntimeCaches();
   const url = new URL(window.location.href);
   url.searchParams.set("_build", String(remoteId || "next").slice(0, 12));
   url.searchParams.set("_shell", String(remoteGen || UI_SHELL_GENERATION));
@@ -123,9 +131,6 @@ function isProdHost() {
  * @returns {Promise<boolean>} true when a forced reload was triggered
  */
 export async function runBootGuard() {
-  await unregisterServiceWorkers();
-  await clearRuntimeCaches();
-
   rememberLocalShell();
 
   try {
@@ -137,12 +142,15 @@ export async function runBootGuard() {
 
     const generationStale =
       Number.isFinite(remoteGen) && remoteGen > 0 && remoteGen > UI_SHELL_GENERATION;
+    // Ignore ephemeral local-* build ids from Vite/Vercel preview stamps so
+    // every deploy does not bounce mentors through a reload loop.
     const buildStale =
       isProdHost() &&
       Boolean(remoteId) &&
       remoteId !== BUILD_ID &&
       remoteId !== "dev" &&
-      !String(remoteId).startsWith("local-");
+      !String(remoteId).startsWith("local-") &&
+      !String(BUILD_ID).startsWith("local-");
 
     if (!generationStale && !buildStale) return false;
 
