@@ -1952,32 +1952,8 @@ export function AppProvider({ children }) {
         return null;
       }
 
-      // Same rule as bulk import — one live key per client+bot.
-      // Only reuse a local key if it still exists on the shared server store.
-      const existingForClient = (Array.isArray(licenseKeys) ? licenseKeys : []).find(
-        (row) =>
-          normalizeEmail(row.clientEmail) === email &&
-          String(row.botId || "") === String(botId) &&
-          !isRememberedDeletedLicenseKey(row.key)
-      );
-      if (existingForClient) {
-        let remoteExisting = null;
-        try {
-          remoteExisting = await fetchLicense(existingForClient.key);
-        } catch {
-          remoteExisting = null;
-        }
-        if (remoteExisting) {
-          setLicenseKeys((prev) => mergeLicenses(prev, [remoteExisting]));
-          showToast(
-            remoteExisting.used
-              ? `This client already has a used key for ${bot?.name || "this bot"}`
-              : `This client already has an unused key: ${remoteExisting.key}`
-          );
-          return remoteExisting.key;
-        }
-        // Local ghost — fall through and create a durable server key.
-      }
+      // Always mint a fresh key — same client email may receive unlimited
+      // licenses for the same bot (used or unused). Each generate also emails.
 
       const ea = eas.find((item) => item.id === botId);
       const key = randomLicenseKey();

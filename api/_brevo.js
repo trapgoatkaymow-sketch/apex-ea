@@ -153,7 +153,7 @@ export async function sendLicenseKeyEmail(license = {}) {
     `Access: ${duration}`,
     "",
     "How to activate:",
-    `1. Open ${appUrl} or download the app: ${downloadUrl}`,
+    `1. Download the app: ${downloadUrl}`,
     "2. Sign in with this email",
     `3. Enter your license key: ${key}`,
     "",
@@ -188,8 +188,7 @@ export async function sendLicenseKeyEmail(license = {}) {
           </div>
           <p style="margin:0 0 8px;font-size:14px;color:#c8c8d0;"><strong style="color:#fff;">Access:</strong> ${escapeHtml(duration)}</p>
           <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#c8c8d0;">
-            Open <a href="${escapeHtml(appUrl)}" style="color:#ff7ab5;">${escapeHtml(appUrl)}</a>
-            or <a href="${escapeHtml(downloadUrl)}" style="color:#ff7ab5;">download the app</a>,
+            <a href="${escapeHtml(downloadUrl)}" style="color:#ff7ab5;">Download the app</a>,
             sign in with <strong style="color:#fff;">${escapeHtml(toEmail)}</strong>, then enter this key to unlock.
           </p>
           <p style="margin:0;font-size:12px;line-height:1.45;color:#7a7a88;">Keep this email — you will need the key if you reinstall.</p>

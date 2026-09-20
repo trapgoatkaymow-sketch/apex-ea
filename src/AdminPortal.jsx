@@ -4762,7 +4762,9 @@ export default function AdminPortal() {
               </p>
               <p>
                 <span>Email</span>
-                <strong>{latestLicenseMeta?.email || "—"}</strong>
+                <strong className="license-side-plain" x-apple-data-detectors="false">
+                  {latestLicenseMeta?.email || "—"}
+                </strong>
               </p>
               <p>
                 <span>Bot</span>
@@ -4803,7 +4805,7 @@ export default function AdminPortal() {
               {(latestLicenseMeta?.mentorName || latestLicenseMeta?.mentorEmail) && (
                 <p>
                   <span>Mentor</span>
-                  <strong>
+                  <strong className="license-side-plain" x-apple-data-detectors="false">
                     {[latestLicenseMeta?.mentorName, latestLicenseMeta?.mentorEmail]
                       .filter(Boolean)
                       .join(" · ") || "—"}

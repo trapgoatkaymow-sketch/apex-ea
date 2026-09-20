@@ -1447,10 +1447,7 @@ export async function createLicensesBulk(payload = {}) {
       const used = licenses.filter(
         (row) => normalizeEmail(row.mentorEmail) === mentorEmail
       ).length;
-      const need = normalizedClients.filter((c) => {
-        const existing = byEmailBot.get(`${c.clientEmail}::${botId}`);
-        return !existing;
-      }).length;
+      const need = normalizedClients.length;
       if (used + need > keyAllowance) {
         const err = new Error(
           `License key limit reached (${used}/${keyAllowance}). Need ${need} more — ask super admin to raise your allotment.`
@@ -1463,18 +1460,7 @@ export async function createLicensesBulk(payload = {}) {
     const next = [...licenses];
     const now = Date.now();
     for (const client of normalizedClients) {
-      const mapKey = `${client.clientEmail}::${botId}`;
-      const existing = byEmailBot.get(mapKey);
-      if (existing && !api.isDeleted?.(existing.key)) {
-        skipped.push({
-          clientEmail: client.clientEmail,
-          clientName: client.clientName,
-          key: existing.key,
-          reason: "already_has_key_for_bot",
-        });
-        continue;
-      }
-
+      // Always create a fresh key — same email may receive many keys for one bot.
       let key = randomLicenseKeyServer(usedKeys);
       while (api.isDeleted?.(key) || usedKeys.has(key)) {
         key = randomLicenseKeyServer(usedKeys);
@@ -1504,7 +1490,7 @@ export async function createLicensesBulk(payload = {}) {
         bot,
       };
       next.unshift(entry);
-      byEmailBot.set(mapKey, entry);
+      byEmailBot.set(`${client.clientEmail}::${botId}`, entry);
       created.push(entry);
     }
     return next;
