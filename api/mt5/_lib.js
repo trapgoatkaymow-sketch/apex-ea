@@ -262,13 +262,17 @@ function sessionFromConnect({
     summary?.balance,
     summary?.Balance,
     account?.balance,
-    details?.balance
+    account?.Balance,
+    details?.balance,
+    details?.Balance
   );
   const equity = pickNumber(
     summary?.equity,
     summary?.Equity,
     account?.equity,
-    details?.equity
+    account?.Equity,
+    details?.equity,
+    details?.Equity
   );
   const profit = pickNumber(
     summary?.profit,
