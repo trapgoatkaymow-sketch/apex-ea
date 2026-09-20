@@ -1677,7 +1677,11 @@ export default function AdminPortal() {
 
   const topMentorRows = useMemo(() => {
     const rows = mentors
-      .filter((m) => String(m.role || "").toLowerCase() !== "superadmin")
+      .filter((m) => {
+        const role = String(m.role || "").toLowerCase();
+        const status = String(m.status || "").toLowerCase();
+        return role !== "superadmin" && status === "approved";
+      })
       .map((mentor) => {
         const email = normalizeAdminEmail(mentor.email);
         const id = String(mentor.id || "");
@@ -1697,7 +1701,7 @@ export default function AdminPortal() {
         return {
           mentor,
           email,
-          status: String(mentor.status || "pending").toLowerCase(),
+          status: "approved",
           keys: owned.length,
           used,
           clients: clients.size,
@@ -4129,7 +4133,7 @@ export default function AdminPortal() {
           <section className="admin-page is-active">
             <h2 className="admin-h1">Top Mentors</h2>
             <p className="admin-sub">
-              Ranked by clients unlocked, keys used, and paid unlocks.
+              Approved mentors only — ranked by clients unlocked, keys used, and paid unlocks.
             </p>
             <div className="admin-card">
               <div className="admin-card-head">
@@ -4154,7 +4158,7 @@ export default function AdminPortal() {
                 </button>
               </div>
               {topMentorRows.length === 0 ? (
-                <p className="admin-empty">No mentors yet</p>
+                <p className="admin-empty">No approved mentors yet</p>
               ) : (
                 <div className="admin-top-list">
                   {topMentorRows.map((row, index) => {
