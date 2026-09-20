@@ -11,6 +11,7 @@ import {
   grantScanReset,
   listDeletedKeys,
   listLicenses,
+  markLicenseEmailSent,
   markLicenseUsed,
   readJsonBody,
   sendJson,
@@ -112,6 +113,13 @@ export default async function handler(req, res) {
         }
         const { sendLicenseKeyEmail } = await import("../_brevo.js");
         const email = await sendLicenseKeyEmail(license);
+        if (email?.ok) {
+          try {
+            await markLicenseEmailSent(license.key);
+          } catch {
+            // non-fatal
+          }
+        }
         sendJson(res, email.ok ? 200 : email.skipped ? 503 : 502, {
           ok: Boolean(email.ok),
           email,

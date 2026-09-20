@@ -1960,19 +1960,31 @@ export function AppProvider({ children }) {
         return null;
       }
 
-      // Always mint a fresh key — same client email may receive unlimited
-      // licenses for the same bot (used or unused). Each generate also emails.
-
+      // Mint a fresh key only when this client has no unused key for the bot.
+      // Re-generate must not spam another license email for the same unused seat.
       const ea = eas.find((item) => item.id === botId);
-      const key = randomLicenseKey();
+      const existingUnused = (Array.isArray(licenseKeys) ? licenseKeys : []).find(
+        (row) =>
+          normalizeEmail(row?.clientEmail) === email &&
+          String(row?.botId || row?.bot?.id || "").trim() === String(bot.id) &&
+          !row?.used
+      );
+      const key = existingUnused?.key || randomLicenseKey();
+      const reusedLocal = Boolean(existingUnused?.key);
       const ownerEmail =
         String(mentorEmail || ea?.ownerEmail || "")
           .trim()
           .toLowerCase() || "";
       const ownerId = String(mentorId || ea?.ownerId || "").trim();
       const ownerName = String(mentorName || "").trim();
-      const createdAt = Date.now();
-      const timing = resolveLicenseExpiry(duration, createdAt);
+      const createdAt = Number(existingUnused?.createdAt) || Date.now();
+      const timing = existingUnused
+        ? {
+            duration: existingUnused.duration || "lifetime",
+            expiresAt:
+              existingUnused.expiresAt != null ? existingUnused.expiresAt : null,
+          }
+        : resolveLicenseExpiry(duration, createdAt);
 
       if (ownerEmail && ownerEmail !== String(SUPER_ADMIN_EMAIL).toLowerCase()) {
         let allowance = DEFAULT_MENTOR_LICENSE_KEYS;
@@ -2107,8 +2119,18 @@ export function AppProvider({ children }) {
             );
           }
           const mail = remote?._email || null;
-          if (mail?.ok) {
+          if (mail?.ok && !mail?.skipped) {
             showToast(`License ready for ${name} · emailed ${email}`);
+          } else if (mail?.skipped && mail?.reason === "reused-unused-key") {
+            showToast(
+              `License already ready for ${name} · ${email} (same unused key)`
+            );
+          } else if (mail?.skipped && mail?.reason === "already-sent") {
+            showToast(
+              reusedLocal
+                ? `License already emailed to ${email}`
+                : `License ready for ${name} · already emailed ${email}`
+            );
           } else if (mail?.skipped) {
             showToast(
               `License ready for ${name} · email not configured (add Brevo keys on Vercel)`

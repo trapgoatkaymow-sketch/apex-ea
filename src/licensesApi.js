@@ -251,6 +251,7 @@ export function normalizeLicense(row) {
         ? Number(row?.usedAt) || null
         : null,
     updatedAt: Number(row?.updatedAt || row?.usedAt || row?.createdAt) || Date.now(),
+    emailSentAt: row?.emailSentAt ? Number(row.emailSentAt) : null,
     scanReset: (() => {
       const raw = row?.scanReset;
       if (!raw || typeof raw !== "object") return null;
