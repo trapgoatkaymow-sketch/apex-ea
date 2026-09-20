@@ -224,7 +224,7 @@
       "destination": "/api/download-apk"
     },
     {
-      "source": "/((?!api/|mt5-api/|get-app\\.html|app-version\\.json|.*\\.apk$).*)",
+      "source": "/((?!api/|mt5-api/|get-app\\.html|copy-key\\.html|app-version\\.json|.*\\.apk$).*)",
       "destination": "/index.html"
     }
   ]
