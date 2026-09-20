@@ -869,15 +869,36 @@ export default function ChartScanner({ variant = "default", active = true }) {
               onClick={openCamera}
               disabled={busy || !connected}
             >
+              {variant === "v2" ? (
+                <span className="cs-v2-intake-frame" aria-hidden="true">
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tl" />
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tr" />
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--bl" />
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--br" />
+                </span>
+              ) : null}
               <span className="cs-capture-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8A1.5 1.5 0 0 1 10.9 3.5h2.2a1.5 1.5 0 0 1 1.2.7L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="1.6" />
-                </svg>
+                {variant === "v2" ? (
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.4" />
+                    <circle cx="12" cy="12" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+                    <path
+                      d="M12 2.8v2.2M12 19v2.2M2.8 12h2.2M19 12h2.2"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8A1.5 1.5 0 0 1 10.9 3.5h2.2a1.5 1.5 0 0 1 1.2.7L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                )}
               </span>
               <span className="cs-capture-text">
                 <strong>{variant === "v2" ? "Shoot" : "Camera"}</strong>
@@ -895,22 +916,54 @@ export default function ChartScanner({ variant = "default", active = true }) {
               onClick={openUpload}
               disabled={busy || !connected}
             >
+              {variant === "v2" ? (
+                <span className="cs-v2-intake-frame" aria-hidden="true">
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tl" />
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tr" />
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--bl" />
+                  <i className="cs-v2-intake-corner cs-v2-intake-corner--br" />
+                </span>
+              ) : null}
               <span className="cs-capture-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M5 7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5v9A1.5 1.5 0 0 1 17.5 18h-11A1.5 1.5 0 0 1 5 16.5v-9Z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M8 14.5 10.2 12l2.1 2.1L15.5 11l2.5 3.5"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="9.2" cy="9.2" r="1.1" fill="currentColor" />
-                </svg>
+                {variant === "v2" ? (
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M4.5 7.2h15v9.6h-15V7.2Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M7 14.2 9.6 11l2.4 2.5L15.4 9.8 18 13.6"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="8.6" cy="9.4" r="1" fill="currentColor" />
+                    <path
+                      d="M12 4.2v2.2"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5 7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5v9A1.5 1.5 0 0 1 17.5 18h-11A1.5 1.5 0 0 1 5 16.5v-9Z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <path
+                      d="M8 14.5 10.2 12l2.1 2.1L15.5 11l2.5 3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="9.2" cy="9.2" r="1.1" fill="currentColor" />
+                  </svg>
+                )}
               </span>
               <span className="cs-capture-text">
                 <strong>{variant === "v2" ? "Import" : "Upload"}</strong>

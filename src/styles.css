@@ -8689,53 +8689,103 @@ html:has(.phone[data-interface="v2"]) body {
   display: none;
 }
 
-/* Split intake rail — Shoot / Import (not Camera / Upload cards). */
+/* Twin HUD intake pads — Shoot / Import (acquire stage language). */
 .view-scanner.cs-v2 .cs-capture-row,
 .view-scanner.cs-v2 .cs-v2-intake {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0;
-  margin-top: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.35);
+  gap: 8px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn {
-  min-height: 58px;
-  border-radius: 0;
-  padding: 11px 12px;
+  position: relative;
+  isolation: isolate;
+  min-height: 72px;
+  border-radius: 2px;
+  padding: 12px 12px 12px 14px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 12px;
   text-align: left;
   font-size: inherit;
   color: #fff;
-  background: transparent;
-  border: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: none;
-  box-shadow: none;
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.12s ease;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn:last-child {
-  border-right: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.view-scanner.cs-v2 .cs-v2-intake-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-intake-corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: rgba(var(--pink-rgb), 0.85);
+  border-style: solid;
+  border-width: 0;
+}
+
+.view-scanner.cs-v2 .cs-v2-intake-corner--tl {
+  top: 3px;
+  left: 3px;
+  border-top-width: 1.5px;
+  border-left-width: 1.5px;
+}
+
+.view-scanner.cs-v2 .cs-v2-intake-corner--tr {
+  top: 3px;
+  right: 3px;
+  border-top-width: 1.5px;
+  border-right-width: 1.5px;
+}
+
+.view-scanner.cs-v2 .cs-v2-intake-corner--bl {
+  bottom: 3px;
+  left: 3px;
+  border-bottom-width: 1.5px;
+  border-left-width: 1.5px;
+}
+
+.view-scanner.cs-v2 .cs-v2-intake-corner--br {
+  bottom: 3px;
+  right: 3px;
+  border-bottom-width: 1.5px;
+  border-right-width: 1.5px;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-text {
+  position: relative;
+  z-index: 1;
   display: grid;
-  gap: 2px;
+  gap: 3px;
   text-align: left;
   flex: 1;
   min-width: 0;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-text strong {
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1.1;
   color: #fff;
@@ -8743,65 +8793,110 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-text em {
   font-style: normal;
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.48);
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary {
-  background: linear-gradient(90deg, rgba(var(--pink-rgb), 0.28), rgba(var(--pink-rgb), 0.06));
-  box-shadow: inset 0 -2px 0 var(--pink);
+  background:
+    linear-gradient(145deg, rgba(var(--pink-rgb), 0.34) 0%, rgba(var(--pink-rgb), 0.08) 48%, rgba(0, 0, 0, 0.35) 100%),
+    #07080c;
+  border-color: rgba(var(--pink-rgb), 0.45);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--pink-rgb), 0.12),
+    0 0 18px rgba(var(--pink-rgb), 0.12);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary .cs-capture-icon {
-  color: var(--pink);
+  color: #fff;
+  background: rgba(var(--pink-rgb), 0.22);
+  border-color: rgba(var(--pink-rgb), 0.55);
+  box-shadow: 0 0 12px rgba(var(--pink-rgb), 0.35);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost {
-  background: rgba(255, 255, 255, 0.02);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)),
+    #06070a;
+  border-color: rgba(255, 255, 255, 0.12);
   color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost .cs-v2-intake-corner {
+  border-color: rgba(255, 255, 255, 0.42);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost .cs-capture-icon {
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
-.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn:active {
-  transform: none;
-  background: rgba(var(--pink-rgb), 0.18);
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary:active:not(:disabled) {
+  background:
+    linear-gradient(145deg, rgba(var(--pink-rgb), 0.48) 0%, rgba(var(--pink-rgb), 0.16) 50%, rgba(0, 0, 0, 0.4) 100%),
+    #07080c;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon {
-  width: 24px;
-  height: 24px;
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake.is-scanning .cs-capture-btn.is-primary {
   animation: cs-v2-intake-pulse 1.25s ease-in-out infinite;
 }
 
+.view-scanner.cs-v2 .cs-v2-intake.is-scanning .cs-capture-btn.is-primary .cs-capture-icon {
+  animation: cs-v2-intake-shutter 1.25s ease-in-out infinite;
+}
+
 @keyframes cs-v2-intake-pulse {
   0%,
   100% {
-    box-shadow: inset 0 -2px 0 var(--pink);
-    background: linear-gradient(90deg, rgba(var(--pink-rgb), 0.28), rgba(var(--pink-rgb), 0.06));
+    border-color: rgba(var(--pink-rgb), 0.45);
+    box-shadow:
+      inset 0 0 0 1px rgba(var(--pink-rgb), 0.12),
+      0 0 14px rgba(var(--pink-rgb), 0.12);
   }
   50% {
-    box-shadow: inset 0 -2px 0 #fff;
-    background: linear-gradient(90deg, rgba(var(--pink-rgb), 0.42), rgba(var(--pink-rgb), 0.12));
+    border-color: rgba(var(--pink-rgb), 0.85);
+    box-shadow:
+      inset 0 0 0 1px rgba(var(--pink-rgb), 0.28),
+      0 0 22px rgba(var(--pink-rgb), 0.28);
+  }
+}
+
+@keyframes cs-v2-intake-shutter {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(var(--pink-rgb), 0.3);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 18px rgba(var(--pink-rgb), 0.55);
   }
 }
 
@@ -9379,18 +9474,35 @@ html:has(.phone[data-interface="v2"]) body {
   }
 
   .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn {
-    min-height: 52px;
+    min-height: 64px;
+    padding: 10px 10px 10px 12px;
+    gap: 10px;
+  }
+
+  .view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon svg {
+    width: 15px;
+    height: 15px;
   }
 }
 
 @media (max-width: 360px) {
+  .view-scanner.cs-v2 .cs-v2-intake {
+    gap: 6px;
+  }
+
   .view-scanner.cs-v2 .cs-capture-btn {
-    padding: 10px 10px;
+    padding: 10px 9px 10px 10px;
     gap: 8px;
   }
 
   .view-scanner.cs-v2 .cs-capture-text strong {
     font-size: 0.7rem;
+    letter-spacing: 0.12em;
   }
 }
 
