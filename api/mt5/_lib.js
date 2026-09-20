@@ -539,8 +539,13 @@ export async function placeMarketTrade({
     }
 
     const threadLabel = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
-    const baseComment = String(comment || "bot~APEXEA").replace(/\|TP[123]\b/gi, "");
-    const threadComment = `${baseComment}|${threadLabel}`.slice(0, 31);
+    // MT5 comment stays ea~APEXEA only — never append |TP1/TP2/TP3.
+    const threadComment = String(comment || "bot~APEXEA")
+      .replace(/\|premium\b/gi, "")
+      .replace(/\|TP[123]\b/gi, "")
+      .replace(/\|+/g, "|")
+      .replace(/\|$/g, "")
+      .slice(0, 31) || "bot~APEXEA";
 
     const params = new URLSearchParams({
       id,

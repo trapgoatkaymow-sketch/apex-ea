@@ -509,9 +509,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     if (action === "BUY" || action === "SELL") side = action;
 
     const tradeComment = buildBotTradeComment(activeBot?.name);
-    const orbComment = isPremiumScanner
-      ? `${tradeComment}|premium`.slice(0, 31)
-      : tradeComment;
+    const orbComment = tradeComment;
     const threads = buildTpThreads({
       tradeCount,
       lot,
@@ -552,9 +550,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
       pushEngineLog(
         `Thread map · ${threads.map((t) => `T${t.tradeNo}→${t.target}`).join(" · ")}`
       );
-      if (isPremiumScanner) {
-        pushEngineLog("Premium scanner · MT5 comments tagged premium");
-      }
 
       const nextFills = [];
       let lastError = "";
@@ -566,10 +561,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
         const { target, takeProfit, tradeNo, volume } = thread;
         const tradeCommentTag = buildScannerFillComment({
           botName: activeBot?.name,
-          variant: isPremiumScanner ? "v2" : "default",
-          premium: isPremiumScanner,
-          target,
-          tradeNo,
         });
         setEngineStep(0);
         try {
@@ -582,7 +573,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             takeProfit,
             region: mt5Session.region || "",
             comment: tradeCommentTag,
-            // Always chart-scanner for API gate; premium is carried in the comment.
+            // Always chart-scanner for API gate; comment is ea~APEXEA only.
             source: "chart-scanner",
           });
           const filledSymbol = String(fill?.symbol || tradeSymbol)
@@ -615,7 +606,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             target,
           });
           pushEngineLog(
-            `Trade ${tradeNo} · ${target}${isPremiumScanner ? " · premium" : ""} · ${filledSymbol || tradeSymbol} · TP ${takeProfit} · comment ${tradeCommentTag}`
+            `Trade ${tradeNo} · ${target} · ${filledSymbol || tradeSymbol} · TP ${takeProfit} · comment ${tradeCommentTag}`
           );
         } catch (error) {
           lastError = error.message || "Trade failed";
@@ -649,9 +640,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       setEngineProgress(100);
       const okCount = nextFills.filter((f) => f.ok !== false).length;
       if (okCount) {
-        showToast(
-          `Executed ${okCount}/${nextFills.length} trades · T1→TP1 · T2→TP2 · T3→TP3 (cycles)`
-        );
+        showToast(`Executed ${okCount}/${nextFills.length} trades`);
       } else {
         showToast(lastError || nextFills[0]?.error || "No trades filled");
       }
