@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { resolveBotPhotoSrc } from "./apiOrigin.js";
 import BotAvatar from "./BotAvatar.jsx";
+import BotLicenseInfoButton from "./BotLicenseInfo.jsx";
 import {
   getCachedBotPhotoSync,
   resolveCachedBotPhoto,
@@ -238,24 +239,29 @@ export default function V2Interface() {
                   <p className="v2-robot-empty">No connected robots</p>
                 ) : (
                   activeRobots.map((bot) => (
-                    <button
+                    <div
                       key={bot.id}
                       className={`v2-robot-row${bot.id === activeBot?.id ? " is-active" : ""}`}
-                      type="button"
-                      onClick={() => {
-                        selectBot(bot.id);
-                        setFloatCycle(true);
-                      }}
                     >
-                      <V2EnergyBubbles count={ROW_PARTICLE_COUNT} energyClassName="v2-row-energy" />
-                      <BotAvatar
-                        bot={bot}
-                        width="40"
-                        height="40"
-                        fallback="/logo.png"
-                      />
-                      <span>{bot.name}</span>
-                    </button>
+                      <button
+                        className="v2-robot-row-main"
+                        type="button"
+                        onClick={() => {
+                          selectBot(bot.id);
+                          setFloatCycle(true);
+                        }}
+                      >
+                        <V2EnergyBubbles count={ROW_PARTICLE_COUNT} energyClassName="v2-row-energy" />
+                        <BotAvatar
+                          bot={bot}
+                          width="40"
+                          height="40"
+                          fallback="/logo.png"
+                        />
+                        <span>{bot.name}</span>
+                      </button>
+                      <BotLicenseInfoButton bot={bot} className="v2-robot-license" />
+                    </div>
                   ))
                 )}
                 <button className="v2-robot-row v2-robot-add" type="button" onClick={openLicense}>

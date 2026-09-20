@@ -1,5 +1,6 @@
 import { resolveBotPhotoSrc } from "./apiOrigin.js";
 import BotAvatar from "./BotAvatar.jsx";
+import BotLicenseInfoButton from "./BotLicenseInfo.jsx";
 import {
   getCachedBotPhotoSync,
   resolveCachedBotPhoto,
@@ -161,20 +162,25 @@ export default function ZetaInterface() {
               {bots
                 .filter((b) => b.active)
                 .map((bot) => (
-                  <button
+                  <div
                     key={bot.id}
                     className={`robot-row${bot.selected ? " is-active" : ""}`}
-                    type="button"
-                    onClick={() => selectBot(bot.id)}
                   >
-                    <BotAvatar
-                      bot={bot}
-                      width="36"
-                      height="36"
-                      fallback="/logo.png"
-                    />
-                    <span>{bot.name}</span>
-                  </button>
+                    <button
+                      className="robot-row-main"
+                      type="button"
+                      onClick={() => selectBot(bot.id)}
+                    >
+                      <BotAvatar
+                        bot={bot}
+                        width="36"
+                        height="36"
+                        fallback="/logo.png"
+                      />
+                      <span>{bot.name}</span>
+                    </button>
+                    <BotLicenseInfoButton bot={bot} className="zeta-robot-license" />
+                  </div>
                 ))}
               <button
                 className="robot-row robot-add"

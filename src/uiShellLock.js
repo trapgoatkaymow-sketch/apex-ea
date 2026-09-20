@@ -7,20 +7,21 @@
  * Gen 41 — Brevo license-key emails when mentors generate keys.
  * Gen 53 — One license email per unused client+bot key (no duplicate sends).
  * Gen 54 — Still email every new key; only block duplicate sends of the same key.
+ * Gen 55 — Live MT5 balance + license info icon on robot rows.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 54;
+export const UI_SHELL_GENERATION = 55;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-license-email-once";
+export const UI_SHELL_LABEL = "product-locked-balance-license-info";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 53;
+export const UI_SHELL_FLOOR = 54;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
