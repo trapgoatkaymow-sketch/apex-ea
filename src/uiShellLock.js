@@ -9,20 +9,21 @@
  * Gen 54 — Still email every new key; only block duplicate sends of the same key.
  * Gen 55 — Live MT5 balance + license info icon on robot rows.
  * Gen 56 — Fix PascalCase AccountSummary parse + visible license key icon.
+ * Gen 57 — Live floating profit = equity − balance on MetaTrader card.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 56;
+export const UI_SHELL_GENERATION = 57;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-balance-license-v2";
+export const UI_SHELL_LABEL = "product-locked-mt-floating-profit";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 55;
+export const UI_SHELL_FLOOR = 56;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

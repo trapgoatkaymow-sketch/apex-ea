@@ -2169,8 +2169,8 @@ html:has(.phone[data-interface="v2"]) body {
 
 .mt-session-metrics {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
   padding: 12px 12px 10px;
   margin: 0 -2px;
   border-radius: 12px;
@@ -2199,6 +2199,14 @@ html:has(.phone[data-interface="v2"]) body {
   color: #fff;
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
+}
+
+.mt-metric-value.is-profit {
+  color: #3dde8c;
+}
+
+.mt-metric-value.is-loss {
+  color: #ff5d7a;
 }
 
 .mt-session-btn {

@@ -343,12 +343,20 @@ function sessionFromConnect({
     details?.Equity,
     deepPickNumber(bag, ["equity", "Equity"])
   );
-  const profit = pickNumber(
-    summary?.profit,
-    summary?.Profit,
-    Number.isFinite(balance) && Number.isFinite(equity) ? equity - balance : null,
-    deepPickNumber(bag, ["profit", "Profit", "floating", "Floating"])
-  );
+  // Floating P/L MUST be equity − balance (same as MT5 Trade tab).
+  // Never prefer summary.profit first — brokers often return 0 / stale values.
+  const profitFromEquity =
+    Number.isFinite(balance) && Number.isFinite(equity)
+      ? Number((equity - balance).toFixed(8))
+      : null;
+  const profit =
+    profitFromEquity != null
+      ? profitFromEquity
+      : pickNumber(
+          summary?.profit,
+          summary?.Profit,
+          deepPickNumber(bag, ["profit", "Profit", "floating", "Floating"])
+        );
   const currency =
     pickCurrency(
       summary?.currency,

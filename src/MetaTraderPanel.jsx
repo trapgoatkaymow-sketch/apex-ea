@@ -49,28 +49,54 @@ function normalizeEmail(email) {
     .toLowerCase();
 }
 
-function formatMoney(value, currency = "") {
+function formatMoney(value, currency = "", { signed = false } = {}) {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "—";
   const code = String(currency || "").trim().toUpperCase();
+  const abs = Math.abs(amount);
+  let formatted = "";
   // Only use currency style when broker reported a real ISO code (ZAR, USD, …).
   if (/^[A-Z]{3}$/.test(code)) {
     try {
-      return new Intl.NumberFormat(undefined, {
+      formatted = new Intl.NumberFormat(undefined, {
         style: "currency",
         currency: code,
         currencyDisplay: "narrowSymbol",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      }).format(amount);
+      }).format(abs);
     } catch {
-      return `${code} ${amount.toFixed(2)}`;
+      formatted = `${code} ${abs.toFixed(2)}`;
     }
+  } else {
+    formatted = abs.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   }
-  return amount.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  if (!signed) {
+    return amount < 0 ? `-${formatted.replace(/^-/, "")}` : formatted;
+  }
+  if (amount > 0) return `+${formatted}`;
+  if (amount < 0) return `-${formatted.replace(/^-/, "")}`;
+  return formatted;
+}
+
+function profitTone(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount === 0) return "";
+  return amount > 0 ? " is-profit" : " is-loss";
+}
+
+/** Real floating P/L = equity − balance (matches MT5). */
+function floatingFromStatus(status = {}) {
+  const bal = Number(status?.balance);
+  const eq = Number(status?.equity);
+  if (Number.isFinite(bal) && Number.isFinite(eq)) {
+    return Number((eq - bal).toFixed(8));
+  }
+  const profit = Number(status?.profit);
+  return Number.isFinite(profit) ? profit : null;
 }
 
 export default function MetaTraderPanel({ variant = "zeta" }) {
@@ -215,19 +241,23 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     };
   }, []);
 
-  // Keep connected session fresh and pull live balance.
+  // Keep connected session fresh — live balance + floating (equity − balance).
   useEffect(() => {
     if (!session?.accountId) {
       setAccountMetrics(null);
       return undefined;
     }
     // Seed from session immediately when reconnecting / remounting.
-    if (session.balance != null || session.currency) {
+    if (session.balance != null || session.currency || session.profit != null) {
       setAccountMetrics((prev) =>
         prev?.balance != null
           ? prev
           : {
               balance: session.balance ?? null,
+              equity: session.equity ?? null,
+              profit:
+                floatingFromStatus(session) ??
+                (session.profit != null ? Number(session.profit) : null),
               currency: session.currency || "",
             }
       );
@@ -265,18 +295,25 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         }
         if (
           status &&
-          (status.balance != null || status.equity != null)
+          (status.balance != null || status.equity != null || status.profit != null)
         ) {
           const balance =
-            status.balance != null ? status.balance : status.equity;
+            status.balance != null ? Number(status.balance) : null;
+          const equity =
+            status.equity != null ? Number(status.equity) : null;
+          const profit = floatingFromStatus(status);
           setAccountMetrics({
-            balance,
+            balance: Number.isFinite(balance) ? balance : equity,
+            equity: Number.isFinite(equity) ? equity : null,
+            profit,
             currency: status.currency || "",
           });
-          // Keep session copy so remounts still show last known balance.
+          // Keep session copy so remounts still show last known metrics.
           setMt5Session({
             ...session,
-            balance,
+            balance: Number.isFinite(balance) ? balance : session.balance ?? null,
+            equity: Number.isFinite(equity) ? equity : session.equity ?? null,
+            profit,
             currency: status.currency || session.currency || "",
           });
         }
@@ -286,15 +323,15 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     }
 
     void reconcile();
-    // Poll faster while balance is still missing.
+    // Live floating needs frequent refresh; faster while balance still missing.
     const timer = setInterval(() => {
       void reconcile();
-    }, accountMetrics?.balance != null ? 12000 : 4000);
+    }, accountMetrics?.balance != null ? 5000 : 3500);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when account / network / metrics change
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- account / network / metrics
   }, [session?.accountId, apiHealth?.online, accountMetrics?.balance == null]);
 
   useEffect(() => {
@@ -437,12 +474,20 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         region: connected.region || null,
         connectedAt: Date.now(),
         balance: connected.balance ?? null,
+        equity: connected.equity ?? null,
+        profit: floatingFromStatus(connected),
         currency: connected.currency || "",
       };
       setMt5Session(nextSession);
-      if (connected.balance != null || connected.currency) {
+      if (
+        connected.balance != null ||
+        connected.equity != null ||
+        connected.currency
+      ) {
         setAccountMetrics({
           balance: connected.balance ?? null,
+          equity: connected.equity ?? null,
+          profit: floatingFromStatus(connected),
           currency: connected.currency || "",
         });
       }
@@ -660,7 +705,10 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                 Disconnect
               </button>
             </div>
-            <div className="mt-session-metrics" aria-label="Account balance">
+            <div
+              className="mt-session-metrics"
+              aria-label="Account balance and floating profit"
+            >
               <div className="mt-metric">
                 <span className="mt-metric-label">Balance</span>
                 <strong className="mt-metric-value">
@@ -669,6 +717,22 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                     : apiOnline
                       ? "Loading…"
                       : "—"}
+                </strong>
+              </div>
+              <div className="mt-metric">
+                <span className="mt-metric-label">Floating profit</span>
+                <strong
+                  className={`mt-metric-value${profitTone(accountMetrics?.profit)}`}
+                >
+                  {accountMetrics?.profit != null
+                    ? formatMoney(accountMetrics.profit, accountMetrics?.currency, {
+                        signed: true,
+                      })
+                    : accountMetrics?.balance != null
+                      ? formatMoney(0, accountMetrics?.currency, { signed: true })
+                      : apiOnline
+                        ? "Loading…"
+                        : "—"}
                 </strong>
               </div>
             </div>
