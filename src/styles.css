@@ -7016,6 +7016,188 @@ html:has(.phone[data-interface="v2"]) body {
   text-overflow: ellipsis;
 }
 
+/* Interface 2 Trading Engine — glass desk with ring meter */
+.cs-engine.is-desk {
+  --cs-engine-accent: #c026d3;
+  --cs-engine-accent-hot: #e879f9;
+  --cs-engine-accent-rgb: 192, 38, 211;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(var(--cs-engine-accent-rgb), 0.28), transparent 55%),
+    linear-gradient(145deg, rgba(28, 12, 40, 0.92), rgba(8, 6, 14, 0.94));
+  border: 1px solid rgba(var(--cs-engine-accent-rgb), 0.42);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 12px 28px rgba(0, 0, 0, 0.35),
+    0 0 28px rgba(var(--cs-engine-accent-rgb), 0.22);
+  backdrop-filter: blur(14px);
+}
+
+.cs-engine.is-desk.is-open {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(var(--cs-engine-accent-rgb), 0.4), transparent 58%),
+    linear-gradient(145deg, rgba(36, 14, 52, 0.95), rgba(10, 6, 18, 0.96));
+  border-color: rgba(232, 121, 249, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 14px 32px rgba(0, 0, 0, 0.4),
+    0 0 36px rgba(var(--cs-engine-accent-rgb), 0.35);
+  transform: none;
+}
+
+.cs-engine.is-desk.is-locked {
+  border-color: rgba(232, 121, 249, 0.65);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 12px 28px rgba(0, 0, 0, 0.35),
+    0 0 32px rgba(var(--cs-engine-accent-rgb), 0.4);
+}
+
+.cs-engine.is-desk .cs-engine-ring {
+  --cs-engine-ring: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  flex-shrink: 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(20, 10, 30, 0.95), #05040a 70%) padding-box,
+    conic-gradient(
+      from -90deg,
+      var(--cs-engine-accent-hot) 0 calc(var(--cs-engine-ring) * 1%),
+      rgba(255, 255, 255, 0.1) 0
+    ) border-box;
+  border: 2.5px solid transparent;
+  box-shadow:
+    0 0 16px rgba(var(--cs-engine-accent-rgb), 0.35),
+    inset 0 0 10px rgba(0, 0, 0, 0.45);
+}
+
+.cs-engine.is-desk .cs-engine-ring strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-engine.is-desk .cs-engine-ring em {
+  font-style: normal;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 1px;
+}
+
+.cs-engine.is-desk .cs-engine-copy {
+  min-width: 0;
+}
+
+.cs-engine.is-desk .cs-engine-kicker {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cs-engine-accent-hot);
+}
+
+.cs-engine.is-desk .cs-engine-kicker i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cs-engine-accent-hot);
+  box-shadow: 0 0 10px rgba(var(--cs-engine-accent-rgb), 0.95);
+  animation: cs-engine-pulse 1.6s ease-in-out infinite;
+}
+
+.cs-engine.is-desk:not(.is-open):not(.is-locked) .cs-engine-kicker i {
+  animation-play-state: paused;
+  opacity: 0.45;
+}
+
+.cs-engine.is-desk .cs-engine-status {
+  margin: 5px 0 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.01em;
+}
+
+.cs-engine.is-desk .cs-engine-log {
+  margin: 5px 0 0;
+  font-size: 0.64rem;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.cs-engine.is-desk .cs-engine-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+  padding: 5px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--cs-engine-accent-rgb), 0.28);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 12px rgba(var(--cs-engine-accent-rgb), 0.12);
+}
+
+.cs-engine.is-desk .cs-engine-wave i {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--cs-engine-accent-hot), var(--cs-engine-accent));
+  box-shadow: 0 0 8px rgba(var(--cs-engine-accent-rgb), 0.45);
+  animation: cs-engine-wave 1.15s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.cs-engine.is-desk .cs-engine-wave i:nth-child(1) { height: 8px; animation-delay: 0s; }
+.cs-engine.is-desk .cs-engine-wave i:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+.cs-engine.is-desk .cs-engine-wave i:nth-child(3) { height: 22px; animation-delay: 0.2s; }
+.cs-engine.is-desk .cs-engine-wave i:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+.cs-engine.is-desk .cs-engine-wave i:nth-child(5) { height: 26px; animation-delay: 0.15s; }
+.cs-engine.is-desk .cs-engine-wave i:nth-child(6) { height: 10px; animation-delay: 0.25s; }
+.cs-engine.is-desk .cs-engine-wave i:nth-child(7) { height: 18px; animation-delay: 0.05s; }
+
+.cs-engine.is-desk:not(.is-open) .cs-engine-wave i {
+  animation-play-state: paused;
+  opacity: 0.4;
+}
+
+.cs-engine.is-desk.is-locked:not(.is-open) .cs-engine-wave i {
+  opacity: 0.75;
+}
+
+@keyframes cs-engine-wave {
+  0%,
+  100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes cs-engine-pulse {
+  0%,
+  100% { opacity: 0.55; box-shadow: 0 0 6px rgba(var(--cs-engine-accent-rgb), 0.5); }
+  50% { opacity: 1; box-shadow: 0 0 14px rgba(var(--cs-engine-accent-rgb), 1); }
+}
+
+html.is-native.is-paused .cs-engine.is-desk .cs-engine-wave i,
+html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
+  animation-play-state: paused !important;
+}
+
 .cs-controls {
   display: grid;
   grid-template-columns: 1.15fr 1.2fr 1fr;

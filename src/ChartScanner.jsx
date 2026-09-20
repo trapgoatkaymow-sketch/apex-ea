@@ -893,52 +893,103 @@ export default function ChartScanner({ variant = "default", active = true }) {
       </div>
 
 
-        <div className={`cs-engine${engineActive ? " is-open" : ""}`} aria-live="polite">
-          <div className="cs-engine-top">
-            <div className="cs-engine-label">
-              <span className="cs-engine-gear" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="4.5"
-                    y="4.5"
-                    width="15"
-                    height="15"
-                    rx="2.2"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M8 8h3.2v3.2H8V8Zm4.8 0H16v3.2h-3.2V8ZM8 12.8h3.2V16H8v-3.2Zm4.8 0H16V16h-3.2v-3.2Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </span>
-              <div>
-                  <p className="cs-engine-kicker">Trading Engine</p>
-                  <p className="cs-engine-status">
-                    {engineActive
-                      ? activeStepLabel
-                      : setupReady
-                        ? "Setup ready — waiting for Execute Trade"
-                        : "Armed and ready"}
-                  </p>
+        <div
+          className={`cs-engine${engineActive ? " is-open" : ""}${setupReady ? " is-locked" : ""}${
+            useTrapResult ? " is-desk" : ""
+          }`}
+          aria-live="polite"
+        >
+          {useTrapResult ? (
+            <>
+              <div
+                className="cs-engine-ring"
+                style={{
+                  ["--cs-engine-ring"]: `${
+                    engineActive ? engineProgress : setupReady ? 100 : 0
+                  }`,
+                }}
+                aria-hidden="true"
+              >
+                <strong>
+                  {engineActive ? `${engineProgress}` : setupReady ? "100" : "0"}
+                </strong>
+                <em>%</em>
               </div>
-            </div>
-            <span className="cs-engine-pct">
-              {engineActive ? `${engineProgress}%` : setupReady ? "100%" : "0%"}
-            </span>
-          </div>
-          <div className="cs-engine-track">
-            <span
-              className="cs-engine-fill"
-              style={{
-                width: `${engineActive ? engineProgress : setupReady ? 100 : 0}%`,
-              }}
-            />
-          </div>
-          {engineActive && engineLogs.length ? (
-            <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
-          ) : null}
+              <div className="cs-engine-copy">
+                <p className="cs-engine-kicker">
+                  <i aria-hidden="true" />
+                  Trading Engine
+                </p>
+                <p className="cs-engine-status">
+                  {engineActive
+                    ? activeStepLabel
+                    : setupReady
+                      ? "Setup ready — waiting for Execute Trade"
+                      : "Armed and ready"}
+                </p>
+                {engineActive && engineLogs.length ? (
+                  <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
+                ) : null}
+              </div>
+              <span className="cs-engine-wave" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="cs-engine-top">
+                <div className="cs-engine-label">
+                  <span className="cs-engine-gear" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <rect
+                        x="4.5"
+                        y="4.5"
+                        width="15"
+                        height="15"
+                        rx="2.2"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                      />
+                      <path
+                        d="M8 8h3.2v3.2H8V8Zm4.8 0H16v3.2h-3.2V8ZM8 12.8h3.2V16H8v-3.2Zm4.8 0H16V16h-3.2v-3.2Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="cs-engine-kicker">Trading Engine</p>
+                    <p className="cs-engine-status">
+                      {engineActive
+                        ? activeStepLabel
+                        : setupReady
+                          ? "Setup ready — waiting for Execute Trade"
+                          : "Armed and ready"}
+                    </p>
+                  </div>
+                </div>
+                <span className="cs-engine-pct">
+                  {engineActive ? `${engineProgress}%` : setupReady ? "100%" : "0%"}
+                </span>
+              </div>
+              <div className="cs-engine-track">
+                <span
+                  className="cs-engine-fill"
+                  style={{
+                    width: `${engineActive ? engineProgress : setupReady ? 100 : 0}%`,
+                  }}
+                />
+              </div>
+              {engineActive && engineLogs.length ? (
+                <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
+              ) : null}
+            </>
+          )}
         </div>
 
         <div className="cs-controls">
