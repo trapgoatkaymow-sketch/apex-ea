@@ -737,7 +737,12 @@ export default function ChartScanner({ variant = "default", active = true }) {
           <div className="cs-viewport" aria-label="Chart preview">
             {preview ? (
               <div className="cs-chart-frame">
-                <img className="cs-chart" src={preview} alt="Chart to scan" />
+                <img
+                  className="cs-chart"
+                  src={preview}
+                  alt="Chart to scan"
+                  decoding="async"
+                />
               </div>
             ) : (
               <div className="cs-empty">
