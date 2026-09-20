@@ -381,6 +381,41 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
           Number(primary.withdrawalRequestedAt) || 0,
           Number(secondary.withdrawalRequestedAt) || 0
         ) || null,
+      passwordResetTokenHash: (() => {
+        const aAt = Number(primary.passwordResetRequestedAt) || 0;
+        const bAt = Number(secondary.passwordResetRequestedAt) || 0;
+        if (aAt >= bAt) {
+          return (
+            String(primary.passwordResetTokenHash || "") ||
+            String(secondary.passwordResetTokenHash || "")
+          );
+        }
+        return (
+          String(secondary.passwordResetTokenHash || "") ||
+          String(primary.passwordResetTokenHash || "")
+        );
+      })(),
+      passwordResetExpiresAt: (() => {
+        const aAt = Number(primary.passwordResetRequestedAt) || 0;
+        const bAt = Number(secondary.passwordResetRequestedAt) || 0;
+        if (aAt >= bAt) {
+          return (
+            Number(primary.passwordResetExpiresAt) ||
+            Number(secondary.passwordResetExpiresAt) ||
+            null
+          );
+        }
+        return (
+          Number(secondary.passwordResetExpiresAt) ||
+          Number(primary.passwordResetExpiresAt) ||
+          null
+        );
+      })(),
+      passwordResetRequestedAt:
+        Math.max(
+          Number(primary.passwordResetRequestedAt) || 0,
+          Number(secondary.passwordResetRequestedAt) || 0
+        ) || null,
     });
   };
 
