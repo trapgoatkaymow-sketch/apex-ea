@@ -277,7 +277,7 @@ button {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  max-width: calc(100% - 168px);
+  max-width: calc(100% - 120px);
   min-height: 1.2em;
   font-size: 1.12rem;
   font-weight: 700;
@@ -293,23 +293,9 @@ button {
   pointer-events: none;
 }
 
-.top-end {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 20;
-  position: relative;
-  max-width: min(58%, 220px);
-}
-
-.top-broker {
-  max-width: 132px;
-}
-
 .iface-toggle {
   flex: 0 0 auto;
-  margin-left: 0;
+  margin-left: auto;
   width: 44px;
   height: 44px;
   border-radius: 14px;
@@ -411,12 +397,6 @@ html:has(.phone[data-interface="v2"]) body {
   z-index: 31;
   pointer-events: none;
   color: #fff;
-}
-
-.phone[data-interface="v2"] .top .top-end {
-  position: relative;
-  z-index: 31;
-  pointer-events: auto;
 }
 
 .phone[data-interface="v2"] .top .iface-toggle {
@@ -1689,15 +1669,6 @@ html:has(.phone[data-interface="v2"]) body {
 .mt-head-broker {
   flex: 0 1 auto;
   max-width: min(52%, 168px);
-}
-
-.mt-session-broker {
-  margin-bottom: 4px;
-}
-
-.mt-session-mark .broker-mark-name {
-  font-size: 0.95rem;
-  font-weight: 750;
 }
 
 .broker-mark {

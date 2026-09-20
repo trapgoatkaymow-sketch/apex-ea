@@ -613,9 +613,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           <div className="mt-session-body">
             <div className="mt-session-row">
               <div className="mt-session-copy">
-                <div className="mt-session-broker">
-                  <BrokerMark broker={sessionBroker} className="mt-session-mark" size={28} />
-                </div>
+                <strong>{session.company || session.server}</strong>
                 <span>
                   {session.server} · login {session.login}
                   {session.subscribed ? " · copying" : ""} · engine armed
