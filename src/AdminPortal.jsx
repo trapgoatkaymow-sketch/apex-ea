@@ -25,7 +25,7 @@ import {
   resolveLicenseExpiry,
   resendLicenseEmailRemote,
 } from "./licensesApi.js";
-import { sendBroadcastEmailsRemote, requestCommissionWithdrawalRemote, fetchWithdrawQuotaRemote, WITHDRAWAL_REQUEST_EMAIL, WITHDRAW_MAX_PER_WEEK } from "./emailsApi.js";
+import { sendBroadcastEmailsRemote, requestCommissionWithdrawalRemote, sendMentorPayoutDoneRemote, fetchWithdrawQuotaRemote, WITHDRAWAL_REQUEST_EMAIL, WITHDRAW_MAX_PER_WEEK } from "./emailsApi.js";
 import {
   fetchEconomicEvents,
   formatEventDay,
@@ -257,6 +257,7 @@ export default function AdminPortal() {
   const [bankingBusy, setBankingBusy] = useState(false);
   const [withdrawRequestBusy, setWithdrawRequestBusy] = useState(false);
   const [withdrawQuota, setWithdrawQuota] = useState(null);
+  const [payoutEmailBusy, setPayoutEmailBusy] = useState("");
   const [hostSymbol, setHostSymbol] = useState("XAUUSD");
   const [hostSide, setHostSide] = useState("BUY");
   const [hostTradesCount, setHostTradesCount] = useState("1");
@@ -2013,6 +2014,32 @@ export default function AdminPortal() {
       showToast(error.message || "Could not send withdrawal request");
     } finally {
       setWithdrawRequestBusy(false);
+    }
+  }
+
+  async function sendPayoutDoneEmail(row) {
+    const email = normalizeAdminEmail(row?.mentor?.email);
+    if (!email) {
+      showToast("Mentor email missing");
+      return;
+    }
+    if (payoutEmailBusy) return;
+    setPayoutEmailBusy(email);
+    try {
+      await sendMentorPayoutDoneRemote({
+        adminEmail: adminSession?.email || SUPER_ADMIN_EMAIL,
+        mentorEmail: email,
+        username: row?.mentor?.username || "",
+        paidUnlocks: row?.sold || 0,
+        commissionUsd: row?.usd || 0,
+        commissionZar: row?.zar || 0,
+        banking: row?.banking || {},
+      });
+      showToast(`Payout email sent to ${email}`);
+    } catch (error) {
+      showToast(error.message || "Could not send payout email");
+    } finally {
+      setPayoutEmailBusy("");
     }
   }
 
@@ -4177,6 +4204,34 @@ export default function AdminPortal() {
                         <p className="admin-empty">Mentor has not added banking details yet</p>
                       )}
                     </div>
+                    <button
+                      className={`admin-btn admin-btn-solid admin-btn-block${
+                        payoutEmailBusy === normalizeAdminEmail(mentor.email)
+                          ? " is-loading"
+                          : ""
+                      }`}
+                      type="button"
+                      style={{ marginTop: 12 }}
+                      disabled={Boolean(payoutEmailBusy)}
+                      onClick={() =>
+                        void sendPayoutDoneEmail({
+                          mentor,
+                          sold,
+                          usd,
+                          zar,
+                          banking,
+                        })
+                      }
+                    >
+                      <AdminBusyLabel
+                        busy={
+                          payoutEmailBusy === normalizeAdminEmail(mentor.email)
+                        }
+                        busyText="Sending…"
+                      >
+                        Email payout done
+                      </AdminBusyLabel>
+                    </button>
                   </div>
                 );
               })

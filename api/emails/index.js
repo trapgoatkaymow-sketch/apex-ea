@@ -166,6 +166,122 @@ async function handleWithdrawRequest(body) {
   };
 }
 
+/** Super admin notifies a mentor that their commission payout was completed. */
+async function handlePayoutDone(body) {
+  assertSuperAdmin(body.adminEmail || body.actorEmail || body.by || "");
+
+  const mentorEmail = normalizeEmail(body.mentorEmail || body.email || "");
+  if (!mentorEmail || !mentorEmail.includes("@")) {
+    const err = new Error("Mentor email is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const mentors = await listMentors();
+  const mentor = (Array.isArray(mentors) ? mentors : []).find(
+    (m) => normalizeEmail(m.email) === mentorEmail
+  );
+  if (!mentor) {
+    const err = new Error("Mentor account not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (!brevoConfigured()) {
+    const err = new Error(
+      "Brevo not configured (set BREVO_API_KEY and BREVO_SENDER_EMAIL)"
+    );
+    err.status = 503;
+    throw err;
+  }
+
+  const username =
+    String(body.username || mentor.username || "").trim() || "Mentor";
+  const paidUnlocks = Number(body.paidUnlocks ?? body.sold ?? 0) || 0;
+  const commissionUsd = Number(body.commissionUsd ?? body.usd ?? 0) || 0;
+  const commissionZar = Number(body.commissionZar ?? body.zar ?? 0) || 0;
+  const banking = body.banking || mentor.banking || {};
+  const hasAmount = commissionUsd > 0 || commissionZar > 0;
+
+  const subject = "Your ApexEA commission payout was sent";
+  const textContent = [
+    `Hi ${username},`,
+    "",
+    "Your ApexEA mentor commission payout has been completed.",
+    "",
+    hasAmount
+      ? `Amount: $${commissionUsd.toFixed(2)} (R${commissionZar})`
+      : null,
+    paidUnlocks > 0 ? `Paid unlocks: ${paidUnlocks}` : null,
+    banking?.bankName || banking?.accountNumber
+      ? `Paid to: ${escapeText(banking.bankName)}${
+          banking.accountNumber ? ` · ${escapeText(banking.accountNumber)}` : ""
+        }`
+      : null,
+    "",
+    "Thank you for mentoring with ApexEA.",
+    "",
+    "— ApexEA",
+  ]
+    .filter((line) => line != null)
+    .join("\n");
+
+  const htmlContent = `<!DOCTYPE html>
+<html><body style="margin:0;padding:24px;background:#0b0b0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f5f5f7;">
+  <div style="max-width:520px;margin:0 auto;background:#16161d;border:1px solid #2a2a35;border-radius:16px;padding:24px;">
+    <p style="margin:0 0 6px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#ff7ab5;">ApexEA payout</p>
+    <h1 style="margin:0 0 16px;font-size:22px;color:#fff;">Payout completed</h1>
+    <p style="margin:0 0 14px;color:#c8c8d0;font-size:15px;line-height:1.5;">Hi ${escapeHtml(username)},</p>
+    <p style="margin:0 0 18px;color:#c8c8d0;font-size:15px;line-height:1.55;">
+      Your mentor commission payout has been completed.
+    </p>
+    ${
+      hasAmount
+        ? `<p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Amount:</strong> $${commissionUsd.toFixed(2)} (R${commissionZar})</p>`
+        : ""
+    }
+    ${
+      paidUnlocks > 0
+        ? `<p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Paid unlocks:</strong> ${paidUnlocks}</p>`
+        : ""
+    }
+    ${
+      banking?.bankName || banking?.accountNumber
+        ? `<p style="margin:0 0 18px;color:#c8c8d0;"><strong style="color:#fff;">Paid to:</strong> ${escapeHtml(
+            escapeText(banking.bankName)
+          )}${
+            banking.accountNumber
+              ? ` · ${escapeHtml(escapeText(banking.accountNumber))}`
+              : ""
+          }</p>`
+        : ""
+    }
+    <p style="margin:0;font-size:12px;line-height:1.45;color:#7a7a88;">Thank you for mentoring with ApexEA.</p>
+  </div>
+</body></html>`;
+
+  const email = await sendBrevoEmail({
+    toEmail: mentorEmail,
+    toName: username,
+    subject,
+    htmlContent,
+    textContent,
+    tags: ["mentor-payout-done"],
+  });
+
+  if (!email.ok) {
+    const err = new Error(email.error || "Could not send payout email");
+    err.status = email.skipped ? 503 : 502;
+    throw err;
+  }
+
+  return {
+    ok: true,
+    to: mentorEmail,
+    messageId: email.messageId || "",
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     endOptions(res);
@@ -234,6 +350,17 @@ export default async function handler(req, res) {
       action === "request-withdrawal"
     ) {
       const result = await handleWithdrawRequest(body);
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (
+      action === "payout-done" ||
+      action === "payout-complete" ||
+      action === "payout-sent" ||
+      action === "notify-payout"
+    ) {
+      const result = await handlePayoutDone(body);
       sendJson(res, 200, result);
       return;
     }

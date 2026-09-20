@@ -67,6 +67,17 @@ export async function requestCommissionWithdrawalRemote(payload = {}) {
   });
 }
 
+/** Super admin emails a mentor that their commission payout was completed. */
+export async function sendMentorPayoutDoneRemote(payload = {}) {
+  return apiFetch("", {
+    method: "POST",
+    body: {
+      action: "payout-done",
+      ...payload,
+    },
+  });
+}
+
 /** How many withdrawal requests this mentor has left this week. */
 export async function fetchWithdrawQuotaRemote(mentorEmail) {
   const email = String(mentorEmail || "").trim();
