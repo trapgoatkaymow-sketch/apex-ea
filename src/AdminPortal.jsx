@@ -1697,7 +1697,9 @@ export default function AdminPortal() {
         String(a.mentor.username || "").localeCompare(String(b.mentor.username || ""))
     );
 
-  const topMentorRows = useMemo(() => {
+  // Plain compute (not useMemo): must stay after auth early-returns without
+  // changing hook order when session appears/disappears on sign-in / logout.
+  const topMentorRows = (() => {
     const rows = mentors
       .filter((m) => {
         const role = String(m.role || "").toLowerCase();
@@ -1741,7 +1743,7 @@ export default function AdminPortal() {
         )
     );
     return rows;
-  }, [mentors, licenseKeys, signups]);
+  })();
 
   const commissionQuery = String(commissionSearch || "")
     .trim()
