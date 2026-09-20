@@ -314,19 +314,18 @@ function pickCurrency(...values) {
 }
 
 /**
- * Sum live floating P/L from open market positions (matches MT5 Trade tab).
- * Pending orders are skipped (profit is usually 0).
+ * List opened orders from MT5API. Returns raw rows (positions + pendings).
  */
-async function fetchOpenedOrdersProfit(accountId, { timeoutMs = 12000 } = {}) {
+async function listOpenedOrders(accountId, { timeoutMs = 12000 } = {}) {
   const id = String(accountId || "").trim();
-  if (!id) return null;
+  if (!id) return [];
   let data = null;
   try {
     data = await mt5Fetch(`/OpenedOrders?id=${encodeURIComponent(id)}`, {
       timeoutMs,
     });
   } catch {
-    return null;
+    return [];
   }
   const list = Array.isArray(data)
     ? data
@@ -335,22 +334,56 @@ async function fetchOpenedOrdersProfit(accountId, { timeoutMs = 12000 } = {}) {
       : Array.isArray(data?.OpenedOrders)
         ? data.OpenedOrders
         : [];
+  return list.filter((row) => row && typeof row === "object");
+}
+
+function isPendingOrderRow(row) {
+  const kind = String(row?.kind || row?.Kind || row?.orderType || row?.OrderType || "")
+    .trim()
+    .toLowerCase();
+  const type = String(row?.type || row?.Type || row?.orderType || "")
+    .trim()
+    .toLowerCase();
+  return (
+    /pending|limit|stop|stopimit|buystop|sellstop|buylimit|selllimit/.test(kind) ||
+    /limit|stop/.test(type)
+  );
+}
+
+function orderTicket(row) {
+  const ticket = pickNumber(row?.ticket, row?.Ticket, row?.order, row?.Order);
+  return ticket != null ? Math.trunc(ticket) : null;
+}
+
+function orderLots(row) {
+  return pickNumber(
+    row?.lots,
+    row?.Lots,
+    row?.volume,
+    row?.Volume,
+    row?.volumeCurrent,
+    row?.VolumeCurrent
+  );
+}
+
+/**
+ * Sum live floating P/L from open market positions (matches MT5 Trade tab).
+ * Pending orders are skipped (profit is usually 0).
+ */
+async function fetchOpenedOrdersProfit(accountId, { timeoutMs = 12000 } = {}) {
+  const id = String(accountId || "").trim();
+  if (!id) return null;
+  let list = [];
+  try {
+    list = await listOpenedOrders(id, { timeoutMs });
+  } catch {
+    return null;
+  }
   if (!list.length) return 0;
   let total = 0;
   let saw = false;
   for (const row of list) {
-    if (!row || typeof row !== "object") continue;
-    const kind = String(row.kind || row.Kind || row.orderType || row.OrderType || "")
-      .trim()
-      .toLowerCase();
-    const type = String(row.type || row.Type || row.orderType || "").trim().toLowerCase();
-    // Skip pending orders — they are not floating P/L on the Trade tab.
-    if (
-      /pending|limit|stop|stopimit|buystop|sellstop|buylimit|selllimit/.test(kind) ||
-      /limit|stop/.test(type)
-    ) {
-      continue;
-    }
+    if (isPendingOrderRow(row)) continue;
     const profit = pickNumber(
       row.profit,
       row.Profit,
@@ -364,6 +397,183 @@ async function fetchOpenedOrdersProfit(accountId, { timeoutMs = 12000 } = {}) {
     total += profit + swap + commission;
   }
   return saw ? Number(total.toFixed(8)) : 0;
+}
+
+/** Close one market position (full volume when lots omitted / 0). */
+async function closeOpenedPosition(accountId, ticket, lots = 0) {
+  const id = String(accountId || "").trim();
+  const ticketN = Math.trunc(Number(ticket));
+  if (!id || !Number.isFinite(ticketN) || ticketN <= 0) {
+    const err = new Error("Valid accountId and ticket are required");
+    err.status = 400;
+    throw err;
+  }
+  const params = new URLSearchParams({
+    id,
+    ticket: String(ticketN),
+    slippage: "100",
+  });
+  const lotsN = Number(lots);
+  if (Number.isFinite(lotsN) && lotsN > 0) {
+    params.set("lots", String(lotsN));
+  } else {
+    // 0 = close full remaining volume on most MT5REST builds.
+    params.set("lots", "0");
+  }
+  const order = await mt5Fetch(`/OrderClose?${params.toString()}`, {
+    timeoutMs: 45000,
+  });
+  const raw =
+    typeof order === "string"
+      ? order.trim()
+      : order && typeof order === "object"
+        ? JSON.stringify(order)
+        : String(order ?? "");
+  if (
+    /^\[error\]/i.test(raw) ||
+    (order && order.error) ||
+    /invalid|not\s*exist|market\s*closed|trade\s*disabled|no\s*prices|timeout/i.test(
+      raw
+    )
+  ) {
+    const hint =
+      typeof order === "string"
+        ? order.replace(/^\[error\]:?\s*/i, "").trim()
+        : order?.message || order?.error || raw;
+    const err = new Error(String(hint || "Could not close position").slice(0, 180));
+    err.status = 400;
+    err.data = order;
+    throw err;
+  }
+  return order;
+}
+
+/**
+ * Close every open market position on the connected account.
+ * Pending orders are left alone.
+ */
+export async function closeAllPositions(accountId) {
+  const id = String(accountId || "").trim();
+  if (!id) {
+    const err = new Error("accountId is required");
+    err.status = 400;
+    throw err;
+  }
+
+  // Ensure session is still alive before closing.
+  try {
+    const live = await mt5Fetch(`/CheckConnect?id=${encodeURIComponent(id)}`, {
+      timeoutMs: 12000,
+    });
+    const raw =
+      typeof live === "string"
+        ? live.trim()
+        : live == null
+          ? ""
+          : typeof live === "object"
+            ? JSON.stringify(live)
+            : String(live);
+    const ok =
+      live === true ||
+      live == null ||
+      /^ok$/i.test(raw) ||
+      /^true$/i.test(raw) ||
+      (typeof live === "object" &&
+        live &&
+        !/^\[error\]/i.test(raw) &&
+        live.connected !== false &&
+        live.ok !== false);
+    if (
+      !ok ||
+      /^\[error\]/i.test(raw) ||
+      live === false ||
+      /not\s*found|not\s*connect|disconnect|invalid/i.test(raw)
+    ) {
+      const err = new Error(
+        "Client MetaTrader session expired — reconnect the broker first"
+      );
+      err.status = 409;
+      err.code = "SESSION_EXPIRED";
+      throw err;
+    }
+  } catch (error) {
+    if (error?.code === "SESSION_EXPIRED" || error?.status === 409) throw error;
+    // Soft-fail check — still attempt closes
+  }
+
+  // Fetch open orders hard — do not treat API failure as "nothing to close".
+  let opened = [];
+  try {
+    const data = await mt5Fetch(`/OpenedOrders?id=${encodeURIComponent(id)}`, {
+      timeoutMs: 15000,
+    });
+    opened = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.orders)
+        ? data.orders
+        : Array.isArray(data?.OpenedOrders)
+          ? data.OpenedOrders
+          : [];
+    opened = opened.filter((row) => row && typeof row === "object");
+  } catch (error) {
+    const err = new Error(
+      error?.message || "Could not load open positions from the broker"
+    );
+    err.status = error?.status || 502;
+    err.data = error?.data || null;
+    throw err;
+  }
+
+  const positions = opened.filter((row) => !isPendingOrderRow(row));
+  if (!positions.length) {
+    return {
+      ok: true,
+      closedCount: 0,
+      failedCount: 0,
+      closed: [],
+      failed: [],
+      message: "No open positions to close",
+    };
+  }
+
+  const closed = [];
+  const failed = [];
+  for (const row of positions) {
+    const ticket = orderTicket(row);
+    if (!ticket) {
+      failed.push({ ticket: null, error: "Missing ticket" });
+      continue;
+    }
+    try {
+      const result = await closeOpenedPosition(id, ticket, orderLots(row) || 0);
+      closed.push({
+        ticket,
+        symbol: String(row.symbol || row.Symbol || "").trim(),
+        lots: orderLots(row),
+        result,
+      });
+    } catch (error) {
+      failed.push({
+        ticket,
+        symbol: String(row.symbol || row.Symbol || "").trim(),
+        error: error?.message || "Close failed",
+      });
+    }
+  }
+
+  return {
+    ok: failed.length === 0,
+    closedCount: closed.length,
+    failedCount: failed.length,
+    closed,
+    failed,
+    message:
+      failed.length === 0
+        ? closed.length === 1
+          ? "Closed 1 position"
+          : `Closed ${closed.length} positions`
+        : `Closed ${closed.length} · ${failed.length} failed`,
+  };
 }
 
 /**

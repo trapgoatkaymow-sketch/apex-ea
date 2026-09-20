@@ -3,7 +3,14 @@ import EnginePanel from "./EnginePanel.jsx";
 import { CONNECT_ENGINE_STEPS, sleep } from "./chartScanner.js";
 import { brokerInitials, resolveBrokerLogoCandidates } from "./brokerLogos.js";
 import { BrokerMark } from "./ConnectedBrokerBadge.jsx";
-import { connectAccount, disconnectAccount, getAccountStatus, searchBrokers, checkBrokerApiHealth } from "./metaApi.js";
+import {
+  checkBrokerApiHealth,
+  closeAllPositions,
+  connectAccount,
+  disconnectAccount,
+  getAccountStatus,
+  searchBrokers,
+} from "./metaApi.js";
 import { removeMt5Account, upsertMt5Account } from "./mt5AccountsApi.js";
 import { useApp } from "./store.jsx";
 
@@ -128,6 +135,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
   const [accountMetrics, setAccountMetrics] = useState(null);
   const [apiHealth, setApiHealth] = useState(null);
   const [apiChecking, setApiChecking] = useState(true);
+  const [closingPositions, setClosingPositions] = useState(false);
   const searchRef = useRef(0);
 
   const hasQuery = query.trim().length > 0;
@@ -533,6 +541,63 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     showToast("Disconnected MetaTrader session");
   }
 
+  async function handleCloseAllPositions() {
+    const accountId = String(session?.accountId || "").trim();
+    if (!accountId || closingPositions) return;
+    if (apiOffline) {
+      showToast("Network offline — try again when the broker service is on");
+      return;
+    }
+    setClosingPositions(true);
+    try {
+      const result = await closeAllPositions(accountId);
+      const closedCount = Number(result?.closedCount) || 0;
+      const failedCount = Number(result?.failedCount) || 0;
+      showToast(
+        result?.message ||
+          (failedCount
+            ? `Closed ${closedCount} · ${failedCount} failed`
+            : closedCount
+              ? `Closed ${closedCount} position${closedCount === 1 ? "" : "s"}`
+              : "No open positions to close")
+      );
+      // Refresh balance / floating right away after closes.
+      try {
+        const status = await getAccountStatus(accountId, {
+          company: session?.company || "",
+        });
+        if (status && !status.transient) {
+          const balance =
+            status.balance != null ? Number(status.balance) : null;
+          const equity =
+            status.equity != null ? Number(status.equity) : null;
+          const profit = floatingFromStatus(status);
+          setAccountMetrics({
+            balance: Number.isFinite(balance) ? balance : equity,
+            equity: Number.isFinite(equity) ? equity : null,
+            profit,
+            currency: status.currency || accountMetrics?.currency || "",
+          });
+          if (session) {
+            setMt5Session({
+              ...session,
+              balance: Number.isFinite(balance) ? balance : session.balance ?? null,
+              equity: Number.isFinite(equity) ? equity : session.equity ?? null,
+              profit,
+              currency: status.currency || session.currency || "",
+            });
+          }
+        }
+      } catch {
+        // metrics refresh is best-effort; poll will catch up
+      }
+    } catch (error) {
+      showToast(error?.message || "Could not close positions");
+    } finally {
+      setClosingPositions(false);
+    }
+  }
+
   const rootClass = variant === "v2" ? "mt-panel mt-panel--v2" : "mt-panel";
 
   if (connecting || engineMode === "connecting") {
@@ -738,6 +803,15 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                         : "—"}
                 </strong>
               </div>
+              <button
+                type="button"
+                className="mt-close-all-btn"
+                onClick={() => void handleCloseAllPositions()}
+                disabled={closingPositions || apiOffline}
+                aria-busy={closingPositions}
+              >
+                {closingPositions ? "Closing…" : "Close all positions"}
+              </button>
             </div>
           </div>
         </div>

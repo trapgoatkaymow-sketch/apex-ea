@@ -8,6 +8,7 @@ import {
 import { enqueueTradeEvent } from "../trade-events/_lib.js";
 import { endOptions } from "../_cors.js";
 import {
+  closeAllPositions as mt5CloseAllPositions,
   connectAccount as mt5ConnectAccount,
   disconnectAccount as mt5DisconnectAccount,
   getAccountStatus as mt5GetAccountStatus,
@@ -228,6 +229,35 @@ export async function handleDisconnect(req, res) {
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Disconnect failed",
+      details: error.data || null,
+    });
+  }
+}
+
+/** Close every open market position on the connected MT5/MT4 account. */
+export async function handleClosePositions(req, res) {
+  if (req.method === "OPTIONS") {
+    endOptions(res);
+    return;
+  }
+  if (req.method !== "POST") {
+    sendJson(res, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  try {
+    const body = await readJsonBody(req);
+    const accountId = String(body.accountId || "").trim();
+    if (!accountId) {
+      sendJson(res, 400, { error: "accountId is required" });
+      return;
+    }
+    const result = await mt5CloseAllPositions(accountId);
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendJson(res, error.status || 500, {
+      error: error.message || "Close positions failed",
+      code: error.code || null,
       details: error.data || null,
     });
   }

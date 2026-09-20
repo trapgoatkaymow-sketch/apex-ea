@@ -123,6 +123,17 @@ export async function disconnectAccount(accountId, { email = "", signal } = {}) 
   });
 }
 
+/** Close every open market position on the connected account. */
+export async function closeAllPositions(accountId, { signal } = {}) {
+  return apiFetch("/close-positions", {
+    method: "POST",
+    signal,
+    body: {
+      accountId: String(accountId || "").trim(),
+    },
+  });
+}
+
 export async function placeTrade({
   accountId,
   symbol,

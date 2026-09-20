@@ -2209,6 +2209,35 @@ html:has(.phone[data-interface="v2"]) body {
   color: #ff5d7a;
 }
 
+.mt-close-all-btn {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 93, 122, 0.45);
+  background: rgba(255, 93, 122, 0.12);
+  color: #ff8fa3;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.mt-close-all-btn:active:not(:disabled) {
+  background: rgba(255, 93, 122, 0.22);
+  border-color: rgba(255, 93, 122, 0.65);
+}
+
+.mt-close-all-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .mt-session-btn {
   flex-shrink: 0;
   padding: 9px 14px;
