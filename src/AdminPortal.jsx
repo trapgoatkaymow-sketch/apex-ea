@@ -25,7 +25,7 @@ import {
   resolveLicenseExpiry,
   resendLicenseEmailRemote,
 } from "./licensesApi.js";
-import { sendBroadcastEmailsRemote, requestCommissionWithdrawalRemote, WITHDRAWAL_REQUEST_EMAIL } from "./emailsApi.js";
+import { sendBroadcastEmailsRemote, requestCommissionWithdrawalRemote, fetchWithdrawQuotaRemote, WITHDRAWAL_REQUEST_EMAIL, WITHDRAW_MAX_PER_WEEK } from "./emailsApi.js";
 import {
   fetchEconomicEvents,
   formatEventDay,
@@ -256,6 +256,7 @@ export default function AdminPortal() {
   });
   const [bankingBusy, setBankingBusy] = useState(false);
   const [withdrawRequestBusy, setWithdrawRequestBusy] = useState(false);
+  const [withdrawQuota, setWithdrawQuota] = useState(null);
   const [hostSymbol, setHostSymbol] = useState("XAUUSD");
   const [hostSide, setHostSide] = useState("BUY");
   const [hostTradesCount, setHostTradesCount] = useState("1");
@@ -618,6 +619,24 @@ export default function AdminPortal() {
     refreshSignups?.();
     refreshLicenses?.();
   }, [adminOpen, adminPage, refreshSignups, refreshLicenses]);
+
+  useEffect(() => {
+    if (!adminOpen || !adminSession?.email) return;
+    if (isSuperAdminSession(adminSession)) return;
+    if (adminPage !== "commission") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const quota = await fetchWithdrawQuotaRemote(adminSession.email);
+        if (!cancelled) setWithdrawQuota(quota);
+      } catch {
+        if (!cancelled) setWithdrawQuota(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [adminOpen, adminSession, adminPage]);
 
   useEffect(() => {
     if (!adminOpen || !adminSession) return undefined;
@@ -1876,6 +1895,11 @@ export default function AdminPortal() {
   const commissionZar = soldKeysCount * COMMISSION_ZAR;
   const canWithdraw = soldKeysCount >= WITHDRAW_MIN_KEYS;
   const keysUntilWithdraw = Math.max(0, WITHDRAW_MIN_KEYS - soldKeysCount);
+  const withdrawRemaining =
+    withdrawQuota && Number.isFinite(Number(withdrawQuota.remaining))
+      ? Number(withdrawQuota.remaining)
+      : WITHDRAW_MAX_PER_WEEK;
+  const withdrawLimitHit = withdrawRemaining <= 0;
 
   async function requestCommissionWithdrawal() {
     if (!adminSession?.email) return;
@@ -1883,6 +1907,12 @@ export default function AdminPortal() {
     if (!canWithdraw) {
       showToast(
         `Need ${keysUntilWithdraw} more unlock${keysUntilWithdraw === 1 ? "" : "s"} before withdrawing`
+      );
+      return;
+    }
+    if (withdrawLimitHit) {
+      showToast(
+        `Withdrawal limit reached — max ${WITHDRAW_MAX_PER_WEEK} requests per week`
       );
       return;
     }
@@ -1897,7 +1927,7 @@ export default function AdminPortal() {
 
     setWithdrawRequestBusy(true);
     try {
-      await requestCommissionWithdrawalRemote({
+      const result = await requestCommissionWithdrawalRemote({
         mentorEmail: adminSession.email,
         username: adminSession.username || sessionMentor?.username || "",
         contact: sessionMentor?.contact || profileContact || "",
@@ -1906,8 +1936,18 @@ export default function AdminPortal() {
         commissionZar,
         banking: bankingForm,
       });
-      showToast(`Withdrawal request sent to ${WITHDRAWAL_REQUEST_EMAIL}`);
+      if (result?.quota) setWithdrawQuota(result.quota);
+      const left =
+        result?.quota?.remaining != null
+          ? Number(result.quota.remaining)
+          : Math.max(0, withdrawRemaining - 1);
+      showToast(
+        left > 0
+          ? `Request sent · ${left} left this week`
+          : `Request sent · weekly limit reached`
+      );
     } catch (error) {
+      if (error?.quota) setWithdrawQuota(error.quota);
       showToast(error.message || "Could not send withdrawal request");
     } finally {
       setWithdrawRequestBusy(false);
@@ -3326,13 +3366,20 @@ export default function AdminPortal() {
                     withdrawRequestBusy ? " is-loading" : ""
                   }`}
                   type="button"
-                  disabled={withdrawRequestBusy || !canWithdraw}
+                  disabled={
+                    withdrawRequestBusy || !canWithdraw || withdrawLimitHit
+                  }
                   onClick={() => void requestCommissionWithdrawal()}
                 >
                   <AdminBusyLabel busy={withdrawRequestBusy} busyText="Sending…">
-                    Request withdrawal
+                    {withdrawLimitHit ? "Limit reached" : "Request withdrawal"}
                   </AdminBusyLabel>
                 </button>
+                <p className="admin-card-meta">
+                  {withdrawLimitHit
+                    ? `Max ${WITHDRAW_MAX_PER_WEEK}/week — try again later`
+                    : `${withdrawRemaining} of ${WITHDRAW_MAX_PER_WEEK} left this week`}
+                </p>
                 <p className="admin-card-meta">
                   Emails {WITHDRAWAL_REQUEST_EMAIL}
                 </p>

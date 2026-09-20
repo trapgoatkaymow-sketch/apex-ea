@@ -1,9 +1,12 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import { endOptions } from "../_cors.js";
 import {
   brevoConfigured,
   sendBrevoEmail,
   sendBroadcastEmails,
 } from "../_brevo.js";
+import { durableRead, durableWrite } from "../_durableJson.js";
 import {
   listMentors,
   readJsonBody,
@@ -15,6 +18,17 @@ export const config = { maxDuration: 60 };
 
 /** Inbox that receives mentor commission withdrawal requests. */
 export const WITHDRAWAL_REQUEST_EMAIL = "apexeaa@gmail.com";
+/** Max withdrawal request emails a mentor can send per rolling week. */
+export const WITHDRAW_MAX_PER_WEEK = 2;
+export const WITHDRAW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FILE_PATH =
+  process.env.WITHDRAWAL_REQUESTS_FILE_PATH || "data/withdrawal-requests.json";
+const BLOB_PATH =
+  process.env.WITHDRAWAL_REQUESTS_BLOB_PATH || "apexea/withdrawal-requests.json";
+const TMP_FILE = path.join("/tmp", "apexea-withdrawal-requests.json");
+const BUNDLED_FILE = path.resolve(__dirname, "../../data/withdrawal-requests.json");
 
 function normalizeEmail(value) {
   return String(value || "")
@@ -44,6 +58,109 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+function pruneTimestamps(list, now = Date.now()) {
+  const floor = now - WITHDRAW_WINDOW_MS;
+  return (Array.isArray(list) ? list : [])
+    .map((t) => Number(t))
+    .filter((t) => Number.isFinite(t) && t >= floor)
+    .sort((a, b) => a - b);
+}
+
+async function readWithdrawStore() {
+  const durable = await durableRead({
+    blobPath: BLOB_PATH,
+    githubPath: FILE_PATH,
+    localPaths: [TMP_FILE, BUNDLED_FILE],
+  });
+  let byEmail = {};
+  if (durable.raw != null) {
+    try {
+      const parsed = JSON.parse(durable.raw || "{}");
+      if (parsed?.byEmail && typeof parsed.byEmail === "object") {
+        byEmail = parsed.byEmail;
+      }
+    } catch {
+      byEmail = {};
+    }
+  }
+  return {
+    byEmail,
+    sha: durable.source === "github" ? durable.sha : null,
+  };
+}
+
+async function writeWithdrawStore(byEmail, sha = null) {
+  const payload = JSON.stringify(
+    { byEmail, updatedAt: Date.now() },
+    null,
+    2
+  );
+  return durableWrite({
+    raw: `${payload}\n`,
+    blobPath: BLOB_PATH,
+    githubPath: FILE_PATH,
+    githubSha: sha || undefined,
+    message: "chore: record mentor withdrawal request",
+    localPaths: [TMP_FILE, BUNDLED_FILE],
+  });
+}
+
+function quotaForEmail(byEmail, email, now = Date.now()) {
+  const key = normalizeEmail(email);
+  const recent = pruneTimestamps(byEmail?.[key], now);
+  const used = recent.length;
+  const remaining = Math.max(0, WITHDRAW_MAX_PER_WEEK - used);
+  const oldest = recent[0] || null;
+  const resetsAt = oldest ? oldest + WITHDRAW_WINDOW_MS : null;
+  return {
+    email: key,
+    used,
+    remaining,
+    max: WITHDRAW_MAX_PER_WEEK,
+    windowDays: 7,
+    resetsAt,
+    allowed: remaining > 0,
+  };
+}
+
+async function getWithdrawQuota(mentorEmail) {
+  const email = normalizeEmail(mentorEmail);
+  if (!email || !email.includes("@")) {
+    const err = new Error("Mentor email is required");
+    err.status = 400;
+    throw err;
+  }
+  const store = await readWithdrawStore();
+  return quotaForEmail(store.byEmail, email);
+}
+
+async function recordWithdrawRequest(mentorEmail) {
+  const email = normalizeEmail(mentorEmail);
+  const now = Date.now();
+  const store = await readWithdrawStore();
+  const recent = pruneTimestamps(store.byEmail?.[email], now);
+  if (recent.length >= WITHDRAW_MAX_PER_WEEK) {
+    const quota = quotaForEmail(store.byEmail, email, now);
+    const err = new Error(
+      `Withdrawal limit reached — max ${WITHDRAW_MAX_PER_WEEK} requests per week`
+    );
+    err.status = 429;
+    err.data = { quota };
+    throw err;
+  }
+  const next = {
+    ...store.byEmail,
+    [email]: [...recent, now],
+  };
+  for (const [key, stamps] of Object.entries(next)) {
+    const kept = pruneTimestamps(stamps, now);
+    if (!kept.length) delete next[key];
+    else next[key] = kept;
+  }
+  await writeWithdrawStore(next, store.sha);
+  return quotaForEmail(next, email, now);
+}
+
 async function handleWithdrawRequest(body) {
   const mentorEmail = normalizeEmail(body.mentorEmail || body.email || "");
   if (!mentorEmail || !mentorEmail.includes("@")) {
@@ -66,6 +183,16 @@ async function handleWithdrawRequest(body) {
   if (role !== "superadmin" && status !== "approved") {
     const err = new Error("Only approved mentors can request withdrawals");
     err.status = 403;
+    throw err;
+  }
+
+  const preQuota = await getWithdrawQuota(mentorEmail);
+  if (!preQuota.allowed) {
+    const err = new Error(
+      `Withdrawal limit reached — max ${WITHDRAW_MAX_PER_WEEK} requests per week`
+    );
+    err.status = 429;
+    err.data = { quota: preQuota };
     throw err;
   }
 
@@ -141,10 +268,13 @@ async function handleWithdrawRequest(body) {
     throw err;
   }
 
+  const quota = await recordWithdrawRequest(mentorEmail);
+
   return {
     ok: true,
     to: WITHDRAWAL_REQUEST_EMAIL,
     messageId: email.messageId || "",
+    quota,
   };
 }
 
@@ -156,10 +286,26 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
+      const url = new URL(req.url || "/", "http://localhost");
+      const mentorEmail =
+        url.searchParams.get("mentorEmail") ||
+        url.searchParams.get("email") ||
+        "";
+      if (mentorEmail) {
+        const quota = await getWithdrawQuota(mentorEmail);
+        sendJson(res, 200, {
+          ok: true,
+          configured: brevoConfigured(),
+          withdrawalEmail: WITHDRAWAL_REQUEST_EMAIL,
+          quota,
+        });
+        return;
+      }
       sendJson(res, 200, {
         ok: true,
         configured: brevoConfigured(),
         withdrawalEmail: WITHDRAWAL_REQUEST_EMAIL,
+        maxPerWeek: WITHDRAW_MAX_PER_WEEK,
       });
       return;
     }
@@ -177,7 +323,18 @@ export default async function handler(req, res) {
         ok: true,
         configured: brevoConfigured(),
         withdrawalEmail: WITHDRAWAL_REQUEST_EMAIL,
+        maxPerWeek: WITHDRAW_MAX_PER_WEEK,
       });
+      return;
+    }
+
+    if (
+      action === "withdraw-quota" ||
+      action === "withdrawal-quota" ||
+      action === "quota"
+    ) {
+      const quota = await getWithdrawQuota(body.mentorEmail || body.email || "");
+      sendJson(res, 200, { ok: true, quota });
       return;
     }
 
@@ -264,6 +421,7 @@ export default async function handler(req, res) {
     sendJson(res, error.status || 500, {
       error: error.message || "Email send failed",
       details: error.data || null,
+      quota: error.data?.quota || undefined,
     });
   }
 }
