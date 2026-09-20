@@ -2429,6 +2429,12 @@ export function AppProvider({ children }) {
 
       setBots((prev) => {
         const exists = prev.some((b) => b.id === snapshot.id);
+        const licenseMeta = {
+          licenseKey: entry.key || key,
+          licenseDuration: entry.duration || "lifetime",
+          licenseExpiresAt: entry.expiresAt ?? null,
+          licenseCreatedAt: Number(entry.createdAt) || Date.now(),
+        };
         if (exists) {
           return prev.map((b) =>
             b.id === snapshot.id
@@ -2438,6 +2444,7 @@ export function AppProvider({ children }) {
                   photo: pickProfilePhoto(snapshot.photo, b.photo),
                   active: true,
                   selected: true,
+                  ...licenseMeta,
                 }
               : { ...b, selected: false }
           );
@@ -2450,6 +2457,7 @@ export function AppProvider({ children }) {
             photo: pickProfilePhoto(snapshot.photo),
             active: true,
             selected: true,
+            ...licenseMeta,
           },
         ];
       });

@@ -11970,3 +11970,125 @@ html.is-native.is-paused .cs-scan-grid.is-on {
     grid-column: 1 / -1;
   }
 }
+
+/* Robot row license key info */
+.bot-license-info-btn {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin-right: 6px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
+    0 2px 10px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.bot-license-info-btn:active {
+  transform: scale(0.94);
+}
+
+.bot-license-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.bot-license-sheet {
+  width: min(100%, 420px);
+  margin-bottom: max(12px, env(safe-area-inset-bottom));
+  padding: 18px 16px 16px;
+  border-radius: 18px;
+  background: #14141a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  color: #f5f5f7;
+}
+
+.bot-license-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.bot-license-sheet-head strong {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.bot-license-sheet-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.bot-license-sheet-grid {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.bot-license-sheet-grid dt {
+  margin: 0 0 4px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.bot-license-sheet-grid dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.92rem;
+  color: #fff;
+}
+
+.bot-license-sheet-grid code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: #ff7ab5;
+  word-break: break-all;
+}
+
+.bot-license-copy {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #ff2d7a;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.bot-license-sheet-empty {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.72);
+}

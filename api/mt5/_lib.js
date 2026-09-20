@@ -35,16 +35,74 @@ function isMt5ExceptionResult(data) {
   const code = String(data.code || "").trim();
   if (!code) return false;
   // Real account payloads have balance/equity/currency — exceptions do not.
+  // MT5API uses PascalCase (Balance, Equity, Currency) on many hosts.
   if (
     data.balance != null ||
+    data.Balance != null ||
     data.equity != null ||
+    data.Equity != null ||
     data.currency ||
+    data.Currency ||
     data.login != null ||
-    data.accountNumber != null
+    data.Login != null ||
+    data.accountNumber != null ||
+    data.AccountNumber != null ||
+    data.freeMargin != null ||
+    data.FreeMargin != null
   ) {
     return false;
   }
   return data.message != null || data.stackTrace != null || Boolean(code);
+}
+
+function deepPickNumber(root, names = []) {
+  const want = new Set(names.map((n) => String(n).toLowerCase()));
+  const seen = new Set();
+  const stack = [root];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (!cur || typeof cur !== "object") continue;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    if (Array.isArray(cur)) {
+      for (const item of cur) stack.push(item);
+      continue;
+    }
+    for (const [key, value] of Object.entries(cur)) {
+      if (want.has(String(key).toLowerCase())) {
+        if (value == null || value === "") continue;
+        const n = Number(value);
+        if (Number.isFinite(n)) return n;
+      }
+      if (value && typeof value === "object") stack.push(value);
+    }
+  }
+  return null;
+}
+
+function deepPickCurrency(root) {
+  const seen = new Set();
+  const stack = [root];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (!cur || typeof cur !== "object") continue;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    if (Array.isArray(cur)) {
+      for (const item of cur) stack.push(item);
+      continue;
+    }
+    for (const [key, value] of Object.entries(cur)) {
+      if (/^currency$/i.test(key)) {
+        const code = String(value || "")
+          .trim()
+          .toUpperCase();
+        if (/^[A-Z]{3}$/.test(code)) return code;
+      }
+      if (value && typeof value === "object") stack.push(value);
+    }
+  }
+  return "";
 }
 
 async function mt5Fetch(path, { method = "GET", signal, timeoutMs = 45000 } = {}) {
@@ -71,7 +129,9 @@ async function mt5Fetch(path, { method = "GET", signal, timeoutMs = 45000 } = {}
       data = String(text || "").trim().replace(/^"|"$/g, "");
     }
     // New bridge: errors are often HTTP 201 + { code, message }.
-    if (!response.ok || isMt5ExceptionResult(data) || (response.status === 201 && data?.code)) {
+    // Do NOT treat HTTP 201 account snapshots as errors when Balance/Equity exist.
+    const exception = isMt5ExceptionResult(data);
+    if (!response.ok || exception) {
       const message =
         (typeof data === "string" && data) ||
         data?.message ||
@@ -83,7 +143,7 @@ async function mt5Fetch(path, { method = "GET", signal, timeoutMs = 45000 } = {}
       err.status =
         response.status >= 400 && response.status < 600
           ? response.status
-          : isMt5ExceptionResult(data) || response.status === 201
+          : exception
             ? 400
             : 502;
       err.code = data?.code || "";
@@ -122,15 +182,21 @@ async function fetchAccountSummary(accountId, { timeoutMs = 15000, tries = 8 } =
         timeoutMs,
       });
       if (last && typeof last === "object") {
-        if (last.synced === true) return last;
-        if (
-          last.synced !== false &&
-          (last.currency ||
-            Number.isFinite(Number(last.balance)) ||
-            Number.isFinite(Number(last.equity)))
-        ) {
-          // Usable snapshot even if synced flag is missing on older hosts.
-          if (i >= 2 || last.currency) return last;
+        if (last.synced === true || last.Synced === true) return last;
+        const hasMoney =
+          last.currency ||
+          last.Currency ||
+          Number.isFinite(Number(last.balance)) ||
+          Number.isFinite(Number(last.Balance)) ||
+          Number.isFinite(Number(last.equity)) ||
+          Number.isFinite(Number(last.Equity));
+        // Prefer a usable money snapshot even while synced is still false.
+        if (hasMoney) {
+          if (last.synced === false || last.Synced === false) {
+            if (i >= 1) return last;
+          } else if (i >= 1 || last.currency || last.Currency) {
+            return last;
+          }
         }
       }
     } catch {
@@ -258,13 +324,15 @@ function sessionFromConnect({
   account = null,
 }) {
   const id = String(token || "").trim();
+  const bag = { summary, details, account };
   const balance = pickNumber(
     summary?.balance,
     summary?.Balance,
     account?.balance,
     account?.Balance,
     details?.balance,
-    details?.Balance
+    details?.Balance,
+    deepPickNumber(bag, ["balance", "Balance", "balanceMoney", "BalanceMoney"])
   );
   const equity = pickNumber(
     summary?.equity,
@@ -272,27 +340,38 @@ function sessionFromConnect({
     account?.equity,
     account?.Equity,
     details?.equity,
-    details?.Equity
+    details?.Equity,
+    deepPickNumber(bag, ["equity", "Equity"])
   );
   const profit = pickNumber(
     summary?.profit,
     summary?.Profit,
-    Number.isFinite(balance) && Number.isFinite(equity) ? equity - balance : null
+    Number.isFinite(balance) && Number.isFinite(equity) ? equity - balance : null,
+    deepPickNumber(bag, ["profit", "Profit", "floating", "Floating"])
   );
-  const currency = pickCurrency(
-    summary?.currency,
-    summary?.Currency,
-    account?.currency,
-    details?.currency,
-    details?.Currency
-  );
+  const currency =
+    pickCurrency(
+      summary?.currency,
+      summary?.Currency,
+      account?.currency,
+      account?.Currency,
+      details?.currency,
+      details?.Currency
+    ) || deepPickCurrency(bag);
   return {
     accountId: id,
     provider: "mt5api",
-    login: String(login || details?.accountNumber || details?.login || account?.login || "").trim(),
-    server: String(server || details?.serverName || "").trim(),
+    login: String(
+      login ||
+        details?.accountNumber ||
+        details?.login ||
+        account?.login ||
+        account?.Login ||
+        ""
+    ).trim(),
+    server: String(server || details?.serverName || details?.ServerName || "").trim(),
     platform: String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5",
-    company: String(company || details?.company || "").trim(),
+    company: String(company || details?.company || details?.Company || "").trim(),
     region: "",
     state: "DEPLOYED",
     connectionStatus: "CONNECTED",
@@ -303,8 +382,13 @@ function sessionFromConnect({
     balance,
     equity,
     profit,
-    leverage: summary?.leverage ?? details?.leverage ?? account?.leverage ?? null,
-    synced: summary?.synced === true,
+    leverage:
+      summary?.leverage ??
+      summary?.Leverage ??
+      details?.leverage ??
+      account?.leverage ??
+      null,
+    synced: summary?.synced === true || summary?.Synced === true,
   };
 }
 

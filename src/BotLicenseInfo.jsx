@@ -25,25 +25,39 @@ function formatCreatedAt(value) {
 }
 
 /** Pick the client's license for a connected robot. */
-export function findLicenseForBot(licenseKeys, botId, coverEmail) {
+export function findLicenseForBot(licenseKeys, botId, coverEmail, botName = "") {
   const id = String(botId || "").trim();
-  if (!id) return null;
+  const name = String(botName || "")
+    .trim()
+    .toLowerCase();
   const email = normalizeEmail(coverEmail);
   const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
-  const matches = keys.filter((row) => {
+  if (!id && !name) return null;
+
+  const byBot = keys.filter((row) => {
     const rowBot = String(row?.botId || row?.bot?.id || "").trim();
-    if (rowBot !== id) return false;
-    if (!email) return true;
-    const rowEmail = normalizeEmail(row?.clientEmail);
-    return !rowEmail || rowEmail === email;
+    if (id && rowBot === id) return true;
+    if (!name) return false;
+    const rowName = String(row?.botName || row?.bot?.name || "")
+      .trim()
+      .toLowerCase();
+    return rowName && rowName === name;
   });
-  if (!matches.length) return null;
-  matches.sort(
+
+  const preferEmail = email
+    ? byBot.filter((row) => {
+        const rowEmail = normalizeEmail(row?.clientEmail);
+        return !rowEmail || rowEmail === email;
+      })
+    : byBot;
+  const pool = preferEmail.length ? preferEmail : byBot;
+  if (!pool.length) return null;
+  pool.sort(
     (a, b) =>
       Number(b.usedAt || b.updatedAt || b.createdAt || 0) -
       Number(a.usedAt || a.updatedAt || a.createdAt || 0)
   );
-  return matches.find((row) => row?.used) || matches[0] || null;
+  return pool.find((row) => row?.used) || pool[0] || null;
 }
 
 /**
@@ -53,23 +67,36 @@ export default function BotLicenseInfoButton({ bot, className = "" }) {
   const { licenseKeys, coverEmail, showToast } = useApp();
   const [open, setOpen] = useState(false);
 
-  const license = useMemo(
-    () => findLicenseForBot(licenseKeys, bot?.id, coverEmail),
-    [licenseKeys, bot?.id, coverEmail]
-  );
+  const license = useMemo(() => {
+    const fromStore = findLicenseForBot(
+      licenseKeys,
+      bot?.id,
+      coverEmail,
+      bot?.name
+    );
+    if (fromStore?.key) return fromStore;
+    // Fallback: license stamped onto the bot at activation time.
+    if (bot?.licenseKey) {
+      return {
+        key: bot.licenseKey,
+        duration: bot.licenseDuration || "lifetime",
+        expiresAt: bot.licenseExpiresAt ?? null,
+        createdAt: bot.licenseCreatedAt || null,
+      };
+    }
+    return null;
+  }, [licenseKeys, bot, coverEmail]);
 
-  if (!license?.key) return null;
-
-  const durationLabel = [
-    formatLicenseDuration(license),
-    formatLicenseExpiry(license),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const durationLabel = license
+    ? [formatLicenseDuration(license), formatLicenseExpiry(license)]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
 
   async function copyKey(event) {
     event.preventDefault();
     event.stopPropagation();
+    if (!license?.key) return;
     try {
       await navigator.clipboard.writeText(String(license.key));
       showToast("License key copied");
@@ -91,7 +118,7 @@ export default function BotLicenseInfoButton({ bot, className = "" }) {
           setOpen(true);
         }}
       >
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="currentColor">
           <path d="M12.5 3.5a4 4 0 0 0-3.5 6.05L3.7 14.85a1.5 1.5 0 0 0-.44 1.06v2.59c0 .83.67 1.5 1.5 1.5h2.59c.4 0 .78-.16 1.06-.44l1.1-1.1v-1.96h1.96l.7-.7V14.3l.55-.55A4 4 0 1 0 12.5 3.5zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z" />
         </svg>
       </button>
@@ -124,25 +151,32 @@ export default function BotLicenseInfoButton({ bot, className = "" }) {
                 ×
               </button>
             </div>
-            <dl className="bot-license-sheet-grid">
-              <div>
-                <dt>License key</dt>
-                <dd>
-                  <code>{license.key}</code>
-                  <button type="button" className="bot-license-copy" onClick={copyKey}>
-                    Copy
-                  </button>
-                </dd>
-              </div>
-              <div>
-                <dt>Duration</dt>
-                <dd>{durationLabel}</dd>
-              </div>
-              <div>
-                <dt>Created</dt>
-                <dd>{formatCreatedAt(license.createdAt)}</dd>
-              </div>
-            </dl>
+            {license?.key ? (
+              <dl className="bot-license-sheet-grid">
+                <div>
+                  <dt>License key</dt>
+                  <dd>
+                    <code>{license.key}</code>
+                    <button type="button" className="bot-license-copy" onClick={copyKey}>
+                      Copy
+                    </button>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Duration</dt>
+                  <dd>{durationLabel}</dd>
+                </div>
+                <div>
+                  <dt>Created</dt>
+                  <dd>{formatCreatedAt(license.createdAt)}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="bot-license-sheet-empty">
+                No license key found for this EA on this account yet. Activate with your mentor key
+                first.
+              </p>
+            )}
           </div>
         </div>
       ) : null}

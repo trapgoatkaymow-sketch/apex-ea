@@ -263,15 +263,20 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           showToast("MetaTrader session ended");
           return;
         }
-        if (status && status.balance != null) {
+        if (
+          status &&
+          (status.balance != null || status.equity != null)
+        ) {
+          const balance =
+            status.balance != null ? status.balance : status.equity;
           setAccountMetrics({
-            balance: status.balance,
+            balance,
             currency: status.currency || "",
           });
           // Keep session copy so remounts still show last known balance.
           setMt5Session({
             ...session,
-            balance: status.balance,
+            balance,
             currency: status.currency || session.currency || "",
           });
         }
@@ -281,15 +286,16 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     }
 
     void reconcile();
+    // Poll faster while balance is still missing.
     const timer = setInterval(() => {
       void reconcile();
-    }, 12000);
+    }, accountMetrics?.balance != null ? 12000 : 4000);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when account / network changes
-  }, [session?.accountId, apiHealth?.online]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when account / network / metrics change
+  }, [session?.accountId, apiHealth?.online, accountMetrics?.balance == null]);
 
   useEffect(() => {
     const q = query.trim();
@@ -658,7 +664,11 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
               <div className="mt-metric">
                 <span className="mt-metric-label">Balance</span>
                 <strong className="mt-metric-value">
-                  {formatMoney(accountMetrics?.balance, accountMetrics?.currency)}
+                  {accountMetrics?.balance != null
+                    ? formatMoney(accountMetrics.balance, accountMetrics?.currency)
+                    : apiOnline
+                      ? "Loading…"
+                      : "—"}
                 </strong>
               </div>
             </div>
