@@ -7420,6 +7420,24 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
   box-shadow: none;
 }
 
+.cs-run-btn.is-executing:disabled {
+  opacity: 1;
+  box-shadow:
+    0 12px 28px rgba(var(--pink-hot-rgb), 0.38),
+    0 0 22px rgba(var(--pink-rgb), 0.22);
+  animation: cs-execute-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes cs-execute-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
 .cs-result {
   display: grid;
   gap: 8px;

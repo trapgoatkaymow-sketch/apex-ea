@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 20 — Chart uploads show full image (intrinsic fit) on both scanners.
+ * Gen 21 — Execute buttons show Executing… until all fills complete.
  */
-export const UI_SHELL_GENERATION = 20;
+export const UI_SHELL_GENERATION = 21;
 
-export const UI_SHELL_LABEL = "scanner-chart-show-full";
+export const UI_SHELL_LABEL = "scanner-execute-progress";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

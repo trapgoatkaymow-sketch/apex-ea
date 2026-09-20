@@ -40,6 +40,7 @@ export default function TrapScannerResult({
   tradeManagement,
   updateTradeManagement,
   fills,
+  executingLabel = null,
 }) {
   const side = String(signal?.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
   const displaySymbol = String(signal?.symbol || "").toUpperCase();
@@ -156,22 +157,22 @@ export default function TrapScannerResult({
 
       <button
         type="button"
-        className="tg-execute"
+        className={`tg-execute${executingLabel ? " is-executing" : ""}`}
         onClick={executeTrade}
         disabled={busy || !connected}
       >
         <span className="tg-execute-icon" aria-hidden="true">
-          ✈
+          {executingLabel ? "…" : "✈"}
         </span>
         <span className="tg-execute-copy">
           <strong>
-            {busy && engineMode === "trading"
-              ? "Sending…"
+            {executingLabel
+              ? executingLabel
               : !connected
                 ? "Connect MT5"
                 : "Execute"}
           </strong>
-          <em>Manual execution only</em>
+          <em>{executingLabel ? "Opening trades…" : "Manual execution only"}</em>
         </span>
       </button>
 

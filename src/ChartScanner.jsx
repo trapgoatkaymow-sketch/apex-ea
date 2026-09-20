@@ -150,6 +150,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [signal, setSignal] = useState(null);
   const [fills, setFills] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [execProgress, setExecProgress] = useState({ done: 0, total: 0 });
   const [engineProgress, setEngineProgress] = useState(0);
   const [tradeManagement, setTradeManagement] = useState(() => loadTradeManagement());
 
@@ -527,6 +528,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     setEngineMode("trading");
     setEngineStep(0);
     setEngineProgress(12);
+    setExecProgress({ done: 0, total: threads.length });
     persistTradeSettings(tradeCount, lot, tradeSymbol);
     publishOrbTrade?.({
       botName: activeBot?.name || "Bot",
@@ -540,9 +542,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       takeProfit: signal.takeProfit1,
       target: "TP1",
     });
-    // Show the floating script on Home while trades are opening.
-    if (variant === "v2" || activeInterface === "v2") setV2View("home");
-    else setZetaView("home");
+    // Stay on the scanner so Execute → Executing is visible until all fills complete.
 
     try {
       pushEngineLog(
@@ -632,6 +632,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
           pushEngineLog(`Trade ${tradeNo} · ${target} failed · ${lastError}`);
         }
         completed += 1;
+        setExecProgress({ done: completed, total: totalTrades });
         setEngineStep(1);
         setEngineProgress(20 + Math.round((completed / Math.max(1, totalTrades)) * 75));
         await sleep(220);
@@ -656,11 +657,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
       }
       await sleep(TRADE_SETTLE_MS);
       setEngineMode("idle");
+      setExecProgress({ done: 0, total: 0 });
       // Keep the opening-trades script visible briefly, then return to welcome.
       window.setTimeout(() => clearOrbTrade?.(), 12000);
     } catch (error) {
       setEngineMode("idle");
       setEngineProgress(0);
+      setExecProgress({ done: 0, total: 0 });
       clearOrbTrade?.();
       showToast(error.message || "Execution failed");
     } finally {
@@ -678,6 +681,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
   // I2 uses the same ZETA Chart Scanner chrome as I1; only the setup result card differs.
   const useTrapResult = variant === "v2";
+  const isExecuting = busy && engineMode === "trading";
+  const executingLabel =
+    isExecuting && execProgress.total > 0
+      ? `Executing… ${execProgress.done}/${execProgress.total}`
+      : isExecuting
+        ? "Executing…"
+        : null;
 
   return (
     <section
@@ -1192,13 +1202,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
         </button>
       ) : useTrapResult ? null : (
         <button
-          className="cs-run-btn"
+          className={`cs-run-btn${isExecuting ? " is-executing" : ""}`}
           type="button"
           onClick={executeTrade}
           disabled={busy || !connected}
         >
-          {busy && engineMode === "trading"
-            ? "Sending to MetaTrader…"
+          {executingLabel
+            ? executingLabel
             : !connected
               ? "Connect MT5 to Execute"
               : "Execute Trade"}
@@ -1216,10 +1226,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
           tradeManagement={tradeManagement}
           updateTradeManagement={updateTradeManagement}
           fills={fills}
+          executingLabel={executingLabel}
         />
       ) : null}
 
-      {setupReady && !engineActive && !useTrapResult ? (
+      {setupReady && !useTrapResult ? (
         <div className={`cs-result cs-result--${String(signal.side).toLowerCase()}`}>
           <p className="cs-result-kicker">Trade Signal</p>
           <strong>
