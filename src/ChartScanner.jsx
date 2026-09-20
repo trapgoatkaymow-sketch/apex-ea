@@ -828,10 +828,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
               </div>
             )}
             <div
-              className={`cs-scan-beam${engineActive ? " is-on" : ""}`}
-              aria-hidden="true"
-            />
-            <div
               className={`cs-scan-grid${engineActive ? " is-on" : ""}`}
               aria-hidden="true"
             />
@@ -1235,19 +1231,42 @@ export default function ChartScanner({ variant = "default", active = true }) {
                       : "Waiting for symbol…"
                     : "Scan Chart"}
         </button>
-      ) : useTrapResult ? null : (
-        <button
-          className={`cs-run-btn${isExecuting ? " is-executing" : ""}`}
-          type="button"
-          onClick={executeTrade}
-          disabled={busy || !connected}
-        >
-          {executingLabel
-            ? executingLabel
-            : !connected
-              ? "Connect MT5 to Execute"
-              : "Execute Trade"}
-        </button>
+      ) : (
+        <div className="cs-post-scan-actions">
+          <button
+            className="cs-run-btn cs-scan-again"
+            type="button"
+            onClick={runScan}
+            disabled={
+              busy ||
+              detectingSymbol ||
+              !connected ||
+              !preview ||
+              !symbol ||
+              scansLeft <= 0
+            }
+          >
+            {busy && engineMode === "scanning"
+              ? "Scanning again…"
+              : scansLeft <= 0
+                ? "No scans left today"
+                : "Scan Again"}
+          </button>
+          {!useTrapResult ? (
+            <button
+              className={`cs-run-btn${isExecuting ? " is-executing" : ""}`}
+              type="button"
+              onClick={executeTrade}
+              disabled={busy || !connected}
+            >
+              {executingLabel
+                ? executingLabel
+                : !connected
+                  ? "Connect MT5 to Execute"
+                  : "Execute Trade"}
+            </button>
+          ) : null}
+        </div>
       )}
 
       {setupReady && useTrapResult ? (

@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 33 — Unique signal-hunter eye animation.
+ * Gen 34 — Remove scan beam; Scan Again on both scanners.
  */
-export const UI_SHELL_GENERATION = 33;
+export const UI_SHELL_GENERATION = 34;
 
-export const UI_SHELL_LABEL = "unique-hunt-eye";
+export const UI_SHELL_LABEL = "scan-again-no-beam";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
