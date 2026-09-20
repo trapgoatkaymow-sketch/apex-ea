@@ -4511,6 +4511,20 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   background: radial-gradient(circle, rgba(255, 77, 141, 0.28), transparent 68%);
 }
 
+.admin-portal[data-theme="dark"] .admin-stat-card-action {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-portal[data-theme="dark"] .admin-withdraw-btn {
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  margin-top: 2px;
+}
+
 .admin-portal[data-theme="dark"] .admin-stat-label {
   position: relative;
   z-index: 1;

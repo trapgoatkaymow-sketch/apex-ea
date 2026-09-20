@@ -2,6 +2,8 @@ import { apiUrl } from "./apiOrigin.js";
 
 const API_PATH = "/api/emails";
 
+export const WITHDRAWAL_REQUEST_EMAIL = "apexeaa@gmail.com";
+
 async function apiFetch(path = "", { method = "GET", body } = {}) {
   const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
     method,
@@ -48,6 +50,17 @@ export async function sendBroadcastEmailsRemote({
       message,
       recipients,
       concurrency,
+    },
+  });
+}
+
+/** Mentor requests a commission payout email to apexeaa@gmail.com. */
+export async function requestCommissionWithdrawalRemote(payload = {}) {
+  return apiFetch("", {
+    method: "POST",
+    body: {
+      action: "withdraw-request",
+      ...payload,
     },
   });
 }

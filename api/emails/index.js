@@ -1,12 +1,20 @@
 import { endOptions } from "../_cors.js";
-import { brevoConfigured, sendBroadcastEmails } from "../_brevo.js";
 import {
+  brevoConfigured,
+  sendBrevoEmail,
+  sendBroadcastEmails,
+} from "../_brevo.js";
+import {
+  listMentors,
   readJsonBody,
   sendJson,
   SUPER_ADMIN_EMAIL,
 } from "../mentors/_lib.js";
 
 export const config = { maxDuration: 60 };
+
+/** Inbox that receives mentor commission withdrawal requests. */
+export const WITHDRAWAL_REQUEST_EMAIL = "apexeaa@gmail.com";
 
 function normalizeEmail(value) {
   return String(value || "")
@@ -24,6 +32,122 @@ function assertSuperAdmin(adminEmail) {
   }
 }
 
+function escapeText(value) {
+  return String(value || "").trim() || "—";
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function handleWithdrawRequest(body) {
+  const mentorEmail = normalizeEmail(body.mentorEmail || body.email || "");
+  if (!mentorEmail || !mentorEmail.includes("@")) {
+    const err = new Error("Mentor email is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const mentors = await listMentors();
+  const mentor = (Array.isArray(mentors) ? mentors : []).find(
+    (m) => normalizeEmail(m.email) === mentorEmail
+  );
+  if (!mentor) {
+    const err = new Error("Mentor account not found");
+    err.status = 404;
+    throw err;
+  }
+  const role = String(mentor.role || "").toLowerCase();
+  const status = String(mentor.status || "").toLowerCase();
+  if (role !== "superadmin" && status !== "approved") {
+    const err = new Error("Only approved mentors can request withdrawals");
+    err.status = 403;
+    throw err;
+  }
+
+  if (!brevoConfigured()) {
+    const err = new Error(
+      "Brevo not configured (set BREVO_API_KEY and BREVO_SENDER_EMAIL)"
+    );
+    err.status = 503;
+    throw err;
+  }
+
+  const username =
+    String(body.username || mentor.username || "").trim() || "Mentor";
+  const contact = String(body.contact || mentor.contact || "").trim();
+  const paidUnlocks = Number(body.paidUnlocks ?? body.sold ?? 0) || 0;
+  const commissionUsd = Number(body.commissionUsd ?? body.usd ?? 0) || 0;
+  const commissionZar = Number(body.commissionZar ?? body.zar ?? 0) || 0;
+  const banking = body.banking || mentor.banking || {};
+
+  const subject = `Commission withdrawal request — ${username}`;
+  const lines = [
+    "Mentor commission withdrawal request",
+    "",
+    `Mentor: ${username}`,
+    `Email: ${mentorEmail}`,
+    contact ? `Contact: ${contact}` : null,
+    "",
+    `Paid unlocks: ${paidUnlocks}`,
+    `Commission: $${commissionUsd.toFixed(2)} (R${commissionZar})`,
+    "",
+    "Banking details:",
+    `  Account name: ${escapeText(banking.accountName)}`,
+    `  Bank name: ${escapeText(banking.bankName)}`,
+    `  Account number: ${escapeText(banking.accountNumber)}`,
+    `  Branch code: ${escapeText(banking.branchCode)}`,
+    `  Account type: ${escapeText(banking.accountType)}`,
+    "",
+    `Requested at: ${new Date().toISOString()}`,
+  ].filter((line) => line != null);
+
+  const textContent = lines.join("\n");
+  const htmlContent = `<!DOCTYPE html>
+<html><body style="margin:0;padding:24px;background:#0b0b0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f5f5f7;">
+  <div style="max-width:520px;margin:0 auto;background:#16161d;border:1px solid #2a2a35;border-radius:16px;padding:24px;">
+    <p style="margin:0 0 6px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#ff7ab5;">ApexEA payout</p>
+    <h1 style="margin:0 0 16px;font-size:22px;color:#fff;">Commission withdrawal request</h1>
+    <p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Mentor:</strong> ${escapeHtml(escapeText(username))}</p>
+    <p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Email:</strong> ${escapeHtml(escapeText(mentorEmail))}</p>
+    ${contact ? `<p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Contact:</strong> ${escapeHtml(escapeText(contact))}</p>` : ""}
+    <p style="margin:0 0 10px;color:#c8c8d0;"><strong style="color:#fff;">Paid unlocks:</strong> ${paidUnlocks}</p>
+    <p style="margin:0 0 18px;color:#c8c8d0;"><strong style="color:#fff;">Commission:</strong> $${commissionUsd.toFixed(2)} (R${commissionZar})</p>
+    <p style="margin:0 0 8px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#9a9aaa;">Banking</p>
+    <p style="margin:0 0 6px;color:#c8c8d0;">Account name: ${escapeHtml(escapeText(banking.accountName))}</p>
+    <p style="margin:0 0 6px;color:#c8c8d0;">Bank: ${escapeHtml(escapeText(banking.bankName))}</p>
+    <p style="margin:0 0 6px;color:#c8c8d0;">Account number: ${escapeHtml(escapeText(banking.accountNumber))}</p>
+    <p style="margin:0 0 6px;color:#c8c8d0;">Branch code: ${escapeHtml(escapeText(banking.branchCode))}</p>
+    <p style="margin:0;color:#c8c8d0;">Account type: ${escapeHtml(escapeText(banking.accountType))}</p>
+  </div>
+</body></html>`;
+
+  const email = await sendBrevoEmail({
+    toEmail: WITHDRAWAL_REQUEST_EMAIL,
+    toName: "ApexEA Payouts",
+    subject,
+    htmlContent,
+    textContent,
+    tags: ["commission-withdrawal"],
+  });
+
+  if (!email.ok) {
+    const err = new Error(email.error || "Could not send withdrawal request");
+    err.status = email.skipped ? 503 : 502;
+    throw err;
+  }
+
+  return {
+    ok: true,
+    to: WITHDRAWAL_REQUEST_EMAIL,
+    messageId: email.messageId || "",
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     endOptions(res);
@@ -35,6 +159,7 @@ export default async function handler(req, res) {
       sendJson(res, 200, {
         ok: true,
         configured: brevoConfigured(),
+        withdrawalEmail: WITHDRAWAL_REQUEST_EMAIL,
       });
       return;
     }
@@ -48,7 +173,21 @@ export default async function handler(req, res) {
     const action = String(body.action || body.type || "broadcast").toLowerCase();
 
     if (action === "status" || action === "config") {
-      sendJson(res, 200, { ok: true, configured: brevoConfigured() });
+      sendJson(res, 200, {
+        ok: true,
+        configured: brevoConfigured(),
+        withdrawalEmail: WITHDRAWAL_REQUEST_EMAIL,
+      });
+      return;
+    }
+
+    if (
+      action === "withdraw-request" ||
+      action === "withdrawal-request" ||
+      action === "request-withdrawal"
+    ) {
+      const result = await handleWithdrawRequest(body);
+      sendJson(res, 200, result);
       return;
     }
 

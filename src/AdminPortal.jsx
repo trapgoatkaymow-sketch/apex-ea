@@ -25,7 +25,7 @@ import {
   resolveLicenseExpiry,
   resendLicenseEmailRemote,
 } from "./licensesApi.js";
-import { sendBroadcastEmailsRemote } from "./emailsApi.js";
+import { sendBroadcastEmailsRemote, requestCommissionWithdrawalRemote, WITHDRAWAL_REQUEST_EMAIL } from "./emailsApi.js";
 import {
   fetchEconomicEvents,
   formatEventDay,
@@ -255,6 +255,7 @@ export default function AdminPortal() {
     accountType: "",
   });
   const [bankingBusy, setBankingBusy] = useState(false);
+  const [withdrawRequestBusy, setWithdrawRequestBusy] = useState(false);
   const [hostSymbol, setHostSymbol] = useState("XAUUSD");
   const [hostSide, setHostSide] = useState("BUY");
   const [hostTradesCount, setHostTradesCount] = useState("1");
@@ -1876,6 +1877,43 @@ export default function AdminPortal() {
   const canWithdraw = soldKeysCount >= WITHDRAW_MIN_KEYS;
   const keysUntilWithdraw = Math.max(0, WITHDRAW_MIN_KEYS - soldKeysCount);
 
+  async function requestCommissionWithdrawal() {
+    if (!adminSession?.email) return;
+    if (withdrawRequestBusy) return;
+    if (!canWithdraw) {
+      showToast(
+        `Need ${keysUntilWithdraw} more unlock${keysUntilWithdraw === 1 ? "" : "s"} before withdrawing`
+      );
+      return;
+    }
+    const hasBanking =
+      String(bankingForm.accountName || "").trim() &&
+      String(bankingForm.bankName || "").trim() &&
+      String(bankingForm.accountNumber || "").trim();
+    if (!hasBanking) {
+      showToast("Save your banking details below first");
+      return;
+    }
+
+    setWithdrawRequestBusy(true);
+    try {
+      await requestCommissionWithdrawalRemote({
+        mentorEmail: adminSession.email,
+        username: adminSession.username || sessionMentor?.username || "",
+        contact: sessionMentor?.contact || profileContact || "",
+        paidUnlocks: soldKeysCount,
+        commissionUsd,
+        commissionZar,
+        banking: bankingForm,
+      });
+      showToast(`Withdrawal request sent to ${WITHDRAWAL_REQUEST_EMAIL}`);
+    } catch (error) {
+      showToast(error.message || "Could not send withdrawal request");
+    } finally {
+      setWithdrawRequestBusy(false);
+    }
+  }
+
   const commissionRows = mentors
     .filter((m) => {
       const role = String(m.role || "").toLowerCase();
@@ -3279,6 +3317,24 @@ export default function AdminPortal() {
                   {canWithdraw
                     ? "You can withdraw your commission"
                     : `${keysUntilWithdraw} more unlock${keysUntilWithdraw === 1 ? "" : "s"} to unlock`}
+                </p>
+              </article>
+              <article className="admin-stat-card admin-stat-card-action">
+                <p className="admin-stat-label">Request payout</p>
+                <button
+                  className={`admin-btn admin-btn-solid admin-btn-sm admin-withdraw-btn${
+                    withdrawRequestBusy ? " is-loading" : ""
+                  }`}
+                  type="button"
+                  disabled={withdrawRequestBusy || !canWithdraw}
+                  onClick={() => void requestCommissionWithdrawal()}
+                >
+                  <AdminBusyLabel busy={withdrawRequestBusy} busyText="Sending…">
+                    Request withdrawal
+                  </AdminBusyLabel>
+                </button>
+                <p className="admin-card-meta">
+                  Emails {WITHDRAWAL_REQUEST_EMAIL}
                 </p>
               </article>
             </div>
