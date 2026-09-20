@@ -1604,41 +1604,64 @@ html:has(.phone[data-interface="v2"]) body {
   touch-action: pan-y;
 }
 
+/* MetaTrader / Brokers — glass desk (shared I1 + I2) */
 .mt-panel {
+  --mt-accent: var(--pink);
+  --mt-accent-hot: var(--pink-soft);
+  --mt-accent-rgb: var(--pink-rgb);
+  --mt-glass:
+    radial-gradient(120% 90% at 0% 0%, rgba(var(--mt-accent-rgb), 0.18), transparent 55%),
+    linear-gradient(155deg, rgba(22, 14, 32, 0.88), rgba(6, 8, 14, 0.94));
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   width: 100%;
   max-width: 400px;
   margin: 0 auto;
+  animation: mt-panel-in 0.4s ease both;
+}
+
+@keyframes mt-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .mt-panel-head {
   text-align: left;
+  padding: 2px 2px 0;
 }
 
 .mt-panel-kicker {
-  margin: 0 0 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  margin: 0 0 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--pink);
+  color: var(--mt-accent-hot);
+  text-shadow: 0 0 18px rgba(var(--mt-accent-rgb), 0.55);
 }
 
 .mt-panel-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.85rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 1.9rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 
 .mt-panel-sub {
-  margin: 8px 0 0;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 0.92rem;
-  line-height: 1.45;
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 34ch;
 }
 
 .mt-api-status {
@@ -1646,27 +1669,36 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--mt-glass);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 10px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .mt-api-status.is-on {
-  border-color: rgba(46, 204, 113, 0.45);
-  background: linear-gradient(
-    160deg,
-    rgba(46, 204, 113, 0.16),
-    rgba(255, 255, 255, 0.03)
-  );
+  border-color: rgba(46, 204, 113, 0.5);
+  background:
+    radial-gradient(120% 100% at 0% 50%, rgba(46, 204, 113, 0.22), transparent 55%),
+    linear-gradient(155deg, rgba(12, 28, 20, 0.9), rgba(6, 10, 12, 0.94));
+  box-shadow:
+    0 0 0 1px rgba(46, 204, 113, 0.08) inset,
+    0 10px 24px rgba(0, 0, 0, 0.28),
+    0 0 28px rgba(46, 204, 113, 0.16);
 }
 
 .mt-api-status.is-off {
-  border-color: rgba(255, 82, 82, 0.5);
-  background: linear-gradient(
-    160deg,
-    rgba(255, 82, 82, 0.16),
-    rgba(255, 255, 255, 0.03)
-  );
+  border-color: rgba(255, 82, 82, 0.55);
+  background:
+    radial-gradient(120% 100% at 0% 50%, rgba(255, 82, 82, 0.2), transparent 55%),
+    linear-gradient(155deg, rgba(36, 12, 16, 0.92), rgba(10, 6, 10, 0.94));
+  box-shadow:
+    0 0 0 1px rgba(255, 82, 82, 0.08) inset,
+    0 10px 24px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(255, 82, 82, 0.14);
 }
 
 .mt-api-status-row {
@@ -1680,23 +1712,26 @@ html:has(.phone[data-interface="v2"]) body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 9px 13px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.28);
+  background: rgba(0, 0, 0, 0.38);
   color: #fff;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .mt-api-status.is-on .mt-api-status-btn {
-  border-color: rgba(46, 204, 113, 0.55);
+  border-color: rgba(46, 204, 113, 0.6);
+  background: rgba(8, 28, 18, 0.72);
 }
 
 .mt-api-status.is-off .mt-api-status-btn {
-  border-color: rgba(255, 82, 82, 0.55);
+  border-color: rgba(255, 82, 82, 0.6);
+  background: rgba(36, 10, 12, 0.72);
 }
 
 .mt-api-status-dot {
@@ -1709,13 +1744,17 @@ html:has(.phone[data-interface="v2"]) body {
 
 .mt-api-status.is-on .mt-api-status-dot {
   background: #2ecc71;
-  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.22);
+  box-shadow:
+    0 0 0 3px rgba(46, 204, 113, 0.22),
+    0 0 12px rgba(46, 204, 113, 0.9);
   animation: mt-api-pulse 1.8s ease-in-out infinite;
 }
 
 .mt-api-status.is-off .mt-api-status-dot {
   background: #ff5252;
-  box-shadow: 0 0 0 3px rgba(255, 82, 82, 0.22);
+  box-shadow:
+    0 0 0 3px rgba(255, 82, 82, 0.22),
+    0 0 10px rgba(255, 82, 82, 0.7);
 }
 
 .mt-api-status.is-checking .mt-api-status-dot {
@@ -1725,7 +1764,12 @@ html:has(.phone[data-interface="v2"]) body {
 
 .mt-api-status-hint {
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.58);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mt-api-status.is-on .mt-api-status-hint {
+  color: rgba(180, 255, 210, 0.78);
 }
 
 .mt-api-status-msg {
@@ -1742,8 +1786,8 @@ html:has(.phone[data-interface="v2"]) body {
     opacity: 1;
   }
   50% {
-    transform: scale(1.15);
-    opacity: 0.75;
+    transform: scale(1.18);
+    opacity: 0.72;
   }
 }
 
@@ -1754,19 +1798,40 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .mt-platform-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 5px;
   padding: 16px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--mt-glass);
   text-align: left;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 8px 18px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
   transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
+    border-color 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease,
     transform 0.15s ease;
+}
+
+.mt-platform-btn::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -40% auto;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--mt-accent-rgb), 0.35), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
 }
 
 .mt-platform-btn:active {
@@ -1774,21 +1839,51 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .mt-platform-btn.is-active {
-  border-color: rgba(var(--pink-rgb), 0.85);
-  background: linear-gradient(160deg, rgba(var(--pink-rgb), 0.22), rgba(var(--pink-hot-rgb), 0.08));
-  box-shadow: 0 0 0 1px rgba(var(--pink-rgb), 0.25);
+  border-color: rgba(var(--mt-accent-rgb), 0.85);
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(var(--mt-accent-rgb), 0.32), transparent 55%),
+    linear-gradient(155deg, rgba(36, 16, 52, 0.95), rgba(10, 8, 18, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 10px 24px rgba(0, 0, 0, 0.3),
+    0 0 28px rgba(var(--mt-accent-rgb), 0.28);
+  animation: mt-platform-glow 2.4s ease-in-out infinite;
+}
+
+.mt-platform-btn.is-active::after {
+  opacity: 1;
+}
+
+@keyframes mt-platform-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+      0 10px 24px rgba(0, 0, 0, 0.3),
+      0 0 22px rgba(var(--mt-accent-rgb), 0.22);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+      0 12px 28px rgba(0, 0, 0, 0.34),
+      0 0 34px rgba(var(--mt-accent-rgb), 0.4);
+  }
 }
 
 .mt-platform-label {
   font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 750;
   letter-spacing: 0.04em;
+  position: relative;
+  z-index: 1;
 }
 
 .mt-platform-hint {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.52);
+  position: relative;
+  z-index: 1;
 }
 
 .mt-find {
@@ -1796,33 +1891,49 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--mt-glass);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .mt-find-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 650;
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .mt-search-input {
   width: 100%;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.32);
   color: #fff;
   font-size: 0.95rem;
   outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .mt-search-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.38);
 }
 
 .mt-search-input:focus {
-  border-color: rgba(var(--pink-rgb), 0.7);
-  box-shadow: 0 0 0 3px rgba(var(--pink-rgb), 0.18);
+  border-color: rgba(var(--mt-accent-rgb), 0.7);
+  box-shadow:
+    0 0 0 3px rgba(var(--mt-accent-rgb), 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .mt-broker-list {
@@ -1847,20 +1958,29 @@ html:has(.phone[data-interface="v2"]) body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 14px;
+  padding: 13px 14px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
   text-align: left;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.12s ease;
+}
+
+.mt-broker-item:active {
+  transform: scale(0.99);
 }
 
 .mt-broker-item.is-selected {
-  border-color: rgba(var(--pink-rgb), 0.75);
-  background: rgba(var(--pink-rgb), 0.14);
+  border-color: rgba(var(--mt-accent-rgb), 0.75);
+  background: rgba(var(--mt-accent-rgb), 0.16);
+  box-shadow: 0 0 18px rgba(var(--mt-accent-rgb), 0.18);
 }
 
 .mt-broker-name {
-  font-weight: 600;
+  font-weight: 650;
   font-size: 0.95rem;
 }
 
@@ -1872,24 +1992,25 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .mt-broker-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   object-fit: contain;
   background: #fff;
   flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 .mt-broker-logo.is-fallback {
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, rgba(var(--pink-rgb), 0.35), rgba(255, 255, 255, 0.08));
+  background: linear-gradient(145deg, rgba(var(--mt-accent-rgb), 0.4), rgba(255, 255, 255, 0.08));
   color: #fff;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  border-color: rgba(var(--pink-rgb), 0.45);
+  border-color: rgba(var(--mt-accent-rgb), 0.45);
 }
 
 .mt-broker-text {
@@ -1900,8 +2021,8 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .mt-broker-server {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.52);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1909,16 +2030,36 @@ html:has(.phone[data-interface="v2"]) body {
 
 .mt-session {
   display: block;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(var(--pink-rgb), 0.35);
-  background: rgba(var(--pink-rgb), 0.12);
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--mt-accent-rgb), 0.48);
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(var(--mt-accent-rgb), 0.28), transparent 55%),
+    linear-gradient(155deg, rgba(32, 14, 48, 0.94), rgba(8, 6, 14, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 12px 28px rgba(0, 0, 0, 0.32),
+    0 0 28px rgba(var(--mt-accent-rgb), 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: mt-session-in 0.45s ease both;
+}
+
+@keyframes mt-session-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .mt-session-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -1937,44 +2078,49 @@ html:has(.phone[data-interface="v2"]) body {
 .mt-session strong,
 .mt-session-copy strong {
   display: block;
-  font-size: 0.92rem;
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
 }
 
 .mt-session span,
 .mt-session-copy span {
   display: block;
-  margin-top: 2px;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.65);
-  line-height: 1.35;
+  margin-top: 4px;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.58);
+  line-height: 1.4;
 }
 
 .mt-session-metrics {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px 12px 10px;
+  margin: 0 -2px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.28);
 }
 
 .mt-metric {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
 .mt-metric-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.48);
 }
 
 .mt-metric-value {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 1.05rem;
+  font-weight: 750;
   color: #fff;
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
@@ -1982,36 +2128,48 @@ html:has(.phone[data-interface="v2"]) body {
 
 .mt-session-btn {
   flex-shrink: 0;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.35);
   color: #fff;
-  font-size: 0.78rem;
-  font-weight: 650;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.mt-session-btn:active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .mt-broker-meta {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .mt-broker-empty {
-  padding: 18px 8px;
+  padding: 22px 10px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.88rem;
 }
 
 .mt-back-btn {
   display: inline-flex;
   align-items: center;
   margin-bottom: 12px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.88rem;
-  font-weight: 600;
+  padding: 6px 10px 6px 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.86rem;
+  font-weight: 650;
+  transition: color 0.15s ease;
 }
 
 .mt-back-btn:active {
@@ -2022,6 +2180,15 @@ html:has(.phone[data-interface="v2"]) body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--mt-glass);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .mt-field {
@@ -2032,9 +2199,11 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .mt-field > span {
-  font-size: 0.82rem;
-  font-weight: 650;
-  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .mt-connect-btn {
@@ -2044,13 +2213,24 @@ html:has(.phone[data-interface="v2"]) body {
   border-radius: 999px;
   background: linear-gradient(180deg, var(--pink-soft) 0%, var(--pink-hot) 100%);
   color: #fff;
-  font-weight: 750;
+  font-weight: 800;
   font-size: 0.98rem;
-  box-shadow: 0 10px 24px rgba(var(--pink-hot-rgb), 0.35);
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 10px 26px rgba(var(--pink-hot-rgb), 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: transform 0.12s ease, filter 0.15s ease;
 }
 
 .mt-connect-btn:active {
   transform: scale(0.98);
+  filter: brightness(1.05);
+}
+
+.mt-connect-btn:disabled {
+  opacity: 0.55;
+  filter: grayscale(0.2);
+  box-shadow: none;
 }
 
 .sr-only {
@@ -2065,16 +2245,27 @@ html:has(.phone[data-interface="v2"]) body {
   border: 0;
 }
 
+.mt-panel--v2 {
+  --mt-accent: #c026d3;
+  --mt-accent-hot: #e879f9;
+  --mt-accent-rgb: 192, 38, 211;
+}
+
 .mt-panel--v2 .mt-panel-title,
 .mt-panel--v2 .mt-find-title,
 .mt-panel--v2 .mt-platform-label {
   font-family: var(--font-v2);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .mt-panel--v2 .mt-panel-title {
-  font-size: 1.35rem;
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+}
+
+.mt-panel--v2 .mt-find-title {
+  letter-spacing: 0.1em;
 }
 
 .v2-view-metatrader {
@@ -2086,6 +2277,11 @@ html:has(.phone[data-interface="v2"]) body {
   overflow-y: auto;
   overscroll-behavior-x: none;
   touch-action: pan-y;
+}
+
+html.is-native.is-paused .mt-api-status.is-on .mt-api-status-dot,
+html.is-native.is-paused .mt-platform-btn.is-active {
+  animation-play-state: paused !important;
 }
 
 /* Hide home ambient glow on scanner for cleaner look */
