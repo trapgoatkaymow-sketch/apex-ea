@@ -1,26 +1,28 @@
 /**
- * Keep clients on the latest deploy and protect against stale Safari / WebView
- * shells that used to serve old JS after apex-ea.com updated.
+ * Keep clients on the locked live product UI and reject stale Safari / WebView
+ * shells that used to paint older Interface 1 / Interface 2 layouts.
  *
- * Upgrade path is remote app-version.json only (buildId / shellGeneration).
- * We never reload solely because localStorage remembers a newer generation —
- * that caused infinite loops when the CDN kept serving older HTML.
- *
- * Important: do NOT clear Cache Storage / unregister SW on every boot. That
- * races Safari while the module is still settling and can leave mentors stuck
- * on the Loading splash. Only nuke caches when we are about to force-reload.
+ * Upgrade path is remote app-version.json (shellGeneration / minShellGeneration).
+ * We never reload solely because localStorage remembers a newer generation when
+ * the CDN is still serving older HTML — that caused infinite loops. Instead:
+ *   1) Live remote gen above this bundle → reload once to the locked shell.
+ *   2) Live minShell / uiLocked floor above this bundle → reload once.
+ *   3) Cache nukes only happen on that forced reload path.
  */
 import {
   BUILD_ID_STORAGE_KEY,
+  LOCK_WATERMARK_KEY,
   RECOVERY_SESSION_KEY,
   RELOAD_SESSION_KEY,
   SHELL_GEN_STORAGE_KEY,
+  UI_SHELL_FLOOR,
   UI_SHELL_GENERATION,
   UI_SHELL_LABEL,
+  UI_SHELL_LOCKED,
 } from "./uiShellLock.js";
 
 const BUILD_ID = String(import.meta.env.VITE_APP_BUILD_ID || "dev");
-const CHECK_INTERVAL_MS = 90_000;
+const CHECK_INTERVAL_MS = UI_SHELL_LOCKED ? 45_000 : 90_000;
 
 function versionUrl() {
   const stamp = Date.now();
@@ -66,8 +68,18 @@ function rememberLocalShell() {
       SHELL_GEN_STORAGE_KEY,
       String(Math.max(prev, UI_SHELL_GENERATION))
     );
+    if (UI_SHELL_LOCKED) {
+      const prevFloor = Number(localStorage.getItem(LOCK_WATERMARK_KEY) || 0);
+      localStorage.setItem(
+        LOCK_WATERMARK_KEY,
+        String(Math.max(prevFloor, UI_SHELL_FLOOR, UI_SHELL_GENERATION))
+      );
+    }
     document.documentElement.dataset.uiShell = UI_SHELL_LABEL;
     document.documentElement.dataset.shellGen = String(UI_SHELL_GENERATION);
+    if (UI_SHELL_LOCKED) {
+      document.documentElement.dataset.uiLocked = "1";
+    }
     // App mounted — clear one-shot boot retry flag.
     sessionStorage.removeItem("apexea-boot-retry-v1");
   } catch {
@@ -139,9 +151,24 @@ export async function runBootGuard() {
 
     const remoteId = String(remote?.buildId || "").trim();
     const remoteGen = Number(remote?.shellGeneration || 0);
+    const remoteFloor = Number(
+      remote?.minShellGeneration ||
+        remote?.shellFloor ||
+        (remote?.uiLocked ? remoteGen : 0) ||
+        0
+    );
 
     const generationStale =
       Number.isFinite(remoteGen) && remoteGen > 0 && remoteGen > UI_SHELL_GENERATION;
+
+    // Locked product floor — any older shell that can reach live must upgrade,
+    // even when shellGeneration alone is equal/ambiguous on a partial deploy.
+    const belowLockedFloor =
+      UI_SHELL_LOCKED &&
+      Number.isFinite(remoteFloor) &&
+      remoteFloor > 0 &&
+      UI_SHELL_GENERATION < remoteFloor;
+
     // Ignore ephemeral local-* build ids from Vite/Vercel preview stamps so
     // every deploy does not bounce mentors through a reload loop.
     const buildStale =
@@ -152,7 +179,7 @@ export async function runBootGuard() {
       !String(remoteId).startsWith("local-") &&
       !String(BUILD_ID).startsWith("local-");
 
-    if (!generationStale && !buildStale) return false;
+    if (!generationStale && !belowLockedFloor && !buildStale) return false;
 
     if (isNativePlatform()) {
       try {
@@ -208,4 +235,8 @@ export function getAppBuildId() {
 
 export function getUiShellGeneration() {
   return UI_SHELL_GENERATION;
+}
+
+export function isUiShellLocked() {
+  return UI_SHELL_LOCKED;
 }

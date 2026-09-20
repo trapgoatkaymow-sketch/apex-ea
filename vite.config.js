@@ -38,8 +38,10 @@ function resolveBuildId(env) {
 function appVersionPlugin(buildId) {
   // Keep in sync with src/uiShellLock.js — Vite config cannot import ESM app code
   // reliably during config evaluation, so the number is duplicated here.
-  const shellGeneration = 39;
-  const shellLabel = "portal-boot-recover";
+  const shellGeneration = 40;
+  const shellLabel = "product-locked";
+  const uiLocked = true;
+  const minShellGeneration = 40;
 
   const writeVersion = (outDir) => {
     try {
@@ -52,6 +54,8 @@ function appVersionPlugin(buildId) {
             builtAt: new Date().toISOString(),
             shellGeneration,
             shellLabel,
+            uiLocked,
+            minShellGeneration,
           },
           null,
           2
@@ -71,6 +75,7 @@ function appVersionPlugin(buildId) {
         define: {
           'import.meta.env.VITE_APP_BUILD_ID': JSON.stringify(buildId),
           'import.meta.env.VITE_UI_SHELL_GENERATION': JSON.stringify(shellGeneration),
+          'import.meta.env.VITE_UI_SHELL_LOCKED': JSON.stringify(uiLocked),
         },
       }
     },

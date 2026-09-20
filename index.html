@@ -9,7 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="apexea-shell-generation" content="39" />
+    <meta name="apexea-shell-generation" content="40" />
+    <meta name="apexea-ui-locked" content="1" />
     <title>apex-ea</title>
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo.png" />
@@ -58,8 +59,10 @@
       /* Kill stale service workers BEFORE the app module loads.
          A stuck SW can intercept /assets/*.js and leave the portal on Loading forever. */
       (function () {
-        var GEN = 39;
+        var GEN = 40;
+        var FLOOR = 40;
         var KEY = "apexea-shell-gen-v1";
+        var LOCK_KEY = "apexea-ui-lock-floor-v1";
         var RECOVERY = "apexea-shell-recovery-v1";
         var BOOT_RETRY = "apexea-boot-retry-v1";
 
@@ -106,9 +109,12 @@
         try {
           var seen = Number(localStorage.getItem(KEY) || 0);
           localStorage.setItem(KEY, String(Math.max(seen, GEN)));
+          var prevFloor = Number(localStorage.getItem(LOCK_KEY) || 0);
+          localStorage.setItem(LOCK_KEY, String(Math.max(prevFloor, FLOOR, GEN)));
         } catch (e) {}
 
-        /* Remote shell upgrade — one recovery per tab. */
+        /* Remote shell upgrade — one recovery per tab. Locked product floor
+           also forces older HTML shells onto the live locked UI. */
         try {
           if (sessionStorage.getItem(RECOVERY) !== "1") {
             fetch("/app-version.json?t=" + Date.now(), {
@@ -120,7 +126,13 @@
               .then(function (v) {
                 if (!v) return;
                 var remoteGen = Number(v.shellGeneration || 0);
-                if (!(remoteGen > GEN)) return;
+                var remoteFloor = Number(
+                  v.minShellGeneration || v.shellFloor || (v.uiLocked ? remoteGen : 0) || 0
+                );
+                var needsUpgrade =
+                  (remoteGen > GEN) ||
+                  (remoteFloor > 0 && GEN < remoteFloor);
+                if (!needsUpgrade) return;
                 try { sessionStorage.setItem(RECOVERY, "1"); } catch (e) {}
                 hardReload("shell");
               })
