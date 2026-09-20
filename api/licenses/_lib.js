@@ -39,24 +39,6 @@ const MEMORY_LICENSES_TTL_MS = 20_000;
 /** Prevent concurrent Brevo sends for the same license key. */
 const licenseEmailInflight = new Set();
 
-function findUnusedLicenseForClientBot(licenses, clientEmail, botId) {
-  const email = normalizeEmail(clientEmail);
-  const bot = String(botId || "").trim();
-  if (!email || !bot) return null;
-  const matches = (Array.isArray(licenses) ? licenses : []).filter(
-    (row) =>
-      normalizeEmail(row?.clientEmail) === email &&
-      String(row?.botId || row?.bot?.id || "").trim() === bot &&
-      !row?.used
-  );
-  if (!matches.length) return null;
-  matches.sort(
-    (a, b) =>
-      (Number(b?.createdAt) || 0) - (Number(a?.createdAt) || 0)
-  );
-  return matches[0] || null;
-}
-
 export async function markLicenseEmailSent(rawKey, at = Date.now()) {
   const key = normalizeLicenseKey(rawKey);
   if (!key) return null;
@@ -86,6 +68,63 @@ export async function markLicenseEmailSent(rawKey, at = Date.now()) {
   return updated;
 }
 
+/** Clear emailSentAt so a failed send can retry. */
+async function clearLicenseEmailSent(rawKey) {
+  const key = normalizeLicenseKey(rawKey);
+  if (!key) return;
+  try {
+    await mutateStore((licenses) => {
+      const idx = licenses.findIndex(
+        (row) => normalizeLicenseKey(row.key) === key
+      );
+      if (idx < 0) return licenses;
+      const prev = licenses[idx];
+      if (!prev.emailSentAt) return licenses;
+      licenses[idx] = {
+        ...prev,
+        emailSentAt: null,
+        updatedAt: Date.now(),
+      };
+      return licenses;
+    }, `license email retry: ${key}`);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Claim the right to send this key's email (optimistic emailSentAt stamp).
+ * Returns true only for the caller that won the claim — stops duplicate Brevo sends.
+ */
+async function claimLicenseEmailSend(rawKey) {
+  const key = normalizeLicenseKey(rawKey);
+  if (!key) return false;
+  let claimed = false;
+  try {
+    await mutateStore((licenses) => {
+      const idx = licenses.findIndex(
+        (row) => normalizeLicenseKey(row.key) === key
+      );
+      if (idx < 0) return licenses;
+      const prev = licenses[idx];
+      if (prev.emailSentAt) {
+        claimed = false;
+        return licenses;
+      }
+      claimed = true;
+      licenses[idx] = {
+        ...prev,
+        emailSentAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      return licenses;
+    }, `license email claim: ${key}`);
+  } catch {
+    claimed = false;
+  }
+  return claimed;
+}
+
 async function sendLicenseKeyEmailOnce(license, { force = false } = {}) {
   const key = normalizeLicenseKey(license?.key);
   if (!key) {
@@ -100,34 +139,24 @@ async function sendLicenseKeyEmailOnce(license, { force = false } = {}) {
     };
   }
   if (!force && licenseEmailInflight.has(key)) {
-    return { ok: true, skipped: true, reason: "inflight" };
+    return { ok: true, skipped: true, reason: "already-sent" };
   }
   licenseEmailInflight.add(key);
   try {
-    // Re-read in case another instance already stamped emailSentAt.
     if (!force) {
-      try {
-        const fresh = await findLicense(key);
-        if (fresh?.emailSentAt) {
-          return {
-            ok: true,
-            skipped: true,
-            reason: "already-sent",
-            emailSentAt: Number(fresh.emailSentAt),
-          };
-        }
-      } catch {
-        // continue with send
+      const claimed = await claimLicenseEmailSend(key);
+      if (!claimed) {
+        return { ok: true, skipped: true, reason: "already-sent" };
       }
     }
     const { sendLicenseKeyEmail } = await import("../_brevo.js");
     const email = await sendLicenseKeyEmail(license);
     if (email?.ok) {
-      const stamped = await markLicenseEmailSent(key);
-      return {
-        ...email,
-        emailSentAt: Number(stamped?.emailSentAt) || Date.now(),
-      };
+      return { ...email, emailSentAt: Date.now() };
+    }
+    // Allow a later retry if Brevo failed / not configured.
+    if (!force) {
+      await clearLicenseEmailSent(key);
     }
     return email;
   } finally {
@@ -1303,10 +1332,6 @@ export async function createLicense(payload = {}) {
 
   let result = null;
   let createdNew = false;
-  let reusedUnused = false;
-  const forceNew =
-    payload.forceNew === true ||
-    String(payload.forceNew || "").toLowerCase() === "true";
   const write = await mutateStore((licenses, api) => {
     if (api?.isDeleted?.(key)) {
       const err = new Error("This license key was permanently deleted");
@@ -1314,18 +1339,6 @@ export async function createLicense(payload = {}) {
       throw err;
     }
     const existing = licenses.find((row) => row.key === key);
-
-    // One unused key per client+bot — regenerating must not mint/email another.
-    if (!existing && !forceNew) {
-      const unused = findUnusedLicenseForClientBot(licenses, clientEmail, botId);
-      if (unused?.key) {
-        createdNew = false;
-        reusedUnused = true;
-        result = unused;
-        return licenses;
-      }
-    }
-
     if (!existing && ownerEmailForQuota && keyAllowance != null) {
       const used = licenses.filter(
         (row) => normalizeEmail(row.mentorEmail) === ownerEmailForQuota
@@ -1409,8 +1422,7 @@ export async function createLicense(payload = {}) {
 
   // Never hand out a key that only landed in ephemeral /tmp memory — cold
   // serverless instances will not see it and clients get "Invalid license key".
-  // Reused unused keys were already durable — skip this check.
-  if (!reusedUnused && write?.durable === false) {
+  if (write?.durable === false) {
     const err = new Error(
       `License key did not save to the shared store${
         write?.error ? ` (${write.error})` : ""
@@ -1424,53 +1436,38 @@ export async function createLicense(payload = {}) {
   const skipEmail =
     payload.sendEmail === false ||
     String(payload.sendEmail || "").toLowerCase() === "false";
-  // Auto-email only once per key. Explicit resend-email still forces a send.
-  const alreadySent = Boolean(Number(result?.emailSentAt));
-  const keyAgeMs = Date.now() - (Number(result?.createdAt) || Date.now());
-  const recentEnoughToRetryMail = keyAgeMs < 5 * 60 * 1000;
-  const shouldAutoEmail =
-    !skipEmail &&
-    !alreadySent &&
-    (createdNew ||
-      (reusedUnused && recentEnoughToRetryMail) ||
-      (!createdNew && !reusedUnused && recentEnoughToRetryMail));
-  if (shouldAutoEmail) {
-    try {
-      email = await sendLicenseKeyEmailOnce(result, { force: false });
-      if (email?.emailSentAt && result) {
-        result = { ...result, emailSentAt: email.emailSentAt };
+  // Email every newly created key once. Retries of the same key within a few
+  // minutes can retry a failed send; emailSentAt blocks duplicate Brevo sends.
+  if (!skipEmail) {
+    const alreadySent = Number(result?.emailSentAt);
+    const keyAgeMs = Date.now() - (Number(result?.createdAt) || Date.now());
+    if (alreadySent) {
+      email = {
+        ok: true,
+        skipped: true,
+        reason: "already-sent",
+        emailSentAt: alreadySent,
+      };
+    } else if (createdNew || keyAgeMs < 3 * 60 * 1000) {
+      try {
+        email = await sendLicenseKeyEmailOnce(result, { force: false });
+        if (email?.emailSentAt && result) {
+          result = { ...result, emailSentAt: email.emailSentAt };
+        }
+      } catch (error) {
+        email = { ok: false, error: error?.message || "Email send failed" };
       }
-    } catch (error) {
-      email = { ok: false, error: error?.message || "Email send failed" };
+    } else {
+      // Older key without a stamp — do not re-blast; treat as already delivered.
+      email = {
+        ok: true,
+        skipped: true,
+        reason: "already-sent",
+      };
     }
-  } else if (alreadySent) {
-    email = {
-      ok: true,
-      skipped: true,
-      reason: reusedUnused ? "reused-unused-key" : "already-sent",
-      emailSentAt: Number(result.emailSentAt),
-    };
-  } else if (reusedUnused) {
-    // Older unused keys predate emailSentAt tracking — do not re-blast.
-    try {
-      await markLicenseEmailSent(result.key);
-      result = { ...result, emailSentAt: Date.now() };
-    } catch {
-      // ignore
-    }
-    email = {
-      ok: true,
-      skipped: true,
-      reason: "reused-unused-key",
-    };
   }
 
-  return {
-    ...result,
-    _email: email,
-    _reusedUnused: reusedUnused,
-    _createdNew: createdNew,
-  };
+  return { ...result, _email: email, _createdNew: createdNew };
 }
 
 function randomLicenseKeyServer(existingKeys = new Set()) {
@@ -1614,21 +1611,7 @@ export async function createLicensesBulk(payload = {}) {
     const next = [...licenses];
     const now = Date.now();
     for (const client of normalizedClients) {
-      const existingUnused = findUnusedLicenseForClientBot(
-        next,
-        client.clientEmail,
-        botId
-      );
-      if (existingUnused?.key) {
-        skipped.push({
-          clientEmail: client.clientEmail,
-          clientName: client.clientName,
-          key: existingUnused.key,
-          reason: "unused-key-exists",
-        });
-        continue;
-      }
-      // Fresh key only when this client has no unused key for the bot.
+      // Always create a fresh key — same email may receive many keys for one bot.
       let key = randomLicenseKeyServer(usedKeys);
       while (api.isDeleted?.(key) || usedKeys.has(key)) {
         key = randomLicenseKeyServer(usedKeys);

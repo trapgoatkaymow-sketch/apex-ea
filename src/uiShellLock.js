@@ -6,10 +6,11 @@
  * portals are frozen. Clients on any older shell must reload to live.
  * Gen 41 — Brevo license-key emails when mentors generate keys.
  * Gen 53 — One license email per unused client+bot key (no duplicate sends).
+ * Gen 54 — Still email every new key; only block duplicate sends of the same key.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 53;
+export const UI_SHELL_GENERATION = 54;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-locked-license-email-once";
@@ -19,7 +20,7 @@ export const UI_SHELL_LABEL = "product-locked-license-email-once";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 52;
+export const UI_SHELL_FLOOR = 53;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
