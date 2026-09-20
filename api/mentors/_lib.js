@@ -508,6 +508,28 @@ async function readStore() {
             salt: local.salt,
           };
         }
+        // Keep newer in-memory withdrawal request stamps across instances
+        // until durable stores catch up.
+        const localWithdrawAt = Number(local.withdrawalRequestedAt) || 0;
+        const remoteWithdrawAt = Number(m.withdrawalRequestedAt) || 0;
+        if (
+          Array.isArray(local.withdrawalRequests) &&
+          local.withdrawalRequests.length &&
+          localWithdrawAt >= remoteWithdrawAt
+        ) {
+          const floor = Date.now() - WITHDRAW_WINDOW_MS;
+          const merged = [
+            ...(Array.isArray(m.withdrawalRequests) ? m.withdrawalRequests : []),
+            ...local.withdrawalRequests,
+          ]
+            .map((t) => Number(t))
+            .filter((t) => Number.isFinite(t) && t >= floor);
+          next = {
+            ...next,
+            withdrawalRequests: Array.from(new Set(merged)).sort((a, b) => a - b),
+            withdrawalRequestedAt: Math.max(localWithdrawAt, remoteWithdrawAt) || null,
+          };
+        }
         // Keep a newer local app color when durable remote hasn't caught up yet.
         const localColor = normalizeAppColor(local.appColor);
         const remoteColor = normalizeAppColor(m.appColor);
