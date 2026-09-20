@@ -10,19 +10,19 @@ export const config = {
   maxDuration: 60,
 };
 
-const APK_NAME = "apex-ea-v2.21.apk";
+const APK_NAME = "apex-ea-v2.22.apk";
 const GITHUB_RAW_CANDIDATES = [
-  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea-v2.21.apk",
+  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea-v2.22.apk",
   "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea.apk",
-  "https://github.com/trapgoatkaymow-sketch/apex-ea/raw/main/public/apex-ea-v2.21.apk",
+  "https://github.com/trapgoatkaymow-sketch/apex-ea/raw/main/public/apex-ea-v2.22.apk",
 ];
 
 const LOCAL_CANDIDATES = [
-  path.join(process.cwd(), "public", "apex-ea-v2.21.apk"),
+  path.join(process.cwd(), "public", "apex-ea-v2.22.apk"),
   path.join(process.cwd(), "public", "apex-ea.apk"),
-  path.join(process.cwd(), "apex-ea-v2.21.apk"),
+  path.join(process.cwd(), "apex-ea-v2.22.apk"),
   path.join(process.cwd(), "apex-ea.apk"),
-  path.join(process.cwd(), "dist", "apex-ea-v2.21.apk"),
+  path.join(process.cwd(), "dist", "apex-ea-v2.22.apk"),
   path.join(process.cwd(), "dist", "apex-ea.apk"),
 ];
 
