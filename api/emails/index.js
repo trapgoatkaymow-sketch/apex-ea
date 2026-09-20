@@ -82,6 +82,9 @@ async function handleWithdrawRequest(body) {
     throw err;
   }
 
+  // Reserve a slot before sending so concurrent requests cannot bypass the cap.
+  const quota = await recordMentorWithdrawalRequest(mentorEmail);
+
   if (!brevoConfigured()) {
     const err = new Error(
       "Brevo not configured (set BREVO_API_KEY and BREVO_SENDER_EMAIL)"
@@ -151,11 +154,9 @@ async function handleWithdrawRequest(body) {
   if (!email.ok) {
     const err = new Error(email.error || "Could not send withdrawal request");
     err.status = email.skipped ? 503 : 502;
+    err.data = { quota };
     throw err;
   }
-
-  // Record only after a successful send (durable on mentor record).
-  const quota = await recordMentorWithdrawalRequest(mentorEmail);
 
   return {
     ok: true,
