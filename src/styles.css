@@ -277,7 +277,7 @@ button {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  max-width: calc(100% - 120px);
+  max-width: calc(100% - 168px);
   min-height: 1.2em;
   font-size: 1.12rem;
   font-weight: 700;
@@ -293,9 +293,23 @@ button {
   pointer-events: none;
 }
 
+.top-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+  position: relative;
+  max-width: min(58%, 220px);
+}
+
+.top-broker {
+  max-width: 132px;
+}
+
 .iface-toggle {
   flex: 0 0 auto;
-  margin-left: auto;
+  margin-left: 0;
   width: 44px;
   height: 44px;
   border-radius: 14px;
@@ -397,6 +411,12 @@ html:has(.phone[data-interface="v2"]) body {
   z-index: 31;
   pointer-events: none;
   color: #fff;
+}
+
+.phone[data-interface="v2"] .top .top-end {
+  position: relative;
+  z-index: 31;
+  pointer-events: auto;
 }
 
 .phone[data-interface="v2"] .top .iface-toggle {
@@ -1647,6 +1667,14 @@ html:has(.phone[data-interface="v2"]) body {
   text-shadow: 0 0 18px rgba(var(--mt-accent-rgb), 0.55);
 }
 
+.mt-panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
 .mt-panel-title {
   margin: 0;
   font-family: var(--font-display);
@@ -1654,6 +1682,67 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 750;
   letter-spacing: -0.03em;
   line-height: 1.05;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mt-head-broker {
+  flex: 0 1 auto;
+  max-width: min(52%, 168px);
+}
+
+.mt-session-broker {
+  margin-bottom: 4px;
+}
+
+.mt-session-mark .broker-mark-name {
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.broker-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 5px 10px 5px 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.broker-mark-logo {
+  width: var(--broker-mark-size, 28px);
+  height: var(--broker-mark-size, 28px);
+  border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.broker-mark-logo.is-fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, rgba(var(--pink-rgb), 0.4), rgba(255, 255, 255, 0.08));
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-color: rgba(var(--pink-rgb), 0.45);
+}
+
+.broker-mark-name {
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mt-panel-sub {
@@ -6744,6 +6833,10 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .cs-mt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -6752,6 +6845,24 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 
 .cs-mt-pill.is-on {
   color: #9dffc4;
+}
+
+.cs-mt-broker {
+  max-width: 150px;
+  padding: 3px 8px 3px 3px;
+  border-color: rgba(46, 204, 113, 0.35);
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.cs-mt-broker .broker-mark-logo {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.cs-mt-broker .broker-mark-name {
+  font-size: 0.68rem;
+  color: #b8ffd4;
 }
 
 .cs-stage {

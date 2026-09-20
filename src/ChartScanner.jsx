@@ -9,6 +9,7 @@ import {
   detectSymbolFromChart,
   sleep,
 } from "./chartScanner.js";
+import { BrokerMark } from "./ConnectedBrokerBadge.jsx";
 import { buildBotTradeComment, buildScannerFillComment, placeTrade } from "./metaApi.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import { isNativeApp, useApp } from "./store.jsx";
@@ -725,8 +726,21 @@ export default function ChartScanner({ variant = "default", active = true }) {
             {`${scansLeft} scans left`}
           </span>
           <span className={`cs-mt-pill${connected ? " is-on" : ""}`}>
-            <span className="cs-mt-dot" aria-hidden="true" />
-            {connected ? `MT5 · ${mt5Session.login}` : "MT5 offline"}
+            {connected ? (
+              <BrokerMark
+                broker={{
+                  company: mt5Session?.company || mt5Session?.server || "Broker",
+                  name: mt5Session?.server || "",
+                }}
+                className="cs-mt-broker"
+                size={18}
+              />
+            ) : (
+              <>
+                <span className="cs-mt-dot" aria-hidden="true" />
+                MT5 offline
+              </>
+            )}
           </span>
         </div>
       </header>

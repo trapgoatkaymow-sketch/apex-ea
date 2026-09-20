@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import EnginePanel from "./EnginePanel.jsx";
 import { CONNECT_ENGINE_STEPS, sleep } from "./chartScanner.js";
 import { brokerInitials, resolveBrokerLogoCandidates } from "./brokerLogos.js";
+import { BrokerMark } from "./ConnectedBrokerBadge.jsx";
 import { connectAccount, disconnectAccount, getAccountStatus, searchBrokers, checkBrokerApiHealth } from "./metaApi.js";
 import { removeMt5Account, upsertMt5Account } from "./mt5AccountsApi.js";
 import { useApp } from "./store.jsx";
@@ -470,7 +471,10 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             ← Brokers
           </button>
           <p className="mt-panel-kicker">{platform}</p>
-          <h2 className="mt-panel-title">{selectedBroker.company}</h2>
+          <div className="mt-panel-title-row">
+            <h2 className="mt-panel-title">{selectedBroker.company}</h2>
+            <BrokerMark broker={selectedBroker} className="mt-head-broker" size={30} />
+          </div>
           <p className="mt-panel-sub">
             {selectedBroker.custom
               ? "Enter your MetaTrader account details to connect."
@@ -535,11 +539,23 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     );
   }
 
+  const sessionBroker = session?.accountId
+    ? {
+        company: String(session.company || session.server || "Broker").trim(),
+        name: String(session.server || "").trim(),
+      }
+    : null;
+
   return (
     <div className={rootClass}>
       <header className="mt-panel-head">
         <p className="mt-panel-kicker">MetaTrader</p>
-        <h2 className="mt-panel-title">Brokers</h2>
+        <div className="mt-panel-title-row">
+          <h2 className="mt-panel-title">Brokers</h2>
+          {sessionBroker ? (
+            <BrokerMark broker={sessionBroker} className="mt-head-broker" size={30} />
+          ) : null}
+        </div>
         <p className="mt-panel-sub">
           Search brokers, connect MT5, then arm the ApexEA trading engine.
         </p>
@@ -597,7 +613,9 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           <div className="mt-session-body">
             <div className="mt-session-row">
               <div className="mt-session-copy">
-                <strong>{session.company || session.server}</strong>
+                <div className="mt-session-broker">
+                  <BrokerMark broker={sessionBroker} className="mt-session-mark" size={28} />
+                </div>
                 <span>
                   {session.server} · login {session.login}
                   {session.subscribed ? " · copying" : ""} · engine armed
