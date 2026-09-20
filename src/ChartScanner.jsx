@@ -295,7 +295,12 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
       setSymbol(suggested || "");
       setSymbolSource(suggested ? "scanner" : "");
-      if (
+      if (detection?.quotaFallback) {
+        showToast(
+          detection.message ||
+            "Chart ready — type the symbol to keep scanning"
+        );
+      } else if (
         status === CHART_DETECTION_STATUS.NO_CHART &&
         detection?.error &&
         /credit|quota|billing|unavailable|OpenAI|503|429/i.test(
@@ -304,7 +309,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       ) {
         showToast(
           /credit|quota|billing/i.test(String(detection.error))
-            ? "Scanner temporarily unavailable — retry in a moment"
+            ? "AI scanner offline — type the symbol, then Scan"
             : detection.message || detection.error || "Chart analysis unavailable"
         );
       } else if (status === CHART_DETECTION_STATUS.NO_CHART) {
@@ -441,7 +446,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
       pushEngineLog(
         `Setup ready · ${result.side} ${tradeSymbol} · Entry ${result.entry} · TP1 ${result.takeProfit1} · TP2 ${result.takeProfit2} · TP3 ${result.takeProfit3}`
       );
-      showToast(`${result.side} ${tradeSymbol} setup ready · ${nextScans} scans left`);
+      showToast(
+        result.source === "local-fallback"
+          ? `${result.side} ${tradeSymbol} setup ready (offline AI) · ${nextScans} scans left`
+          : `${result.side} ${tradeSymbol} setup ready · ${nextScans} scans left`
+      );
       await sleep(SCAN_SETTLE_MS);
       setEngineMode("idle");
     } catch (error) {
@@ -455,12 +464,10 @@ export default function ChartScanner({ variant = "default", active = true }) {
         setDetectionHint(error.uiMessage || "Please upload a clear trading chart.");
         showToast("No trading chart detected");
       } else if (error.code === "SYMBOL_UNCLEAR") {
-        setSymbol("");
-        setSymbolSource("");
         setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
         setDetectionMessage(error.message || "Chart detected — symbol unclear");
-        setDetectionHint(error.uiMessage || "Chart detected — symbol unclear");
-        showToast("Chart detected — symbol unclear");
+        setDetectionHint(error.uiMessage || "Type the chart symbol, then Scan.");
+        showToast("Type the chart symbol, then tap Scan");
       } else if (error.code === "ANALYSIS_UNAVAILABLE") {
         showToast(error.message || "Live analysis unavailable — retry");
       } else {
@@ -667,7 +674,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
     Boolean(preview) &&
     Boolean(symbol) &&
     detectionStatus !== CHART_DETECTION_STATUS.NO_CHART &&
-    detectionStatus !== CHART_DETECTION_STATUS.SYMBOL_UNCLEAR &&
     scansLeft > 0;
 
   // I2 uses the same ZETA Chart Scanner chrome as I1; only the setup result card differs.
@@ -1223,11 +1229,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 ? "Connect MT5 to Scan"
                 : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
                   ? "Upload a trading chart"
-                  : detectionStatus === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR
-                    ? "Symbol unclear on chart"
-                    : !symbol
-                      ? "Waiting for symbol…"
-                      : "Scan Chart"}
+                  : !symbol
+                    ? detectionStatus === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR
+                      ? "Type symbol, then Scan"
+                      : "Waiting for symbol…"
+                    : "Scan Chart"}
         </button>
       ) : useTrapResult ? null : (
         <button

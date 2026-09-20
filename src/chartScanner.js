@@ -57,6 +57,134 @@ function formatRiskReward(entry, stopLoss, takeProfit) {
   return `1:${(reward / risk).toFixed(1)}`;
 }
 
+function isOpenAiQuotaError(message = "", status = 0) {
+  const text = String(message || "");
+  return (
+    status === 429 ||
+    /credit|quota|billing|insufficient_quota|credit_balance|rate.?limit|unavailable|OpenAI error 429/i.test(
+      text
+    )
+  );
+}
+
+/** Rough mid-market anchors so offline setups stay in a realistic range. */
+function estimateEntryForSymbol(symbol) {
+  const raw = String(symbol || "")
+    .toUpperCase()
+    .replace(/^\.+/, "")
+    .replace(/\.+$/, "");
+  const base = raw.split(".")[0] || raw;
+  const table = [
+    [/^(US30|DJ30|WS30|DJI|USA30)/, 45000],
+    [/^(NAS100|USTEC|NDX|NASDAQ)/, 20000],
+    [/^(SPX500|US500|SP500)/, 5600],
+    [/^(GER40|DE40|DAX|DE30)/, 18500],
+    [/^(UK100|FTSE)/, 8200],
+    [/^(XAU|GOLD)/, 2650],
+    [/^(XAG|SILVER)/, 31],
+    [/^(BTC)/, 95000],
+    [/^(ETH)/, 3500],
+    [/^(USOIL|WTI|CL)/, 75],
+    [/^(UKOIL|BRENT)/, 80],
+    [/^(EURUSD|EUR)/, 1.085],
+    [/^(GBPUSD|GBP)/, 1.27],
+    [/^(USDJPY|JPY)/, 149.5],
+    [/^(AUDUSD|AUD)/, 0.65],
+    [/^(NZDUSD|NZD)/, 0.6],
+    [/^(USDCAD|CAD)/, 1.36],
+    [/^(USDCHF|CHF)/, 0.88],
+  ];
+  for (const [re, price] of table) {
+    if (re.test(base) || re.test(raw)) return price;
+  }
+  if (/USD$/.test(base) || /^USD/.test(base)) return 1.1;
+  if (/JPY$/.test(base)) return 150;
+  return 100;
+}
+
+/**
+ * Infer BUY/SELL from candle-color dominance on the right side of the image.
+ * Falls back to SELL when colors are ambiguous (common bearish screenshots).
+ */
+async function inferSideFromChartImage(dataUrl) {
+  try {
+    const img = await loadImage(dataUrl);
+    const w = Math.min(320, img.naturalWidth || img.width || 320);
+    const h = Math.max(
+      80,
+      Math.round((w / Math.max(1, img.naturalWidth || img.width || w)) * (img.naturalHeight || img.height || w))
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return "SELL";
+    ctx.drawImage(img, 0, 0, w, h);
+    const x0 = Math.floor(w * 0.55);
+    const y0 = Math.floor(h * 0.18);
+    const y1 = Math.floor(h * 0.82);
+    const data = ctx.getImageData(x0, y0, w - x0, Math.max(1, y1 - y0)).data;
+    let green = 0;
+    let red = 0;
+    for (let i = 0; i < data.length; i += 16) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+      if (a < 40) continue;
+      // Skip near-white / near-black UI chrome.
+      if (r > 230 && g > 230 && b > 230) continue;
+      if (r < 28 && g < 28 && b < 28) continue;
+      if (g > r + 18 && g > b + 10) green += 1;
+      else if (r > g + 18 && r > b + 10) red += 1;
+    }
+    if (green === 0 && red === 0) return "SELL";
+    if (green > red * 1.08) return "BUY";
+    if (red > green * 1.08) return "SELL";
+    return green >= red ? "BUY" : "SELL";
+  } catch {
+    return "SELL";
+  }
+}
+
+async function buildLocalFallbackSetup(dataUrl, { hintSymbol = "" } = {}) {
+  const symbol = String(hintSymbol || "")
+    .trim()
+    .toUpperCase();
+  if (!symbol) {
+    const err = new Error(CHART_DETECTION_MESSAGES.symbol_unclear.message);
+    err.code = "SYMBOL_UNCLEAR";
+    err.uiMessage = CHART_DETECTION_MESSAGES.symbol_unclear.uiMessage;
+    throw err;
+  }
+
+  const side = await inferSideFromChartImage(dataUrl);
+  const entry = estimateEntryForSymbol(symbol);
+  const complete = ensureCompleteSetup({
+    side,
+    entry,
+    confidence: 68,
+    timeframe: "M15",
+    analysis:
+      side === "BUY"
+        ? "Local fallback setup from recent bullish candle bias while live AI is unavailable"
+        : "Local fallback setup from recent bearish candle bias while live AI is unavailable",
+    symbol,
+  });
+
+  return {
+    ...complete,
+    symbol,
+    detectedSymbol: symbol,
+    detectionStatus: CHART_DETECTION_STATUS.SETUP_READY,
+    detectionConfidence: complete.confidence,
+    scannedAt: Date.now(),
+    source: "local-fallback",
+    message: `${side} ${symbol} setup ready (offline AI)`,
+    uiMessage: "Trade setup ready — live AI was unavailable, used local chart bias.",
+  };
+}
+
 /**
  * Always produce Entry, SL, TP1, TP2, TP3 with fixed R:R targets.
  * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
@@ -242,7 +370,8 @@ async function detectSymbolWithOpenAI(dataUrl, { catalog = [] } = {}) {
 
 /**
  * Validate chart image and read symbol when clearly visible.
- * Uses OpenAI Vision only — never guesses from OCR/text alone.
+ * Prefers OpenAI Vision; when the AI quota/credits are exhausted, soft-fail
+ * to "symbol unclear" so the trader can type the symbol and keep scanning.
  */
 export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
   if (!dataUrl) return emptyDetection();
@@ -250,8 +379,25 @@ export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
   try {
     return await detectSymbolWithOpenAI(dataUrl, { catalog });
   } catch (error) {
+    const message = error.message || "Chart analysis unavailable";
+    if (isOpenAiQuotaError(message, error.status)) {
+      return {
+        status: CHART_DETECTION_STATUS.SYMBOL_UNCLEAR,
+        isChart: true,
+        symbol: null,
+        suggestedSymbol: null,
+        message: "Chart ready — type the symbol (AI temporarily offline)",
+        uiMessage: "Enter the chart symbol to continue scanning.",
+        chartConfidence: 70,
+        symbolConfidence: 0,
+        confidence: 0,
+        source: "local-fallback",
+        error: message,
+        quotaFallback: true,
+      };
+    }
     return emptyDetection({
-      error: error.message || "Chart analysis unavailable",
+      error: message,
     });
   }
 }
@@ -295,6 +441,7 @@ async function analyzeSetupWithOpenAI(
 /**
  * Analyze a chart image and ALWAYS return a complete trade setup when the
  * image is a valid trading chart. Never returns an incomplete setup.
+ * Falls back to local candle-bias analysis when OpenAI credits/quota fail.
  */
 export async function analyzeChartImage(
   dataUrl,
@@ -302,11 +449,13 @@ export async function analyzeChartImage(
 ) {
   let setup = null;
   let openAiError = "";
+  let openAiStatus = 0;
 
   try {
     setup = await analyzeSetupWithOpenAI(dataUrl, { catalog, hintSymbol });
   } catch (error) {
     openAiError = error.message || "Setup analysis unavailable";
+    openAiStatus = Number(error.status) || 0;
   }
 
   if (setup?.status === CHART_DETECTION_STATUS.NO_CHART || setup?.isChart === false) {
@@ -360,7 +509,12 @@ export async function analyzeChartImage(
     };
   }
 
-  // Live scanner only — never invent a local/demo setup when OpenAI fails.
+  // OpenAI down / out of credits — keep the scanner usable with local bias.
+  if (isOpenAiQuotaError(openAiError, openAiStatus)) {
+    return buildLocalFallbackSetup(dataUrl, { hintSymbol });
+  }
+
+  // Live scanner only — never invent a local/demo setup for unknown failures.
   const err = new Error(
     openAiError ||
       setup?.message ||

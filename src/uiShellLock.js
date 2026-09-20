@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 31 — Transparent scan-eye sclera (no white fill).
+ * Gen 32 — Scanner local fallback when OpenAI credits are exhausted.
  */
-export const UI_SHELL_GENERATION = 31;
+export const UI_SHELL_GENERATION = 32;
 
-export const UI_SHELL_LABEL = "eye-no-white";
+export const UI_SHELL_LABEL = "scanner-quota-fallback";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
