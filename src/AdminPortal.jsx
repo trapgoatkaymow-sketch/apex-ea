@@ -687,10 +687,12 @@ export default function AdminPortal() {
   }, [adminOpen, adminSession, adminPage]);
 
   useEffect(() => {
-    if (!mentorActivity?.inGrace || !mentorActivity?.graceEndsAt) return undefined;
+    if (!mentorActivity?.graceEndsAt && !mentorActivity?.weekDeadlineAt) {
+      return undefined;
+    }
     const timer = setInterval(() => setActivityTick((n) => n + 1), 1000);
     return () => clearInterval(timer);
-  }, [mentorActivity?.inGrace, mentorActivity?.graceEndsAt]);
+  }, [mentorActivity?.graceEndsAt, mentorActivity?.weekDeadlineAt, mentorActivity?.inGrace]);
 
   useEffect(() => {
     if (!adminOpen || !adminSession) return undefined;
