@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 22 — MetaTrader / Brokers glass desk restyle on both interfaces.
+ * Gen 23 — Compact full chart previews on both scanners.
  */
-export const UI_SHELL_GENERATION = 22;
+export const UI_SHELL_GENERATION = 23;
 
-export const UI_SHELL_LABEL = "mt-brokers-glass-desk";
+export const UI_SHELL_LABEL = "scanner-chart-compact-full";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
