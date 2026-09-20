@@ -7389,7 +7389,7 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .cs-engine.is-desk .cs-engine-ring.is-hunting .cs-scan-eye {
-  width: 30px;
+  width: 28px;
   height: 20px;
 }
 
@@ -7397,7 +7397,7 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   color: #fff;
 }
 
-/* Slow-blinking hunt eye (scanning) */
+/* Unique signal-hunter eye (scanning) */
 .cs-scan-eye-stage,
 .tg-scan-eye-stage {
   position: absolute;
@@ -7409,7 +7409,8 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   gap: 10px;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 48%, rgba(12, 4, 18, 0.18), rgba(0, 0, 0, 0.55) 70%);
+    radial-gradient(circle at 50% 46%, rgba(88, 28, 135, 0.16), transparent 42%),
+    radial-gradient(circle at 50% 52%, transparent 30%, rgba(0, 0, 0, 0.5) 78%);
 }
 
 .cs-scan-eye-caption,
@@ -7429,19 +7430,18 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .cs-scan-eye--lg {
-  width: min(52vw, 168px);
+  width: min(54vw, 176px);
   height: auto;
 }
 
 .cs-scan-eye--sm {
-  width: 30px;
+  width: 28px;
   height: 20px;
 }
 
-.cs-scan-eye-orbit {
+.cs-scan-eye-core {
   width: 100%;
-  filter: drop-shadow(0 0 14px rgba(232, 121, 249, 0.55));
-  animation: cs-scan-eye-look 4.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(232, 121, 249, 0.45));
 }
 
 .cs-scan-eye-svg {
@@ -7451,57 +7451,182 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   overflow: visible;
 }
 
-.cs-scan-eye-outline {
-  stroke: rgba(232, 121, 249, 0.7);
-  stroke-width: 1.6;
+.cs-scan-eye-radar {
+  transform-origin: 40px 28px;
+  animation: cs-hunt-radar 5.5s linear infinite;
+}
+
+.cs-scan-eye-radar-ring {
+  transform-origin: 40px 28px;
+  animation: cs-hunt-radar-rev 3.8s linear infinite;
+}
+
+.cs-scan-eye-aperture {
+  transform-origin: 40px 28px;
+  transform-box: fill-box;
+  animation: cs-hunt-aperture 4.2s ease-in-out infinite;
+}
+
+.cs-scan-eye-iris-wrap {
+  transform-origin: 40px 28px;
+  animation: cs-hunt-aperture 4.2s ease-in-out infinite;
+}
+
+.cs-scan-eye-lid--top,
+.cs-scan-eye-lid--bot {
+  transform-origin: 40px 28px;
+  transform-box: fill-box;
+}
+
+.cs-scan-eye-lid--top {
+  animation: cs-hunt-lid-top 4.2s ease-in-out infinite;
+}
+
+.cs-scan-eye-lid--bot {
+  animation: cs-hunt-lid-bot 4.2s ease-in-out infinite;
+}
+
+.cs-scan-eye-gaze {
+  transform-origin: 40px 28px;
+  animation: cs-hunt-gaze 5.6s ease-in-out infinite;
 }
 
 .cs-scan-eye-pupil {
-  fill: #120018;
+  fill: #09010f;
 }
 
-.cs-scan-eye-glint {
-  fill: #fff;
-  opacity: 0.9;
+.cs-scan-eye-spark {
+  fill: rgba(253, 224, 255, 0.85);
 }
 
-.cs-scan-eye-lid {
-  fill: rgba(5, 4, 10, 0.92);
-  transform-origin: 32px 20px;
-  transform-box: fill-box;
-  animation: cs-scan-eye-blink 3.4s ease-in-out infinite;
+.cs-scan-eye-ringlet {
+  transform-origin: 40px 28px;
+  animation: cs-hunt-radar 7s linear infinite;
 }
 
-@keyframes cs-scan-eye-blink {
-  0%,
-  38%,
-  48%,
-  100% {
-    transform: scaleY(0);
-    opacity: 0;
+.cs-scan-eye-beam {
+  fill: rgba(251, 207, 232, 0.55);
+  animation: cs-hunt-beam 2.4s ease-in-out infinite;
+}
+
+@keyframes cs-hunt-radar {
+  to {
+    transform: rotate(360deg);
   }
-  42%,
-  44% {
-    transform: scaleY(1);
+}
+
+@keyframes cs-hunt-radar-rev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes cs-hunt-gaze {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  18% {
+    transform: translate(-3.2px, -0.8px);
+  }
+  36% {
+    transform: translate(3.6px, 0.6px);
+  }
+  54% {
+    transform: translate(-1.4px, 1.4px);
+  }
+  72% {
+    transform: translate(2.4px, -1.2px);
+  }
+}
+
+/* Aperture + lid squeeze blink — double blink, then long look */
+@keyframes cs-hunt-aperture {
+  0%,
+  12%,
+  22%,
+  32%,
+  100% {
+    transform: scale(1, 1);
+  }
+  15%,
+  18% {
+    transform: scale(1, 0.08);
+  }
+  25%,
+  28% {
+    transform: scale(1, 0.08);
+  }
+}
+
+@keyframes cs-hunt-lid-top {
+  0%,
+  12%,
+  22%,
+  32%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.95;
+  }
+  15%,
+  18% {
+    transform: translateY(7px);
+    opacity: 1;
+  }
+  25%,
+  28% {
+    transform: translateY(7px);
     opacity: 1;
   }
 }
 
-@keyframes cs-scan-eye-look {
+@keyframes cs-hunt-lid-bot {
   0%,
+  12%,
+  22%,
+  32%,
   100% {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 0.9;
   }
-  30% {
-    transform: translateX(-4%);
+  15%,
+  18% {
+    transform: translateY(-7px);
+    opacity: 1;
   }
-  65% {
-    transform: translateX(5%);
+  25%,
+  28% {
+    transform: translateY(-7px);
+    opacity: 1;
   }
 }
 
-html.is-native.is-paused .cs-scan-eye-lid,
-html.is-native.is-paused .cs-scan-eye-orbit {
+@keyframes cs-hunt-beam {
+  0%,
+  100% {
+    transform: translateX(-10px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateX(10px);
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 0.2;
+  }
+}
+
+html.is-native.is-paused .cs-scan-eye-radar,
+html.is-native.is-paused .cs-scan-eye-radar-ring,
+html.is-native.is-paused .cs-scan-eye-iris-wrap,
+html.is-native.is-paused .cs-scan-eye-lid--top,
+html.is-native.is-paused .cs-scan-eye-lid--bot,
+html.is-native.is-paused .cs-scan-eye-gaze,
+html.is-native.is-paused .cs-scan-eye-ringlet,
+html.is-native.is-paused .cs-scan-eye-beam {
   animation: none;
 }
 
