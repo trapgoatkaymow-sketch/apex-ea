@@ -1836,6 +1836,18 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     }
   }
 
+  if (result?.commissionEligible && result?.mentorEmail) {
+    try {
+      const { noteMentorQualifyingActivity } = await import("../mentors/_lib.js");
+      await noteMentorQualifyingActivity(
+        result.mentorEmail,
+        result.usedAt || Date.now()
+      );
+    } catch {
+      // Activity stamp is best-effort.
+    }
+  }
+
   return result;
 }
 
@@ -1891,6 +1903,18 @@ export async function reconcileCommissionForEmail(email) {
     result = list[idx];
     return list;
   }, `commission reconcile: ${key}`);
+
+  if (result?.commissionEligible && result?.mentorEmail) {
+    try {
+      const { noteMentorQualifyingActivity } = await import("../mentors/_lib.js");
+      await noteMentorQualifyingActivity(
+        result.mentorEmail,
+        result.usedAt || Date.now()
+      );
+    } catch {
+      // best-effort
+    }
+  }
 
   return result;
 }

@@ -6,6 +6,7 @@ import {
   COMMISSION_USD,
   COMMISSION_ZAR,
   DEFAULT_MENTOR_LICENSE_KEYS,
+  fetchMentorActivityRemote,
   fetchMentors,
   setMentorAccountPassword,
   SUPER_ADMIN_EMAIL,
@@ -122,6 +123,17 @@ function normalizeAdminEmail(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
+}
+
+function formatGraceCountdown(ms) {
+  const total = Math.max(0, Math.floor(Number(ms) || 0) / 1000);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = Math.floor(total % 60);
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+  }
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
 function isSuperAdminSession(session) {
@@ -258,6 +270,8 @@ export default function AdminPortal() {
   const [withdrawRequestBusy, setWithdrawRequestBusy] = useState(false);
   const [withdrawQuota, setWithdrawQuota] = useState(null);
   const [payoutEmailBusy, setPayoutEmailBusy] = useState("");
+  const [mentorActivity, setMentorActivity] = useState(null);
+  const [activityTick, setActivityTick] = useState(0);
   const [hostSymbol, setHostSymbol] = useState("XAUUSD");
   const [hostSide, setHostSide] = useState("BUY");
   const [hostTradesCount, setHostTradesCount] = useState("1");
@@ -638,6 +652,45 @@ export default function AdminPortal() {
       cancelled = true;
     };
   }, [adminOpen, adminSession, adminPage]);
+
+  useEffect(() => {
+    if (!adminOpen || !adminSession?.email) return undefined;
+    if (isSuperAdminSession(adminSession)) {
+      setMentorActivity(null);
+      return undefined;
+    }
+    let cancelled = false;
+    async function loadActivity() {
+      try {
+        const activity = await fetchMentorActivityRemote(adminSession.email);
+        if (!cancelled) setMentorActivity(activity);
+        if (activity?.deactivated) {
+          showToast(
+            activity.message ||
+              "Portal deactivated — no key used for a new app access in over a week"
+          );
+          writeAdminSession(null);
+          setAdminSession(null);
+          setDrawerOpen(false);
+          setAdminPage("dashboard");
+        }
+      } catch {
+        if (!cancelled) setMentorActivity(null);
+      }
+    }
+    loadActivity();
+    const poll = setInterval(loadActivity, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+    };
+  }, [adminOpen, adminSession, adminPage]);
+
+  useEffect(() => {
+    if (!mentorActivity?.inGrace || !mentorActivity?.graceEndsAt) return undefined;
+    const timer = setInterval(() => setActivityTick((n) => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, [mentorActivity?.inGrace, mentorActivity?.graceEndsAt]);
 
   useEffect(() => {
     if (!adminOpen || !adminSession) return undefined;
@@ -2277,6 +2330,48 @@ export default function AdminPortal() {
                     <p className="admin-stat-label">Total EAs</p>
                     <p className="admin-stat-value">{myEas.length}</p>
                   </article>
+                </div>
+                <div
+                  className={`admin-card mentor-activity-banner${
+                    mentorActivity?.inGrace ? " is-warn" : ""
+                  }`}
+                  style={{ marginTop: 14 }}
+                >
+                  <h3 style={{ margin: "0 0 8px" }}>Weekly unlock rule</h3>
+                  <p className="admin-card-meta" style={{ margin: 0 }}>
+                    Generate at least <strong>1 key each week</strong> that a{" "}
+                    <strong>new client uses to unlock the app</strong>. Keys that
+                    are only generated (or reused on an already-unlocked account)
+                    do not count. If you miss a week, you get a{" "}
+                    <strong>2-hour countdown</strong> — when it ends your portal
+                    deactivates automatically.
+                  </p>
+                  {mentorActivity?.inGrace ? (
+                    <p
+                      className="admin-card-meta"
+                      style={{ marginTop: 10, color: "#ffb020", fontWeight: 700 }}
+                    >
+                      Deactivates in{" "}
+                      {formatGraceCountdown(
+                        Math.max(
+                          0,
+                          Number(mentorActivity.graceEndsAt || 0) - Date.now()
+                        ) +
+                          activityTick * 0
+                      )}
+                    </p>
+                  ) : mentorActivity?.weekDeadlineAt ? (
+                    <p className="admin-card-meta" style={{ marginTop: 10 }}>
+                      Next weekly check in{" "}
+                      {formatGraceCountdown(
+                        Math.max(
+                          0,
+                          Number(mentorActivity.weekDeadlineAt || 0) - Date.now()
+                        )
+                      )}{" "}
+                      unless a new-app unlock is recorded sooner.
+                    </p>
+                  ) : null}
                 </div>
               </>
             )}

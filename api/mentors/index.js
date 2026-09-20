@@ -1,6 +1,7 @@
 import { endOptions } from "../_cors.js";
 import {
   completeMentorPasswordReset,
+  getMentorActivityStatus,
   listMentors,
   loginMentor,
   readJsonBody,
@@ -40,6 +41,19 @@ export default async function handler(req, res) {
           password: body.password,
         });
         sendJson(res, 200, { mentor });
+        return;
+      }
+
+      if (
+        action === "activity" ||
+        action === "activity-status" ||
+        action === "weekly-activity"
+      ) {
+        const activity = await getMentorActivityStatus(
+          body.email || body.mentorEmail,
+          { enforce: body.enforce !== false }
+        );
+        sendJson(res, 200, { ok: true, activity });
         return;
       }
 

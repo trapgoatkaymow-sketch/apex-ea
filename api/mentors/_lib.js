@@ -328,6 +328,9 @@ function decodeMentorsJson(raw, sha = null) {
             passwordResetTokenHash: String(m.passwordResetTokenHash || ""),
             passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
             passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
+            activityGraceStartedAt: Number(m.activityGraceStartedAt) || null,
+            deactivatedAt: Number(m.deactivatedAt) || null,
+            deactivatedReason: String(m.deactivatedReason || ""),
           };
         })
         .filter((m) => m.email && m.email.includes("@")),
@@ -441,6 +444,9 @@ function writeLocalStore(mentors) {
                 passwordResetTokenHash: String(m.passwordResetTokenHash || ""),
                 passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
                 passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
+                activityGraceStartedAt: Number(m.activityGraceStartedAt) || null,
+                deactivatedAt: Number(m.deactivatedAt) || null,
+                deactivatedReason: String(m.deactivatedReason || ""),
               };
             })
             .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt),
@@ -677,6 +683,9 @@ async function writeStore(mentors, sha, message) {
           passwordResetTokenHash: String(m.passwordResetTokenHash || ""),
           passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
           passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
+          activityGraceStartedAt: Number(m.activityGraceStartedAt) || null,
+          deactivatedAt: Number(m.deactivatedAt) || null,
+          deactivatedReason: String(m.deactivatedReason || ""),
         };
       })
       .filter((m) => m.email && m.email.includes("@") && m.passwordHash && m.salt)
@@ -845,6 +854,235 @@ export async function registerMentor({ username, email, contact, password }) {
   return publicMentor(created);
 }
 
+export const ACTIVITY_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+export const ACTIVITY_GRACE_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * Last time this mentor earned a qualifying key: used for a NEW paid app access
+ * (commissionEligible). Generated-only or reuse keys do not count.
+ */
+export async function findMentorLastQualifyingAt(email) {
+  const key = normalizeEmail(email);
+  if (!key) return null;
+  try {
+    const { listLicenses } = await import("../licenses/_lib.js");
+    const licenses = await listLicenses();
+    let max = 0;
+    for (const row of Array.isArray(licenses) ? licenses : []) {
+      if (normalizeEmail(row?.mentorEmail) !== key) continue;
+      if (!row?.used || !row?.commissionEligible) continue;
+      const t = Number(row.usedAt) || Number(row.createdAt) || 0;
+      if (t > max) max = t;
+    }
+    return max || null;
+  } catch {
+    return null;
+  }
+}
+
+function activityAnchorMs(mentor, lastQualifyingAt) {
+  if (lastQualifyingAt) return Number(lastQualifyingAt);
+  return (
+    Number(mentor?.statusUpdatedAt) ||
+    Number(mentor?.createdAt) ||
+    Date.now()
+  );
+}
+
+/**
+ * Evaluate + enforce weekly used-key activity.
+ * Mentors must get ≥1 key used for a new app access every 7 days.
+ * After the week lapses they get a 2-hour countdown, then auto-deactivate.
+ */
+export async function getMentorActivityStatus(email, { enforce = true } = {}) {
+  const key = normalizeEmail(email);
+  const empty = {
+    ok: true,
+    email: key,
+    exempt: true,
+    active: true,
+    inGrace: false,
+    deactivated: false,
+    lastQualifyingAt: null,
+    weekDeadlineAt: null,
+    graceStartedAt: null,
+    graceEndsAt: null,
+    msUntilWeekDeadline: null,
+    msUntilGraceEnds: null,
+    message:
+      "Generate at least 1 key each week that a new client uses to unlock the app, or your portal will be deactivated.",
+  };
+  if (!key || key === SUPER_ADMIN_EMAIL) return empty;
+
+  const store = await readStore().catch(() => readLocalStore());
+  const mentors = ensureSuperAdminRecord(store.mentors || []);
+  let mentor = findMentor(mentors, key);
+  if (!mentor) {
+    return { ...empty, exempt: false, ok: false, error: "Mentor not found" };
+  }
+  if (String(mentor.role || "").toLowerCase() === "superadmin") return empty;
+
+  const status = String(mentor.status || "").toLowerCase();
+  if (status === "pending" || status === "declined") {
+    return {
+      ...empty,
+      exempt: false,
+      active: false,
+      deactivated: status === "declined" && Boolean(mentor.deactivatedAt),
+      message:
+        status === "pending"
+          ? "Account pending approval by super admin"
+          : mentor.deactivatedReason ||
+            "Portal deactivated — ask super admin to reactivate",
+    };
+  }
+
+  const lastQualifyingAt = await findMentorLastQualifyingAt(key);
+  const anchor = activityAnchorMs(mentor, lastQualifyingAt);
+  const weekDeadlineAt = anchor + ACTIVITY_WEEK_MS;
+  const now = Date.now();
+
+  // Still inside the weekly window — clear any leftover grace.
+  if (now < weekDeadlineAt) {
+    if (enforce && Number(mentor.activityGraceStartedAt)) {
+      try {
+        await mutateStore((list) => {
+          const next = ensureSuperAdminRecord(list);
+          const idx = findMentorIndex(next, key);
+          if (idx < 0) return next;
+          next[idx] = {
+            ...next[idx],
+            activityGraceStartedAt: null,
+          };
+          return next;
+        }, `chore: clear mentor activity grace ${key}`);
+      } catch {
+        // best-effort
+      }
+    }
+    return {
+      ok: true,
+      email: key,
+      exempt: false,
+      active: true,
+      inGrace: false,
+      deactivated: false,
+      lastQualifyingAt: lastQualifyingAt || null,
+      weekDeadlineAt,
+      graceStartedAt: null,
+      graceEndsAt: null,
+      msUntilWeekDeadline: Math.max(0, weekDeadlineAt - now),
+      msUntilGraceEnds: null,
+      message:
+        "Generate at least 1 key each week that a new client uses to unlock the app, or your portal will be deactivated.",
+    };
+  }
+
+  // Week missed — start or continue the 2-hour grace countdown.
+  let graceStartedAt = Number(mentor.activityGraceStartedAt) || 0;
+  if (enforce && !graceStartedAt) {
+    graceStartedAt = weekDeadlineAt;
+    try {
+      await mutateStore((list) => {
+        const next = ensureSuperAdminRecord(list);
+        const idx = findMentorIndex(next, key);
+        if (idx < 0) return next;
+        if (Number(next[idx].activityGraceStartedAt)) return next;
+        next[idx] = {
+          ...next[idx],
+          activityGraceStartedAt: graceStartedAt,
+        };
+        return next;
+      }, `chore: start mentor activity grace ${key}`);
+    } catch {
+      // keep computed graceStartedAt even if write fails
+    }
+  }
+  if (!graceStartedAt) graceStartedAt = weekDeadlineAt;
+  const graceEndsAt = graceStartedAt + ACTIVITY_GRACE_MS;
+
+  if (now >= graceEndsAt) {
+    if (enforce && status === "approved") {
+      try {
+        await mutateStore((list) => {
+          const next = ensureSuperAdminRecord(list);
+          const idx = findMentorIndex(next, key);
+          if (idx < 0) return next;
+          if (String(next[idx].status || "").toLowerCase() !== "approved") {
+            return next;
+          }
+          next[idx] = {
+            ...next[idx],
+            status: "declined",
+            statusUpdatedAt: Date.now(),
+            deactivatedAt: Date.now(),
+            deactivatedReason:
+              "Portal deactivated — no key used for a new app access in over a week",
+            activityGraceStartedAt: graceStartedAt,
+          };
+          return next;
+        }, `chore: auto-deactivate inactive mentor ${key}`);
+      } catch {
+        // still report deactivated to the client
+      }
+    }
+    return {
+      ok: true,
+      email: key,
+      exempt: false,
+      active: false,
+      inGrace: false,
+      deactivated: true,
+      lastQualifyingAt: lastQualifyingAt || null,
+      weekDeadlineAt,
+      graceStartedAt,
+      graceEndsAt,
+      msUntilWeekDeadline: 0,
+      msUntilGraceEnds: 0,
+      message:
+        "Portal deactivated — no key used for a new app access in over a week. Ask super admin to reactivate.",
+    };
+  }
+
+  return {
+    ok: true,
+    email: key,
+    exempt: false,
+    active: true,
+    inGrace: true,
+    deactivated: false,
+    lastQualifyingAt: lastQualifyingAt || null,
+    weekDeadlineAt,
+    graceStartedAt,
+    graceEndsAt,
+    msUntilWeekDeadline: 0,
+    msUntilGraceEnds: Math.max(0, graceEndsAt - now),
+    message:
+      "No new-app unlock this week. Portal deactivates when this countdown ends — get a client to use a new key now.",
+  };
+}
+
+/** Clear grace / deactivation stamps when a qualifying key is used. */
+export async function noteMentorQualifyingActivity(email, at = Date.now()) {
+  const key = normalizeEmail(email);
+  if (!key || key === SUPER_ADMIN_EMAIL) return;
+  try {
+    await mutateStore((list) => {
+      const next = ensureSuperAdminRecord(list);
+      const idx = findMentorIndex(next, key);
+      if (idx < 0) return next;
+      next[idx] = {
+        ...next[idx],
+        activityGraceStartedAt: null,
+        // Do not auto-reactivate declined mentors here — super admin must approve.
+      };
+      return next;
+    }, `chore: mentor qualifying activity ${key} @ ${Number(at) || Date.now()}`);
+  } catch {
+    // best-effort
+  }
+}
+
 export async function loginMentor({ email, password }) {
   const key = normalizeEmail(email);
   const pass = String(password || "").trim();
@@ -865,6 +1103,20 @@ export async function loginMentor({ email, password }) {
       status: "approved",
       createdAt: Date.now(),
     };
+  }
+
+  async function loadMentorsFresh({ bustMemory = false } = {}) {
+    if (bustMemory) memoryMentors = null;
+    const store = await readStore().catch(() => readLocalStore());
+    return mergeCredentialRows(
+      ensureSuperAdminRecord(store.mentors || []),
+      credentialBackupPool()
+    );
+  }
+
+  function verifyHash(mentor) {
+    if (!mentor?.passwordHash || !mentor?.salt) return false;
+    return hashPassword(pass, mentor.salt) === mentor.passwordHash;
   }
 
   // Durable bootstrap passwords (repair wiped hashes).
@@ -944,36 +1196,60 @@ export async function loginMentor({ email, password }) {
     };
   }
 
-  const store = await readStore();
-  const mentors = mergeCredentialRows(
-    ensureSuperAdminRecord(store.mentors),
-    credentialBackupPool()
-  );
-  const mentor = findMentor(mentors, key);
+  let mentors = await loadMentorsFresh();
+  let mentor = findMentor(mentors, key);
   if (!mentor) {
     const err = new Error("Invalid email or password");
     err.status = 401;
     throw err;
   }
 
-  if (!mentor.passwordHash || !mentor.salt) {
+  if (!verifyHash(mentor)) {
+    // Stale in-memory / cold-instance hash — re-read once before failing.
+    mentors = await loadMentorsFresh({ bustMemory: true });
+    mentor = findMentor(mentors, key);
+    if (!mentor || !verifyHash(mentor)) {
+      const err = new Error("Invalid email or password");
+      err.status = 401;
+      throw err;
+    }
+  }
+
+  const status = String(mentor.status || "").toLowerCase();
+  if (status === "deactivated" || (status === "declined" && mentor.deactivatedAt)) {
     const err = new Error(
-      "Password missing on this account — ask super admin to set a new password"
+      mentor.deactivatedReason ||
+        "Portal deactivated — no key used for a new app access in over a week. Ask super admin to reactivate."
     );
-    err.status = 401;
+    err.status = 403;
+    throw err;
+  }
+  if (status !== "approved" && mentor.role !== "superadmin") {
+    // Enforce weekly activity for approved mentors only; pending stays pending.
+    const err = new Error(
+      status === "declined"
+        ? mentor.deactivatedReason ||
+            "Account declined — ask super admin to reactivate"
+        : "Account pending approval by super admin"
+    );
+    err.status = 403;
     throw err;
   }
 
-  const hash = hashPassword(pass, mentor.salt);
-  if (hash !== mentor.passwordHash) {
-    const err = new Error("Invalid email or password");
-    err.status = 401;
-    throw err;
-  }
-  if (mentor.status !== "approved" && mentor.role !== "superadmin") {
-    const err = new Error("Account pending approval by super admin");
-    err.status = 403;
-    throw err;
+  // Auto-deactivate inactive mentors at sign-in.
+  try {
+    const activity = await getMentorActivityStatus(key, { enforce: true });
+    if (activity?.deactivated) {
+      const err = new Error(
+        activity.message ||
+          "Portal deactivated — no key used for a new app access in over a week."
+      );
+      err.status = 403;
+      throw err;
+    }
+  } catch (error) {
+    if (error?.status === 403) throw error;
+    // Activity check is best-effort — do not block valid logins on license-store blips.
   }
 
   return publicMentor(mentor);
@@ -982,7 +1258,7 @@ export async function loginMentor({ email, password }) {
 export async function setMentorStatus(email, status) {
   const key = normalizeEmail(email);
   const nextStatus = String(status || "").toLowerCase();
-  if (!["pending", "approved", "declined"].includes(nextStatus)) {
+  if (!["pending", "approved", "declined", "deactivated"].includes(nextStatus)) {
     const err = new Error("Invalid status");
     err.status = 400;
     throw err;
@@ -1006,11 +1282,27 @@ export async function setMentorStatus(email, status) {
       throw err;
     }
     previousStatus = String(list[idx].status || "").toLowerCase();
+    const normalizedStatus =
+      nextStatus === "deactivated" ? "declined" : nextStatus;
     list[idx] = {
       ...list[idx],
-      status: nextStatus,
+      status: normalizedStatus,
       email: key,
       statusUpdatedAt: Date.now(),
+      ...(normalizedStatus === "approved"
+        ? {
+            activityGraceStartedAt: null,
+            deactivatedAt: null,
+            deactivatedReason: "",
+          }
+        : {}),
+      ...(nextStatus === "deactivated"
+        ? {
+            deactivatedAt: Date.now(),
+            deactivatedReason:
+              "Portal deactivated — no key used for a new app access in over a week",
+          }
+        : {}),
     };
     updated = list[idx];
     return list;

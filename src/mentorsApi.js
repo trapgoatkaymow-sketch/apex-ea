@@ -360,7 +360,7 @@ export async function loginMentorAccount({ email, password }) {
   const key = normalizeEmail(email);
   const pass = String(password || "").trim();
 
-  try {
+  async function attempt() {
     const data = await apiFetch("", {
       method: "POST",
       body: { action: "login", email: key, password: pass },
@@ -373,6 +373,20 @@ export async function loginMentorAccount({ email, password }) {
       return { ...mentor, email: key, role: "superadmin", status: "approved" };
     }
     return mentor;
+  }
+
+  try {
+    try {
+      return await attempt();
+    } catch (firstError) {
+      // One quiet retry on 401 only — cold instances sometimes serve a stale
+      // hash once, then succeed after the store refreshes.
+      if (firstError?.status === 401) {
+        await new Promise((r) => setTimeout(r, 450));
+        return await attempt();
+      }
+      throw firstError;
+    }
   } catch (error) {
     // Local fallback (dev / offline) — never mask real API errors as bad password.
     if (key === normalizeEmail(SUPER_ADMIN_EMAIL) && pass === SUPER_ADMIN_PASSWORD) {
@@ -402,6 +416,17 @@ export async function loginMentorAccount({ email, password }) {
       ? error
       : new Error("Could not reach mentor login — check your connection and try again");
   }
+}
+
+/** Weekly used-key activity / deactivation countdown for mentors. */
+export async function fetchMentorActivityRemote(email) {
+  const key = normalizeEmail(email);
+  if (!key.includes("@")) throw new Error("Enter a valid email");
+  const data = await apiFetch("", {
+    method: "POST",
+    body: { action: "activity", email: key, enforce: true },
+  });
+  return data?.activity || null;
 }
 
 export async function registerMentorAccount({

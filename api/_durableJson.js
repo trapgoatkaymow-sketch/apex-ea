@@ -440,6 +440,22 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
           Number(primary.passwordResetRequestedAt) || 0,
           Number(secondary.passwordResetRequestedAt) || 0
         ) || null,
+      activityGraceStartedAt: (() => {
+        const a = Number(primary.activityGraceStartedAt) || 0;
+        const b = Number(secondary.activityGraceStartedAt) || 0;
+        // Prefer an active grace window; otherwise keep whichever is set.
+        if (a && b) return Math.min(a, b);
+        return a || b || null;
+      })(),
+      deactivatedAt:
+        Math.max(
+          Number(primary.deactivatedAt) || 0,
+          Number(secondary.deactivatedAt) || 0
+        ) || null,
+      deactivatedReason:
+        String(primary.deactivatedReason || "") ||
+        String(secondary.deactivatedReason || "") ||
+        "",
     });
   };
 
