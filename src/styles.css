@@ -7452,12 +7452,8 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .cs-scan-eye-outline {
-  stroke: rgba(232, 121, 249, 0.55);
-  stroke-width: 1.4;
-}
-
-.cs-scan-eye-white {
-  fill: #f8f4ff;
+  stroke: rgba(232, 121, 249, 0.7);
+  stroke-width: 1.6;
 }
 
 .cs-scan-eye-pupil {
@@ -7470,7 +7466,7 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .cs-scan-eye-lid {
-  fill: #0a0610;
+  fill: rgba(5, 4, 10, 0.92);
   transform-origin: 32px 20px;
   transform-box: fill-box;
   animation: cs-scan-eye-blink 3.4s ease-in-out infinite;

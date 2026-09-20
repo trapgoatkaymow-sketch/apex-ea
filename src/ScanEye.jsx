@@ -34,7 +34,6 @@ export default function ScanEye({ className = "", size = "lg", label = "Looking 
             fill="none"
           />
           <g clipPath={`url(#cs-eye-clip-${uid})`}>
-            <ellipse className="cs-scan-eye-white" cx="32" cy="20" rx="28" ry="16" />
             <circle className="cs-scan-eye-iris" cx="32" cy="20" r="10.5" fill={`url(#${irisId})`} />
             <circle className="cs-scan-eye-pupil" cx="32" cy="20" r="4.8" />
             <circle className="cs-scan-eye-glint" cx="28.2" cy="16.2" r="1.8" />
