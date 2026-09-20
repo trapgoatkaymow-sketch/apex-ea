@@ -35,7 +35,6 @@ export default function TrapScannerResult({
   signal,
   connected,
   busy,
-  engineMode,
   executeTrade,
   tradeManagement,
   updateTradeManagement,

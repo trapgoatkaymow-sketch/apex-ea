@@ -1221,7 +1221,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
           signal={signal}
           connected={connected}
           busy={busy}
-          engineMode={engineMode}
           executeTrade={executeTrade}
           tradeManagement={tradeManagement}
           updateTradeManagement={updateTradeManagement}

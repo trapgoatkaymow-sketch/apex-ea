@@ -10607,6 +10607,11 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   opacity: 0.45;
 }
 
+.tg-execute.is-executing:disabled {
+  opacity: 1;
+  animation: cs-execute-pulse 1.2s ease-in-out infinite;
+}
+
 .tg-result {
   display: grid;
   gap: 12px;
