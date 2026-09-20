@@ -222,7 +222,7 @@ export default function V2TrapScannerView({
                   <BotAvatar
                     className="tg-orb-ea"
                     bot={activeBot}
-                    fallback="/logo.png"
+                    fallback="/zeta-fire-portal.jpg"
                     width="200"
                     height="260"
                   />
