@@ -5,7 +5,7 @@
  *
  * Gen 8 — Interface 2 scanner mission header + ops telemetry deck restyle.
  */
-export const UI_SHELL_GENERATION = 8;
+export const UI_SHELL_GENERATION = 9;
 
 export const UI_SHELL_LABEL = "v2-scanner-mission-ops";
 

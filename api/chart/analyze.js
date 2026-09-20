@@ -154,6 +154,83 @@ function buildNoChartResult() {
   };
 }
 
+function normalizeChartArea(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const num = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const x = num(raw.x ?? raw.left);
+  const y = num(raw.y ?? raw.top);
+  const w = num(raw.w ?? raw.width);
+  const h = num(raw.h ?? raw.height);
+  if (x == null || y == null || w == null || h == null) return null;
+  const clamp = (n) => Math.min(1, Math.max(0, n));
+  const cx = clamp(x);
+  const cy = clamp(y);
+  const cw = clamp(w);
+  const ch = clamp(h);
+  if (cw < 0.2 || ch < 0.2) return null;
+  return {
+    x: cx,
+    y: cy,
+    w: Math.min(cw, 1 - cx),
+    h: Math.min(ch, 1 - cy),
+  };
+}
+
+function normalizeTrendlines(raw) {
+  if (!Array.isArray(raw)) return [];
+  const clamp = (n) => {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return null;
+    return Math.min(1, Math.max(0, v));
+  };
+  return raw
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const x1 = clamp(row.x1);
+      const y1 = clamp(row.y1);
+      const x2 = clamp(row.x2);
+      const y2 = clamp(row.y2);
+      if (x1 == null || y1 == null || x2 == null || y2 == null) return null;
+      return {
+        x1,
+        y1,
+        x2,
+        y2,
+        kind: String(row.kind || row.type || "trend")
+          .trim()
+          .toLowerCase()
+          .slice(0, 16),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+function normalizeStructure(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((row) => {
+      if (typeof row === "number") {
+        return Number.isFinite(row) ? { price: formatPrice(row), label: "LVL" } : null;
+      }
+      if (!row || typeof row !== "object") return null;
+      const price = formatPrice(row.price ?? row.level);
+      if (price == null) return null;
+      return {
+        price,
+        label: String(row.label || row.kind || "LVL")
+          .trim()
+          .toUpperCase()
+          .slice(0, 8),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
   const chartConfidence = Math.max(
     0,
@@ -203,6 +280,18 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
   // Fixed R:R ladder: TP1 1:1 · TP2 1:2 · TP3 1:3
   const riskReward = "1:1 · 1:2 · 1:3";
 
+  let priceTop = toFiniteNumber(parsed?.priceTop ?? parsed?.axisTop);
+  let priceBottom = toFiniteNumber(parsed?.priceBottom ?? parsed?.axisBottom);
+  if (
+    priceTop != null &&
+    priceBottom != null &&
+    priceTop < priceBottom
+  ) {
+    const swap = priceTop;
+    priceTop = priceBottom;
+    priceBottom = swap;
+  }
+
   return {
     status: "setup_ready",
     isChart: true,
@@ -220,6 +309,11 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
     analysis,
     reasons,
     chartConfidence,
+    priceTop: priceTop == null ? null : formatPrice(priceTop),
+    priceBottom: priceBottom == null ? null : formatPrice(priceBottom),
+    chartArea: normalizeChartArea(parsed?.chartArea || parsed?.plotArea),
+    trendlines: normalizeTrendlines(parsed?.trendlines),
+    structure: normalizeStructure(parsed?.structure || parsed?.levels),
     message: `${levels.side} ${symbol || "setup"} ready`,
     uiMessage: "Trade setup ready — press Execute Trade to send to MetaTrader.",
     source: "openai",
@@ -259,7 +353,7 @@ export async function analyzeChartSetupWithOpenAI({
     body: JSON.stringify({
       model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
       temperature: 0,
-      max_tokens: 520,
+      max_tokens: 900,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -270,7 +364,11 @@ export async function analyzeChartSetupWithOpenAI({
             '"symbol":string|null,"side":"BUY"|"SELL","confidence":0-100,' +
             '"entry":number,"stopLoss":number,' +
             '"takeProfit1":number,"takeProfit2":number,"takeProfit3":number,' +
-            '"riskReward":string,"timeframe":string,"analysis":string,"reasons":string[]}. ' +
+            '"riskReward":string,"timeframe":string,"analysis":string,"reasons":string[],' +
+            '"priceTop":number|null,"priceBottom":number|null,' +
+            '"chartArea":{"x":0-1,"y":0-1,"w":0-1,"h":0-1}|null,' +
+            '"trendlines":[{"x1":0-1,"y1":0-1,"x2":0-1,"y2":0-1,"kind":"trend"|"support"|"resistance"}],' +
+            '"structure":[{"price":number,"label":string}]}. ' +
             "Set isChart=true for phone or desktop trading charts with candlesticks/bars and a price axis " +
             "(including shared chat screenshots and nested chart previews). " +
             "Photographs of people, cars, buildings, or landscapes are NOT charts. " +
@@ -287,7 +385,12 @@ export async function analyzeChartSetupWithOpenAI({
             "Do NOT rename .DE30. to GER40/US30. Catalog is NOT multiple choice — never invent EURUSD/XAUUSD/BTCUSD. " +
             "If a symbol hint is provided and it matches the chart, keep it; otherwise prefer the visible header text. " +
             "If the setup is imperfect, still choose the strongest available BUY or SELL and compute reasonable multi-TP levels. " +
-            "Do not omit Entry, SL, TP1, TP2, or TP3 for a valid chart.",
+            "Do not omit Entry, SL, TP1, TP2, or TP3 for a valid chart. " +
+            "For overlay drawing: read the visible right-side price axis extremes into priceTop (highest visible) and priceBottom (lowest visible). " +
+            "chartArea is the candlestick plot rectangle as fractions of the full image (0-1), excluding headers/toolbars/price axis when possible. " +
+            "trendlines: 1-3 structural diagonals (support/resistance/trend) as normalized image coordinates. " +
+            "structure: optional horizontal support/resistance prices visible on the chart. " +
+            "analysis must briefly explain the structure (trend, break, bounce) in one sentence.",
         },
         {
           role: "user",
@@ -295,7 +398,8 @@ export async function analyzeChartSetupWithOpenAI({
             {
               type: "text",
               text:
-                "Validate whether this is a trading chart. If yes, generate a complete trade setup with Entry, SL, TP1, TP2, and TP3. " +
+                "Validate whether this is a trading chart. If yes, generate a complete trade setup with Entry, SL, TP1, TP2, and TP3, " +
+                "plus overlay geometry (priceTop, priceBottom, chartArea, trendlines). " +
                 "OCR the exact symbol from the chart header (any instrument shown) — do not guess from the catalog." +
                 (hintSymbol
                   ? ` Prefer this already-detected symbol if it matches the chart: ${normalizeSymbol(hintSymbol)}.`

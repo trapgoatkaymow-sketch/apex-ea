@@ -124,6 +124,12 @@ function ensureCompleteSetup(partial = {}) {
     reasons: Array.isArray(partial.reasons) && partial.reasons.length
       ? partial.reasons
       : [analysis],
+    // Keep Vision overlay geometry for Interface 2 chart drawing
+    priceTop: partial.priceTop ?? null,
+    priceBottom: partial.priceBottom ?? null,
+    chartArea: partial.chartArea ?? null,
+    trendlines: Array.isArray(partial.trendlines) ? partial.trendlines : [],
+    structure: Array.isArray(partial.structure) ? partial.structure : [],
   };
 }
 

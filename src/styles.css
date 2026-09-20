@@ -6642,6 +6642,14 @@ html:has(.phone[data-interface="v2"]) body {
   transition: opacity 0.35s ease;
 }
 
+.cs-chart-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
 .cs-stage.is-running .cs-chart {
   transform: none;
   opacity: 0.96;
@@ -8063,6 +8071,251 @@ html:has(.phone[data-interface="v2"]) body {
 .view-scanner.cs-v2 .cs-stage.has-chart .cs-chart,
 .view-scanner.cs-v2 .cs-stage:has(.cs-chart) .cs-chart {
   border-radius: 2px;
+}
+
+/* Chart + analysis overlay share one frame so levels map onto the screenshot */
+.view-scanner.cs-v2 .cs-chart-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+}
+
+.view-scanner.cs-v2 .cs-chart-frame > .cs-chart {
+  grid-area: 1 / 1;
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.view-scanner.cs-v2 .cs-chart-frame > .cs-analysis-overlay {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  justify-self: stretch;
+}
+
+.view-scanner.cs-v2 .cs-analysis-overlay {
+  position: relative;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: 2px;
+  animation: cs-analysis-in 0.45s ease both;
+}
+
+@keyframes cs-analysis-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.view-scanner.cs-v2 .cs-analysis-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.view-scanner.cs-v2 .cs-analysis-frame {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 0.35;
+}
+
+.view-scanner.cs-v2 .cs-analysis-zone {
+  stroke: none;
+}
+
+.view-scanner.cs-v2 .cs-analysis-zone.is-reward.is-buy {
+  fill: rgba(46, 204, 113, 0.14);
+}
+
+.view-scanner.cs-v2 .cs-analysis-zone.is-reward.is-sell {
+  fill: rgba(255, 82, 82, 0.12);
+}
+
+.view-scanner.cs-v2 .cs-analysis-zone.is-risk {
+  fill: rgba(255, 82, 82, 0.16);
+}
+
+.view-scanner.cs-v2 .cs-analysis-structure line {
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 0.9;
+  stroke-dasharray: 3 2.5;
+}
+
+.view-scanner.cs-v2 .cs-analysis-trend {
+  stroke: rgba(var(--pink-rgb), 0.92);
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px rgba(var(--pink-rgb), 0.55));
+}
+
+.view-scanner.cs-v2 .cs-analysis-trend.is-support {
+  stroke: #3dff9a;
+  filter: drop-shadow(0 0 3px rgba(61, 255, 154, 0.45));
+}
+
+.view-scanner.cs-v2 .cs-analysis-trend.is-resistance {
+  stroke: #ff5c7a;
+  filter: drop-shadow(0 0 3px rgba(255, 92, 122, 0.45));
+}
+
+.view-scanner.cs-v2 .cs-analysis-trend.is-bias.is-buy {
+  stroke: #3dff9a;
+  stroke-dasharray: 4 3;
+  opacity: 0.85;
+}
+
+.view-scanner.cs-v2 .cs-analysis-trend.is-bias.is-sell {
+  stroke: #ff5c7a;
+  stroke-dasharray: 4 3;
+  opacity: 0.85;
+}
+
+.view-scanner.cs-v2 .cs-analysis-level line {
+  stroke-width: 1.15;
+  stroke-linecap: round;
+}
+
+.view-scanner.cs-v2 .cs-analysis-level.is-entry line {
+  stroke: #f5f7ff;
+  stroke-width: 1.35;
+}
+
+.view-scanner.cs-v2 .cs-analysis-level.is-sl line {
+  stroke: #ff4d6d;
+}
+
+.view-scanner.cs-v2 .cs-analysis-level.is-tp line {
+  stroke: #2ee59d;
+}
+
+.view-scanner.cs-v2 .cs-analysis-dot {
+  fill: currentColor;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 0.35;
+}
+
+.view-scanner.cs-v2 .cs-analysis-level.is-entry .cs-analysis-dot {
+  fill: #f5f7ff;
+}
+
+.view-scanner.cs-v2 .cs-analysis-level.is-sl .cs-analysis-dot {
+  fill: #ff4d6d;
+}
+
+.view-scanner.cs-v2 .cs-analysis-level.is-tp .cs-analysis-dot {
+  fill: #2ee59d;
+}
+
+.view-scanner.cs-v2 .cs-analysis-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.view-scanner.cs-v2 .cs-analysis-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 3px 7px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+}
+
+.view-scanner.cs-v2 .cs-analysis-badge.is-buy {
+  border-color: rgba(46, 229, 157, 0.45);
+  color: #9dffcf;
+}
+
+.view-scanner.cs-v2 .cs-analysis-badge.is-sell {
+  border-color: rgba(255, 77, 109, 0.45);
+  color: #ffb0bf;
+}
+
+.view-scanner.cs-v2 .cs-analysis-tag {
+  position: absolute;
+  right: 4px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  background: rgba(4, 6, 10, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.view-scanner.cs-v2 .cs-analysis-tag strong {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.view-scanner.cs-v2 .cs-analysis-tag em {
+  font-style: normal;
+  opacity: 0.88;
+  font-variant-numeric: tabular-nums;
+}
+
+.view-scanner.cs-v2 .cs-analysis-tag.is-entry {
+  color: #f0f3ff;
+  border-color: rgba(240, 243, 255, 0.28);
+}
+
+.view-scanner.cs-v2 .cs-analysis-tag.is-sl {
+  color: #ff8da0;
+  border-color: rgba(255, 77, 109, 0.35);
+}
+
+.view-scanner.cs-v2 .cs-analysis-tag.is-tp {
+  color: #7dffc4;
+  border-color: rgba(46, 229, 157, 0.35);
+}
+
+.view-scanner.cs-v2 .cs-analysis-caption {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 5px;
+  margin: 0;
+  padding: 4px 6px;
+  border-radius: 2px;
+  font-size: 9px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(0, 0, 0, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .view-scanner.cs-v2 .cs-bracket {

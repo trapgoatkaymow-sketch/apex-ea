@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
+import ChartAnalysisOverlay from "./ChartAnalysisOverlay.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
@@ -749,7 +750,16 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <div className="cs-stage-main">
           <div className="cs-viewport" aria-label="Chart preview">
             {preview ? (
-              <img className="cs-chart" src={preview} alt="Chart to scan" />
+              <div
+                className={`cs-chart-frame${
+                  variant === "v2" && setupReady ? " has-analysis" : ""
+                }`}
+              >
+                <img className="cs-chart" src={preview} alt="Chart to scan" />
+                {variant === "v2" && setupReady && signal ? (
+                  <ChartAnalysisOverlay signal={signal} visible />
+                ) : null}
+              </div>
             ) : (
               <div className="cs-empty">
                 {variant === "v2" ? (
