@@ -25,6 +25,7 @@ import {
   resolveLicenseExpiry,
   resendLicenseEmailRemote,
 } from "./licensesApi.js";
+import { sendBroadcastEmailsRemote } from "./emailsApi.js";
 import {
   fetchEconomicEvents,
   formatEventDay,
@@ -219,6 +220,12 @@ export default function AdminPortal() {
   const [mentorBulkBusy, setMentorBulkBusy] = useState(false);
   const [clientMgmtSearch, setClientMgmtSearch] = useState("");
   const [clientBulkBusy, setClientBulkBusy] = useState(false);
+  const [emailSearch, setEmailSearch] = useState("");
+  const [emailSelected, setEmailSelected] = useState({});
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailMode, setEmailMode] = useState("message");
+  const [emailSendBusy, setEmailSendBusy] = useState(false);
   const [mentorKeySearch, setMentorKeySearch] = useState("");
   const [mentorKeyDrafts, setMentorKeyDrafts] = useState({});
   const [mentorKeyBusy, setMentorKeyBusy] = useState("");
@@ -505,6 +512,90 @@ export default function AdminPortal() {
     });
   }, [declinedMentors, mentorMgmtQuery]);
 
+  // Union of Cover Lock signups + mentor license clients (unique by email).
+  const emailClients = useMemo(() => {
+    const map = new Map();
+
+    for (const row of licenseKeys || []) {
+      const email = normalizeAdminEmail(row?.clientEmail);
+      if (!email || !email.includes("@")) continue;
+      const prev = map.get(email) || {
+        email,
+        name: "",
+        mentors: [],
+        mentorEmails: [],
+        keys: 0,
+        latestKey: "",
+        latestLicense: null,
+        signupStatus: "",
+        fromLicense: false,
+        fromSignup: false,
+      };
+      const name = String(row?.clientName || "").trim();
+      if (name && !prev.name) prev.name = name;
+      prev.keys += 1;
+      prev.fromLicense = true;
+      const mentorName = String(row?.mentorName || "").trim();
+      const mentorEmail = normalizeAdminEmail(row?.mentorEmail);
+      if (mentorName && !prev.mentors.includes(mentorName)) {
+        prev.mentors.push(mentorName);
+      }
+      if (mentorEmail && !prev.mentorEmails.includes(mentorEmail)) {
+        prev.mentorEmails.push(mentorEmail);
+      }
+      const createdAt = Number(row?.createdAt) || 0;
+      const prevCreated = Number(prev.latestLicense?.createdAt) || 0;
+      if (!prev.latestKey || createdAt >= prevCreated) {
+        prev.latestKey = String(row?.key || "").trim();
+        prev.latestLicense = row;
+      }
+      map.set(email, prev);
+    }
+
+    for (const s of signups || []) {
+      const email = normalizeAdminEmail(s?.email);
+      if (!email || !email.includes("@")) continue;
+      const prev = map.get(email) || {
+        email,
+        name: "",
+        mentors: [],
+        mentorEmails: [],
+        keys: 0,
+        latestKey: "",
+        latestLicense: null,
+        signupStatus: "",
+        fromLicense: false,
+        fromSignup: false,
+      };
+      prev.fromSignup = true;
+      prev.signupStatus = String(s?.status || "").toLowerCase();
+      map.set(email, prev);
+    }
+
+    return Array.from(map.values()).sort((a, b) =>
+      a.email.localeCompare(b.email)
+    );
+  }, [licenseKeys, signups]);
+
+  const emailQuery = String(emailSearch || "")
+    .trim()
+    .toLowerCase();
+
+  const filteredEmailClients = useMemo(() => {
+    if (!emailQuery) return emailClients;
+    return emailClients.filter((row) => {
+      const hay = [
+        row.email,
+        row.name,
+        ...(row.mentors || []),
+        ...(row.mentorEmails || []),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(emailQuery);
+    });
+  }, [emailClients, emailQuery]);
+
   // Form fields are seeded in startEdit — do not rebind on `eas` poll updates
   // or a newly picked profile picture gets wiped before save.
 
@@ -520,6 +611,12 @@ export default function AdminPortal() {
     }, 15000);
     return () => clearInterval(timer);
   }, [adminOpen, adminPage, refreshSignups]);
+
+  useEffect(() => {
+    if (!adminOpen || adminPage !== "emails") return;
+    refreshSignups?.();
+    refreshLicenses?.();
+  }, [adminOpen, adminPage, refreshSignups, refreshLicenses]);
 
   useEffect(() => {
     if (!adminOpen || !adminSession) return undefined;
@@ -994,6 +1091,111 @@ export default function AdminPortal() {
       window.history.pushState({ apexAdmin: true }, "", "/admin");
     }
     showToast("Signed out");
+  }
+
+  function toggleEmailSelect(email) {
+    const key = normalizeAdminEmail(email);
+    if (!key) return;
+    setEmailSelected((prev) => {
+      const next = { ...prev };
+      if (next[key]) delete next[key];
+      else next[key] = true;
+      return next;
+    });
+  }
+
+  function selectAllFilteredEmails() {
+    setEmailSelected((prev) => {
+      const next = { ...prev };
+      for (const row of filteredEmailClients) {
+        next[row.email] = true;
+      }
+      return next;
+    });
+  }
+
+  function clearEmailSelection() {
+    setEmailSelected({});
+  }
+
+  async function sendEmailsToClients({ all = false } = {}) {
+    if (!isSuperAdminSession(adminSession)) {
+      showToast("Only super admin can send emails");
+      return;
+    }
+    if (emailSendBusy) return;
+
+    const selected = all
+      ? emailClients
+      : emailClients.filter((row) => emailSelected[row.email]);
+
+    if (!selected.length) {
+      showToast(all ? "No client emails to send" : "Select at least one client");
+      return;
+    }
+
+    setEmailSendBusy(true);
+    try {
+      if (emailMode === "license") {
+        const withKeys = selected.filter((row) => row.latestKey);
+        if (!withKeys.length) {
+          showToast("None of the selected clients have a license key yet");
+          return;
+        }
+        let ok = 0;
+        let fail = 0;
+        for (const row of withKeys) {
+          try {
+            const result = await resendLicenseEmailRemote(
+              row.latestLicense || row.latestKey
+            );
+            if (result?.ok || result?.email?.ok) ok += 1;
+            else fail += 1;
+          } catch {
+            fail += 1;
+          }
+        }
+        showToast(
+          fail
+            ? `Sent ${ok} license email${ok === 1 ? "" : "s"} · ${fail} failed`
+            : `Sent ${ok} license email${ok === 1 ? "" : "s"}`
+        );
+        return;
+      }
+
+      const subject = String(emailSubject || "").trim();
+      const message = String(emailMessage || "").trim();
+      if (!subject) {
+        showToast("Enter a subject");
+        return;
+      }
+      if (!message) {
+        showToast("Enter a message");
+        return;
+      }
+
+      const result = await sendBroadcastEmailsRemote({
+        adminEmail: adminSession?.email || SUPER_ADMIN_EMAIL,
+        subject,
+        message,
+        recipients: selected.map((row) => ({
+          email: row.email,
+          name: row.name || "",
+        })),
+      });
+      const sent = Number(result?.sentCount) || 0;
+      const failed = Number(result?.failedCount) || 0;
+      const skipped = Number(result?.skippedCount) || 0;
+      showToast(
+        failed || skipped
+          ? `Sent ${sent} · ${failed} failed${skipped ? ` · ${skipped} skipped` : ""}`
+          : `Sent ${sent} email${sent === 1 ? "" : "s"}`
+      );
+    } catch (error) {
+      showToast(error.message || "Could not send emails");
+    } finally {
+      setEmailSendBusy(false);
+    }
   }
 
   async function runSignupStatus(email, status, { silent = false } = {}) {
@@ -4254,9 +4456,168 @@ export default function AdminPortal() {
         {isSuperAdmin && adminPage === "emails" && (
           <section className="admin-page is-active">
             <h2 className="admin-h1">Email Management</h2>
-            <p className="admin-sub">Starts empty — new data appears as clients sign up.</p>
+            <p className="admin-sub">
+              All clients from signups and mentor license keys — send a message or
+              resend license keys.
+            </p>
+
             <div className="admin-card">
-              <p className="admin-empty">No records yet</p>
+              <div className="admin-toolbar admin-client-mgmt-toolbar">
+                <input
+                  className="admin-input"
+                  type="search"
+                  value={emailSearch}
+                  onChange={(e) => setEmailSearch(e.target.value)}
+                  placeholder="Search by email, name, or mentor"
+                  aria-label="Search client emails"
+                />
+              </div>
+
+              <div className="admin-form-stack" style={{ marginBottom: 14 }}>
+                <label className="admin-check">
+                  <input
+                    type="radio"
+                    name="email-mode"
+                    checked={emailMode === "message"}
+                    onChange={() => setEmailMode("message")}
+                  />
+                  Custom message
+                </label>
+                <label className="admin-check">
+                  <input
+                    type="radio"
+                    name="email-mode"
+                    checked={emailMode === "license"}
+                    onChange={() => setEmailMode("license")}
+                  />
+                  Resend license key
+                </label>
+              </div>
+
+              {emailMode === "message" ? (
+                <div className="admin-form-stack" style={{ marginBottom: 14 }}>
+                  <label className="admin-auth-label">
+                    Subject
+                    <input
+                      className="admin-input"
+                      type="text"
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      placeholder="e.g. ApexEA update"
+                      maxLength={180}
+                    />
+                  </label>
+                  <label className="admin-auth-label">
+                    Message
+                    <textarea
+                      className="admin-input"
+                      rows={5}
+                      value={emailMessage}
+                      onChange={(e) => setEmailMessage(e.target.value)}
+                      placeholder="Write the email body…"
+                      style={{ resize: "vertical", minHeight: 110 }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <p className="admin-card-meta">
+                  Sends each client their latest license key email (clients without a
+                  key are skipped).
+                </p>
+              )}
+
+              <div className="admin-toolbar" style={{ marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                <button
+                  className="admin-btn admin-btn-outline admin-btn-sm"
+                  type="button"
+                  disabled={!filteredEmailClients.length}
+                  onClick={selectAllFilteredEmails}
+                >
+                  Select shown
+                </button>
+                <button
+                  className="admin-btn admin-btn-outline admin-btn-sm"
+                  type="button"
+                  disabled={!Object.keys(emailSelected).length}
+                  onClick={clearEmailSelection}
+                >
+                  Clear
+                </button>
+                <button
+                  className={`admin-btn admin-btn-solid admin-btn-sm${
+                    emailSendBusy ? " is-loading" : ""
+                  }`}
+                  type="button"
+                  disabled={emailSendBusy || !Object.keys(emailSelected).length}
+                  onClick={() => void sendEmailsToClients({ all: false })}
+                >
+                  <AdminBusyLabel busy={emailSendBusy} busyText="Sending…">
+                    {`Send selected (${Object.keys(emailSelected).length})`}
+                  </AdminBusyLabel>
+                </button>
+                <button
+                  className={`admin-btn admin-btn-solid admin-btn-sm${
+                    emailSendBusy ? " is-loading" : ""
+                  }`}
+                  type="button"
+                  disabled={emailSendBusy || !emailClients.length}
+                  onClick={() => void sendEmailsToClients({ all: true })}
+                >
+                  <AdminBusyLabel busy={emailSendBusy} busyText="Sending…">
+                    {`Send all (${emailClients.length})`}
+                  </AdminBusyLabel>
+                </button>
+              </div>
+
+              <p className="admin-card-meta">
+                {emailQuery
+                  ? `Showing ${filteredEmailClients.length} of ${emailClients.length} clients`
+                  : `Total clients: ${emailClients.length}`}
+                {` · ${emailClients.filter((r) => r.fromLicense).length} from mentors/licenses`}
+                {` · ${emailClients.filter((r) => r.fromSignup).length} from signups`}
+                {Object.keys(emailSelected).length
+                  ? ` · ${Object.keys(emailSelected).length} selected`
+                  : ""}
+              </p>
+
+              {emailClients.length === 0 ? (
+                <p className="admin-empty">No client emails yet</p>
+              ) : filteredEmailClients.length === 0 ? (
+                <p className="admin-empty">
+                  No clients match “{emailSearch.trim()}”
+                </p>
+              ) : (
+                filteredEmailClients.map((row) => {
+                  const mentorLabel =
+                    row.mentors.filter(Boolean).join(", ") ||
+                    row.mentorEmails.filter(Boolean).join(", ") ||
+                    "";
+                  return (
+                    <label className="admin-email-row" key={row.email}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(emailSelected[row.email])}
+                        onChange={() => toggleEmailSelect(row.email)}
+                      />
+                      <span className="admin-name">{row.email}</span>
+                      <span className="admin-muted">
+                        {[
+                          row.name || null,
+                          mentorLabel ? `Mentor: ${mentorLabel}` : null,
+                          row.keys ? `${row.keys} key${row.keys === 1 ? "" : "s"}` : "No key yet",
+                          row.signupStatus
+                            ? `Signup: ${row.signupStatus}`
+                            : row.fromLicense
+                              ? "License only"
+                              : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
             </div>
           </section>
         )}

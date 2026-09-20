@@ -3023,6 +3023,12 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   accent-color: #111827;
 }
 
+.admin-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .admin-search-row {
   width: 100%;
 }
