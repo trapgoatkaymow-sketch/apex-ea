@@ -313,6 +313,89 @@ function pickCurrency(...values) {
   return "";
 }
 
+/**
+ * Sum live floating P/L from open market positions (matches MT5 Trade tab).
+ * Pending orders are skipped (profit is usually 0).
+ */
+async function fetchOpenedOrdersProfit(accountId, { timeoutMs = 12000 } = {}) {
+  const id = String(accountId || "").trim();
+  if (!id) return null;
+  let data = null;
+  try {
+    data = await mt5Fetch(`/OpenedOrders?id=${encodeURIComponent(id)}`, {
+      timeoutMs,
+    });
+  } catch {
+    return null;
+  }
+  const list = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.orders)
+      ? data.orders
+      : Array.isArray(data?.OpenedOrders)
+        ? data.OpenedOrders
+        : [];
+  if (!list.length) return 0;
+  let total = 0;
+  let saw = false;
+  for (const row of list) {
+    if (!row || typeof row !== "object") continue;
+    const kind = String(row.kind || row.Kind || row.orderType || row.OrderType || "")
+      .trim()
+      .toLowerCase();
+    const type = String(row.type || row.Type || row.orderType || "").trim().toLowerCase();
+    // Skip pending orders — they are not floating P/L on the Trade tab.
+    if (
+      /pending|limit|stop|stopimit|buystop|sellstop|buylimit|selllimit/.test(kind) ||
+      /limit|stop/.test(type)
+    ) {
+      continue;
+    }
+    const profit = pickNumber(
+      row.profit,
+      row.Profit,
+      row.unrealizedProfit,
+      row.floatingProfit
+    );
+    const swap = pickNumber(row.swap, row.Swap) || 0;
+    const commission = pickNumber(row.commission, row.Commission) || 0;
+    if (profit == null) continue;
+    saw = true;
+    total += profit + swap + commission;
+  }
+  return saw ? Number(total.toFixed(8)) : 0;
+}
+
+/**
+ * Real MT5 floating = open P/L.
+ * Prefer OpenedOrders sum, then AccountSummary.Profit, then equity−balance−credit.
+ * Never trust equity−balance alone when Credit exists (that was returning wrong amounts).
+ */
+function deriveFloatingProfit({
+  balance,
+  equity,
+  credit,
+  profit,
+  ordersProfit,
+} = {}) {
+  // null = OpenedOrders fetch failed; 0 = no open positions (real flat floating).
+  if (ordersProfit != null && Number.isFinite(Number(ordersProfit))) {
+    return Number(Number(ordersProfit).toFixed(8));
+  }
+  const direct = pickNumber(profit);
+  if (direct != null) {
+    return Number(direct.toFixed(8));
+  }
+  const bal = Number(balance);
+  const eq = Number(equity);
+  const cr = Number(credit);
+  const creditN = Number.isFinite(cr) ? cr : 0;
+  if (Number.isFinite(bal) && Number.isFinite(eq)) {
+    return Number((eq - bal - creditN).toFixed(8));
+  }
+  return null;
+}
+
 function sessionFromConnect({
   token,
   login,
@@ -322,50 +405,45 @@ function sessionFromConnect({
   summary = null,
   details = null,
   account = null,
+  ordersProfit = null,
 }) {
   const id = String(token || "").trim();
-  const bag = { summary, details, account };
+  // Prefer AccountSummary top-level only — deep-picking nested fields caused
+  // wrong equity/profit (showing +R7k while MT5 showed −R2k).
   const balance = pickNumber(
     summary?.balance,
     summary?.Balance,
     account?.balance,
-    account?.Balance,
-    details?.balance,
-    details?.Balance,
-    deepPickNumber(bag, ["balance", "Balance", "balanceMoney", "BalanceMoney"])
+    account?.Balance
   );
   const equity = pickNumber(
     summary?.equity,
     summary?.Equity,
     account?.equity,
-    account?.Equity,
-    details?.equity,
-    details?.Equity,
-    deepPickNumber(bag, ["equity", "Equity"])
+    account?.Equity
   );
-  // Floating P/L MUST be equity − balance (same as MT5 Trade tab).
-  // Never prefer summary.profit first — brokers often return 0 / stale values.
-  const profitFromEquity =
-    Number.isFinite(balance) && Number.isFinite(equity)
-      ? Number((equity - balance).toFixed(8))
-      : null;
-  const profit =
-    profitFromEquity != null
-      ? profitFromEquity
-      : pickNumber(
-          summary?.profit,
-          summary?.Profit,
-          deepPickNumber(bag, ["profit", "Profit", "floating", "Floating"])
-        );
-  const currency =
-    pickCurrency(
-      summary?.currency,
-      summary?.Currency,
-      account?.currency,
-      account?.Currency,
-      details?.currency,
-      details?.Currency
-    ) || deepPickCurrency(bag);
+  const credit = pickNumber(
+    summary?.credit,
+    summary?.Credit,
+    account?.credit,
+    account?.Credit
+  );
+  const summaryProfit = pickNumber(summary?.profit, summary?.Profit);
+  const profit = deriveFloatingProfit({
+    balance,
+    equity,
+    credit,
+    profit: summaryProfit,
+    ordersProfit,
+  });
+  const currency = pickCurrency(
+    summary?.currency,
+    summary?.Currency,
+    account?.currency,
+    account?.Currency,
+    details?.currency,
+    details?.Currency
+  );
   return {
     accountId: id,
     provider: "mt5api",
@@ -385,10 +463,10 @@ function sessionFromConnect({
     connectionStatus: "CONNECTED",
     pending: false,
     connectedAt: Date.now(),
-    // Empty until broker reports currency — never invent USD/$ for ZAR accounts.
     currency,
     balance,
     equity,
+    credit: credit != null ? credit : 0,
     profit,
     leverage:
       summary?.leverage ??
@@ -466,6 +544,7 @@ export async function connectAccount({
   let summary = null;
   let details = null;
   let account = null;
+  let ordersProfit = null;
   try {
     summary = await fetchAccountSummary(id, { timeoutMs: 20000, tries: 10 });
   } catch {
@@ -485,6 +564,11 @@ export async function connectAccount({
   } catch {
     account = null;
   }
+  try {
+    ordersProfit = await fetchOpenedOrdersProfit(id, { timeoutMs: 15000 });
+  } catch {
+    ordersProfit = null;
+  }
 
   return sessionFromConnect({
     token: id,
@@ -495,6 +579,7 @@ export async function connectAccount({
     summary,
     details,
     account,
+    ordersProfit,
   });
 }
 
@@ -579,6 +664,7 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
   let summary = null;
   let details = null;
   let account = null;
+  let ordersProfit = null;
   try {
     summary = await fetchAccountSummary(id, { timeoutMs: 15000, tries: 6 });
   } catch {
@@ -598,6 +684,11 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
   } catch {
     account = null;
   }
+  try {
+    ordersProfit = await fetchOpenedOrdersProfit(id, { timeoutMs: 12000 });
+  } catch {
+    ordersProfit = null;
+  }
 
   return sessionFromConnect({
     token: id,
@@ -608,6 +699,7 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
     summary,
     details,
     account,
+    ordersProfit,
   });
 }
 

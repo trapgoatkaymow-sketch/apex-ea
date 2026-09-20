@@ -88,15 +88,18 @@ function profitTone(value) {
   return amount > 0 ? " is-profit" : " is-loss";
 }
 
-/** Real floating P/L = equity − balance (matches MT5). */
+/** Prefer server floating (OpenedOrders / AccountSummary.Profit). */
 function floatingFromStatus(status = {}) {
+  const direct = Number(status?.profit);
+  if (Number.isFinite(direct)) return Number(direct.toFixed(8));
   const bal = Number(status?.balance);
   const eq = Number(status?.equity);
+  const credit = Number(status?.credit);
+  const creditN = Number.isFinite(credit) ? credit : 0;
   if (Number.isFinite(bal) && Number.isFinite(eq)) {
-    return Number((eq - bal).toFixed(8));
+    return Number((eq - bal - creditN).toFixed(8));
   }
-  const profit = Number(status?.profit);
-  return Number.isFinite(profit) ? profit : null;
+  return null;
 }
 
 export default function MetaTraderPanel({ variant = "zeta" }) {
