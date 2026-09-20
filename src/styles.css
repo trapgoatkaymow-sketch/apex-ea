@@ -9831,8 +9831,8 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   display: grid;
   grid-template-columns: 28px 1fr 28px;
   align-items: center;
-  gap: 4px;
-  min-height: 240px;
+  gap: 6px;
+  min-height: 280px;
   margin: 2px 0 4px;
 }
 
@@ -9841,7 +9841,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   flex-direction: column;
   justify-content: center;
   gap: 4px;
-  height: 150px;
+  height: 210px;
 }
 
 .tg-eq i {
@@ -9885,17 +9885,18 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-orb-glow {
   position: absolute;
-  inset: 8% 10%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--tg-purple-rgb), 0.45), transparent 68%);
+  inset: 4% 8%;
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 40%, rgba(var(--tg-purple-rgb), 0.45), transparent 68%);
   filter: blur(18px);
   pointer-events: none;
 }
 
 .tg-orb {
   position: relative;
-  width: min(72vw, 250px);
-  aspect-ratio: 1;
+  width: min(58vw, 210px);
+  aspect-ratio: 3 / 4;
+  max-height: min(46vh, 320px);
   display: grid;
   place-items: center;
 }
@@ -9903,20 +9904,21 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 .tg-orb-ring {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: 22px;
   border: 2px solid rgba(var(--tg-purple-rgb), 0.55);
   box-shadow:
-    0 0 0 6px rgba(var(--tg-purple-rgb), 0.08),
+    0 0 0 5px rgba(var(--tg-purple-rgb), 0.08),
     0 0 28px rgba(var(--tg-purple-rgb), 0.55),
     inset 0 0 24px rgba(var(--tg-purple-rgb), 0.2);
   pointer-events: none;
 }
 
 .tg-orb-ring--b {
-  inset: 8px;
+  inset: 7px;
+  border-radius: 18px;
   border-color: rgba(232, 121, 249, 0.35);
   box-shadow: 0 0 18px rgba(232, 121, 249, 0.25);
-  animation: tg-ring-spin 10s linear infinite;
+  animation: none;
 }
 
 .tg-hero.is-scanning .tg-orb-ring--a {
@@ -9933,20 +9935,20 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   0%,
   100% {
     box-shadow:
-      0 0 0 6px rgba(var(--tg-purple-rgb), 0.08),
+      0 0 0 5px rgba(var(--tg-purple-rgb), 0.08),
       0 0 24px rgba(var(--tg-purple-rgb), 0.45);
   }
   50% {
     box-shadow:
-      0 0 0 10px rgba(var(--tg-purple-rgb), 0.14),
+      0 0 0 9px rgba(var(--tg-purple-rgb), 0.14),
       0 0 36px rgba(var(--tg-purple-rgb), 0.75);
   }
 }
 
 .tg-orb-core {
   position: absolute;
-  inset: 18px;
-  border-radius: 50%;
+  inset: 12px;
+  border-radius: 16px;
   overflow: hidden;
   background: #050508;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -9957,6 +9959,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
   display: block;
 }
 
@@ -9964,7 +9967,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 45%, rgba(var(--tg-purple-rgb), 0.28), transparent 60%),
+    radial-gradient(ellipse at 50% 40%, rgba(var(--tg-purple-rgb), 0.28), transparent 60%),
     #08060e;
 }
 
@@ -9977,7 +9980,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-orb-symbol {
   position: absolute;
-  top: 22px;
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
@@ -10006,7 +10009,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-orb-badge {
   position: absolute;
-  bottom: 18px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
@@ -10081,7 +10084,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-side-panel {
   display: grid;
-  gap: 10px;
+  gap: 0;
   padding: 12px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
@@ -10155,39 +10158,6 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-switch.is-on i {
   transform: translateX(20px);
-}
-
-.tg-features {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.tg-features li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.tg-feature-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  color: var(--tg-purple-hot);
-  background: rgba(var(--tg-purple-rgb), 0.12);
-  border: 1px solid rgba(var(--tg-purple-rgb), 0.28);
-  flex-shrink: 0;
-}
-
-.tg-feature-icon svg {
-  width: 14px;
-  height: 14px;
 }
 
 .tg-capture {
@@ -10566,7 +10536,8 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   }
 
   .tg-orb {
-    width: min(78vw, 230px);
+    width: min(62vw, 200px);
+    max-height: min(44vh, 300px);
   }
 
   .tg-result-head {

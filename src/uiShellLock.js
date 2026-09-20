@@ -5,9 +5,9 @@
  *
  * Gen 13 — Interface 2 TrapGoat scanner exact redesign.
  */
-export const UI_SHELL_GENERATION = 13;
+export const UI_SHELL_GENERATION = 14;
 
-export const UI_SHELL_LABEL = "v2-trapgoat-scanner";
+export const UI_SHELL_LABEL = "v2-trapgoat-portrait";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";

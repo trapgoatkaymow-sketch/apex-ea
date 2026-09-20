@@ -27,72 +27,6 @@ function levelPct(entry, level, side, kind) {
   return `${sign}${Math.abs(pct).toFixed(1)}%`;
 }
 
-const FEATURES = [
-  { icon: "target", label: "Detects real symbol" },
-  { icon: "pulse", label: "Analyzes price action" },
-  { icon: "ai", label: "Returns Buy/Sell + Confidence" },
-  { icon: "levels", label: "Builds Entry / SL / TP levels" },
-  { icon: "mt", label: "Ready for MetaTrader" },
-  { icon: "hand", label: "Manual execution only" },
-];
-
-function FeatureIcon({ name }) {
-  const common = {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "1.7",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-  };
-  if (name === "target") {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="7" />
-        <circle cx="12" cy="12" r="2.5" />
-        <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" />
-      </svg>
-    );
-  }
-  if (name === "pulse") {
-    return (
-      <svg {...common}>
-        <path d="M3 12h4l2-5 3 10 2-5h7" />
-      </svg>
-    );
-  }
-  if (name === "ai") {
-    return (
-      <svg {...common}>
-        <rect x="4" y="5" width="16" height="14" rx="3" />
-        <circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none" />
-        <circle cx="15" cy="12" r="1.2" fill="currentColor" stroke="none" />
-        <path d="M9 16h6" />
-      </svg>
-    );
-  }
-  if (name === "levels") {
-    return (
-      <svg {...common}>
-        <path d="M4 7h16M4 12h10M4 17h13" />
-      </svg>
-    );
-  }
-  if (name === "mt") {
-    return (
-      <svg {...common}>
-        <path d="M4 18V8l4 4 4-6 4 6 4-4v10H4Z" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...common}>
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-      <rect x="6" y="11" width="12" height="9" rx="2" />
-    </svg>
-  );
-}
-
 function EqBars({ side }) {
   const heights = side === "left"
     ? [28, 46, 34, 58, 40, 52, 30, 44]
@@ -321,16 +255,6 @@ export default function V2TrapScannerView({
             <i />
           </button>
         </label>
-        <ul className="tg-features">
-          {FEATURES.map((row) => (
-            <li key={row.label}>
-              <span className="tg-feature-icon">
-                <FeatureIcon name={row.icon} />
-              </span>
-              <span>{row.label}</span>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <div className="tg-capture">
