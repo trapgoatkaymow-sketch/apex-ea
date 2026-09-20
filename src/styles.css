@@ -6616,23 +6616,25 @@ html:has(.phone[data-interface="v2"]) body {
 
 .cs-stage.has-chart .cs-viewport,
 .cs-stage:has(.cs-chart) .cs-viewport {
-  /* Keep a stable dark frame; nest the full screenshot inside, zoomed out. */
-  aspect-ratio: 16 / 11;
-  height: auto;
-  max-height: min(36vh, 250px);
-  min-height: 170px;
+  /* Fixed tall frame so portrait chart screenshots fit fully (object-fit: contain). */
+  aspect-ratio: auto;
+  width: 100%;
+  height: min(52vh, 420px);
+  max-height: min(52vh, 420px);
+  min-height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 22px;
+  padding: 8px;
   box-sizing: border-box;
   background: #05060a;
+  overflow: hidden;
 }
 
 .cs-chart {
-  width: auto;
+  width: 100%;
+  height: 100%;
   max-width: 100%;
-  height: auto;
   max-height: 100%;
   object-fit: contain;
   object-position: center;
@@ -6644,8 +6646,13 @@ html:has(.phone[data-interface="v2"]) body {
 
 .cs-chart-frame {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
   max-height: 100%;
 }
@@ -7653,9 +7660,11 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
 
 .view-scanner:not(.cs-v2) .cs-stage.has-chart .cs-viewport,
 .view-scanner:not(.cs-v2) .cs-stage:has(.cs-chart) .cs-viewport {
-  aspect-ratio: 16 / 11;
-  max-height: min(36vh, 250px);
-  min-height: 170px;
+  aspect-ratio: auto;
+  height: min(52vh, 420px);
+  max-height: min(52vh, 420px);
+  min-height: 240px;
+  padding: 8px;
   overflow: hidden;
 }
 
@@ -8228,9 +8237,10 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
 
 .view-scanner.cs-v2 .cs-stage.has-chart .cs-viewport,
 .view-scanner.cs-v2 .cs-stage:has(.cs-chart) .cs-viewport {
-  aspect-ratio: 16 / 11;
-  max-height: min(36vh, 250px);
-  min-height: 170px;
+  aspect-ratio: auto;
+  height: min(52vh, 420px);
+  max-height: min(52vh, 420px);
+  min-height: 240px;
   padding: 8px;
   border-radius: 4px;
   background: #050507;
@@ -8240,24 +8250,31 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
 .view-scanner.cs-v2 .cs-stage.has-chart .cs-chart,
 .view-scanner.cs-v2 .cs-stage:has(.cs-chart) .cs-chart {
   border-radius: 3px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .view-scanner.cs-v2 .cs-chart-frame {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
   max-height: 100%;
-  width: auto;
-  height: auto;
 }
 
 .view-scanner.cs-v2 .cs-chart-frame > .cs-chart {
-  width: auto;
+  width: 100%;
+  height: 100%;
   max-width: 100%;
   max-height: 100%;
-  height: auto;
   object-fit: contain;
+  object-position: center;
 }
 
 .view-scanner.cs-v2 .cs-bracket {
