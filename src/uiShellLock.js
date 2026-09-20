@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 25 — Connected broker logo + name on Home, Scanner, and MetaTrader.
+ * Gen 26 — Broker mark only beside Brokers title (not TopBar / session card).
  */
-export const UI_SHELL_GENERATION = 25;
+export const UI_SHELL_GENERATION = 26;
 
-export const UI_SHELL_LABEL = "broker-logo-header";
+export const UI_SHELL_LABEL = "broker-mark-title-only";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
