@@ -7,7 +7,7 @@
  */
 export const UI_SHELL_GENERATION = 9;
 
-export const UI_SHELL_LABEL = "v2-scanner-mission-ops";
+export const UI_SHELL_LABEL = "v2-scan-overlay-analysis";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
