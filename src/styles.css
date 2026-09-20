@@ -7753,38 +7753,32 @@ html:has(.phone[data-interface="v2"]) body {
 
 .phone[data-interface="v2"]:has(.view-scanner.cs-v2) .v2-stage {
   background:
-    radial-gradient(120% 70% at 50% 0%, rgba(255, 0, 60, 0.14), transparent 55%),
-    radial-gradient(90% 55% at 50% 100%, rgba(80, 0, 20, 0.35), transparent 60%),
-    linear-gradient(180deg, #0a0a0e 0%, #050508 55%, #08060a 100%);
-  padding: 6px 14px 10px;
+    radial-gradient(100% 60% at 50% -5%, rgba(196, 165, 116, 0.1), transparent 55%),
+    linear-gradient(180deg, #07070a 0%, #040406 48%, #08070a 100%);
+  padding: 8px 16px 12px;
 }
 
 .view-scanner.cs-v2 {
-  --cs-v2-neon: var(--pink-hot);
+  --cs-v2-neon: #c4a574;
   --cs-v2-pink: var(--pink);
-  --cs-v2-ink: #ffffff;
-  --cs-v2-muted: rgba(255, 255, 255, 0.5);
-  --cs-v2-card: rgba(255, 255, 255, 0.045);
-  gap: 12px;
-  padding: calc(6px + env(safe-area-inset-top, 0px)) 2px 12px;
+  --cs-v2-gold: #c4a574;
+  --cs-v2-gold-soft: #d8c19a;
+  --cs-v2-gold-rgb: 196, 165, 116;
+  --cs-v2-ink: #f4f0e8;
+  --cs-v2-muted: rgba(244, 240, 232, 0.52);
+  --cs-v2-card: rgba(255, 248, 235, 0.035);
+  --cs-v2-line: rgba(196, 165, 116, 0.28);
+  --cs-v2-display: "Cormorant Garamond", "Times New Roman", serif;
+  --cs-v2-ui: "Space Grotesk", "Outfit", sans-serif;
+  gap: 14px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 4px 14px;
   color: var(--cs-v2-ink);
   position: relative;
+  font-family: var(--cs-v2-ui);
 }
 
 .view-scanner.cs-v2::after {
-  content: "";
-  position: absolute;
-  left: -18px;
-  right: -18px;
-  bottom: -8px;
-  height: 140px;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(70% 90% at 50% 100%, rgba(var(--pink-hot-rgb), 0.28), transparent 70%),
-    linear-gradient(180deg, transparent, rgba(20, 0, 8, 0.55));
-  clip-path: polygon(0 35%, 8% 55%, 18% 48%, 28% 70%, 42% 52%, 55% 78%, 68% 58%, 80% 82%, 92% 60%, 100% 75%, 100% 100%, 0 100%);
-  opacity: 0.85;
+  display: none;
 }
 
 .view-scanner.cs-v2 > * {
@@ -7802,7 +7796,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-v2-mission .cs-head-main {
   position: relative;
-  padding-left: 12px;
+  padding-left: 14px;
   min-width: 0;
 }
 
@@ -7810,69 +7804,69 @@ html:has(.phone[data-interface="v2"]) body {
   content: "";
   position: absolute;
   left: 0;
-  top: 2px;
-  bottom: 2px;
-  width: 2px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
   background: linear-gradient(
     180deg,
-    var(--pink),
-    rgba(var(--pink-rgb), 0.15)
+    var(--cs-v2-gold),
+    rgba(var(--cs-v2-gold-rgb), 0.08)
   );
-  box-shadow: 0 0 10px rgba(var(--pink-rgb), 0.55);
+  box-shadow: none;
 }
 
 .view-scanner.cs-v2 .cs-v2-mission .cs-kicker {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-family: var(--font-v2, var(--font-display));
-  font-size: clamp(0.92rem, 4.2vw, 1.12rem);
-  letter-spacing: 0.12em;
+  font-family: var(--cs-v2-ui);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #fff;
-  font-weight: 800;
+  color: var(--cs-v2-gold-soft);
+  font-weight: 600;
   background: none;
   -webkit-text-fill-color: unset;
-  text-shadow: 0 0 16px rgba(var(--pink-rgb), 0.4);
-  line-height: 1.05;
+  text-shadow: none;
+  line-height: 1.1;
 }
 
 .view-scanner.cs-v2 .cs-v2-mission-pip {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: var(--pink);
-  box-shadow: 0 0 8px rgba(var(--pink-rgb), 0.95);
-  animation: cs-v2-badge-pulse 1.6s ease-in-out infinite;
+  background: var(--cs-v2-gold);
+  box-shadow: 0 0 0 3px rgba(var(--cs-v2-gold-rgb), 0.18);
+  animation: none;
 }
 
 .view-scanner.cs-v2 .cs-v2-mission .cs-title {
   margin: 0;
-  font-family: var(--font-body);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.62);
+  font-family: var(--cs-v2-display);
+  font-size: clamp(1.55rem, 7vw, 1.95rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--cs-v2-ink);
   text-shadow: none;
-  line-height: 1.2;
+  line-height: 1.05;
 }
 
 .view-scanner.cs-v2 .cs-v2-mission .cs-tagline {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 0;
   padding: 0;
   max-width: 100%;
-  font-size: 0.48rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--cs-v2-muted);
   border: 0;
   background: none;
   overflow: hidden;
@@ -7880,22 +7874,22 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-v2-mission .cs-tagline span {
   position: relative;
-  padding: 3px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border: 1px solid rgba(var(--cs-v2-gold-rgb), 0.18);
   border-left: 0;
-  background: rgba(0, 0, 0, 0.35);
-  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 248, 235, 0.03);
+  color: rgba(244, 240, 232, 0.55);
   white-space: nowrap;
 }
 
 .view-scanner.cs-v2 .cs-v2-mission .cs-tagline span:first-child {
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.78);
+  border-left: 1px solid rgba(var(--cs-v2-gold-rgb), 0.18);
+  color: var(--cs-v2-gold-soft);
 }
 
 .view-scanner.cs-v2 .cs-v2-mission .cs-tagline span:last-child {
-  border-color: rgba(var(--pink-rgb), 0.35);
-  color: var(--pink-soft);
+  border-color: rgba(var(--cs-v2-gold-rgb), 0.32);
+  color: var(--cs-v2-gold);
 }
 
 .view-scanner.cs-v2 .cs-head-meta {
@@ -7909,13 +7903,13 @@ html:has(.phone[data-interface="v2"]) body {
 .view-scanner.cs-v2 .cs-settings-btn {
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: 4px;
   display: grid;
   place-items: center;
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  color: var(--cs-v2-gold-soft);
+  background: rgba(255, 248, 235, 0.04);
+  border: 1px solid rgba(var(--cs-v2-gold-rgb), 0.28);
+  box-shadow: none;
   backdrop-filter: blur(10px);
   grid-column: 2;
   grid-row: 1;
@@ -7939,17 +7933,16 @@ html:has(.phone[data-interface="v2"]) body {
   min-height: 34px;
   padding: 0 14px 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(var(--pink-rgb), 0.55);
-  background: linear-gradient(135deg, rgba(var(--pink-hot-rgb), 0.42), rgba(var(--pink-rgb), 0.28));
-  color: #fff;
-  font-family: var(--font-body);
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  border: 1px solid rgba(var(--cs-v2-gold-rgb), 0.42);
+  background:
+    linear-gradient(135deg, rgba(var(--cs-v2-gold-rgb), 0.22), rgba(var(--cs-v2-gold-rgb), 0.08));
+  color: var(--cs-v2-ink);
+  font-family: var(--cs-v2-ui);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  box-shadow:
-    0 10px 22px rgba(255, 0, 60, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.12);
 }
 
 .view-scanner.cs-v2 .cs-scans-icon {
@@ -8038,19 +8031,13 @@ html:has(.phone[data-interface="v2"]) body {
   aspect-ratio: 1 / 1;
   max-height: min(40vh, 268px);
   min-height: 196px;
-  border-radius: 2px;
+  border-radius: 4px;
   background:
-    radial-gradient(circle at 50% 46%, rgba(var(--pink-rgb), 0.14), transparent 52%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 11px,
-      rgba(255, 255, 255, 0.015) 11px,
-      rgba(255, 255, 255, 0.015) 12px
-    ),
-    #040508;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  overflow: visible;
+    radial-gradient(circle at 50% 42%, rgba(var(--cs-v2-gold-rgb), 0.1), transparent 58%),
+    linear-gradient(165deg, #0c0c10 0%, #060608 100%);
+  border: 1px solid var(--cs-v2-line);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.04);
+  overflow: hidden;
 }
 
 .view-scanner.cs-v2 .cs-viewport::before {
@@ -8062,18 +8049,17 @@ html:has(.phone[data-interface="v2"]) body {
   aspect-ratio: 16 / 11;
   max-height: min(36vh, 250px);
   min-height: 170px;
-  padding: 10px;
-  border-radius: 2px;
-  background: #05060a;
+  padding: 8px;
+  border-radius: 4px;
+  background: #050507;
   overflow: hidden;
 }
 
 .view-scanner.cs-v2 .cs-stage.has-chart .cs-chart,
 .view-scanner.cs-v2 .cs-stage:has(.cs-chart) .cs-chart {
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
-/* Chart + analysis overlay share one frame so levels map onto the screenshot */
 .view-scanner.cs-v2 .cs-chart-frame {
   position: relative;
   display: grid;
@@ -8082,391 +8068,14 @@ html:has(.phone[data-interface="v2"]) body {
   max-height: 100%;
   width: auto;
   height: auto;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.view-scanner.cs-v2 .cs-chart-frame.is-expandable {
-  cursor: zoom-in;
 }
 
 .view-scanner.cs-v2 .cs-chart-frame > .cs-chart {
-  grid-area: 1 / 1;
   width: auto;
   max-width: 100%;
   max-height: 100%;
   height: auto;
   object-fit: contain;
-  pointer-events: none;
-}
-
-.view-scanner.cs-v2 .cs-chart-frame > .cs-analysis-overlay {
-  grid-area: 1 / 1;
-  width: 100%;
-  height: 100%;
-  align-self: stretch;
-  justify-self: stretch;
-  pointer-events: none;
-}
-
-.view-scanner.cs-v2 .cs-chart-expand-hint {
-  grid-area: 1 / 1;
-  align-self: end;
-  justify-self: center;
-  z-index: 4;
-  margin-bottom: 6px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  pointer-events: none;
-  opacity: 0.92;
-}
-
-.view-scanner.cs-v2 .cs-chart-frame.has-analysis .cs-chart-expand-hint {
-  margin-bottom: 28px;
-}
-
-.view-scanner.cs-v2 .cs-analysis-overlay {
-  position: relative;
-  pointer-events: none;
-  z-index: 3;
-  overflow: hidden;
-  border-radius: 2px;
-  animation: cs-analysis-in 0.45s ease both;
-}
-
-@keyframes cs-analysis-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.view-scanner.cs-v2 .cs-analysis-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
-}
-
-/* TradingView-style RR: grey risk / cyan reward */
-.view-scanner.cs-v2 .cs-analysis-zone {
-  stroke: none;
-}
-
-.view-scanner.cs-v2 .cs-analysis-zone.is-risk {
-  fill: rgba(160, 168, 180, 0.28);
-}
-
-.view-scanner.cs-v2 .cs-analysis-zone.is-reward,
-.view-scanner.cs-v2 .cs-analysis-zone.is-reward.is-buy,
-.view-scanner.cs-v2 .cs-analysis-zone.is-reward.is-sell {
-  fill: rgba(64, 156, 255, 0.26);
-}
-
-.view-scanner.cs-v2 .cs-analysis-entry-split {
-  stroke: rgba(20, 24, 32, 0.85);
-  stroke-width: 1.2;
-  stroke-dasharray: 2.2 1.6;
-}
-
-.view-scanner.cs-v2 .cs-analysis-level-secondary {
-  stroke: rgba(46, 229, 157, 0.28);
-  stroke-width: 0.7;
-  stroke-dasharray: 2 2;
-}
-
-.view-scanner.cs-v2 .cs-analysis-trend {
-  stroke: rgba(var(--pink-rgb), 0.9);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-
-.view-scanner.cs-v2 .cs-analysis-trend.is-support {
-  stroke: #2ee59d;
-  stroke-width: 1.45;
-}
-
-.view-scanner.cs-v2 .cs-analysis-trend.is-resistance {
-  stroke: #ff4d6d;
-  stroke-width: 1.45;
-}
-
-.view-scanner.cs-v2 .cs-analysis-level {
-  stroke-linecap: round;
-}
-
-.view-scanner.cs-v2 .cs-analysis-level.is-entry {
-  stroke: rgba(230, 234, 242, 0.92);
-  stroke-width: 1.35;
-  stroke-dasharray: 2.4 1.8;
-}
-
-.view-scanner.cs-v2 .cs-analysis-level.is-sl {
-  stroke: #e8455a;
-  stroke-width: 1.45;
-}
-
-.view-scanner.cs-v2 .cs-analysis-level.is-tp {
-  stroke: #2ee59d;
-  stroke-width: 1.45;
-}
-
-.view-scanner.cs-v2 .cs-analysis-labels {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-.view-scanner.cs-v2 .cs-analysis-badge {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 4px 8px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #fff;
-  background: #7a1838;
-  border: 1px solid rgba(255, 120, 150, 0.35);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-.view-scanner.cs-v2 .cs-analysis-badge.is-buy {
-  background: #0f5c3d;
-  border-color: rgba(46, 229, 157, 0.4);
-}
-
-.view-scanner.cs-v2 .cs-analysis-badge.is-sell {
-  background: #7a1838;
-  border-color: rgba(255, 120, 150, 0.35);
-  color: #fff;
-}
-
-.view-scanner.cs-v2 .cs-analysis-tag {
-  position: absolute;
-  right: 3px;
-  transform: translateY(-50%);
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  padding: 3px 6px;
-  border-radius: 2px;
-  font-size: 8px;
-  line-height: 1.05;
-  letter-spacing: 0.03em;
-  color: #fff;
-  white-space: nowrap;
-  max-width: 48%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
-}
-
-.view-scanner.cs-v2 .cs-analysis-tag strong {
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  font-size: 7.5px;
-  opacity: 0.92;
-}
-
-.view-scanner.cs-v2 .cs-analysis-tag em {
-  font-style: normal;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 9px;
-}
-
-.view-scanner.cs-v2 .cs-analysis-tag.is-entry {
-  background: #2a2e38;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-}
-
-.view-scanner.cs-v2 .cs-analysis-tag.is-sl {
-  background: #b01f35;
-  border: 1px solid rgba(255, 140, 160, 0.35);
-}
-
-.view-scanner.cs-v2 .cs-analysis-tag.is-tp {
-  background: #0f7a4f;
-  border: 1px solid rgba(80, 230, 170, 0.35);
-}
-
-.view-scanner.cs-v2 .cs-analysis-caption {
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 5px;
-  margin: 0;
-  padding: 5px 7px;
-  border-radius: 3px;
-  font-size: 9px;
-  line-height: 1.3;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.92);
-  background: rgba(12, 14, 18, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.view-scanner.cs-v2 .cs-analysis-overlay.is-dense .cs-analysis-badge {
-  font-size: 12px;
-  padding: 5px 10px;
-}
-
-.view-scanner.cs-v2 .cs-analysis-overlay.is-dense .cs-analysis-tag {
-  font-size: 10px;
-  padding: 4px 8px;
-}
-
-.view-scanner.cs-v2 .cs-analysis-overlay.is-dense .cs-analysis-tag strong {
-  font-size: 9px;
-}
-
-.view-scanner.cs-v2 .cs-analysis-overlay.is-dense .cs-analysis-tag em {
-  font-size: 11px;
-}
-
-.view-scanner.cs-v2 .cs-analysis-overlay.is-dense .cs-analysis-caption {
-  font-size: 12px;
-  padding: 8px 10px;
-  -webkit-line-clamp: 3;
-}
-
-/* Fullscreen chart lightbox */
-.cs-chart-lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 12000;
-  display: flex;
-  flex-direction: column;
-  background: rgba(2, 3, 6, 0.96);
-  backdrop-filter: blur(10px);
-  animation: cs-analysis-in 0.22s ease both;
-}
-
-.cs-chart-lightbox-bar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  padding-top: max(10px, env(safe-area-inset-top));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.cs-chart-lightbox-close {
-  appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.cs-chart-lightbox-hint {
-  flex: 1;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-  text-align: center;
-}
-
-.cs-chart-lightbox-zoom {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cs-chart-lightbox-zoom button {
-  width: 34px;
-  height: 34px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.cs-chart-lightbox-zoom em {
-  font-style: normal;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.75);
-  min-width: 40px;
-  text-align: center;
-}
-
-.cs-chart-lightbox-stage {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-  overflow: hidden;
-  touch-action: none;
-  cursor: grab;
-  display: grid;
-  place-items: center;
-  padding: 12px;
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-}
-
-.cs-chart-lightbox-stage:active {
-  cursor: grabbing;
-}
-
-.cs-chart-lightbox-canvas {
-  transform-origin: center center;
-  will-change: transform;
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.cs-chart-lightbox .cs-chart-frame.is-lightbox {
-  width: min(100vw - 24px, 560px);
-  max-height: calc(100dvh - 88px);
-  display: grid;
-}
-
-.cs-chart-lightbox .cs-chart-frame.is-lightbox > .cs-chart {
-  width: 100%;
-  max-width: 100%;
-  max-height: calc(100dvh - 88px);
-  height: auto;
-  object-fit: contain;
-}
-
-.cs-chart-lightbox .cs-chart-frame.is-lightbox > .cs-analysis-overlay {
-  width: 100%;
-  height: 100%;
 }
 
 .view-scanner.cs-v2 .cs-bracket {
@@ -8494,7 +8103,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 /* Unique Interface 2 empty-state: acquire HUD (not I1 bobble / not hex SCAN LOCK). */
 .view-scanner.cs-v2 .cs-v2-portal {
-  --cs-v2-portal: var(--pink);
+  --cs-v2-portal: var(--cs-v2-gold);
   position: relative;
   width: clamp(176px, 50vw, 220px);
   height: clamp(176px, 50vw, 220px);
@@ -8624,27 +8233,27 @@ html:has(.phone[data-interface="v2"]) body {
   gap: 7px;
   padding: 5px 10px 5px 8px;
   border-radius: 2px;
-  font-family: var(--font-v2);
-  font-size: 0.58rem;
-  font-weight: 800;
+  font-family: var(--cs-v2-ui);
+  font-size: 0.56rem;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(0, 0, 0, 0.72);
-  border: 1px solid rgba(var(--pink-rgb), 0.45);
-  box-shadow: 0 0 14px rgba(var(--pink-rgb), 0.25);
+  color: var(--cs-v2-ink);
+  background: rgba(8, 8, 10, 0.85);
+  border: 1px solid rgba(var(--cs-v2-gold-rgb), 0.4);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
   white-space: nowrap;
   pointer-events: none;
   z-index: 4;
 }
 
 .view-scanner.cs-v2 .cs-v2-portal-badge i {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--pink);
-  box-shadow: 0 0 8px rgba(var(--pink-rgb), 0.9);
-  animation: cs-v2-badge-pulse 1.4s ease-in-out infinite;
+  background: var(--cs-v2-gold);
+  box-shadow: 0 0 0 3px rgba(var(--cs-v2-gold-rgb), 0.2);
+  animation: none;
 }
 
 @keyframes cs-v2-spin {
@@ -8689,13 +8298,13 @@ html:has(.phone[data-interface="v2"]) body {
   display: none;
 }
 
-/* Twin HUD intake pads — Shoot / Import (acquire stage language). */
+/* Premium twin intake — quiet gold desk controls */
 .view-scanner.cs-v2 .cs-capture-row,
 .view-scanner.cs-v2 .cs-v2-intake {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 10px;
   border: 0;
   border-radius: 0;
   overflow: visible;
@@ -8704,77 +8313,30 @@ html:has(.phone[data-interface="v2"]) body {
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn {
   position: relative;
-  isolation: isolate;
-  min-height: 72px;
-  border-radius: 2px;
-  padding: 12px 12px 12px 14px;
+  min-height: 68px;
+  border-radius: 4px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 12px;
   text-align: left;
-  font-size: inherit;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--cs-v2-ink);
+  border: 1px solid rgba(var(--cs-v2-gold-rgb), 0.22);
+  background:
+    linear-gradient(160deg, rgba(255, 248, 235, 0.05), rgba(0, 0, 0, 0.25)),
+    #09090c;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.04);
   backdrop-filter: none;
   overflow: hidden;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    transform 0.12s ease;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.12s ease;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn:last-child {
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.view-scanner.cs-v2 .cs-v2-intake-frame {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.view-scanner.cs-v2 .cs-v2-intake-corner {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-color: rgba(var(--pink-rgb), 0.85);
-  border-style: solid;
-  border-width: 0;
-}
-
-.view-scanner.cs-v2 .cs-v2-intake-corner--tl {
-  top: 3px;
-  left: 3px;
-  border-top-width: 1.5px;
-  border-left-width: 1.5px;
-}
-
-.view-scanner.cs-v2 .cs-v2-intake-corner--tr {
-  top: 3px;
-  right: 3px;
-  border-top-width: 1.5px;
-  border-right-width: 1.5px;
-}
-
-.view-scanner.cs-v2 .cs-v2-intake-corner--bl {
-  bottom: 3px;
-  left: 3px;
-  border-bottom-width: 1.5px;
-  border-left-width: 1.5px;
-}
-
-.view-scanner.cs-v2 .cs-v2-intake-corner--br {
-  bottom: 3px;
-  right: 3px;
-  border-bottom-width: 1.5px;
-  border-right-width: 1.5px;
+  border-right: 1px solid rgba(var(--cs-v2-gold-rgb), 0.22);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-text {
-  position: relative;
-  z-index: 1;
   display: grid;
   gap: 3px;
   text-align: left;
@@ -8783,12 +8345,13 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-text strong {
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-family: var(--cs-v2-ui);
+  font-size: 0.74rem;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1.1;
-  color: #fff;
+  color: var(--cs-v2-ink);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-text em {
@@ -8796,109 +8359,74 @@ html:has(.phone[data-interface="v2"]) body {
   font-size: 0.62rem;
   font-weight: 500;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(244, 240, 232, 0.45);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary {
+  border-color: rgba(var(--cs-v2-gold-rgb), 0.48);
   background:
-    linear-gradient(145deg, rgba(var(--pink-rgb), 0.34) 0%, rgba(var(--pink-rgb), 0.08) 48%, rgba(0, 0, 0, 0.35) 100%),
-    #07080c;
-  border-color: rgba(var(--pink-rgb), 0.45);
+    linear-gradient(145deg, rgba(var(--cs-v2-gold-rgb), 0.18) 0%, rgba(var(--cs-v2-gold-rgb), 0.04) 45%, rgba(0, 0, 0, 0.35) 100%),
+    #0a0a0d;
   box-shadow:
-    inset 0 0 0 1px rgba(var(--pink-rgb), 0.12),
-    0 0 18px rgba(var(--pink-rgb), 0.12);
+    inset 0 1px 0 rgba(255, 248, 235, 0.06),
+    0 8px 22px rgba(0, 0, 0, 0.35);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary .cs-capture-icon {
-  color: #fff;
-  background: rgba(var(--pink-rgb), 0.22);
-  border-color: rgba(var(--pink-rgb), 0.55);
-  box-shadow: 0 0 12px rgba(var(--pink-rgb), 0.35);
+  color: #1a140c;
+  background: linear-gradient(145deg, #e2d0a8, #c4a574);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(var(--cs-v2-gold-rgb), 0.35);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost {
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)),
-    #06070a;
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-}
-
-.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost .cs-v2-intake-corner {
-  border-color: rgba(255, 255, 255, 0.42);
+  color: var(--cs-v2-ink);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-ghost .cs-capture-icon {
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--cs-v2-gold-soft);
+  background: rgba(var(--cs-v2-gold-rgb), 0.08);
+  border-color: rgba(var(--cs-v2-gold-rgb), 0.28);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn:active:not(:disabled) {
   transform: scale(0.985);
 }
 
-.view-scanner.cs-v2 .cs-v2-intake .cs-capture-btn.is-primary:active:not(:disabled) {
-  background:
-    linear-gradient(145deg, rgba(var(--pink-rgb), 0.48) 0%, rgba(var(--pink-rgb), 0.16) 50%, rgba(0, 0, 0, 0.4) 100%),
-    #07080c;
-}
-
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon {
-  position: relative;
-  z-index: 1;
   width: 34px;
   height: 34px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(var(--cs-v2-gold-rgb), 0.25);
+  background: rgba(255, 248, 235, 0.04);
+  color: var(--cs-v2-gold-soft);
 }
 
 .view-scanner.cs-v2 .cs-v2-intake .cs-capture-icon svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
 }
 
 .view-scanner.cs-v2 .cs-v2-intake.is-scanning .cs-capture-btn.is-primary {
-  animation: cs-v2-intake-pulse 1.25s ease-in-out infinite;
-}
-
-.view-scanner.cs-v2 .cs-v2-intake.is-scanning .cs-capture-btn.is-primary .cs-capture-icon {
-  animation: cs-v2-intake-shutter 1.25s ease-in-out infinite;
+  animation: cs-v2-intake-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes cs-v2-intake-pulse {
   0%,
   100% {
-    border-color: rgba(var(--pink-rgb), 0.45);
-    box-shadow:
-      inset 0 0 0 1px rgba(var(--pink-rgb), 0.12),
-      0 0 14px rgba(var(--pink-rgb), 0.12);
+    border-color: rgba(var(--cs-v2-gold-rgb), 0.48);
   }
   50% {
-    border-color: rgba(var(--pink-rgb), 0.85);
+    border-color: rgba(var(--cs-v2-gold-rgb), 0.85);
     box-shadow:
-      inset 0 0 0 1px rgba(var(--pink-rgb), 0.28),
-      0 0 22px rgba(var(--pink-rgb), 0.28);
+      inset 0 1px 0 rgba(255, 248, 235, 0.08),
+      0 0 20px rgba(var(--cs-v2-gold-rgb), 0.18);
   }
 }
 
-@keyframes cs-v2-intake-shutter {
-  0%,
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 10px rgba(var(--pink-rgb), 0.3);
-  }
-  50% {
-    transform: scale(1.06);
-    box-shadow: 0 0 18px rgba(var(--pink-rgb), 0.55);
-  }
-}
 
 .view-scanner.cs-v2 .cs-v2-ops,
 .view-scanner.cs-v2 .cs-v2-ops-deck {
@@ -9392,27 +8920,34 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .view-scanner.cs-v2 .cs-run-btn {
-  min-height: 52px;
-  border-radius: 16px;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  min-height: 54px;
+  border-radius: 4px;
+  font-family: var(--cs-v2-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, var(--pink-hot), var(--pink));
-  color: #fff;
-  box-shadow: 0 14px 28px rgba(255, 0, 60, 0.35);
+  background: linear-gradient(135deg, #e2d0a8 0%, #c4a574 42%, #a88955 100%);
+  color: #1a140c;
+  border: 1px solid rgba(255, 248, 235, 0.25);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .view-scanner.cs-v2 .cs-run-btn:disabled {
-  opacity: 0.45;
-  color: rgba(255, 255, 255, 0.85);
+  opacity: 0.42;
+  color: rgba(26, 20, 12, 0.75);
 }
 
 .view-scanner.cs-v2 .cs-result {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(var(--pink-rgb), 0.22);
-  color: #fff;
+  background:
+    linear-gradient(165deg, rgba(255, 248, 235, 0.04), rgba(0, 0, 0, 0.2)),
+    #09090c;
+  border: 1px solid rgba(var(--cs-v2-gold-rgb), 0.28);
+  border-radius: 4px;
+  color: var(--cs-v2-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.04);
 }
 
 .view-scanner.cs-v2 .cs-result-kicker,
@@ -9420,7 +8955,21 @@ html:has(.phone[data-interface="v2"]) body {
 .view-scanner.cs-v2 .cs-setup-analysis,
 .view-scanner.cs-v2 .cs-setup-plan,
 .view-scanner.cs-v2 .cs-setup-wait {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(244, 240, 232, 0.55);
+}
+
+.view-scanner.cs-v2 .cs-result-kicker {
+  font-family: var(--cs-v2-ui);
+  letter-spacing: 0.18em;
+  font-size: 0.58rem;
+  color: var(--cs-v2-gold);
+}
+
+.view-scanner.cs-v2 .cs-result strong {
+  font-family: var(--cs-v2-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .view-scanner.cs-v2 .cs-setup-grid span {

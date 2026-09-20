@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
-import ChartAnalysisOverlay from "./ChartAnalysisOverlay.jsx";
-import ChartFullscreenViewer from "./ChartFullscreenViewer.jsx";
 import {
   CHART_DETECTION_STATUS,
   EXECUTE_ENGINE_STEPS,
@@ -149,7 +147,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [lotSize, setLotSize] = useState(0.01);
   const [scansLeft, setScansLeft] = useState(() => loadScansLeft(variant));
   const [signal, setSignal] = useState(null);
-  const [chartLightboxOpen, setChartLightboxOpen] = useState(false);
   const [fills, setFills] = useState([]);
   const [busy, setBusy] = useState(false);
   const [engineProgress, setEngineProgress] = useState(0);
@@ -158,10 +155,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
   useEffect(() => {
     if (active) setScansLeft(loadScansLeft(variant));
   }, [variant, active]);
-
-  useEffect(() => {
-    if (!preview) setChartLightboxOpen(false);
-  }, [preview]);
 
   // Refresh quota when the app returns to the foreground (new calendar day).
   useEffect(() => {
@@ -693,18 +686,20 @@ export default function ChartScanner({ variant = "default", active = true }) {
           {variant === "v2" ? (
             <p className="cs-kicker">
               <i className="cs-v2-mission-pip" aria-hidden="true" />
-              {activeBot?.name || "ApexEA"}
+              Premium · {activeBot?.name || "ApexEA"}
             </p>
           ) : (
             <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
           )}
-          <h2 className="cs-title">Chart Scanner</h2>
+          <h2 className="cs-title">
+            {variant === "v2" ? "Private Scanner" : "Chart Scanner"}
+          </h2>
           <p className="cs-tagline">
             {variant === "v2" ? (
               <>
-                <span>Scan</span>
-                <span>Analyze</span>
-                <span>Trade Smarter</span>
+                <span>Capture</span>
+                <span>Confirm</span>
+                <span>Execute</span>
               </>
             ) : (
               "Scan · Analyze · Trade Smarter"
@@ -756,28 +751,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <div className="cs-stage-main">
           <div className="cs-viewport" aria-label="Chart preview">
             {preview ? (
-              variant === "v2" ? (
-                <button
-                  type="button"
-                  className={`cs-chart-frame is-expandable${
-                    setupReady ? " has-analysis" : ""
-                  }`}
-                  onClick={() => setChartLightboxOpen(true)}
-                  aria-label="Open full chart analysis — tap to zoom"
-                >
-                  <img className="cs-chart" src={preview} alt="Chart to scan" />
-                  {setupReady && signal ? (
-                    <ChartAnalysisOverlay signal={signal} visible />
-                  ) : null}
-                  <span className="cs-chart-expand-hint" aria-hidden="true">
-                    Tap to view full · zoom
-                  </span>
-                </button>
-              ) : (
-                <div className="cs-chart-frame">
-                  <img className="cs-chart" src={preview} alt="Chart to scan" />
-                </div>
-              )
+              <div className="cs-chart-frame">
+                <img className="cs-chart" src={preview} alt="Chart to scan" />
+              </div>
             ) : (
               <div className="cs-empty">
                 {variant === "v2" ? (
@@ -869,14 +845,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
               onClick={openCamera}
               disabled={busy || !connected}
             >
-              {variant === "v2" ? (
-                <span className="cs-v2-intake-frame" aria-hidden="true">
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tl" />
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tr" />
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--bl" />
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--br" />
-                </span>
-              ) : null}
               <span className="cs-capture-icon" aria-hidden="true">
                 {variant === "v2" ? (
                   <svg viewBox="0 0 24 24" fill="none">
@@ -916,14 +884,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
               onClick={openUpload}
               disabled={busy || !connected}
             >
-              {variant === "v2" ? (
-                <span className="cs-v2-intake-frame" aria-hidden="true">
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tl" />
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--tr" />
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--bl" />
-                  <i className="cs-v2-intake-corner cs-v2-intake-corner--br" />
-                </span>
-              ) : null}
               <span className="cs-capture-icon" aria-hidden="true">
                 {variant === "v2" ? (
                   <svg viewBox="0 0 24 24" fill="none">
@@ -1533,15 +1493,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
         >
           Connect a trading account to unlock the scanner →
         </button>
-      ) : null}
-
-      {variant === "v2" ? (
-        <ChartFullscreenViewer
-          open={chartLightboxOpen}
-          preview={preview}
-          signal={setupReady ? signal : null}
-          onClose={() => setChartLightboxOpen(false)}
-        />
       ) : null}
     </section>
   );

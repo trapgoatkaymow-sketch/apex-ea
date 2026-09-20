@@ -3,11 +3,11 @@
  * must never fall back to an older layout (e.g. circular V2 home, glass tabs,
  * robot stadium pills). Deployed app-version.json carries the same number.
  *
- * Gen 11 — I2 Shoot/Import twin HUD intake pads.
+ * Gen 12 — I2 premium desk restyle; remove scan overlay + zoom.
  */
-export const UI_SHELL_GENERATION = 11;
+export const UI_SHELL_GENERATION = 12;
 
-export const UI_SHELL_LABEL = "v2-intake-hud-pads";
+export const UI_SHELL_LABEL = "v2-premium-desk-scanner";
 
 export const SHELL_GEN_STORAGE_KEY = "apexea-shell-gen-v1";
 export const BUILD_ID_STORAGE_KEY = "apexea-build-id-v1";
