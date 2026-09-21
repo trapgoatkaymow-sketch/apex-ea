@@ -7,7 +7,7 @@ import {
   resolveCachedBotPhoto,
 } from "./botPhotoCache.js";
 import ChartScanner from "./ChartScanner.jsx";
-import { buildBotTradeComment } from "./metaApi.js";
+import { buildScannerFillComment } from "./metaApi.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import TopBar from "./TopBar.jsx";
@@ -112,7 +112,11 @@ export default function V2Interface() {
   const allowed = catalog.filter((s) => appSymbols.has(s));
   const list = v2SymTab === "allowed" ? allowed : catalog;
   const activeRobots = bots.filter((b) => b.active);
-  const tradeComment = buildBotTradeComment(activeBot?.name);
+  const tradeComment = buildScannerFillComment({
+    botName: activeBot?.name,
+    variant: "v2",
+    premium: true,
+  });
   const scriptSymbol =
     editingSymbol ||
     (activeBot?.symbols && activeBot.symbols[0]) ||
