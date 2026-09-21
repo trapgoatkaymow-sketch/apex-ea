@@ -279,7 +279,9 @@ export function normalizeLicense(row) {
           photo: String(bot.photo || "/logo.png"),
           strategy: String(bot.strategy || "scalper"),
           symbols: Array.isArray(bot.symbols)
-            ? bot.symbols.map((s) => String(s || "").trim().toUpperCase()).filter(Boolean)
+            ? bot.symbols
+                .map((s) => String(s || "").trim().replace(/[^A-Za-z0-9._/-]/g, ""))
+                .filter(Boolean)
             : [],
         }
       : null,
