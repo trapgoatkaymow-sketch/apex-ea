@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { FALLBACK_METAAPI_TOKEN } from "./_fallbackToken.js";
 import { applyCorsHeaders } from "../_cors.js";
 import { candidateSymbols as buildCandidateSymbols } from "../_symbolResolve.js";
+import { normalizeProtectiveLevels } from "../_tradeLevels.js";
 
 const PROVISIONING_BASE =
   process.env.METAAPI_PROVISIONING_URL ||

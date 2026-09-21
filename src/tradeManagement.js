@@ -11,10 +11,12 @@ export const DEFAULT_TRADE_MANAGEMENT = {
   tp1ClosePercent: 30,
   tp2ClosePercent: 30,
   tp3ClosePercent: 40,
-  /** After TP1, move SL to entry (breakeven) on remaining legs. */
-  moveSlToBreakevenAfterTp1: true,
-  /** After TP2, trail/protect remaining SL toward TP1. */
-  protectProfitAfterTp2: true,
+  /**
+   * App-side SL moves are not live on broker yet — keep these off by default
+   * so mentors do not think the robot is auto-closing remaining legs.
+   */
+  moveSlToBreakevenAfterTp1: false,
+  protectProfitAfterTp2: false,
   /** Minimum lot size when splitting legs. */
   minLot: 0.01,
 };
@@ -37,8 +39,8 @@ export function normalizeTradeManagement(raw = {}) {
         0,
         100 - Math.round(tp1 * scale) - Math.round(tp2 * scale)
       ),
-      moveSlToBreakevenAfterTp1: raw.moveSlToBreakevenAfterTp1 !== false,
-      protectProfitAfterTp2: raw.protectProfitAfterTp2 !== false,
+      moveSlToBreakevenAfterTp1: raw.moveSlToBreakevenAfterTp1 === true,
+      protectProfitAfterTp2: raw.protectProfitAfterTp2 === true,
       minLot: Math.max(0.01, Number(raw.minLot) || 0.01),
     };
   }
@@ -46,8 +48,8 @@ export function normalizeTradeManagement(raw = {}) {
     tp1ClosePercent: tp1,
     tp2ClosePercent: tp2,
     tp3ClosePercent: tp3,
-    moveSlToBreakevenAfterTp1: raw.moveSlToBreakevenAfterTp1 !== false,
-    protectProfitAfterTp2: raw.protectProfitAfterTp2 !== false,
+    moveSlToBreakevenAfterTp1: raw.moveSlToBreakevenAfterTp1 === true,
+    protectProfitAfterTp2: raw.protectProfitAfterTp2 === true,
     minLot: Math.max(0.01, Number(raw.minLot) || 0.01),
   };
 }
