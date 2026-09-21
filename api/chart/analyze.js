@@ -334,8 +334,10 @@ export async function analyzeChartSetupWithOpenAI({
             "FX ≥ ~15 pips, XAUUSD ≥ ~$1.50, US30/NAS100/DE40 ≥ ~25 points, BTC ≥ ~0.2%. " +
             "BUY must satisfy: stopLoss < entry < takeProfit1 < takeProfit2 < takeProfit3. " +
             "SELL must satisfy: stopLoss > entry > takeProfit1 > takeProfit2 > takeProfit3. " +
-            "OCR the instrument from the chart header/title/tab EXACTLY as shown — keep broker dots " +
-            "(e.g. .DE30. , .US30Cash , US30). Also use the description line under the ticker when present. " +
+            "OCR the instrument from the chart header/title/tab EXACTLY as shown — keep broker dots AND " +
+            "lowercase suffixes (e.g. .DE30. , .US30Cash , EURUSD.m , XAUUSDp , US30). " +
+            "Keep suffix letters exactly as on the chart — XAUUSDp must stay XAUUSDp (lowercase p), never XAUUSDP. " +
+            "Also use the description line under the ticker when present. " +
             "Do NOT rename .DE30. to GER40/US30. Catalog is NOT multiple choice — never invent EURUSD/XAUUSD/BTCUSD. " +
             "If a symbol hint is provided and it matches the chart, keep it; otherwise prefer the visible header text. " +
             "If the setup is imperfect, still choose the strongest available BUY or SELL and compute reasonable multi-TP levels. " +
@@ -354,7 +356,8 @@ export async function analyzeChartSetupWithOpenAI({
               text:
                 "Validate whether this is a trading chart. If yes, generate a complete trade setup with Entry, SL, TP1, TP2, and TP3, " +
                 "plus overlay geometry (priceTop, priceBottom, chartArea, trendlines). " +
-                "OCR the exact symbol from the chart header (any instrument shown) — do not guess from the catalog." +
+                "OCR the exact symbol from the chart header (any instrument shown) — keep lowercase " +
+                "broker suffixes like XAUUSDp / EURUSDm. Do not guess from the catalog." +
                 (hintSymbol
                   ? ` Prefer this already-detected symbol if it matches the chart: ${normalizeSymbol(hintSymbol)}.`
                   : "") +

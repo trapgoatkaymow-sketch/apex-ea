@@ -54,6 +54,7 @@ import {
   updateMentorAppColor,
 } from "./mentorsApi.js";
 import { recordTrade } from "./dailyTradeHistory.js";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import {
   ackPendingTradeEvents,
   fetchPendingTradeEvents,
@@ -2840,7 +2841,7 @@ export function AppProvider({ children }) {
     setOrbTradeLive({
       botName: String(details.botName || "").trim(),
       comment: String(details.comment || "").trim(),
-      symbol: String(details.symbol || "").trim().toUpperCase(),
+      symbol: normalizeBrokerSymbol(details.symbol || ""),
       lotSize: Number(details.lotSize) > 0 ? Number(details.lotSize) : 0.01,
       action: String(details.action || details.side || "BOTH").toUpperCase(),
       side: String(details.side || "").toUpperCase(),
@@ -2935,7 +2936,7 @@ export function AppProvider({ children }) {
         );
         const last = fresh[fresh.length - 1];
         const lastSide = String(last?.side || "BUY").toUpperCase();
-        const lastSym = String(last?.symbol || "").trim().toUpperCase();
+        const lastSym = normalizeBrokerSymbol(last?.symbol || "");
         if (lastSym) {
           showToast(
             `Mentor opened ${lastSide} ${lastSym}${

@@ -38,8 +38,9 @@ function looksLikeTradingSymbol(raw) {
   const base = symbolBase(s);
   if (!base || base.length < 2) return false;
   // Must include a letter; reject pure numbers / prices.
-  if (!/[A-Z]/.test(base)) return false;
-  return /^\.?[A-Z][A-Z0-9.]*\.?$/.test(s);
+  if (!/[A-Z]/i.test(base)) return false;
+  // Allow lowercase broker suffixes (XAUUSDp, EURUSD.m).
+  return /^\.?[A-Za-z][A-Za-z0-9.]*\.?$/.test(s);
 }
 
 function requireOpenAiKey() {
@@ -181,7 +182,9 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
             "Do NOT treat photos of people, cars, buildings, or landscapes as charts. " +
             "If isChart=false → status=no_chart, symbol=null, symbolConfidence=0. " +
             "If isChart=true → OCR the instrument from the chart HEADER / TITLE / TAB / SYMBOL ROW EXACTLY as shown — " +
-            "copy every character including broker dots (examples: .DE30. , .US30Cash , EURUSD.m , NAS100). " +
+            "copy every character including broker dots AND lowercase suffixes " +
+            "(examples: .DE30. , .US30Cash , EURUSD.m , XAUUSDp , NAS100). " +
+            "Keep suffix letters exactly as on the chart — XAUUSDp must stay XAUUSDp (lowercase p), never XAUUSDP. " +
             "Also read the description line under the ticker when present (e.g. 'German 40 Index', 'Wall Street 30') into description. " +
             "Use the ticker code as symbol (not the long description). " +
             "Detect ANY shared instrument: forex, metals, indices, stocks, crypto, oil, CFDs, synthetics. " +
@@ -197,7 +200,7 @@ export async function detectSymbolWithOpenAI({ image, catalog = [] } = {}) {
               type: "text",
               text:
                 "Is this a trading chart screenshot? If yes, OCR-read the EXACT instrument ticker from the header/tab " +
-                "(keep broker dots like .DE30.) and the short description under it if shown. Do not guess from the catalog." +
+                "(keep broker dots and lowercase suffixes like XAUUSDp / EURUSDm). Do not guess from the catalog." +
                 (catalogHint
                   ? ` Optional exact-match catalog (mapping only, never choose blindly): ${catalogHint}.`
                   : ""),

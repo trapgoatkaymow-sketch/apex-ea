@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { FALLBACK_METAAPI_TOKEN } from "./_fallbackToken.js";
 import { applyCorsHeaders } from "../_cors.js";
-import { candidateSymbols as buildCandidateSymbols } from "../_symbolResolve.js";
+import { candidateSymbols as buildCandidateSymbols, pickBestSymbolFromList } from "../_symbolResolve.js";
 import { normalizeProtectiveLevels } from "../_tradeLevels.js";
 
 const PROVISIONING_BASE =
@@ -823,11 +823,24 @@ function candidateSymbols(symbol) {
 export async function resolveTradeableSymbol(accountId, symbol, { region, token } = {}) {
   const resolvedRegion = await resolveAccountRegion(accountId, region);
   const { symbols } = await listAccountSymbols(accountId, { region: resolvedRegion, token });
+  // Prefer the broker's exact catalog spelling (keeps XAUUSDp lowercase-p).
+  const best = pickBestSymbolFromList(symbol, symbols);
   const symbolSet = new Set(symbols);
-  const candidates = candidateSymbols(symbol).filter((s) => symbolSet.has(s));
+  const candidates = [
+    ...(best && symbolSet.has(best) ? [best] : []),
+    ...candidateSymbols(symbol).filter((s) => symbolSet.has(s)),
+  ].filter((s, i, arr) => arr.indexOf(s) === i);
+  // Case-insensitive fallback when Set.has misses suffix casing.
+  if (!candidates.length) {
+    const lowerMap = new Map(symbols.map((s) => [String(s).toLowerCase(), s]));
+    for (const c of candidateSymbols(symbol)) {
+      const hit = lowerMap.get(String(c).toLowerCase());
+      if (hit && !candidates.includes(hit)) candidates.push(hit);
+    }
+  }
   if (!candidates.length) {
     const err = new Error(
-      `Symbol ${String(symbol || "").toUpperCase()} not found on this MT5 account`
+      `Symbol ${String(symbol || "").trim() || "?"} not found on this MT5 account`
     );
     err.status = 400;
     throw err;
@@ -866,7 +879,7 @@ export async function resolveTradeableSymbol(accountId, symbol, { region, token 
 
   if (bestDisabled) {
     const err = new Error(
-      `Trade disabled for ${bestDisabled.symbol}. Try ${String(symbol || "").toUpperCase()}.mic (Razor min lot often 0.1).`
+      `Trade disabled for ${bestDisabled.symbol}. Try ${String(symbol || "").trim()}.mic (Razor min lot often 0.1).`
     );
     err.status = 400;
     err.data = bestDisabled;
@@ -964,7 +977,7 @@ export async function placeMarketTrade({
   return {
     ok: true,
     accountId: id,
-    requestedSymbol: String(symbol || "").toUpperCase(),
+    requestedSymbol: String(symbol || "").trim(),
     symbol: resolved.symbol,
     volume: vol,
     side: actionType === "ORDER_TYPE_SELL" ? "SELL" : "BUY",

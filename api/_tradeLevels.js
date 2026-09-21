@@ -21,8 +21,8 @@ export function symbolCoreName(raw) {
     .replace(/^\.+/, "")
     .replace(/\.+$/, "")
     .replace(/CASH$/i, "")
-    .replace(/\.(MIC|M|PRO|RAW|ECN|STD|CASH|SPOT|R|I)$/i, "")
-    .replace(/([A-Z0-9])M$/i, "$1")
+    .replace(/\.(MIC|M|P|PRO|RAW|ECN|STD|CASH|SPOT|R|I|A|B|C)$/i, "")
+    .replace(/([A-Z0-9])[MPABCRI]$/i, "$1")
     .split(".")[0];
 }
 

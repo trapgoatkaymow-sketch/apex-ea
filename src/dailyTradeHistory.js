@@ -1,3 +1,5 @@
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
+
 const STORAGE_KEY = "apexea-trade-history-v2";
 const LEGACY_KEY = "apexea-daily-trades-v1";
 const MAX_TRADES = 200;
@@ -20,11 +22,7 @@ function normalizeTrade(row = {}) {
     id: String(row?.id || `${at}-${row?.symbol || ""}`),
     at,
     botName: String(row?.botName || "Bot").trim() || "Bot",
-    symbol: String(row?.symbol || "")
-      .trim()
-      .toUpperCase()
-      // Strip decorative trailing dashes from older UI mistakes / bad saves.
-      .replace(/[-–—]+$/g, "") || "—",
+    symbol: normalizeBrokerSymbol(row?.symbol || "").replace(/[-–—]+$/g, "") || "—",
     lotSize: Number(row?.lotSize) > 0 ? Number(row.lotSize) : 0.01,
     action: normalizeSide(row?.action || row?.side),
     comment: String(row?.comment || "").trim(),

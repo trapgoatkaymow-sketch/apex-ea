@@ -1,4 +1,5 @@
 import { apiUrl } from "./apiOrigin.js";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { buildSafeMultiTpLevels } from "./tradeLevels.js";
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -152,9 +153,7 @@ async function inferSideFromChartImage(dataUrl) {
 }
 
 async function buildLocalFallbackSetup(dataUrl, { hintSymbol = "" } = {}) {
-  const symbol = String(hintSymbol || "")
-    .trim()
-    .toUpperCase();
+  const symbol = normalizeBrokerSymbol(hintSymbol || "");
   if (!symbol) {
     const err = new Error(CHART_DETECTION_MESSAGES.symbol_unclear.message);
     err.code = "SYMBOL_UNCLEAR";
@@ -322,13 +321,10 @@ async function detectSymbolWithOpenAI(dataUrl, { catalog = [] } = {}) {
   const status = String(data?.status || CHART_DETECTION_STATUS.NO_CHART);
   const symbol =
     status === CHART_DETECTION_STATUS.SYMBOL_DETECTED && data?.symbol
-      ? String(data.symbol).trim().toUpperCase()
+      ? normalizeBrokerSymbol(data.symbol)
       : null;
-  const suggestedSymbol = String(
-    data?.suggestedSymbol || data?.symbol || ""
-  )
-    .trim()
-    .toUpperCase() || null;
+  const suggestedSymbol =
+    normalizeBrokerSymbol(data?.suggestedSymbol || data?.symbol || "") || null;
 
   return {
     status,
@@ -450,12 +446,8 @@ export async function analyzeChartImage(
     // Prefer the symbol already detected from the screenshot over a fresh
     // analyze pass that may hallucinate a popular pair.
     let symbol = preferDetectedSymbol
-      ? String(hintSymbol || complete.symbol || "")
-          .trim()
-          .toUpperCase()
-      : String(complete.symbol || hintSymbol || "")
-          .trim()
-          .toUpperCase();
+      ? normalizeBrokerSymbol(hintSymbol || complete.symbol || "")
+      : normalizeBrokerSymbol(complete.symbol || hintSymbol || "");
     if (!symbol) {
       const detection = await detectSymbolFromChart(dataUrl, { catalog });
       if (detection.status === CHART_DETECTION_STATUS.NO_CHART) {
@@ -464,9 +456,7 @@ export async function analyzeChartImage(
         err.uiMessage = CHART_DETECTION_MESSAGES.no_chart.uiMessage;
         throw err;
       }
-      symbol = String(detection.symbol || hintSymbol || "")
-        .trim()
-        .toUpperCase();
+      symbol = normalizeBrokerSymbol(detection.symbol || hintSymbol || "");
     }
     if (!symbol) {
       const err = new Error(CHART_DETECTION_MESSAGES.symbol_unclear.message);

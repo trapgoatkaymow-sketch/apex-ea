@@ -11,6 +11,7 @@ import {
   detectSymbolFromChart,
   sleep,
 } from "./chartScanner.js";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { BrokerMark } from "./ConnectedBrokerBadge.jsx";
 import { buildBotTradeComment, buildScannerFillComment, placeTrade } from "./metaApi.js";
 import { recordTrade } from "./dailyTradeHistory.js";
@@ -311,7 +312,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         status === CHART_DETECTION_STATUS.SYMBOL_DETECTED &&
         detection?.symbol
       ) {
-        const next = String(detection.symbol).toUpperCase();
+        const next = normalizeBrokerSymbol(detection.symbol);
         ensureCatalog?.(next);
         setSymbol(next);
         setSymbolSource("scanner");
@@ -320,11 +321,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
       }
 
       // OpenAI saw a chart but was unsure — still prefill any OCR guess for edit.
-      const suggested = String(
+      const suggested = normalizeBrokerSymbol(
         detection?.suggestedSymbol || detection?.symbol || ""
-      )
-        .trim()
-        .toUpperCase();
+      );
       if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR && suggested) {
         ensureCatalog?.(suggested);
         setSymbol(suggested);
@@ -463,9 +462,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
         throw new Error("Could not build a complete trade setup with TP1/TP2/TP3");
       }
 
-      const tradeSymbol = String(result.detectedSymbol || result.symbol || "")
-        .trim()
-        .toUpperCase();
+      const tradeSymbol = normalizeBrokerSymbol(
+        result.detectedSymbol || result.symbol || ""
+      );
       if (!tradeSymbol) {
         const err = new Error("Chart detected — symbol unclear");
         err.code = "SYMBOL_UNCLEAR";
@@ -546,9 +545,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
     const tradeCount = clampTrades(trades);
     const lot = clampLot(lotSize);
-    const tradeSymbol = String(signal.detectedSymbol || signal.symbol || symbol)
-      .trim()
-      .toUpperCase();
+    const tradeSymbol = normalizeBrokerSymbol(
+      signal.detectedSymbol || signal.symbol || symbol
+    );
     if (!tradeSymbol) {
       showToast("Symbol missing from setup");
       return;
@@ -627,10 +626,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
             // Always chart-scanner for API gate; comment is ea~APEXEA only.
             source: "chart-scanner",
           });
-          const filledSymbol = String(fill?.symbol || tradeSymbol)
-            .trim()
-            .toUpperCase()
-            .replace(/[-–—]+$/g, "");
+          const filledSymbol = normalizeBrokerSymbol(
+            String(fill?.symbol || tradeSymbol).replace(/[-–—]+$/g, "")
+          );
           if (filledSymbol && filledSymbol !== tradeSymbol) {
             setSymbol(filledSymbol);
             persistTradeSettings(tradeCount, lot, filledSymbol);
@@ -1112,14 +1110,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
               value={detectingSymbol ? "" : symbol}
               disabled={busy || detectingSymbol}
               placeholder={detectingSymbol ? "Analyzing image…" : "Symbol (e.g. US30)"}
-              autoCapitalize="characters"
+              autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
               onChange={(e) => {
-                const next = String(e.target.value || "")
-                  .trim()
-                  .toUpperCase()
-                  .replace(/\s+/g, "");
+                const next = normalizeBrokerSymbol(
+                  String(e.target.value || "").replace(/\s+/g, "")
+                );
                 setSymbol(next);
                 setSymbolSource(next ? "manual" : "");
                 if (next) {
