@@ -1,4 +1,5 @@
 import BotAvatar from "./BotAvatar.jsx";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 
 function formatPrice(value) {
   if (value == null || value === "") return "—";
@@ -42,7 +43,7 @@ export default function TrapScannerResult({
   executingLabel = null,
 }) {
   const side = String(signal?.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
-  const displaySymbol = String(signal?.symbol || "").toUpperCase();
+  const displaySymbol = normalizeBrokerSymbol(signal?.symbol || "");
   const confidence = Math.max(
     0,
     Math.min(100, Math.round(Number(signal?.confidence) || 0))

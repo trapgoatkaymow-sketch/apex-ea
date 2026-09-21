@@ -16,6 +16,7 @@ import {
 } from "./floatOverlay.js";
 import { buildBotTradeComment } from "./metaApi.js";
 import { isNativeApp } from "./store.jsx";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 
 const FLOAT_SIZE = 58;
 const DRAG_THRESHOLD = 8;
@@ -48,7 +49,7 @@ function saveFloatPos(storageKey, pos) {
 export function buildShortOpenTradeScript({ botName, comment, symbol, lotSize, action }) {
   const name = String(botName || "Bot").trim() || "Bot";
   const tag = String(comment || buildBotTradeComment(name)).trim();
-  const sym = String(symbol || "XAUUSD").trim().toUpperCase() || "XAUUSD";
+  const sym = normalizeBrokerSymbol(symbol || "XAUUSD") || "XAUUSD";
   const lot = Number(lotSize) > 0 ? Number(lotSize) : 0.01;
   const mode = String(action || "BOTH").toUpperCase();
   return [

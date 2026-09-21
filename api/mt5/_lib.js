@@ -1,5 +1,5 @@
 import { applyCorsHeaders } from "../_cors.js";
-import { candidateSymbols, pickBestSymbolFromList } from "../_symbolResolve.js";
+import { candidateSymbols, normalizeBrokerSymbol, pickBestSymbolFromList } from "../_symbolResolve.js";
 import { normalizeProtectiveLevels } from "../_tradeLevels.js";
 
 /** Self-hosted MT5API RESTful — https://66.23.225.158/swagger/index.html */
@@ -954,7 +954,7 @@ export async function placeMarketTrade({
   count = 1,
 } = {}) {
   const id = String(accountId || "").trim();
-  const requested = String(symbol || "").trim().toUpperCase();
+  const requested = normalizeBrokerSymbol(symbol);
   const lots = Number(volume);
   const action = String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
   const times = Math.max(1, Math.min(20, Math.floor(Number(count) || 1)));
@@ -1057,10 +1057,11 @@ export async function placeMarketTrade({
     tradeSymbol = quoted.symbol;
   } else {
     // First spelling had no rate — walk broker-style aliases until GetQuote answers.
-    const tried = new Set([String(sym || "").toUpperCase()]);
+    const tried = new Set([String(sym || "").toLowerCase()]);
     for (const alt of candidateSymbols(requested)) {
-      if (tried.has(alt)) continue;
-      tried.add(alt);
+      const key = String(alt || "").toLowerCase();
+      if (tried.has(key)) continue;
+      tried.add(key);
       const hit = await fetchQuotePrice(alt);
       if (hit) {
         price = hit.price;

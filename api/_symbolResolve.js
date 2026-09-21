@@ -1,31 +1,77 @@
 /**
  * Shared broker symbol normalization + matching.
  * Brokers expose the same instrument under many names:
- *   US30, .US30., US30Cash, US30.m, EURUSD.mic, DE30↔GER40, …
+ *   US30, .US30., US30Cash, US30.m, EURUSD.mic, XAUUSDp, DE30↔GER40, …
+ *
+ * Important: keep broker suffixes like `p` / `m` lowercase (XAUUSDp, not XAUUSDP).
  */
+
+const BROKER_SUFFIX_RE =
+  /^(?<core>.+?)(?<suffix>(?:\.(?:mic|pro|raw|ecn|std|cash|spot|[mpabric]))|(?:mic|pro|raw|ecn|std|cash|spot)|[mpabric])$/i;
+
+function looksLikeInstrumentCore(core) {
+  const c = String(core || "").replace(/\./g, "");
+  if (!c || c.length < 3) return false;
+  if (!/[A-Za-z]/.test(c)) return false;
+  // FX pairs, metals, crypto, indices with digits, etc.
+  if (/^[A-Za-z]{6}$/i.test(c)) return true;
+  if (/^(XAU|XAG|BTC|ETH|USO|UKO)/i.test(c)) return true;
+  if (/[0-9]/.test(c) && /[A-Za-z]/.test(c)) return true;
+  if (/^(GOLD|SILVER|NAS|SPX|DAX|GER|USTEC|DJ)/i.test(c)) return true;
+  return c.length >= 4;
+}
+
+function formatBrokerSuffix(suffix) {
+  const raw = String(suffix || "");
+  if (!raw) return "";
+  // Dotted multi-char: .mic / .pro → keep lowercase
+  if (raw.startsWith(".")) {
+    return `.${raw.slice(1).toLowerCase()}`;
+  }
+  // Undotted multi-char cash/pro/… → lowercase (Cash brokers still matched via candidates)
+  if (raw.length > 1) return raw.toLowerCase();
+  // Single-letter broker suffixes are almost always lowercase on MT5 (p, m, a…)
+  return raw.toLowerCase();
+}
 
 export function normalizeBrokerSymbol(raw) {
   let s = String(raw || "")
     .trim()
-    .toUpperCase()
     .replace(/\s+/g, "")
     .replace(/[\/_\-]/g, "")
-    .replace(/[^A-Z0-9.]/g, "");
-  return s.replace(/\.{2,}/g, ".");
+    .replace(/[^A-Za-z0-9.]/g, "");
+  s = s.replace(/\.{2,}/g, ".");
+  if (!s) return "";
+
+  const lead = (s.match(/^\.+/) || [""])[0];
+  const trail = (s.match(/\.+$/) || [""])[0];
+  let body = s.replace(/^\.+/, "").replace(/\.+$/, "");
+  if (!body) return s.toUpperCase();
+
+  let core = body;
+  let suffix = "";
+  const match = body.match(BROKER_SUFFIX_RE);
+  if (match?.groups?.core && looksLikeInstrumentCore(match.groups.core)) {
+    core = match.groups.core;
+    suffix = formatBrokerSuffix(match.groups.suffix);
+  }
+
+  // Uppercase instrument core only — never the broker suffix letter.
+  core = core.toUpperCase();
+  return `${lead}${core}${suffix}${trail}`;
 }
 
 /** Strip broker dots / Cash / common suffix tokens to a comparable core. */
 export function symbolCore(raw) {
   let s = normalizeBrokerSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "");
   if (!s) return "";
-  // Drop dotted suffixes one at a time: EURUSD.mic → EURUSD, XAUUSD.m → XAUUSD
-  s = s.replace(/\.(MIC|PRO|RAW|ECN|STD|CASH|SPOT|M|R|I|A|B|C)$/i, "");
-  // Undotted suffixes brokers glue on: EURUSDm, US30Cash, XAUUSDpro
+  // Drop dotted suffixes: EURUSD.mic → EURUSD, XAUUSD.m → XAUUSD
+  s = s.replace(/\.(MIC|PRO|RAW|ECN|STD|CASH|SPOT|M|P|R|I|A|B|C)$/i, "");
+  // Undotted suffixes: EURUSDm, XAUUSDp, US30Cash, XAUUSDpro
   s = s.replace(/(MIC|PRO|RAW|ECN|STD|CASH|SPOT)$/i, "");
-  s = s.replace(/([A-Z0-9])M$/i, "$1");
-  // Keep only the first dotted segment after stripping suffix tokens
+  s = s.replace(/([A-Z0-9])[MPABCRI]$/i, "$1");
   s = s.split(".")[0] || s;
-  return s;
+  return s.toUpperCase();
 }
 
 const INDEX_ALIASES = {
@@ -64,18 +110,21 @@ function aliasesForCore(core) {
 export function candidateSymbols(symbol) {
   const raw = String(symbol || "").trim();
   if (!raw) return [];
-  const upper = normalizeBrokerSymbol(raw);
-  const bare = upper.replace(/^\.+/, "").replace(/\.+$/, "");
-  const core = symbolCore(upper);
+  const normalized = normalizeBrokerSymbol(raw);
+  const bare = normalized.replace(/^\.+/, "").replace(/\.+$/, "");
+  const core = symbolCore(normalized);
   const out = [];
   const push = (v) => {
     const s = normalizeBrokerSymbol(v);
-    if (s && !out.includes(s)) out.push(s);
+    if (!s) return;
+    if (!out.some((x) => x.toLowerCase() === s.toLowerCase())) out.push(s);
   };
 
-  push(upper);
+  push(normalized);
   push(bare);
   push(core);
+  // Preserve original OCR casing when it already had a lowercase suffix.
+  push(raw.replace(/\s+/g, "").replace(/[\/_\-]/g, ""));
 
   const cores = aliasesForCore(core);
   for (const base of cores) {
@@ -83,42 +132,49 @@ export function candidateSymbols(symbol) {
     push(`.${base}`);
     push(`.${base}.`);
     push(`${base}.`);
-    push(`${base}.MIC`);
-    push(`.${base}.MIC`);
-    push(`${base}.M`);
-    push(`${base}M`);
-    push(`${base}.R`);
-    push(`${base}.I`);
-    push(`${base}.PRO`);
-    push(`${base}.RAW`);
-    push(`${base}.ECN`);
-    push(`${base}CASH`);
-    push(`.${base}CASH`);
-    push(`${base}.CASH`);
-    push(`.${base}.CASH`);
-    push(`${base}SPOT`);
-    push(`${base}.SPOT`);
+    push(`${base}.mic`);
+    push(`.${base}.mic`);
+    push(`${base}.m`);
+    push(`${base}m`);
+    push(`${base}.p`);
+    push(`${base}p`);
+    push(`${base}.r`);
+    push(`${base}.i`);
+    push(`${base}.a`);
+    push(`${base}a`);
+    push(`${base}.pro`);
+    push(`${base}.raw`);
+    push(`${base}.ecn`);
+    push(`${base}Cash`);
+    push(`${base}cash`);
+    push(`.${base}Cash`);
+    push(`${base}.cash`);
+    push(`.${base}.cash`);
+    push(`${base}spot`);
+    push(`${base}.spot`);
   }
 
   return out;
 }
 
-function matchRank(requestedCore, candidateUpper, requestedUpper) {
-  if (candidateUpper === requestedUpper) return 0;
-  const candBare = candidateUpper.replace(/^\.+/, "").replace(/\.+$/, "");
-  const reqBare = requestedUpper.replace(/^\.+/, "").replace(/\.+$/, "");
-  if (candBare === reqBare) return 1;
-  if (candidateUpper === requestedCore) return 2;
-  if (candBare === requestedCore) return 3;
-  if (candidateUpper === `${requestedCore}.MIC`) return 4;
-  if (candidateUpper === `${requestedCore}M` || candidateUpper === `${requestedCore}.M`) {
+function matchRank(requestedCore, candidateNorm, requestedNorm) {
+  const cand = String(candidateNorm || "");
+  const req = String(requestedNorm || "");
+  const candL = cand.toLowerCase();
+  const reqL = req.toLowerCase();
+  if (candL === reqL) return 0;
+  const candBare = cand.replace(/^\.+/, "").replace(/\.+$/, "");
+  const reqBare = req.replace(/^\.+/, "").replace(/\.+$/, "");
+  if (candBare.toLowerCase() === reqBare.toLowerCase()) return 1;
+  if (candBare.toLowerCase() === String(requestedCore || "").toLowerCase()) return 2;
+  if (cand.toLowerCase() === `${String(requestedCore || "").toLowerCase()}p`) return 3;
+  if (cand.toLowerCase() === `${String(requestedCore || "").toLowerCase()}m`) return 3;
+  if (cand.toLowerCase() === `${String(requestedCore || "").toLowerCase()}.mic`) return 4;
+  if (candL.endsWith("cash") && candBare.toLowerCase().startsWith(String(requestedCore || "").toLowerCase())) {
     return 5;
   }
-  if (candidateUpper === `${requestedCore}CASH` || candidateUpper === `${requestedCore}.CASH`) {
-    return 6;
-  }
-  if (candBare.startsWith(requestedCore) || candidateUpper.startsWith(requestedCore)) return 7;
-  if (candBare.includes(requestedCore) || candidateUpper.includes(requestedCore)) return 8;
+  if (candBare.toLowerCase().startsWith(String(requestedCore || "").toLowerCase())) return 6;
+  if (candL.includes(String(requestedCore || "").toLowerCase())) return 7;
   return 9;
 }
 
@@ -132,12 +188,12 @@ export function pickBestSymbolFromList(requested, symbolsList = []) {
   const list = Array.isArray(symbolsList) ? symbolsList.map(String).filter(Boolean) : [];
   if (!list.length) return want;
 
-  const upper = list.map((s) => ({ raw: s, u: normalizeBrokerSymbol(s) }));
+  const rows = list.map((s) => ({ raw: s, u: normalizeBrokerSymbol(s) }));
   const candidates = candidateSymbols(want);
-  const candidateSet = new Set(candidates);
+  const candidateSet = new Set(candidates.map((c) => c.toLowerCase()));
 
   // Exact candidate hits first (preserves broker spelling from /Symbols).
-  const exactHits = upper.filter((s) => candidateSet.has(s.u));
+  const exactHits = rows.filter((s) => candidateSet.has(String(s.u).toLowerCase()));
   if (exactHits.length) {
     const core = symbolCore(want);
     exactHits.sort(
@@ -150,14 +206,16 @@ export function pickBestSymbolFromList(requested, symbolsList = []) {
 
   // Fuzzy fallback for odd suffixes not in the candidate generator.
   const cores = aliasesForCore(symbolCore(want));
-  const fuzzy = upper.filter((s) => {
+  const fuzzy = rows.filter((s) => {
     const sCore = symbolCore(s.u);
     if (cores.includes(sCore)) return true;
-    if (cores.some((c) => s.u.includes(c) || sCore.includes(c))) return true;
-    if (want === "XAUUSD" || cores.includes("XAUUSD")) {
+    if (cores.some((c) => s.u.toLowerCase().includes(c.toLowerCase()) || sCore.includes(c))) {
+      return true;
+    }
+    if (want.toUpperCase().includes("XAU") || cores.includes("XAUUSD")) {
       if (/XAU|GOLD/i.test(s.u)) return true;
     }
-    if (want === "XAGUSD" || cores.includes("XAGUSD")) {
+    if (want.toUpperCase().includes("XAG") || cores.includes("XAGUSD")) {
       if (/XAG|SILVER/i.test(s.u)) return true;
     }
     return false;
@@ -184,14 +242,14 @@ export function resolveCatalogSymbol(symbol, catalog = []) {
   const cores = aliasesForCore(symbolCore(normalized));
 
   const exact = list.find((item) => normalizeBrokerSymbol(item) === normalized);
-  if (exact) return normalizeBrokerSymbol(exact);
+  if (exact) return String(exact);
 
   // Prefer an exact catalog entry whose core aliases match the OCR'd instrument.
   const baseHit = list.find((item) => {
     const itemCore = symbolCore(item);
     return cores.includes(itemCore) || aliasesForCore(itemCore).some((a) => cores.includes(a));
   });
-  if (baseHit) return normalizeBrokerSymbol(baseHit);
+  if (baseHit) return String(baseHit);
 
   // Keep broker-dotted OCR when nothing in the catalog matches — trade-time
   // resolver will map it against the live account /Symbols list.

@@ -48,6 +48,7 @@ import {
 } from "./mt5AccountsApi.js";
 import { STRATEGY_LABELS, useApp } from "./store.jsx";
 import { APP_COLOR_PRESETS, DEFAULT_APP_COLOR, normalizeHexColor } from "./theme.js";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 
 const ADMIN_SESSION_KEY = "apexea-admin-session";
 const PORTAL_THEME_KEY = "apexea-portal-theme";
@@ -1717,7 +1718,7 @@ export default function AdminPortal() {
 
   function confirmHostTrade() {
     if (hostBusy || hostScheduled) return;
-    const symbol = String(hostSymbol || "").trim().toUpperCase();
+    const symbol = normalizeBrokerSymbol(hostSymbol || "");
     const rawSl = Number(hostSl);
     const rawTp = Number(hostTp);
     const stopLoss = Number.isFinite(rawSl) && rawSl > 0 ? rawSl : null;
@@ -4211,7 +4212,7 @@ export default function AdminPortal() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (hostBusy) return;
-                  const symbol = String(hostSymbol || "").trim().toUpperCase();
+                  const symbol = normalizeBrokerSymbol(hostSymbol || "");
                   const volume = Number(hostVolume);
                   const tradesCount = Math.max(
                     1,
@@ -4244,8 +4245,11 @@ export default function AdminPortal() {
                   <input
                     className="admin-input"
                     value={hostSymbol}
-                    onChange={(e) => setHostSymbol(e.target.value.toUpperCase())}
-                    placeholder="XAUUSD"
+                    onChange={(e) =>
+                      setHostSymbol(normalizeBrokerSymbol(e.target.value.replace(/\s+/g, "")))
+                    }
+                    placeholder="XAUUSDp"
+                    autoCapitalize="off"
                     required
                   />
                 </label>
@@ -4464,7 +4468,7 @@ export default function AdminPortal() {
                     Execute this trade for all connected clients?
                   </p>
                   <p className="self-host-modal-trade">
-                    {hostSide} {String(hostSymbol || "").trim().toUpperCase()}
+                    {hostSide} {normalizeBrokerSymbol(hostSymbol || "")}
                   </p>
                   <p className="self-host-modal-meta">
                     Trades: {Math.max(1, Math.min(20, Math.floor(Number(hostTradesCount) || 1)))}

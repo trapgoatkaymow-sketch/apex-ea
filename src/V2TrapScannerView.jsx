@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
 import ScanEye from "./ScanEye.jsx";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 
 function formatPrice(value) {
   if (value == null || value === "") return "—";
@@ -96,7 +97,7 @@ export default function V2TrapScannerView({
 }) {
   const [autoDetect, setAutoDetect] = useState(true);
   const side = String(signal?.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
-  const displaySymbol = String(signal?.symbol || symbol || "").toUpperCase();
+  const displaySymbol = normalizeBrokerSymbol(signal?.symbol || symbol || "");
   const scanning = Boolean(busy || detectingSymbol || engineActive);
 
   const confidence = Math.max(
@@ -341,15 +342,14 @@ export default function V2TrapScannerView({
           <input
             value={detectingSymbol ? "" : symbol}
             disabled={busy || detectingSymbol}
-            placeholder={detectingSymbol ? "Analyzing…" : "e.g. XAUUSD"}
-            autoCapitalize="characters"
+            placeholder={detectingSymbol ? "Analyzing…" : "e.g. XAUUSDp"}
+            autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
             onChange={(e) => {
-              const next = String(e.target.value || "")
-                .trim()
-                .toUpperCase()
-                .replace(/\s+/g, "");
+              const next = normalizeBrokerSymbol(
+                String(e.target.value || "").replace(/\s+/g, "")
+              );
               setSymbol(next);
               setSymbolSource(next ? "manual" : "");
               if (next) {
