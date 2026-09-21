@@ -4071,6 +4071,82 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   margin-top: 16px;
 }
 
+.self-host-delay {
+  margin-top: 14px;
+}
+
+.self-host-delay-label {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.self-host-delay-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.self-host-delay-btn {
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.self-host-delay-btn.is-active {
+  border-color: transparent;
+  background: linear-gradient(90deg, #22d3ee, #a855f7);
+  color: #0b1020;
+}
+
+.self-host-scheduled {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  display: grid;
+  gap: 8px;
+}
+
+.self-host-scheduled p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: #111827;
+}
+
+.admin-portal[data-theme="dark"] .self-host-delay-label {
+  color: var(--ap-muted);
+}
+
+.admin-portal[data-theme="dark"] .self-host-delay-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--ap-text);
+}
+
+.admin-portal[data-theme="dark"] .self-host-delay-btn.is-active {
+  border-color: transparent;
+  color: #0b1020;
+}
+
+.admin-portal[data-theme="dark"] .self-host-scheduled {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.admin-portal[data-theme="dark"] .self-host-scheduled p {
+  color: var(--ap-text);
+}
+
 .ea-delete-modal-backdrop {
   position: fixed;
   inset: 0;
