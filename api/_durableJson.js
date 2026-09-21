@@ -1175,6 +1175,9 @@ export async function durableWrite(opts = {}) {
       // data/licenses.json when Firebase/Blob is briefly unavailable — if GitHub
       // is weeks behind, clients get "Invalid license key" for freshly generated
       // keys. Mentors stay Firebase-primary (merged on read).
+      //
+      // Always use git push for licenses — Contents API rejects ~1MB base64
+      // payloads and our store is already near that size.
       if (licensesViaGit && githubPath) {
         let licenseBody = body;
         try {
@@ -1193,57 +1196,26 @@ export async function durableWrite(opts = {}) {
         } catch {
           // push intended body
         }
-        let sha = githubSha || null;
-        let mirrored = false;
-        for (let attempt = 0; attempt < 4 && !mirrored; attempt += 1) {
-          if (!sha) {
-            try {
-              const latest = await githubGet({
-                repo: githubRepo,
-                branch: githubBranch,
-                filePath: githubPath,
-              });
-              sha = latest?.sha || null;
-              if (latest?.raw) {
-                licenseBody = mergeLicensesDocuments(
-                  latest.raw,
-                  licenseBody,
-                  message || "license firebase mirror"
-                );
-              }
-            } catch {
-              // continue
-            }
-          }
-          const ghPut = await githubPut({
-            repo: githubRepo,
-            branch: githubBranch,
-            filePath: githubPath,
-            raw: licenseBody,
-            sha,
-            message: message || "chore: mirror licenses from firebase",
-          });
-          if (ghPut.ok) {
-            mirrored = true;
-            if (blobPath) await blobPut(blobPath, licenseBody);
-            break;
-          }
-          if (ghPut.status === 409 || ghPut.status === 422 || !sha) {
-            sha = null;
-            continue;
-          }
-          break;
+        const viaGit = await githubPutViaGit({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+          raw: licenseBody,
+          message: message || "chore: mirror licenses from firebase",
+        });
+        if (viaGit.ok) {
+          if (blobPath) await blobPut(blobPath, licenseBody);
+          return {
+            ok: true,
+            durable: true,
+            source: "firebase+github-git",
+            sha: viaGit.sha || null,
+          };
         }
-        if (!mirrored) {
-          const viaGit = await githubPutViaGit({
-            repo: githubRepo,
-            branch: githubBranch,
-            filePath: githubPath,
-            raw: licenseBody,
-            message: message || "chore: mirror licenses from firebase",
-          });
-          if (viaGit.ok && blobPath) await blobPut(blobPath, licenseBody);
-        }
+        console.warn(
+          "license github mirror failed after firebase write",
+          viaGit.reason || viaGit.status || "unknown"
+        );
       }
 
       return { ok: true, durable: true, source: "firebase" };
@@ -1257,6 +1229,44 @@ export async function durableWrite(opts = {}) {
   }
 
   if (githubPath) {
+    // Licenses store is too large for Contents API (base64 > 1MB). Go straight
+    // to git push so Generate/mirror actually updates data/licenses.json.
+    if (licensesViaGit) {
+      const viaGit = await githubPutViaGit({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+        raw: body,
+        message,
+      });
+      if (viaGit.ok) {
+        if (blobPath) await blobPut(blobPath, body);
+        return {
+          ok: true,
+          durable: true,
+          source: "github-git",
+          sha: viaGit.sha,
+        };
+      }
+      if (blobPath) {
+        const blob = await blobPut(blobPath, body);
+        if (blob.ok) {
+          return {
+            ok: true,
+            durable: true,
+            source: "blob-fallback",
+            reason: viaGit.reason || null,
+          };
+        }
+      }
+      return {
+        ok: false,
+        durable: false,
+        reason: viaGit.reason || "license github-git write failed",
+        conflict: Boolean(viaGit.conflict),
+      };
+    }
+
     // Resolve / refresh Contents sha so updates work when the caller only
     // read via raw CDN (sha:null) — common under Contents API rate limits.
     let sha = githubSha || null;
@@ -1280,11 +1290,6 @@ export async function durableWrite(opts = {}) {
         message,
       });
       if (put.ok) {
-        // Mirror licenses to Blob after GitHub so cold reads stay fast, but
-        // GitHub remains the source of truth.
-        if (licensesViaGit && blobPath) {
-          await blobPut(blobPath, writeBody);
-        }
         return { ok: true, durable: true, source: "github", sha: put.sha };
       }
       // Conflict / missing sha — refresh and retry.
@@ -1314,29 +1319,12 @@ export async function durableWrite(opts = {}) {
       message,
     });
     if (viaGit.ok) {
-      if (licensesViaGit && blobPath) {
-        await blobPut(blobPath, mentorsViaGit ? mentorsBody : body);
-      }
       return {
         ok: true,
         durable: true,
         source: "github-git",
         sha: viaGit.sha,
       };
-    }
-
-    // Last resort for Generate: Blob is still shared across serverless
-    // instances. Prefer this over blocking mentors when GitHub is down.
-    if (licensesViaGit && blobPath) {
-      const blob = await blobPut(blobPath, body);
-      if (blob.ok) {
-        return {
-          ok: true,
-          durable: true,
-          source: "blob-fallback",
-          reason: viaGit.reason || put.reason || null,
-        };
-      }
     }
 
     if (put.status === 409 || put.status === 422 || viaGit.conflict) {

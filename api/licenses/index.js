@@ -19,7 +19,7 @@ import {
 } from "./_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 function normalizeEmail(value) {
   return String(value || "")
