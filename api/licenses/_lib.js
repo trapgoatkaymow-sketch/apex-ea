@@ -2001,7 +2001,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   const claimEmail = normalizeEmail(email);
 
   // Peek current license + signup before mutate so commission rules use paid/first-access.
-  const currentList = await listLicenses();
+  const currentList = await listLicenses({ preferFresh: true });
   const current =
     currentList.find((row) => variants.includes(row.key)) || null;
   if (!current) {
