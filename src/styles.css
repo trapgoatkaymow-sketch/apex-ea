@@ -12037,21 +12037,29 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   inset: 0;
   z-index: 12000;
   display: grid;
-  place-items: end center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px
+    max(24px, calc(72px + env(safe-area-inset-bottom))) 16px;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-sizing: border-box;
 }
 
 .bot-license-sheet {
   width: min(100%, 420px);
-  margin-bottom: max(12px, env(safe-area-inset-bottom));
-  padding: 18px 16px 16px;
+  max-height: min(78vh, 520px);
+  margin: 0;
+  padding: 18px 16px 20px;
   border-radius: 18px;
   background: #14141a;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
   color: #f5f5f7;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .bot-license-sheet-head {
@@ -12065,9 +12073,12 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 .bot-license-sheet-head strong {
   font-size: 0.95rem;
   letter-spacing: 0.02em;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .bot-license-sheet-close {
+  flex-shrink: 0;
   width: 32px;
   height: 32px;
   border: 0;
@@ -12082,7 +12093,11 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 .bot-license-sheet-grid {
   margin: 0;
   display: grid;
-  gap: 12px;
+  gap: 14px;
+}
+
+.bot-license-sheet-grid > div {
+  min-width: 0;
 }
 
 .bot-license-sheet-grid dt {
@@ -12100,7 +12115,9 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   gap: 8px;
   flex-wrap: wrap;
   font-size: 0.92rem;
+  line-height: 1.35;
   color: #fff;
+  overflow-wrap: anywhere;
 }
 
 .bot-license-sheet-grid code {
@@ -12112,6 +12129,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 }
 
 .bot-license-copy {
+  flex-shrink: 0;
   border: 0;
   border-radius: 999px;
   padding: 5px 10px;
