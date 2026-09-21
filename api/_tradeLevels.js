@@ -152,9 +152,9 @@ export function buildSafeMultiTpLevels({
     sl = dir === "BUY" ? e - risk : e + risk;
   }
 
-  const tp1 = dir === "BUY" ? e + risk * 2 : e - risk * 2;
-  const tp2 = dir === "BUY" ? e + risk * 3 : e - risk * 3;
-  const tp3 = dir === "BUY" ? e + risk * 4 : e - risk * 4;
+  const tp1 = dir === "BUY" ? e + risk * 1 : e - risk * 1;
+  const tp2 = dir === "BUY" ? e + risk * 2 : e - risk * 2;
+  const tp3 = dir === "BUY" ? e + risk * 3 : e - risk * 3;
 
   // Re-run through protective normalizer so rounding cannot collapse levels.
   const safeSl = normalizeProtectiveLevels({
@@ -175,16 +175,16 @@ export function buildSafeMultiTpLevels({
     entry: finalEntry,
     stopLoss: finalSl,
     takeProfit1: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 2 : finalEntry - safeRisk * 2
+      dir === "BUY" ? finalEntry + safeRisk * 1 : finalEntry - safeRisk * 1
     ),
     takeProfit2: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 3 : finalEntry - safeRisk * 3
+      dir === "BUY" ? finalEntry + safeRisk * 2 : finalEntry - safeRisk * 2
     ),
     takeProfit3: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 4 : finalEntry - safeRisk * 4
+      dir === "BUY" ? finalEntry + safeRisk * 3 : finalEntry - safeRisk * 3
     ),
     takeProfit: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 4 : finalEntry - safeRisk * 4
+      dir === "BUY" ? finalEntry + safeRisk * 3 : finalEntry - safeRisk * 3
     ),
     minDist,
     widened: safeSl.widened || risk < minDist + 1e-12,
