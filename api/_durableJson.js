@@ -272,7 +272,8 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
       .toLowerCase();
   const stamp = (row) =>
     Number(
-      row?.withdrawalRequestedAt ||
+      row?.passwordUpdatedAt ||
+        row?.withdrawalRequestedAt ||
         row?.usernameUpdatedAt ||
         row?.statusUpdatedAt ||
         row?.appColorUpdatedAt ||
@@ -320,14 +321,70 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
       // do not flip declined→approved when ranks are compared carelessly.
       nextStatus = row.status || prev.status || nextStatus;
     }
+    const pickCredentials = () => {
+      const aHash = String(primary.passwordHash || "");
+      const bHash = String(secondary.passwordHash || "");
+      const aSalt = String(primary.salt || "");
+      const bSalt = String(secondary.salt || "");
+      const aAt = Number(primary.passwordUpdatedAt) || 0;
+      const bAt = Number(secondary.passwordUpdatedAt) || 0;
+      // Prefer a real hash; when both differ, newest passwordUpdatedAt wins.
+      // Untamped ties keep secondary (earlier/Firebase) so a stale GitHub
+      // TempPass12 bootstrap cannot wipe a custom portal password.
+      if (aHash && aSalt && bHash && bSalt) {
+        if (aHash === bHash && aSalt === bSalt) {
+          return {
+            passwordHash: aHash,
+            salt: aSalt,
+            passwordUpdatedAt: Math.max(aAt, bAt) || null,
+          };
+        }
+        if (aAt || bAt) {
+          if (aAt >= bAt) {
+            return {
+              passwordHash: aHash,
+              salt: aSalt,
+              passwordUpdatedAt: aAt || null,
+            };
+          }
+          return {
+            passwordHash: bHash,
+            salt: bSalt,
+            passwordUpdatedAt: bAt || null,
+          };
+        }
+        return {
+          passwordHash: bHash,
+          salt: bSalt,
+          passwordUpdatedAt: null,
+        };
+      }
+      if (aHash && aSalt) {
+        return {
+          passwordHash: aHash,
+          salt: aSalt,
+          passwordUpdatedAt: aAt || null,
+        };
+      }
+      if (bHash && bSalt) {
+        return {
+          passwordHash: bHash,
+          salt: bSalt,
+          passwordUpdatedAt: bAt || null,
+        };
+      }
+      return { passwordHash: "", salt: "", passwordUpdatedAt: null };
+    };
+    const creds = pickCredentials();
     map.set(email, {
       ...secondary,
       ...primary,
       email,
       status: nextStatus || "pending",
       statusUpdatedAt: nextStatusAt,
-      passwordHash: primary.passwordHash || secondary.passwordHash || "",
-      salt: primary.salt || secondary.salt || "",
+      passwordHash: creds.passwordHash,
+      salt: creds.salt,
+      passwordUpdatedAt: creds.passwordUpdatedAt,
       username: (() => {
         const a = String(primary.username || "").trim();
         const b = String(secondary.username || "").trim();

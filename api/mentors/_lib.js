@@ -313,6 +313,7 @@ function decodeMentorsJson(raw, sha = null) {
             statusUpdatedAt: Number(m.statusUpdatedAt) || null,
             passwordHash: String(m.passwordHash || ""),
             salt: String(m.salt || ""),
+            passwordUpdatedAt: Number(m.passwordUpdatedAt) || null,
             createdAt: Number(m.createdAt) || Date.now(),
             banking: normalizeBanking(m.banking),
             licenseKeysAllowed: normalizeLicenseKeysAllowed(m.licenseKeysAllowed, {
@@ -430,6 +431,7 @@ function writeLocalStore(mentors) {
                 statusUpdatedAt: Number(m.statusUpdatedAt) || null,
                 passwordHash: m.passwordHash,
                 salt: m.salt,
+                passwordUpdatedAt: Number(m.passwordUpdatedAt) || null,
                 createdAt: Number(m.createdAt) || Date.now(),
                 banking: normalizeBanking(m.banking),
                 licenseKeysAllowed: normalizeLicenseKeysAllowed(
@@ -537,12 +539,30 @@ async function readStore() {
             licenseKeysUpdatedAt: chosenAt || Date.now(),
           };
         }
-        // Never let a local row without credentials blank out durable hashes.
+        // Credentials: fill blanks from memory, or keep newer in-memory hash
+        // when a stale remote bootstrap/hash would otherwise win.
+        const localPwAt = Number(local.passwordUpdatedAt) || 0;
+        const remotePwAt = Number(m.passwordUpdatedAt) || 0;
         if (!next.passwordHash && local.passwordHash && local.salt) {
           next = {
             ...next,
             passwordHash: local.passwordHash,
             salt: local.salt,
+            passwordUpdatedAt: localPwAt || null,
+          };
+        } else if (
+          local.passwordHash &&
+          local.salt &&
+          next.passwordHash &&
+          next.salt &&
+          (local.passwordHash !== next.passwordHash || local.salt !== next.salt) &&
+          localPwAt > remotePwAt
+        ) {
+          next = {
+            ...next,
+            passwordHash: local.passwordHash,
+            salt: local.salt,
+            passwordUpdatedAt: localPwAt,
           };
         }
         // Keep newer in-memory withdrawal request stamps across instances
@@ -667,6 +687,7 @@ async function writeStore(mentors, sha, message) {
           statusUpdatedAt: Number(m.statusUpdatedAt) || null,
           passwordHash: m.passwordHash,
           salt: m.salt,
+          passwordUpdatedAt: Number(m.passwordUpdatedAt) || null,
           createdAt: Number(m.createdAt) || Date.now(),
           banking: normalizeBanking(m.banking),
           licenseKeysAllowed: normalizeLicenseKeysAllowed(
@@ -844,6 +865,7 @@ export async function registerMentor({ username, email, contact, password }) {
       status: "pending",
       passwordHash: hashPassword(pass, salt),
       salt,
+      passwordUpdatedAt: Date.now(),
       createdAt: Date.now(),
       licenseKeysAllowed: DEFAULT_MENTOR_LICENSE_KEYS,
     };
@@ -1119,140 +1141,128 @@ export async function loginMentor({ email, password }) {
     return hashPassword(pass, mentor.salt) === mentor.passwordHash;
   }
 
-  // Durable bootstrap passwords (repair wiped hashes).
-  const bootstrapPass = DURABLE_MENTOR_PASSWORDS[key];
-  if (bootstrapPass && pass === bootstrapPass) {
-    const storeEarly = await readStore().catch(() => readLocalStore());
-    const mentorsEarly = mergeCredentialRows(
-      ensureSuperAdminRecord(storeEarly.mentors || []),
-      credentialBackupPool()
-    );
-    const existing = findMentor(mentorsEarly, key);
-    if (
-      existing?.passwordHash &&
-      existing?.salt &&
-      hashPassword(pass, existing.salt) === existing.passwordHash
-    ) {
-      if (existing.status !== "approved" && existing.role !== "superadmin") {
-        // Auto-approve durable mentor accounts that use the bootstrap password.
-        try {
-          await mutateStore((mentors) => {
-            const list = ensureSuperAdminRecord(mentors);
-            const idx = findMentorIndex(list, key);
-            if (idx >= 0) list[idx] = { ...list[idx], status: "approved" };
-            return list;
-          }, `chore: approve durable mentor ${key}`);
-        } catch {
-          // ignore write failure
-        }
-      }
-      return publicMentor({ ...existing, status: "approved" });
+  async function finishApprovedLogin(mentor) {
+    const status = String(mentor.status || "").toLowerCase();
+    if (status === "deactivated" || (status === "declined" && mentor.deactivatedAt)) {
+      const err = new Error(
+        mentor.deactivatedReason ||
+          "Portal deactivated — no key used for a new app access in over a week. Ask super admin to reactivate."
+      );
+      err.status = 403;
+      throw err;
+    }
+    if (status !== "approved" && mentor.role !== "superadmin") {
+      const err = new Error(
+        status === "declined"
+          ? mentor.deactivatedReason ||
+              "Account declined — ask super admin to reactivate"
+          : "Account pending approval by super admin"
+      );
+      err.status = 403;
+      throw err;
     }
 
-    // Ensure row exists with this password even if the store was wiped.
     try {
-      await mutateStore((mentors) => {
-        const list = ensureSuperAdminRecord(mentors);
-        const idx = findMentorIndex(list, key);
-        const salt = createSalt();
-        const passwordHash = hashPassword(pass, salt);
-        if (idx >= 0) {
-          list[idx] = { ...list[idx], salt, passwordHash, status: "approved" };
-        } else {
-          list.unshift({
-            id: existing?.id || "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-            username: existing?.username || key.split("@")[0] || "Mentor",
-            email: key,
-            contact: existing?.contact || "",
-            role: "mentor",
-            status: "approved",
-            passwordHash,
-            salt,
-            createdAt: existing?.createdAt || Date.now(),
-            licenseKeysAllowed:
-              existing?.licenseKeysAllowed ?? DEFAULT_MENTOR_LICENSE_KEYS,
-          });
-        }
-        return list;
-      }, `chore: repair durable password for ${key}`);
-    } catch {
-      // Still allow login from bootstrap even if durable write is rate-limited.
+      const activity = await getMentorActivityStatus(key, { enforce: true });
+      if (activity?.deactivated) {
+        const err = new Error(
+          activity.message ||
+            "Portal deactivated — no key used for a new app access in over a week."
+        );
+        err.status = 403;
+        throw err;
+      }
+    } catch (error) {
+      if (error?.status === 403) throw error;
     }
-    const store = await readStore().catch(() => readLocalStore());
-    const mentors = mergeCredentialRows(
-      ensureSuperAdminRecord(store.mentors || []),
-      credentialBackupPool()
-    );
-    const repaired = findMentor(mentors, key);
-    if (repaired) return publicMentor({ ...repaired, status: "approved" });
-    return {
-      id: existing?.id || "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      username: existing?.username || key.split("@")[0] || "Mentor",
-      email: key,
-      contact: existing?.contact || "",
-      role: "mentor",
-      status: "approved",
-      createdAt: existing?.createdAt || Date.now(),
-    };
+
+    return publicMentor(mentor);
   }
 
+  // 1) Verify the stored hash first — custom passwords always win.
   let mentors = await loadMentorsFresh();
   let mentor = findMentor(mentors, key);
-  if (!mentor) {
+  if (mentor && verifyHash(mentor)) {
+    return finishApprovedLogin(mentor);
+  }
+  if (mentor && mentor.passwordHash && mentor.salt && !verifyHash(mentor)) {
+    // Stale in-memory / cold-instance hash — re-read once before failing.
+    mentors = await loadMentorsFresh({ bustMemory: true });
+    mentor = findMentor(mentors, key);
+    if (mentor && verifyHash(mentor)) {
+      return finishApprovedLogin(mentor);
+    }
+    // Stored hash exists and does not match — never wipe it with bootstrap.
     const err = new Error("Invalid email or password");
     err.status = 401;
     throw err;
   }
 
-  if (!verifyHash(mentor)) {
-    // Stale in-memory / cold-instance hash — re-read once before failing.
-    mentors = await loadMentorsFresh({ bustMemory: true });
-    mentor = findMentor(mentors, key);
-    if (!mentor || !verifyHash(mentor)) {
-      const err = new Error("Invalid email or password");
-      err.status = 401;
-      throw err;
-    }
-  }
-
-  const status = String(mentor.status || "").toLowerCase();
-  if (status === "deactivated" || (status === "declined" && mentor.deactivatedAt)) {
-    const err = new Error(
-      mentor.deactivatedReason ||
-        "Portal deactivated — no key used for a new app access in over a week. Ask super admin to reactivate."
-    );
-    err.status = 403;
-    throw err;
-  }
-  if (status !== "approved" && mentor.role !== "superadmin") {
-    // Enforce weekly activity for approved mentors only; pending stays pending.
-    const err = new Error(
-      status === "declined"
-        ? mentor.deactivatedReason ||
-            "Account declined — ask super admin to reactivate"
-        : "Account pending approval by super admin"
-    );
-    err.status = 403;
+  // 2) Missing row or wiped credentials — bootstrap may repair ONLY then.
+  const bootstrapPass = DURABLE_MENTOR_PASSWORDS[key];
+  if (!bootstrapPass || pass !== bootstrapPass) {
+    const err = new Error("Invalid email or password");
+    err.status = 401;
     throw err;
   }
 
-  // Auto-deactivate inactive mentors at sign-in.
+  const existing = mentor || findMentor(mentors, key);
   try {
-    const activity = await getMentorActivityStatus(key, { enforce: true });
-    if (activity?.deactivated) {
-      const err = new Error(
-        activity.message ||
-          "Portal deactivated — no key used for a new app access in over a week."
-      );
-      err.status = 403;
-      throw err;
-    }
-  } catch (error) {
-    if (error?.status === 403) throw error;
-    // Activity check is best-effort — do not block valid logins on license-store blips.
+    await mutateStore((listIn) => {
+      const list = ensureSuperAdminRecord(listIn);
+      const idx = findMentorIndex(list, key);
+      // Only fill empty credentials — never overwrite a real custom hash.
+      if (idx >= 0 && list[idx]?.passwordHash && list[idx]?.salt) {
+        list[idx] = { ...list[idx], status: "approved" };
+        return list;
+      }
+      const salt = createSalt();
+      const passwordHash = hashPassword(pass, salt);
+      const passwordUpdatedAt = Date.now();
+      if (idx >= 0) {
+        list[idx] = {
+          ...list[idx],
+          salt,
+          passwordHash,
+          passwordUpdatedAt,
+          status: "approved",
+        };
+      } else {
+        list.unshift({
+          id: existing?.id || "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+          username: existing?.username || key.split("@")[0] || "Mentor",
+          email: key,
+          contact: existing?.contact || "",
+          role: "mentor",
+          status: "approved",
+          passwordHash,
+          salt,
+          passwordUpdatedAt,
+          createdAt: existing?.createdAt || Date.now(),
+          licenseKeysAllowed:
+            existing?.licenseKeysAllowed ?? DEFAULT_MENTOR_LICENSE_KEYS,
+        });
+      }
+      return list;
+    }, `chore: repair missing durable password for ${key}`);
+  } catch {
+    // Allow bootstrap login even if durable write is rate-limited.
   }
 
-  return publicMentor(mentor);
+  mentors = await loadMentorsFresh({ bustMemory: true });
+  const repaired = findMentor(mentors, key);
+  if (repaired) {
+    return publicMentor({ ...repaired, status: "approved" });
+  }
+  return {
+    id: existing?.id || "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+    username: existing?.username || key.split("@")[0] || "Mentor",
+    email: key,
+    contact: existing?.contact || "",
+    role: "mentor",
+    status: "approved",
+    createdAt: existing?.createdAt || Date.now(),
+  };
 }
 
 export async function setMentorStatus(email, status) {
@@ -1732,6 +1742,7 @@ export async function setMentorPassword({
     const idx = findMentorIndex(list, key);
     const salt = createSalt();
     const passwordHash = hashPassword(pass, salt);
+    const passwordUpdatedAt = Date.now();
     if (idx < 0) {
       // Super admin can restore mentors wiped from durable storage by setting
       // a password — recreates the row so Approve / Decline work again.
@@ -1752,6 +1763,7 @@ export async function setMentorPassword({
         status: nextStatus,
         passwordHash,
         salt,
+        passwordUpdatedAt,
         createdAt: Date.now(),
         licenseKeysAllowed: DEFAULT_MENTOR_LICENSE_KEYS,
       };
@@ -1763,6 +1775,7 @@ export async function setMentorPassword({
       email: key,
       salt,
       passwordHash,
+      passwordUpdatedAt,
       ...(restoreName ? { username: restoreName } : {}),
       ...(restoreContact ? { contact: restoreContact } : {}),
     };
