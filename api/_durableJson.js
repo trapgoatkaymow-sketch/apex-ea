@@ -872,10 +872,21 @@ export async function durableRead(opts = {}) {
   }
 
   // 1) Firebase Realtime Database — primary shared store when configured.
+  // Licenses: never return Firebase alone. Cold GitHub / Blob copies can hold
+  // keys that another path wrote during an outage — union-merge like mentors.
+  let firebaseLicensesRaw = null;
+  let firebaseLicensesEtag = null;
   if (rtdbPath && fb.firebaseConfigured()) {
     const hit = await fb.firebaseGet(rtdbPath);
     if (hit && !hit.missing && hit.raw != null) {
-      return { raw: hit.raw, sha: hit.etag || null, source: "firebase" };
+      const licensesViaGitEarly = /licenses\.json$/i.test(
+        String(githubPath || blobPath || "")
+      );
+      if (!licensesViaGitEarly) {
+        return { raw: hit.raw, sha: hit.etag || null, source: "firebase" };
+      }
+      firebaseLicensesRaw = hit.raw;
+      firebaseLicensesEtag = hit.etag || null;
     }
   }
 
@@ -892,7 +903,81 @@ export async function durableRead(opts = {}) {
     );
   }
 
-  if (githubPath) {
+  if (licensesViaGit) {
+    const pieces = [];
+    if (firebaseLicensesRaw != null) pieces.push(firebaseLicensesRaw);
+    if (blob && !blob.missing && blob.raw != null) pieces.push(blob.raw);
+
+    let githubResult = null;
+    if (githubPath) {
+      const gh = await githubGet({
+        repo: githubRepo,
+        branch: githubBranch,
+        filePath: githubPath,
+      });
+      if (gh && !gh.missing && gh.raw != null) {
+        githubResult = { raw: gh.raw, sha: gh.sha, source: "github" };
+      }
+      const preferFresh = Boolean(opts.preferFresh);
+      if (!githubResult && preferFresh) {
+        const viaGit = await githubGetViaGit({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        if (viaGit && !viaGit.missing && viaGit.raw != null) {
+          githubResult = { raw: viaGit.raw, sha: null, source: "github-git" };
+        }
+      }
+      if (!githubResult) {
+        const raw = await githubGetRaw({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        if (raw && !raw.missing && raw.raw != null) {
+          githubResult = { raw: raw.raw, sha: null, source: "github-raw" };
+        }
+      }
+      if (!githubResult) {
+        const viaGit = await githubGetViaGit({
+          repo: githubRepo,
+          branch: githubBranch,
+          filePath: githubPath,
+        });
+        if (viaGit && !viaGit.missing && viaGit.raw != null) {
+          githubResult = { raw: viaGit.raw, sha: null, source: "github-git" };
+        }
+      }
+      if (githubResult?.raw) pieces.push(githubResult.raw);
+    }
+
+    for (const file of localPaths) {
+      const local = readLocalFile(file);
+      if (local != null) pieces.push(local);
+    }
+
+    if (pieces.length) {
+      let merged = pieces[0];
+      for (let i = 1; i < pieces.length; i += 1) {
+        merged = mergeLicensesDocuments(
+          merged,
+          pieces[i],
+          "license read merge"
+        );
+      }
+      return seedFirebaseFrom(
+        {
+          raw: merged,
+          sha: githubResult?.sha || firebaseLicensesEtag || null,
+          source: pieces.length > 1 ? "licenses-merged" : "licenses",
+        },
+        rtdbPath
+      );
+    }
+  }
+
+  if (githubPath && !licensesViaGit) {
     let githubResult = null;
     const gh = await githubGet({
       repo: githubRepo,
@@ -1083,8 +1168,84 @@ export async function durableWrite(opts = {}) {
   if (rtdbPath && fb.firebaseConfigured()) {
     const put = await fb.firebasePut(rtdbPath, mentorsViaGit ? mentorsBody : body);
     if (put.ok) {
-      // Best-effort mirrors so cold Blob/GitHub reads still work during rollout.
+      // Best-effort Blob mirror for cold reads.
       if (blobPath) await blobPut(blobPath, mentorsViaGit ? mentorsBody : body);
+
+      // Licenses MUST also land on GitHub. Older cold instances fall back to
+      // data/licenses.json when Firebase/Blob is briefly unavailable — if GitHub
+      // is weeks behind, clients get "Invalid license key" for freshly generated
+      // keys. Mentors stay Firebase-primary (merged on read).
+      if (licensesViaGit && githubPath) {
+        let licenseBody = body;
+        try {
+          const gh = await githubGet({
+            repo: githubRepo,
+            branch: githubBranch,
+            filePath: githubPath,
+          });
+          if (gh && !gh.missing && gh.raw != null) {
+            licenseBody = mergeLicensesDocuments(
+              gh.raw,
+              licenseBody,
+              message || "license firebase mirror"
+            );
+          }
+        } catch {
+          // push intended body
+        }
+        let sha = githubSha || null;
+        let mirrored = false;
+        for (let attempt = 0; attempt < 4 && !mirrored; attempt += 1) {
+          if (!sha) {
+            try {
+              const latest = await githubGet({
+                repo: githubRepo,
+                branch: githubBranch,
+                filePath: githubPath,
+              });
+              sha = latest?.sha || null;
+              if (latest?.raw) {
+                licenseBody = mergeLicensesDocuments(
+                  latest.raw,
+                  licenseBody,
+                  message || "license firebase mirror"
+                );
+              }
+            } catch {
+              // continue
+            }
+          }
+          const ghPut = await githubPut({
+            repo: githubRepo,
+            branch: githubBranch,
+            filePath: githubPath,
+            raw: licenseBody,
+            sha,
+            message: message || "chore: mirror licenses from firebase",
+          });
+          if (ghPut.ok) {
+            mirrored = true;
+            if (blobPath) await blobPut(blobPath, licenseBody);
+            break;
+          }
+          if (ghPut.status === 409 || ghPut.status === 422 || !sha) {
+            sha = null;
+            continue;
+          }
+          break;
+        }
+        if (!mirrored) {
+          const viaGit = await githubPutViaGit({
+            repo: githubRepo,
+            branch: githubBranch,
+            filePath: githubPath,
+            raw: licenseBody,
+            message: message || "chore: mirror licenses from firebase",
+          });
+          if (viaGit.ok && blobPath) await blobPut(blobPath, licenseBody);
+        }
+      }
+
       return { ok: true, durable: true, source: "firebase" };
     }
   }
