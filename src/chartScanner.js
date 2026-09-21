@@ -190,7 +190,7 @@ async function buildLocalFallbackSetup(dataUrl, { hintSymbol = "" } = {}) {
 
 /**
  * Always produce Entry, SL, TP1, TP2, TP3 with fixed R:R targets.
- * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
+ * TP1 = 1:2 · TP2 = 1:3 · TP3 = 1:4 (reward vs stop distance).
  * BUY:  SL < Entry < TP1 < TP2 < TP3
  * SELL: SL > Entry > TP1 > TP2 > TP3
  * Enforces instrument-class minimum stop distance so SL/TP are not too close.
@@ -222,7 +222,7 @@ function ensureCompleteSetup(partial = {}) {
     takeProfit2: levels.takeProfit2,
     takeProfit3: levels.takeProfit3,
     takeProfit: levels.takeProfit3,
-    riskReward: "1:1 · 1:2 · 1:3",
+    riskReward: "1:2 · 1:3 · 1:4",
     timeframe: String(partial.timeframe || "M15").trim().toUpperCase() || "M15",
     analysis,
     reasons: Array.isArray(partial.reasons) && partial.reasons.length

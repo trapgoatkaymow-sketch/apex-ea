@@ -77,7 +77,7 @@ function formatRiskReward(entry, stopLoss, takeProfit) {
 
 /**
  * Ensure Entry / SL / TP1 / TP2 / TP3 with fixed R:R targets.
- * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
+ * TP1 = 1:2 · TP2 = 1:3 · TP3 = 1:4 (reward vs stop distance).
  * BUY:  SL < Entry < TP1 < TP2 < TP3
  * SELL: SL > Entry > TP1 > TP2 > TP3
  * Enforces instrument-class minimum stop distance so levels are not too close.
@@ -229,8 +229,8 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
     ? parsed.reasons.map((r) => String(r)).filter(Boolean).slice(0, 4)
     : [analysis];
 
-  // Fixed R:R ladder: TP1 1:1 · TP2 1:2 · TP3 1:3
-  const riskReward = "1:1 · 1:2 · 1:3";
+  // Fixed R:R ladder: TP1 1:2 · TP2 1:3 · TP3 1:4
+  const riskReward = "1:2 · 1:3 · 1:4";
 
   let priceTop = toFiniteNumber(parsed?.priceTop ?? parsed?.axisTop);
   let priceBottom = toFiniteNumber(parsed?.priceBottom ?? parsed?.axisBottom);
@@ -328,7 +328,7 @@ export async function analyzeChartSetupWithOpenAI({
             "If it IS a chart: ALWAYS return a COMPLETE trade setup with THREE take-profit levels. NEVER say incomplete. " +
             "ALWAYS provide side, confidence, entry, stopLoss, takeProfit1, takeProfit2, takeProfit3, riskReward, timeframe, and analysis. " +
             "Set take-profit targets using fixed risk/reward multiples of the stop distance: " +
-            "TP1 = 1:1, TP2 = 1:2, TP3 = 1:3. Set riskReward to \"1:1 · 1:2 · 1:3\". " +
+            "TP1 = 1:2, TP2 = 1:3, TP3 = 1:4. Set riskReward to \"1:2 · 1:3 · 1:4\". " +
             "Read entry and stop from chart structure (support/resistance, swings). " +
             "Keep stopLoss FAR enough from entry for the instrument — never a few ticks: " +
             "FX ≥ ~15 pips, XAUUSD ≥ ~$1.50, US30/NAS100/DE40 ≥ ~25 points, BTC ≥ ~0.2%. " +
