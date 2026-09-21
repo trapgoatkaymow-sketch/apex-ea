@@ -15,20 +15,21 @@
  * Gen 60 — Android APK v2.23 with close-all positions baked in.
  * Gen 61 — Restore Economic calendar button on Interface 1 + 2 Home.
  * Gen 62 — Fix license details card clipping / Created row cut off.
+ * Gen 63 — Android APK 2.23.2 with license card fix.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 62;
+export const UI_SHELL_GENERATION = 63;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-license-card-fix";
+export const UI_SHELL_LABEL = "product-locked-license-card-apk";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 61;
+export const UI_SHELL_FLOOR = 62;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
