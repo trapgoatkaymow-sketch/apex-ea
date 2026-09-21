@@ -3355,7 +3355,7 @@ export default function AdminPortal() {
           <section className="admin-page is-active">
             <h2 className="admin-h1">Settings</h2>
             <p className="admin-sub">
-              Change the app accent color. Home robot, buttons, highlights, and scanner accents update live for your clients.
+              Choose an app accent color, then press Save. Home robot, buttons, highlights, and scanner accents update for your clients after you save.
             </p>
             <div className="admin-card">
               <div className="admin-card-title-row">
