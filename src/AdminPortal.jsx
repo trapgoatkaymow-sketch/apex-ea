@@ -288,6 +288,10 @@ export default function AdminPortal() {
   const [hostLoading, setHostLoading] = useState(false);
   const [hostBusy, setHostBusy] = useState(false);
   const [hostConfirmOpen, setHostConfirmOpen] = useState(false);
+  const [hostDelaySec, setHostDelaySec] = useState(0);
+  const [hostScheduled, setHostScheduled] = useState(null);
+  const [hostScheduleTick, setHostScheduleTick] = useState(0);
+  const hostScheduleTimerRef = useRef(null);
   const [hostResult, setHostResult] = useState(null);
   const [hostDetailsOpen, setHostDetailsOpen] = useState(false);
   const [hostRecent, setHostRecent] = useState([]);
@@ -866,6 +870,21 @@ export default function AdminPortal() {
       clearInterval(timer);
     };
   }, [adminOpen, adminSession, adminPage, showToast, licenseKeys]);
+
+  useEffect(() => {
+    if (!hostScheduled?.runAt) return undefined;
+    const timer = setInterval(() => setHostScheduleTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hostScheduled?.runAt]);
+
+  useEffect(() => {
+    return () => {
+      if (hostScheduleTimerRef.current) {
+        clearTimeout(hostScheduleTimerRef.current);
+        hostScheduleTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Pay-after-activate: stamp commissionEligible for paid clients when mentor
   // opens the commission page (repairs unlocks that stayed at not_paid).
@@ -1621,6 +1640,140 @@ export default function AdminPortal() {
     } finally {
       setEaDeleteBusy("");
     }
+  }
+
+  function cancelHostSchedule() {
+    if (hostScheduleTimerRef.current) {
+      clearTimeout(hostScheduleTimerRef.current);
+      hostScheduleTimerRef.current = null;
+    }
+    setHostScheduled(null);
+    setHostBusy(false);
+    showToast("Scheduled trade cancelled");
+  }
+
+  async function runHostTrade(payload) {
+    const {
+      symbol,
+      side,
+      volume,
+      tradesCount,
+      stopLoss,
+      takeProfit,
+      clients,
+    } = payload;
+    setHostBusy(true);
+    try {
+      const result = await executeMentorSelfHostTrade({
+        mentorEmail: adminSession.email,
+        symbol,
+        side,
+        volume: Number.isFinite(volume) && volume > 0 ? volume : 0.01,
+        tradesCount,
+        stopLoss,
+        takeProfit,
+        comment: "mentor~APEXEA",
+        clients,
+      });
+      setHostResult(result);
+      setHostScheduled(null);
+      const entry = {
+        id: `${Date.now()}-${symbol}-${side}`,
+        at: Date.now(),
+        symbol: result.symbol || symbol,
+        side: result.side || side,
+        volume: result.volume || volume,
+        tradesCount,
+        stopLoss,
+        takeProfit,
+        targeted: Number(result.targeted || result.connected || 0),
+        placed: Number(result.placed || 0),
+        offline: Number(result.offline || result.failed || 0),
+      };
+      setHostRecent(saveSelfHostRecent(adminSession.email, entry));
+      const placed = Number(result?.placed || 0);
+      if (placed > 0) {
+        showToast(
+          `Opened ${placed} trade${placed === 1 ? "" : "s"} on connected clients`
+        );
+      } else {
+        const detail =
+          result?.error ||
+          result?.results?.find((r) => !r.ok)?.error ||
+          "No trades were placed";
+        showToast(detail);
+      }
+      return result;
+    } catch (error) {
+      showToast(error.message || "Could not execute trade");
+      setHostResult(error.data || { error: error.message });
+      setHostScheduled(null);
+      throw error;
+    } finally {
+      setHostBusy(false);
+      hostScheduleTimerRef.current = null;
+    }
+  }
+
+  function confirmHostTrade() {
+    if (hostBusy || hostScheduled) return;
+    const symbol = String(hostSymbol || "").trim().toUpperCase();
+    const rawSl = Number(hostSl);
+    const rawTp = Number(hostTp);
+    const stopLoss = Number.isFinite(rawSl) && rawSl > 0 ? rawSl : null;
+    const takeProfit = Number.isFinite(rawTp) && rawTp > 0 ? rawTp : null;
+    const volume = Number(hostVolume);
+    const tradesCount = Math.max(
+      1,
+      Math.min(20, Math.floor(Number(hostTradesCount) || 1))
+    );
+    const clients = hostAccounts.map((row) => ({
+      email: row.email,
+      accountId: row.accountId,
+      login: row.login,
+      server: row.server,
+      company: row.company,
+      platform: row.platform,
+      connectedAt: row.connectedAt,
+      updatedAt: row.updatedAt,
+    }));
+    const payload = {
+      symbol,
+      side: hostSide,
+      volume,
+      tradesCount,
+      stopLoss,
+      takeProfit,
+      clients,
+    };
+    const delaySec = Math.max(0, Number(hostDelaySec) || 0);
+    setHostConfirmOpen(false);
+    setHostDelaySec(0);
+
+    if (delaySec <= 0) {
+      void runHostTrade(payload);
+      return;
+    }
+
+    const runAt = Date.now() + delaySec * 1000;
+    const label =
+      delaySec >= 60
+        ? `${Math.round(delaySec / 60)} minute${Math.round(delaySec / 60) === 1 ? "" : "s"}`
+        : `${delaySec}s`;
+    setHostScheduled({
+      runAt,
+      delaySec,
+      symbol,
+      side: hostSide,
+      volume,
+      tradesCount,
+    });
+    setHostBusy(true);
+    showToast(`Trade scheduled — executes in ${label}`);
+    if (hostScheduleTimerRef.current) clearTimeout(hostScheduleTimerRef.current);
+    hostScheduleTimerRef.current = setTimeout(() => {
+      void runHostTrade(payload);
+    }, delaySec * 1000);
   }
 
   function onPhotoChange(event) {
@@ -4082,6 +4235,7 @@ export default function AdminPortal() {
                   }
                   setHostResult(null);
                   setHostDetailsOpen(false);
+                  setHostDelaySec(0);
                   setHostConfirmOpen(true);
                 }}
               >
@@ -4185,10 +4339,35 @@ export default function AdminPortal() {
                   type="submit"
                   disabled={hostBusy || !hostAccounts.length}
                 >
-                  <AdminBusyLabel busy={hostBusy} busyText="WORKING…">
+                  <AdminBusyLabel
+                    busy={hostBusy}
+                    busyText={hostScheduled ? "SCHEDULED…" : "WORKING…"}
+                  >
                     EXECUTE TRADE
                   </AdminBusyLabel>
                 </button>
+                {hostScheduled ? (
+                  <div className="self-host-scheduled">
+                    <p>
+                      Scheduled {hostScheduled.side} {hostScheduled.symbol} · fires in{" "}
+                      {Math.max(
+                        0,
+                        Math.ceil(
+                          (Number(hostScheduled.runAt) - (hostScheduleTick || Date.now())) /
+                            1000
+                        )
+                      )}
+                      s
+                    </p>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-outline admin-btn-sm"
+                      onClick={cancelHostSchedule}
+                    >
+                      Cancel schedule
+                    </button>
+                  </div>
+                ) : null}
               </form>
             </div>
 
@@ -4301,12 +4480,38 @@ export default function AdminPortal() {
                     {hostAccounts.length} connected client
                     {hostAccounts.length === 1 ? "" : "s"}
                   </p>
+
+                  <div className="self-host-delay">
+                    <p className="self-host-delay-label">When should it execute?</p>
+                    <div className="self-host-delay-options" role="group" aria-label="Execution timing">
+                      {[
+                        { sec: 0, label: "Immediately" },
+                        { sec: 60, label: "1 minute" },
+                        { sec: 300, label: "5 minutes" },
+                        { sec: 600, label: "10 minutes" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.sec}
+                          type="button"
+                          className={`self-host-delay-btn${hostDelaySec === opt.sec ? " is-active" : ""}`}
+                          onClick={() => setHostDelaySec(opt.sec)}
+                          disabled={hostBusy}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="self-host-modal-actions">
                     <button
                       type="button"
                       className="admin-btn admin-btn-outline"
                       disabled={hostBusy}
-                      onClick={() => setHostConfirmOpen(false)}
+                      onClick={() => {
+                        setHostConfirmOpen(false);
+                        setHostDelaySec(0);
+                      }}
                     >
                       CANCEL
                     </button>
@@ -4314,84 +4519,13 @@ export default function AdminPortal() {
                       type="button"
                       className={`admin-btn admin-btn-solid${hostBusy ? " is-loading" : ""}`}
                       disabled={hostBusy}
-                      onClick={async () => {
-                        if (hostBusy) return;
-                        const symbol = String(hostSymbol || "").trim().toUpperCase();
-                        const rawSl = Number(hostSl);
-                        const rawTp = Number(hostTp);
-                        const stopLoss =
-                          Number.isFinite(rawSl) && rawSl > 0 ? rawSl : null;
-                        const takeProfit =
-                          Number.isFinite(rawTp) && rawTp > 0 ? rawTp : null;
-                        const volume = Number(hostVolume);
-                        const tradesCount = Math.max(
-                          1,
-                          Math.min(20, Math.floor(Number(hostTradesCount) || 1))
-                        );
-                        setHostBusy(true);
-                        try {
-                          const result = await executeMentorSelfHostTrade({
-                            mentorEmail: adminSession.email,
-                            symbol,
-                            side: hostSide,
-                            volume: Number.isFinite(volume) && volume > 0 ? volume : 0.01,
-                            tradesCount,
-                            stopLoss,
-                            takeProfit,
-                            comment: "mentor~APEXEA",
-                            // Pass the same connected clients the UI is showing —
-                            // mentor-trade runs in a separate serverless function
-                            // and cannot see mt5-accounts /tmp state alone.
-                            clients: hostAccounts.map((row) => ({
-                              email: row.email,
-                              accountId: row.accountId,
-                              login: row.login,
-                              server: row.server,
-                              company: row.company,
-                              platform: row.platform,
-                              connectedAt: row.connectedAt,
-                              updatedAt: row.updatedAt,
-                            })),
-                          });
-                          setHostResult(result);
-                          setHostConfirmOpen(false);
-                          const entry = {
-                            id: `${Date.now()}-${symbol}-${hostSide}`,
-                            at: Date.now(),
-                            symbol: result.symbol || symbol,
-                            side: result.side || hostSide,
-                            volume: result.volume || volume,
-                            tradesCount,
-                            stopLoss,
-                            takeProfit,
-                            targeted: Number(result.targeted || result.connected || 0),
-                            placed: Number(result.placed || 0),
-                            offline: Number(result.offline || result.failed || 0),
-                          };
-                          setHostRecent(saveSelfHostRecent(adminSession.email, entry));
-                          const placed = Number(result?.placed || 0);
-                          if (placed > 0) {
-                            showToast(
-                              `Opened ${placed} trade${placed === 1 ? "" : "s"} on connected clients`
-                            );
-                          } else {
-                            const detail =
-                              result?.error ||
-                              result?.results?.find((r) => !r.ok)?.error ||
-                              "No trades were placed";
-                            showToast(detail);
-                          }
-                        } catch (error) {
-                          showToast(error.message || "Could not execute trade");
-                          setHostResult(error.data || { error: error.message });
-                          setHostConfirmOpen(false);
-                        } finally {
-                          setHostBusy(false);
-                        }
-                      }}
+                      onClick={() => confirmHostTrade()}
                     >
-                      <AdminBusyLabel busy={hostBusy} busyText="EXECUTING…">
-                        EXECUTE TRADE
+                      <AdminBusyLabel
+                        busy={hostBusy}
+                        busyText={hostDelaySec > 0 ? "SCHEDULING…" : "EXECUTING…"}
+                      >
+                        {hostDelaySec > 0 ? "SCHEDULE TRADE" : "EXECUTE TRADE"}
                       </AdminBusyLabel>
                     </button>
                   </div>
