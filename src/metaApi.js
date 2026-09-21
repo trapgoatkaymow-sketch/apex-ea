@@ -184,12 +184,18 @@ function buildTaggedBotPrefix(botName, maxLen = 31) {
 
 /**
  * Per-fill MT5 comment (max 31 chars).
- * Always `eaName~APEXEA` only — no |TP1/TP2/TP3 and no |premium suffix.
+ * Interface 2 (premium scanner): bot tag + |premium — never TPx.
+ * Interface 1: bot tag only — never TPx.
  */
 export function buildScannerFillComment({
   botName = "",
+  variant = "default",
+  premium = false,
 } = {}) {
-  return buildBotTradeComment(botName);
+  const isPremium = Boolean(premium) || variant === "v2";
+  const suffix = isPremium ? "|premium" : "";
+  const prefix = buildTaggedBotPrefix(botName, 31 - suffix.length);
+  return `${prefix}${suffix}`.slice(0, 31);
 }
 
 // Legacy no-ops — MetaAPI client token is unused with MT5API broker connect.
