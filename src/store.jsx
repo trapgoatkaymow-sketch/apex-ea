@@ -2296,8 +2296,12 @@ export function AppProvider({ children }) {
       }
 
       const licenseEmail = normalizeEmail(entry.clientEmail);
-      const emailOwnsLicense = Boolean(
-        accountEmail && licenseEmail && accountEmail === licenseEmail
+      const mentorEmail = normalizeEmail(entry.mentorEmail || entry.ownerEmail);
+      // Client who owns the key OR mentor who issued it can reclaim after reinstall.
+      let emailOwnsLicense = Boolean(
+        accountEmail &&
+          ((licenseEmail && accountEmail === licenseEmail) ||
+            (mentorEmail && accountEmail === mentorEmail))
       );
       const approved = signup?.status === "approved";
       // Owning the key is enough after signup-store resets; otherwise require approval.
@@ -2321,12 +2325,21 @@ export function AppProvider({ children }) {
           entry = fresh;
           setLicenseKeys((prev) => mergeLicenses(prev, [fresh]));
           boundDevice = String(entry.deviceId || "").trim();
+          const freshClient = normalizeEmail(entry.clientEmail);
+          const freshMentor = normalizeEmail(
+            entry.mentorEmail || entry.ownerEmail
+          );
+          emailOwnsLicense = Boolean(
+            accountEmail &&
+              ((freshClient && accountEmail === freshClient) ||
+                (freshMentor && accountEmail === freshMentor))
+          );
         }
       } catch {
         // keep local
       }
       if (entry.used && boundDevice && boundDevice !== deviceId) {
-        // Owner email can reclaim after reinstall (new device id). Anyone else stays locked.
+        // Owner or issuing mentor can reclaim after reinstall (new device id).
         if (!emailOwnsLicense) {
           showToast("This license is locked to another phone");
           return false;
