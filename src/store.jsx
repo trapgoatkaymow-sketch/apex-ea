@@ -13,6 +13,7 @@ import {
   fetchSignups,
   mergeSignups,
   submitSignup,
+  updateSignupAccessBypassed,
   updateSignupAccessPaid,
   updateSignupPremiumScanner,
   updateSignupStatus,
@@ -1435,17 +1436,18 @@ export function AppProvider({ children }) {
       }
       await setSignupStatus(key, "approved");
       try {
-        const remote = await updateSignupAccessPaid(key);
+        const remote = await updateSignupAccessBypassed(key);
         if (remote) setSignups((prev) => mergeSignups(prev, [remote]));
       } catch {
-        // Still mark paid locally so "I have paid" restores on this phone.
+        // Still mark bypassed locally so Top Mentors / commission stay accurate.
         setSignups((prev) =>
           mergeSignups(prev, [
             {
               email: key,
               status: "approved",
-              accessPaid: true,
-              accessPaidAt: Date.now(),
+              accessPaid: false,
+              accessBypassed: true,
+              accessBypassedAt: Date.now(),
               createdAt: Date.now(),
             },
           ])

@@ -3225,7 +3225,7 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 
 .admin-top-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 14px;
 }
@@ -3245,6 +3245,49 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 
 .top-mentor-title-row strong {
   font-size: 0.95rem;
+}
+
+.top-mentor-actions {
+  margin-top: 8px;
+}
+
+.top-mentor-emails {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.35);
+  max-height: 220px;
+  overflow: auto;
+}
+
+.top-mentor-email-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.top-mentor-email-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.top-mentor-email-list a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.top-mentor-email-badge {
+  margin-left: auto;
+  font-size: 0.62rem;
+  padding: 2px 8px;
 }
 
 .admin-avatar-circle {

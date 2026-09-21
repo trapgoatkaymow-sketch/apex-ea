@@ -263,6 +263,7 @@ export default function AdminPortal() {
   const [bypassOpen, setBypassOpen] = useState(false);
   const [bypassEmail, setBypassEmail] = useState("");
   const [bypassBusy, setBypassBusy] = useState(false);
+  const [topMentorEmailsOpen, setTopMentorEmailsOpen] = useState("");
   const [bankingForm, setBankingForm] = useState({
     accountName: "",
     bankName: "",
@@ -2161,6 +2162,25 @@ export default function AdminPortal() {
   // Plain compute (not useMemo): must stay after auth early-returns without
   // changing hook order when session appears/disappears on sign-in / logout.
   const topMentorRows = (() => {
+    const signupByEmail = new Map(
+      (signups || []).map((s) => [normalizeAdminEmail(s.email), s])
+    );
+    const isBypassedClient = (clientEmail, licenseRow = null) => {
+      const client = normalizeAdminEmail(clientEmail);
+      if (!client) return false;
+      const signup = signupByEmail.get(client);
+      if (signup?.accessBypassed) return true;
+      const reason = String(licenseRow?.commissionReason || "").toLowerCase();
+      if (
+        reason === "invite_migrate_bypass" ||
+        reason === "access_already_active" ||
+        reason.includes("bypass")
+      ) {
+        return true;
+      }
+      return false;
+    };
+
     const rows = mentors
       .filter((m) => {
         const role = String(m.role || "").toLowerCase();
@@ -2176,21 +2196,50 @@ export default function AdminPortal() {
           return (email && owner === email) || (id && ownerId === id);
         });
         const clients = new Set();
+        const clientEmails = [];
+        const clientMeta = new Map();
         let used = 0;
+        let keysCounted = 0;
+        let bypassedClients = 0;
+        const bypassedSeen = new Set();
         for (const row of owned) {
-          if (row?.used) used += 1;
           const client = normalizeAdminEmail(row.clientEmail);
-          if (client) clients.add(client);
+          const bypassed = isBypassedClient(client, row);
+          if (bypassed) {
+            if (client && !bypassedSeen.has(client)) {
+              bypassedSeen.add(client);
+              bypassedClients += 1;
+            }
+            continue;
+          }
+          keysCounted += 1;
+          if (row?.used) used += 1;
+          if (client && !clients.has(client)) {
+            clients.add(client);
+            clientEmails.push(client);
+            clientMeta.set(client, {
+              email: client,
+              name: String(row.clientName || "").trim(),
+              used: Boolean(row.used),
+            });
+          } else if (client && row?.used) {
+            const prev = clientMeta.get(client);
+            if (prev) clientMeta.set(client, { ...prev, used: true });
+          }
         }
+        clientEmails.sort((a, b) => a.localeCompare(b));
         const sold = countSoldKeysForMentor(mentor);
         return {
           mentor,
           email,
           status: "approved",
-          keys: owned.length,
+          keys: keysCounted,
           used,
           clients: clients.size,
           sold,
+          bypassedClients,
+          clientEmails,
+          clientRows: clientEmails.map((c) => clientMeta.get(c)).filter(Boolean),
         };
       });
     rows.sort(
@@ -4757,6 +4806,7 @@ export default function AdminPortal() {
             <h2 className="admin-h1">Top Mentors</h2>
             <p className="admin-sub">
               Approved mentors only — ranked by clients unlocked, keys used, and paid unlocks.
+              Bypassed emails are excluded from counts.
             </p>
             <div className="admin-card">
               <div className="admin-card-head">
@@ -4789,6 +4839,8 @@ export default function AdminPortal() {
                       .trim()
                       .slice(0, 2)
                       .toUpperCase();
+                    const openKey = row.email || row.mentor.id || "";
+                    const emailsOpen = topMentorEmailsOpen === openKey;
                     return (
                       <div className="admin-top-card" key={row.mentor.id || row.email}>
                         <div className="admin-avatar-circle" aria-hidden="true">
@@ -4815,7 +4867,52 @@ export default function AdminPortal() {
                           <p className="admin-card-meta">
                             {row.clients} client{row.clients === 1 ? "" : "s"} ·{" "}
                             {row.used}/{row.keys} keys used · {row.sold} paid
+                            {row.bypassedClients
+                              ? ` · ${row.bypassedClients} bypassed excluded`
+                              : ""}
                           </p>
+                          <div className="top-mentor-actions">
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn-outline admin-btn-sm"
+                              onClick={() =>
+                                setTopMentorEmailsOpen((prev) =>
+                                  prev === openKey ? "" : openKey
+                                )
+                              }
+                            >
+                              {emailsOpen
+                                ? "Hide emails"
+                                : `View emails (${row.clientEmails.length})`}
+                            </button>
+                          </div>
+                          {emailsOpen ? (
+                            <div className="top-mentor-emails">
+                              {row.clientRows.length === 0 ? (
+                                <p className="admin-card-meta">
+                                  No client emails (bypassed excluded)
+                                </p>
+                              ) : (
+                                <ul className="top-mentor-email-list">
+                                  {row.clientRows.map((client) => (
+                                    <li key={client.email}>
+                                      <a href={`mailto:${client.email}`}>{client.email}</a>
+                                      {client.name ? (
+                                        <span className="admin-muted"> · {client.name}</span>
+                                      ) : null}
+                                      <span
+                                        className={`admin-badge top-mentor-email-badge${
+                                          client.used ? " is-approved" : " is-pending"
+                                        }`}
+                                      >
+                                        {client.used ? "used" : "unused"}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     );

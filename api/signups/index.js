@@ -3,6 +3,7 @@ import {
   listSignups,
   readJsonBody,
   sendJson,
+  setSignupAccessBypassed,
   setSignupAccessPaid,
   setSignupAppAccessUnlocked,
   setSignupPremiumScanner,
@@ -84,6 +85,16 @@ export default async function handler(req, res) {
           // Best-effort backfill after payment mark.
         }
         sendJson(res, 200, { signup, accessPaid: true });
+        return;
+      }
+      if (
+        body.accessBypassed === true ||
+        body.action === "accessBypassed" ||
+        body.action === "bypass" ||
+        body.action === "accessBypass"
+      ) {
+        const signup = await setSignupAccessBypassed(body.email, true);
+        sendJson(res, 200, { signup, accessBypassed: true });
         return;
       }
       const signup = await setSignupStatus(body.email, body.status);

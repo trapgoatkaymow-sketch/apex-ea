@@ -513,6 +513,46 @@ export async function setSignupAccessPaid(email, paid = true) {
   return result;
 }
 
+/** Admin payment bypass — free access without counting as a paid unlock. */
+export async function setSignupAccessBypassed(email, bypassed = true) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("Enter a valid email");
+    err.status = 400;
+    throw err;
+  }
+
+  let result = null;
+  const now = Date.now();
+  await mutateStore((signups) => {
+    const idx = signups.findIndex((s) => s.email === key);
+    const accessBypassed = Boolean(bypassed);
+    if (idx >= 0) {
+      signups[idx] = {
+        ...signups[idx],
+        status: accessBypassed ? "approved" : signups[idx].status,
+        accessBypassed,
+        accessBypassedAt: accessBypassed
+          ? signups[idx].accessBypassedAt || now
+          : null,
+      };
+      result = signups[idx];
+      return signups;
+    }
+    result = normalizeSignup({
+      email: key,
+      status: "approved",
+      createdAt: now,
+      accessBypassed: true,
+      accessBypassedAt: now,
+      accessPaid: false,
+    });
+    return [result, ...signups];
+  }, `access bypass ${bypassed ? "on" : "off"}: ${key}`);
+
+  return result;
+}
+
 export async function setSignupAppAccessUnlocked(email, unlockedAt = Date.now()) {
   const key = normalizeEmail(email);
   if (!key || !key.includes("@")) {

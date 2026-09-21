@@ -65,6 +65,14 @@ export async function updateSignupAccessPaid(email) {
   return data?.signup || null;
 }
 
+export async function updateSignupAccessBypassed(email) {
+  const data = await apiFetch("", {
+    method: "PATCH",
+    body: { email, accessBypassed: true, action: "accessBypass" },
+  });
+  return data?.signup || null;
+}
+
 export function mergeSignups(localList = [], remoteList = []) {
   const map = new Map();
   [...localList, ...remoteList].forEach((item) => {
