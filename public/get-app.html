@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Download apex-ea Android app</title>
+    <meta
+      name="description"
+      content="Download the official apex-ea Android APK. Install on your phone and trade with the same live backends as the website."
+    />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <style>
       :root {
@@ -55,6 +59,21 @@
         line-height: 1.45;
         font-size: 0.95rem;
       }
+      .link-box {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e8dcff;
+        font-size: 0.88rem;
+        word-break: break-all;
+      }
+      .link-box a {
+        color: #d6c2ff;
+        text-decoration: none;
+        font-weight: 700;
+      }
       .btn {
         display: block;
         width: 100%;
@@ -80,33 +99,50 @@
         margin-top: 16px;
         font-size: 0.82rem;
         color: var(--muted);
+        text-align: left;
+      }
+      .note ol {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+      .note li { margin: 4px 0; }
+      .version {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
       }
     </style>
   </head>
   <body>
     <main>
       <img class="logo" src="/logo.png" alt="apex-ea" />
-      <h1>apex-ea for Android</h1>
+      <h1>Download apex-ea Android</h1>
       <p>
-        Client trading app only (not the mentor portal). Same live backends as the
+        Official client trading app (not the mentor portal). Same live backends as the
         website — licenses, PayPal, Chart Scanner, MetaTrader.
       </p>
+      <div class="link-box">
+        Share this link:<br />
+        <a href="https://www.apex-ea.com/android">https://www.apex-ea.com/android</a>
+      </div>
       <a class="btn" id="primary" href="/api/download-apk">
-        Download APK v2.23.3
+        Download Android APK
       </a>
-      <a class="btn secondary" href="/apex-ea-v2.23.apk" download="apex-ea-v2.23.apk">
-        Direct file link
+      <a class="btn secondary" href="/apex-ea.apk" download="apex-ea.apk">
+        Direct APK file
       </a>
-      <p class="note">
-        On Android: open this page in Chrome → tap Download → Allow from this source
-        if asked. File size is about 4.5&nbsp;MB.
-      </p>
+      <p class="version">Version 2.24.0 · ~4.5 MB</p>
+      <div class="note">
+        Install on Android:
+        <ol>
+          <li>Open this page in <strong>Chrome</strong> on your phone</li>
+          <li>Tap <strong>Download Android APK</strong></li>
+          <li>Allow install from this source if Android asks</li>
+          <li>Open the downloaded <strong>apex-ea</strong> file</li>
+        </ol>
+      </div>
     </main>
-    <script>
-      // If the .apk URL ever HTML-falls-through, send users to the direct file again.
-      document.getElementById("primary").addEventListener("click", function () {
-        // Keep default navigation to the APK binary.
-      });
-    </script>
   </body>
 </html>
