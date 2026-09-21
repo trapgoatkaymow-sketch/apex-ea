@@ -241,6 +241,10 @@ export default function AdminPortal() {
   const [mentorKeySearch, setMentorKeySearch] = useState("");
   const [mentorKeyDrafts, setMentorKeyDrafts] = useState({});
   const [mentorKeyBusy, setMentorKeyBusy] = useState("");
+  const [draftAppColor, setDraftAppColor] = useState(() =>
+    normalizeHexColor(DEFAULT_APP_COLOR)
+  );
+  const [appColorSaveBusy, setAppColorSaveBusy] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [calendarDate, setCalendarDate] = useState("");
   const [calendarTitle, setCalendarTitle] = useState("");
@@ -1004,38 +1008,70 @@ export default function AdminPortal() {
     setProfileContact(String(mine?.contact || "").trim());
   }, [mentors, adminSession?.email, adminSession?.username]);
 
-  // Keep portal App color in sync whenever the mentor record changes.
+  // Seed draft color from the signed-in mentor's saved app color.
+  // Never overwrite while the mentor is editing a draft (dirty).
+  const appColorDirtyRef = useRef(false);
   useEffect(() => {
     if (!adminSession?.email) return;
+    if (appColorDirtyRef.current) return;
     const sessionKey = normalizeAdminEmail(adminSession.email);
     const mine = mentors.find((m) => normalizeAdminEmail(m.email) === sessionKey);
-    const color = normalizeHexColor(mine?.appColor || "", "");
-    if (!color) return;
-    if (normalizeHexColor(appColor) === color) return;
-    setAppColor(color, { silent: true });
-  }, [mentors, adminSession?.email, appColor, setAppColor]);
+    const saved = normalizeHexColor(
+      mine?.appColor || appColor || DEFAULT_APP_COLOR,
+      DEFAULT_APP_COLOR
+    );
+    setDraftAppColor(saved);
+  }, [mentors, adminSession?.email, appColor]);
 
-  const colorPersistTimerRef = useRef(0);
-  const applyPortalAppColor = (next, { debounce = false } = {}) => {
+  const savedMentorAppColor = useMemo(() => {
+    if (!adminSession?.email) return normalizeHexColor(appColor || DEFAULT_APP_COLOR);
+    const sessionKey = normalizeAdminEmail(adminSession.email);
+    const mine = mentors.find((m) => normalizeAdminEmail(m.email) === sessionKey);
+    return normalizeHexColor(mine?.appColor || appColor || DEFAULT_APP_COLOR);
+  }, [mentors, adminSession?.email, appColor]);
+
+  const draftColorNorm = normalizeHexColor(draftAppColor || DEFAULT_APP_COLOR);
+  const appColorDirty = draftColorNorm !== normalizeHexColor(savedMentorAppColor);
+
+  const selectDraftAppColor = (next) => {
+    appColorDirtyRef.current = true;
+    setDraftAppColor(normalizeHexColor(next || DEFAULT_APP_COLOR));
+  };
+
+  const savePortalAppColor = async () => {
     const email = adminSession?.email || "";
+    const next = normalizeHexColor(draftAppColor || DEFAULT_APP_COLOR);
     if (!email) {
-      setAppColor(next);
+      await setAppColor(next);
+      appColorDirtyRef.current = false;
       return;
     }
-    if (!debounce) {
-      if (colorPersistTimerRef.current) {
-        clearTimeout(colorPersistTimerRef.current);
-        colorPersistTimerRef.current = 0;
-      }
-      setAppColor(next, { persistEmail: email });
+    if (appColorSaveBusy) return;
+    if (!appColorDirty) {
+      showToast("App color already saved");
       return;
     }
-    setAppColor(next, { silent: true });
-    if (colorPersistTimerRef.current) clearTimeout(colorPersistTimerRef.current);
-    colorPersistTimerRef.current = setTimeout(() => {
-      colorPersistTimerRef.current = 0;
-      setAppColor(next, { persistEmail: email, silent: true });
-    }, 450);
+    setAppColorSaveBusy(true);
+    try {
+      await setAppColor(next, { persistEmail: email });
+      setMentors((prev) =>
+        prev.map((m) =>
+          normalizeAdminEmail(m.email) === normalizeAdminEmail(email)
+            ? {
+                ...m,
+                appColor: next,
+                appColorUpdatedAt: Date.now(),
+              }
+            : m
+        )
+      );
+      setDraftAppColor(next);
+      appColorDirtyRef.current = false;
+    } catch (error) {
+      showToast(error?.message || "Could not save app color");
+    } finally {
+      setAppColorSaveBusy(false);
+    }
   };
 
   async function refreshMentorsList() {
@@ -3324,13 +3360,18 @@ export default function AdminPortal() {
             <div className="admin-card">
               <div className="admin-card-title-row">
                 <h3>App color</h3>
-                <span className="admin-badge">{appColor || DEFAULT_APP_COLOR}</span>
+                <span className="admin-badge">{draftColorNorm}</span>
               </div>
-              <div className="app-color-preview" style={{ ["--preview-color"]: appColor }}>
+              <div
+                className="app-color-preview"
+                style={{ ["--preview-color"]: draftColorNorm }}
+              >
                 <div className="app-color-preview-orb" aria-hidden="true" />
                 <div>
-                  <strong>Live preview</strong>
-                  <p className="ea-hint">This color drives the app theme on home (robot), lock, and scanner.</p>
+                  <strong>Preview</strong>
+                  <p className="ea-hint">
+                    Pick a color, then press Save. Home robot, lock, and scanner accents update for your clients after save.
+                  </p>
                 </div>
               </div>
               <label className="ea-field" style={{ marginTop: 14 }}>
@@ -3339,21 +3380,21 @@ export default function AdminPortal() {
                   <input
                     className="app-color-swatch"
                     type="color"
-                    value={appColor || DEFAULT_APP_COLOR}
-                    onChange={(e) => applyPortalAppColor(e.target.value, { debounce: true })}
+                    value={draftColorNorm}
+                    onChange={(e) => selectDraftAppColor(e.target.value)}
                     aria-label="Choose app color"
                   />
                   <input
                     className="admin-input"
                     type="text"
-                    value={appColor || DEFAULT_APP_COLOR}
-                    onChange={(e) => applyPortalAppColor(e.target.value, { debounce: true })}
+                    value={draftAppColor || DEFAULT_APP_COLOR}
+                    onChange={(e) => selectDraftAppColor(e.target.value)}
                     placeholder="#ff2d7a"
                   />
                   <button
                     className="admin-btn admin-btn-outline"
                     type="button"
-                    onClick={() => applyPortalAppColor(DEFAULT_APP_COLOR)}
+                    onClick={() => selectDraftAppColor(DEFAULT_APP_COLOR)}
                   >
                     Reset
                   </button>
@@ -3366,16 +3407,30 @@ export default function AdminPortal() {
                     type="button"
                     role="listitem"
                     className={`app-color-preset${
-                      String(appColor).toLowerCase() === preset.color ? " is-active" : ""
+                      draftColorNorm === String(preset.color).toLowerCase()
+                        ? " is-active"
+                        : ""
                     }`}
                     style={{ ["--swatch"]: preset.color }}
-                    onClick={() => applyPortalAppColor(preset.color)}
+                    onClick={() => selectDraftAppColor(preset.color)}
                     title={preset.label}
                   >
                     <span className="app-color-preset-dot" aria-hidden="true" />
                     <span>{preset.label}</span>
                   </button>
                 ))}
+              </div>
+              <div className="app-color-save-row">
+                <button
+                  className="admin-btn admin-btn-solid admin-btn-block"
+                  type="button"
+                  disabled={!appColorDirty || appColorSaveBusy}
+                  onClick={savePortalAppColor}
+                >
+                  <AdminBusyLabel busy={appColorSaveBusy} busyText="Saving…">
+                    {appColorDirty ? "Save app color" : "Saved"}
+                  </AdminBusyLabel>
+                </button>
               </div>
             </div>
 
