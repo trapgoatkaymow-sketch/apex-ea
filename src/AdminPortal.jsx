@@ -223,6 +223,8 @@ export default function AdminPortal() {
   const [licenseActionBusy, setLicenseActionBusy] = useState("");
   const [eaBusy, setEaBusy] = useState(false);
   const [eaDeleteBusy, setEaDeleteBusy] = useState("");
+  const [eaDeleteConfirm, setEaDeleteConfirm] = useState(null);
+  const [eaDeleteEmail, setEaDeleteEmail] = useState("");
   const [signupActionBusy, setSignupActionBusy] = useState("");
   const [mentorActionBusy, setMentorActionBusy] = useState("");
   const [refreshBusy, setRefreshBusy] = useState("");
@@ -1584,6 +1586,43 @@ export default function AdminPortal() {
     setDraftSymbols((prev) => prev.filter((s) => s !== symbol));
   }
 
+  function openEaDeleteConfirm(ea) {
+    if (eaBusy || eaDeleteBusy) return;
+    setEaDeleteConfirm({
+      id: ea.id,
+      name: ea.name || "this EA",
+    });
+    setEaDeleteEmail("");
+  }
+
+  function closeEaDeleteConfirm() {
+    if (eaDeleteBusy) return;
+    setEaDeleteConfirm(null);
+    setEaDeleteEmail("");
+  }
+
+  async function confirmEaDelete() {
+    if (!eaDeleteConfirm?.id || eaDeleteBusy) return;
+    const typed = normalizeAdminEmail(eaDeleteEmail);
+    const sessionEmail = normalizeAdminEmail(adminSession?.email);
+    if (!typed || !typed.includes("@")) {
+      showToast("Type your email to confirm delete");
+      return;
+    }
+    if (!sessionEmail || typed !== sessionEmail) {
+      showToast("Email does not match your mentor account");
+      return;
+    }
+    setEaDeleteBusy(eaDeleteConfirm.id);
+    try {
+      await deleteEa(eaDeleteConfirm.id);
+      setEaDeleteConfirm(null);
+      setEaDeleteEmail("");
+    } finally {
+      setEaDeleteBusy("");
+    }
+  }
+
   function onPhotoChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2938,15 +2977,7 @@ export default function AdminPortal() {
                           className={`ea-delete-btn${eaDeleteBusy === ea.id ? " is-loading" : ""}`}
                           type="button"
                           disabled={Boolean(eaBusy || eaDeleteBusy)}
-                          onClick={async () => {
-                            if (eaDeleteBusy) return;
-                            setEaDeleteBusy(ea.id);
-                            try {
-                              await deleteEa(ea.id);
-                            } finally {
-                              setEaDeleteBusy("");
-                            }
-                          }}
+                          onClick={() => openEaDeleteConfirm(ea)}
                         >
                           {eaDeleteBusy === ea.id ? (
                             <>
@@ -5141,6 +5172,76 @@ export default function AdminPortal() {
           </section>
         )}
       </div>
+
+      {eaDeleteConfirm ? (
+        <div
+          className="ea-delete-modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeEaDeleteConfirm();
+          }}
+        >
+          <div
+            className="admin-card ea-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirm EA delete"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="ea-delete-modal-title">Delete this EA?</h3>
+            <p className="ea-delete-modal-copy">
+              Type your mentor email to permanently delete{" "}
+              <strong>{eaDeleteConfirm.name}</strong>. This cannot be undone.
+            </p>
+            <label className="ea-field">
+              <span>Your email</span>
+              <input
+                className="admin-input"
+                type="email"
+                autoComplete="email"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                value={eaDeleteEmail}
+                onChange={(e) => setEaDeleteEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void confirmEaDelete();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    closeEaDeleteConfirm();
+                  }
+                }}
+                placeholder={adminSession?.email || "mentor@email.com"}
+                disabled={Boolean(eaDeleteBusy)}
+                autoFocus
+              />
+            </label>
+            <div className="ea-delete-modal-actions">
+              <button
+                className="admin-btn admin-btn-outline"
+                type="button"
+                disabled={Boolean(eaDeleteBusy)}
+                onClick={closeEaDeleteConfirm}
+              >
+                Cancel
+              </button>
+              <button
+                className={`admin-btn admin-btn-danger${eaDeleteBusy ? " is-loading" : ""}`}
+                type="button"
+                disabled={Boolean(eaDeleteBusy)}
+                onClick={() => void confirmEaDelete()}
+              >
+                <AdminBusyLabel busy={Boolean(eaDeleteBusy)} busyText="Deleting…">
+                  Delete permanently
+                </AdminBusyLabel>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {licenseSheetOpen && latestKey ? (
         <div className="license-side-sheet" role="dialog" aria-modal="true" aria-label="License details">

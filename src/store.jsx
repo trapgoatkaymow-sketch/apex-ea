@@ -1954,10 +1954,6 @@ export function AppProvider({ children }) {
   const deleteEa = useCallback(
     (eaId) => {
       const ea = eas.find((e) => e.id === eaId);
-      const ok = window.confirm(
-        `Delete ${ea?.name || "this EA"} permanently?\n\nThis cannot be undone.`
-      );
-      if (!ok) return;
       setEas((prev) => {
         const next = prev.filter((e) => e.id !== eaId);
         if (next.length === 0) clearEaBackup();
@@ -1973,6 +1969,7 @@ export function AppProvider({ children }) {
       });
       showToast(`${ea?.name || "EA"} deleted`);
       if (editingEaId === eaId) setEditingEaId(null);
+      return true;
     },
     [eas, editingEaId, showToast]
   );
