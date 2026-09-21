@@ -5164,6 +5164,13 @@ html.is-native.is-paused .mt-platform-btn.is-active {
     linear-gradient(180deg, #1a0b28 0%, #07040d 48%, #050508 100%);
 }
 
+/* Interface 2 SCAN LOCK portal scanner — keep the stage dark with soft purple edge */
+.phone[data-interface="v2"]:has(.view-scanner.cs-i2-portal:not([hidden])) .v2-stage {
+  background:
+    radial-gradient(120% 70% at 50% -8%, rgba(var(--pink-rgb, 192, 38, 211), 0.22), transparent 52%),
+    linear-gradient(180deg, #0c0612 0%, #050508 55%, #050508 100%);
+}
+
 .v2-view {
   display: none;
   flex: 1;
@@ -10965,12 +10972,12 @@ html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-empty {
   overflow: visible;
 }
 
-html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-frame {
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2):not(.cs-i2-portal) .cs-robot-frame {
   width: clamp(132px, 38vw, 176px);
   height: clamp(132px, 38vw, 176px);
 }
 
-html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-glow {
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2):not(.cs-i2-portal) .cs-robot-glow {
   filter: none;
   opacity: 0.85;
   background:
@@ -10979,7 +10986,7 @@ html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-glow {
   animation: cs-breathe-native 3.2s ease-in-out infinite;
 }
 
-html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-orb {
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2):not(.cs-i2-portal) .cs-robot-orb {
   overflow: visible;
   box-shadow:
     0 0 0 3px rgba(var(--pink-rgb), 0.95),
@@ -10990,7 +10997,7 @@ html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-orb {
   animation: cs-breathe-native 3.2s ease-in-out infinite;
 }
 
-html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-particle-field-energy.is-outer {
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2):not(.cs-i2-portal) .cs-particle-field-energy.is-outer {
   display: block;
   opacity: 0.6;
   transform: scale(2.6);
@@ -11004,7 +11011,7 @@ html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-scans-left {
   box-shadow: 0 0 16px rgba(var(--pink-rgb), 0.4);
 }
 
-html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-engine {
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-engine:not(.is-desk) {
   background: rgba(12, 10, 16, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
@@ -11017,6 +11024,67 @@ html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-engine-gear {
   background: rgba(var(--pink-rgb), 0.16);
   border: 1px solid rgba(var(--pink-soft-rgb, var(--pink-rgb)), 0.4);
   box-shadow: 0 0 12px rgba(var(--pink-rgb), 0.25);
+}
+
+/* Interface 2 — keep SCAN LOCK portal + desk engine vivid on Android */
+html.is-native .view-scanner.cs-i2-portal .cs-v2-portal {
+  width: clamp(176px, 50vw, 220px);
+  height: clamp(176px, 50vw, 220px);
+}
+
+html.is-native .view-scanner.cs-i2-portal .cs-v2-portal-aura {
+  filter: none;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.5),
+    rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.14) 48%,
+    transparent 72%
+  );
+  animation: cs-v2-breathe 2.8s ease-in-out infinite;
+}
+
+html.is-native .view-scanner.cs-i2-portal .cs-v2-portal-orbit {
+  box-shadow: 0 0 22px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.4);
+}
+
+html.is-native .view-scanner.cs-i2-portal .cs-v2-portal-core {
+  border-color: rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.75);
+  box-shadow:
+    0 0 0 4px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.16),
+    0 0 32px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.5),
+    inset 0 0 18px rgba(0, 0, 0, 0.45);
+  animation: cs-v2-core-pulse 2.8s ease-in-out infinite;
+}
+
+html.is-native .view-scanner.cs-i2-portal .cs-v2-portal-sweep {
+  mix-blend-mode: normal;
+  opacity: 0.9;
+}
+
+html.is-native .view-scanner.cs-i2-portal .cs-v2-portal-label {
+  bottom: -2%;
+  box-shadow:
+    0 0 18px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-shadow: 0 0 14px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.95);
+}
+
+html.is-native .view-scanner.cs-i2-portal .cs-engine.is-desk {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(192, 38, 211, 0.32), transparent 55%),
+    linear-gradient(145deg, rgba(28, 12, 40, 0.96), rgba(8, 6, 14, 0.98));
+  border: 1px solid rgba(192, 38, 211, 0.48);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 12px 28px rgba(0, 0, 0, 0.35),
+    0 0 28px rgba(192, 38, 211, 0.28);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.is-native .view-scanner.cs-i2-portal .cs-engine.is-desk .cs-engine-wave i,
+html.is-native .view-scanner.cs-i2-portal .cs-engine.is-desk .cs-engine-kicker i {
+  animation-play-state: running;
 }
 
 /* Pause continuous motion when the app is backgrounded (class from MainActivity). */
