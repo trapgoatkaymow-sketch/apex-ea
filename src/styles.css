@@ -5156,6 +5156,14 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   background: #000;
 }
 
+/* Classic Chart Scanner on Interface 2 — purple wash matching the Zeta reference */
+.phone[data-interface="v2"]:has(.view-scanner.cs-locked-hud:not([hidden])) .v2-stage {
+  background:
+    radial-gradient(120% 70% at 50% -8%, rgba(var(--pink-rgb, 192, 38, 211), 0.34), transparent 52%),
+    radial-gradient(90% 50% at 100% 18%, rgba(168, 85, 247, 0.12), transparent 45%),
+    linear-gradient(180deg, #1a0b28 0%, #07040d 48%, #050508 100%);
+}
+
 .v2-view {
   display: none;
   flex: 1;
