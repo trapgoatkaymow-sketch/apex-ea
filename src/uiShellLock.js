@@ -13,20 +13,21 @@
  * Gen 58 — Floating from open orders / AccountSummary.Profit; profit color blue.
  * Gen 59 — Close all positions button on connected MetaTrader card.
  * Gen 60 — Android APK v2.23 with close-all positions baked in.
+ * Gen 61 — Restore Economic calendar button on Interface 1 + 2 Home.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 60;
+export const UI_SHELL_GENERATION = 61;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-apk-close-all";
+export const UI_SHELL_LABEL = "product-locked-econ-cal-restored";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 59;
+export const UI_SHELL_FLOOR = 60;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
