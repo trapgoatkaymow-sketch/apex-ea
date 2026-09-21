@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BotAvatar from "./BotAvatar.jsx";
-import ScanEye from "./ScanEye.jsx";
 import SniperScan from "./SniperScan.jsx";
 import TrapScannerResult from "./TrapScannerResult.jsx";
 import {
@@ -29,9 +28,7 @@ import {
   saveTradeManagement,
 } from "./tradeManagement.js";
 
-/** Android WebView: keep motion close to web, with a lighter particle count. */
-const SCANNER_PARTICLE_COUNT = isNativeApp() ? 12 : 18;
-const SCANNER_OUTER_PARTICLES = isNativeApp() ? 8 : 18;
+/** Android WebView: slightly faster scan cadence; HUD visuals match web. */
 const SCAN_STEP_MS = isNativeApp() ? 220 : 420;
 const SCAN_STEP_GAP_MS = isNativeApp() ? 36 : 70;
 const SCAN_SETTLE_MS = isNativeApp() ? 220 : 500;
@@ -718,7 +715,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
     detectionStatus !== CHART_DETECTION_STATUS.NO_CHART &&
     scansLeft > 0;
 
-  // I2 uses the same ZETA Chart Scanner chrome as I1; only the setup result card differs.
+  // Both interfaces share the purple SCAN LOCK portal + desk Trading Engine HUD.
+  // Interface 2 keeps the TrapGoat-style setup result card after a successful scan.
   const useTrapResult = variant === "v2";
   const isExecuting = busy && engineMode === "trading";
   const executingLabel =
@@ -730,7 +728,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
   return (
     <section
-      className="view is-active view-scanner"
+      className="view is-active view-scanner cs-locked-hud"
       hidden={!active ? true : undefined}
       aria-hidden={!active ? true : undefined}
     >
@@ -808,65 +806,29 @@ export default function ChartScanner({ variant = "default", active = true }) {
               </div>
             ) : (
               <div className="cs-empty">
-                {useTrapResult ? (
-                  <div className="cs-v2-portal" aria-hidden="true">
-                    <span className="cs-v2-portal-aura" />
-                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--a" />
-                    <span className="cs-v2-portal-orbit cs-v2-portal-orbit--b" />
-                    <span className="cs-v2-portal-spark cs-v2-portal-spark--1" />
-                    <span className="cs-v2-portal-spark cs-v2-portal-spark--2" />
-                    <span className="cs-v2-portal-spark cs-v2-portal-spark--3" />
-                    <span className="cs-v2-portal-core">
-                      <BotAvatar
-                        className="cs-v2-portal-photo"
-                        bot={activeBot}
-                        fallback="/zeta-fire-portal.jpg"
-                        width="160"
-                        height="160"
-                      />
-                      <span className="cs-v2-portal-sweep" />
-                      <span className="cs-v2-portal-shine" />
-                    </span>
-                    <span className="cs-v2-portal-label">
-                      <i />
-                      SCAN LOCK
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    <span className="cs-particle-field" aria-hidden="true">
-                      <span className="stop-energy cs-particle-field-energy">
-                        {Array.from({ length: SCANNER_PARTICLE_COUNT }, (_, i) => (
-                          <span key={`in-${i}`} className={`stop-particle stop-particle-${i + 1}`} />
-                        ))}
-                      </span>
-                      {SCANNER_OUTER_PARTICLES > 0 ? (
-                        <span className="stop-energy cs-particle-field-energy is-outer">
-                          {Array.from({ length: SCANNER_OUTER_PARTICLES }, (_, i) => (
-                            <span key={`out-${i}`} className={`stop-particle stop-particle-${i + 1}`} />
-                          ))}
-                        </span>
-                      ) : null}
-                    </span>
-                    <div className="cs-robot-frame">
-                      <span className="cs-robot-glow" aria-hidden="true" />
-                      <span className="cs-empty-orb cs-robot-orb" aria-hidden="true">
-                        <BotAvatar
-                          className="cs-robot-photo"
-                          bot={activeBot}
-                          fallback="/zeta-fire-portal.jpg"
-                          width="160"
-                          height="160"
-                        />
-                        <span className="stop-energy cs-robot-orb-energy">
-                          {Array.from({ length: SCANNER_PARTICLE_COUNT }, (_, i) => (
-                            <span key={i} className={`stop-particle stop-particle-${i + 1}`} />
-                          ))}
-                        </span>
-                      </span>
-                    </div>
-                  </>
-                )}
+                <div className="cs-v2-portal" aria-hidden="true">
+                  <span className="cs-v2-portal-aura" />
+                  <span className="cs-v2-portal-orbit cs-v2-portal-orbit--a" />
+                  <span className="cs-v2-portal-orbit cs-v2-portal-orbit--b" />
+                  <span className="cs-v2-portal-spark cs-v2-portal-spark--1" />
+                  <span className="cs-v2-portal-spark cs-v2-portal-spark--2" />
+                  <span className="cs-v2-portal-spark cs-v2-portal-spark--3" />
+                  <span className="cs-v2-portal-core">
+                    <BotAvatar
+                      className="cs-v2-portal-photo"
+                      bot={activeBot}
+                      fallback="/zeta-fire-portal.jpg"
+                      width="160"
+                      height="160"
+                    />
+                    <span className="cs-v2-portal-sweep" />
+                    <span className="cs-v2-portal-shine" />
+                  </span>
+                  <span className="cs-v2-portal-label">
+                    <i />
+                    SCAN LOCK
+                  </span>
+                </div>
               </div>
             )}
             <div
@@ -880,21 +842,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
               </div>
             ) : null}
             {engineMode === "scanning" ? (
-              <div
-                className={`cs-scan-eye-stage${useTrapResult ? " is-sniper" : ""}`}
-                aria-live="polite"
-              >
-                {useTrapResult ? (
-                  <>
-                    <SniperScan size="lg" label="Robot sniper scanning" />
-                    <span className="cs-scan-eye-caption">Sniper lock · hunting signal</span>
-                  </>
-                ) : (
-                  <>
-                    <ScanEye size="lg" label="Looking for a signal" />
-                    <span className="cs-scan-eye-caption">Looking for signal</span>
-                  </>
-                )}
+              <div className="cs-scan-eye-stage is-sniper" aria-live="polite">
+                <SniperScan size="lg" label="Robot sniper scanning" />
+                <span className="cs-scan-eye-caption">Sniper lock · hunting signal</span>
               </div>
             ) : null}
           </div>
@@ -972,128 +922,72 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
 
         <div
-          className={`cs-engine${engineActive ? " is-open" : ""}${setupReady ? " is-locked" : ""}${
-            useTrapResult ? " is-desk" : ""
+          className={`cs-engine is-desk${engineActive ? " is-open" : ""}${
+            setupReady ? " is-locked" : ""
           }`}
           aria-live="polite"
         >
-          {useTrapResult ? (
-            <>
-              <div
-                className={`cs-engine-ring${engineMode === "scanning" ? " is-hunting" : ""}${
-                  setupReady && !engineActive ? " is-confidence" : ""
-                }`}
-                style={{
-                  ["--cs-engine-ring"]: `${
-                    engineActive
-                      ? engineProgress
-                      : setupReady
-                        ? Math.max(
-                            0,
-                            Math.min(100, Math.round(Number(signal?.confidence) || 100))
-                          )
-                        : 0
-                  }`,
-                }}
-                aria-hidden="true"
-              >
-                {engineMode === "scanning" ? (
-                  useTrapResult ? (
-                    <SniperScan size="sm" label="Robot sniper scanning" />
-                  ) : (
-                    <ScanEye size="sm" label="Looking for a signal" />
-                  )
-                ) : (
-                  <>
-                    <strong>
-                      {engineActive
-                        ? `${engineProgress}`
-                        : setupReady
-                          ? `${Math.max(
-                              0,
-                              Math.min(100, Math.round(Number(signal?.confidence) || 100))
-                            )}`
-                          : "0"}
-                    </strong>
-                    <em>%</em>
-                  </>
-                )}
-              </div>
-              <div className="cs-engine-copy">
-                <p className="cs-engine-kicker">
-                  <i aria-hidden="true" />
-                  Trading Engine
-                </p>
-                <p className="cs-engine-status">
+          <div
+            className={`cs-engine-ring${engineMode === "scanning" ? " is-hunting" : ""}${
+              setupReady && !engineActive ? " is-confidence" : ""
+            }`}
+            style={{
+              ["--cs-engine-ring"]: `${
+                engineActive
+                  ? engineProgress
+                  : setupReady
+                    ? Math.max(
+                        0,
+                        Math.min(100, Math.round(Number(signal?.confidence) || 100))
+                      )
+                    : 0
+              }`,
+            }}
+            aria-hidden="true"
+          >
+            {engineMode === "scanning" ? (
+              <SniperScan size="sm" label="Robot sniper scanning" />
+            ) : (
+              <>
+                <strong>
                   {engineActive
-                    ? activeStepLabel
+                    ? `${engineProgress}`
                     : setupReady
-                      ? "Setup ready — waiting for Execute Trade"
-                      : "Armed and ready"}
-                </p>
-                {engineActive && engineLogs.length ? (
-                  <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
-                ) : null}
-              </div>
-              <span className="cs-engine-wave" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-              </span>
-            </>
-          ) : (
-            <>
-              <div className="cs-engine-top">
-                <div className="cs-engine-label">
-                  <span className="cs-engine-gear" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <rect
-                        x="4.5"
-                        y="4.5"
-                        width="15"
-                        height="15"
-                        rx="2.2"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                      <path
-                        d="M8 8h3.2v3.2H8V8Zm4.8 0H16v3.2h-3.2V8ZM8 12.8h3.2V16H8v-3.2Zm4.8 0H16V16h-3.2v-3.2Z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </span>
-                  <div>
-                    <p className="cs-engine-kicker">Trading Engine</p>
-                    <p className="cs-engine-status">
-                      {engineActive
-                        ? activeStepLabel
-                        : setupReady
-                          ? "Setup ready — waiting for Execute Trade"
-                          : "Armed and ready"}
-                    </p>
-                  </div>
-                </div>
-                <span className="cs-engine-pct">
-                  {engineActive ? `${engineProgress}%` : setupReady ? "100%" : "0%"}
-                </span>
-              </div>
-              <div className="cs-engine-track">
-                <span
-                  className="cs-engine-fill"
-                  style={{
-                    width: `${engineActive ? engineProgress : setupReady ? 100 : 0}%`,
-                  }}
-                />
-              </div>
-              {engineActive && engineLogs.length ? (
-                <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
-              ) : null}
-            </>
-          )}
+                      ? `${Math.max(
+                          0,
+                          Math.min(100, Math.round(Number(signal?.confidence) || 100))
+                        )}`
+                      : "0"}
+                </strong>
+                <em>%</em>
+              </>
+            )}
+          </div>
+          <div className="cs-engine-copy">
+            <p className="cs-engine-kicker">
+              <i aria-hidden="true" />
+              Trading Engine
+            </p>
+            <p className="cs-engine-status">
+              {engineActive
+                ? activeStepLabel
+                : setupReady
+                  ? "Setup ready — waiting for Execute Trade"
+                  : "Armed and ready"}
+            </p>
+            {engineActive && engineLogs.length ? (
+              <p className="cs-engine-log">{engineLogs[engineLogs.length - 1]}</p>
+            ) : null}
+          </div>
+          <span className="cs-engine-wave" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
         </div>
 
         <div className="cs-controls">

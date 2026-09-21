@@ -20,20 +20,21 @@
  * Gen 65 — Android APK 2.23.3 without Interface 2 Economic calendar.
  * Gen 66 — Stable /android download link + APK 2.24.0.
  * Gen 67 — Android EA photo loads on the hero and the robot bubble.
+ * Gen 68 — Lock Chart Scanner SCAN LOCK HUD on Android for both interfaces.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 67;
+export const UI_SHELL_GENERATION = 68;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-android-ea-photo";
+export const UI_SHELL_LABEL = "product-locked-android-scanner-hud";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 66;
+export const UI_SHELL_FLOOR = 67;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
