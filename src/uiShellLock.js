@@ -23,20 +23,21 @@
  * Gen 68 — Lock Chart Scanner SCAN LOCK HUD on Android for both interfaces.
  * Gen 69 — Classic glowing orb Chart Scanner on both interfaces (Android lock).
  * Gen 70 — Restore Interface 2 SCAN LOCK portal + desk Trading Engine.
+ * Gen 71 — Old license keys reclaim on same email after reinstall.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 70;
+export const UI_SHELL_GENERATION = 71;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-i2-scan-lock-restore";
+export const UI_SHELL_LABEL = "product-locked-license-reclaim";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 69;
+export const UI_SHELL_FLOOR = 70;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

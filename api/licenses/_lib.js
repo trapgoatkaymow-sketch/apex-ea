@@ -1848,8 +1848,9 @@ export async function claimLicenseViaInvite(payload = {}) {
 
 /**
  * Bind a license to the activating phone.
- * Same phone can re-open automatically. A different phone is always rejected —
- * only super admin can deactivate/reset a used key for a new phone.
+ * Same phone can re-open automatically.
+ * A different phone is rejected — unless the CoverLock email matches the
+ * license clientEmail (owner reclaim after reinstall / cleared WebView storage).
  */
 export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}) {
   const variants = licenseKeyVariants(rawKey);
@@ -1879,12 +1880,48 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   }
 
   const boundDevice = String(current.deviceId || "").trim();
+  const licenseEmail = normalizeEmail(current.clientEmail);
+  const emailOwnsLicense = Boolean(
+    claimEmail && licenseEmail && claimEmail === licenseEmail
+  );
 
-  // Used on another phone — hard lock. Super admin must deactivate first.
+  // Used on another phone — allow reclaim only when email matches the key owner
+  // (Android reinstall clears localStorage and mints a new device id).
   if (current.used && boundDevice && boundDevice !== claimDevice) {
-    const err = new Error("This license is locked to another phone");
-    err.status = 403;
-    throw err;
+    if (!emailOwnsLicense) {
+      const err = new Error("This license is locked to another phone");
+      err.status = 403;
+      throw err;
+    }
+    let reclaimed = current;
+    const now = Date.now();
+    await mutateStore((licenses) => {
+      const idx = licenses.findIndex((row) => variants.includes(row.key));
+      if (idx < 0) return licenses;
+      const row = licenses[idx];
+      const next = {
+        ...row,
+        used: true,
+        usedAt: row.usedAt || now,
+        deviceId: claimDevice,
+        boundAt: now,
+        updatedAt: now,
+        clientEmail: row.clientEmail || claimEmail,
+      };
+      licenses[idx] = next;
+      reclaimed = next;
+      return licenses;
+    }, `license email reclaim: ${variants[0]}`);
+    // Pay-after-activate: payment may have landed after the first use stamp.
+    if (claimEmail && !reclaimed?.commissionEligible) {
+      try {
+        const upgraded = await reconcileCommissionForEmail(claimEmail);
+        if (upgraded) reclaimed = upgraded;
+      } catch {
+        // Best-effort
+      }
+    }
+    return reclaimed;
   }
 
   // Same phone re-open, or legacy used key with no device yet → claim/keep.
@@ -1955,10 +1992,28 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     }
     const row = licenses[idx];
     const alreadyBound = String(row.deviceId || "").trim();
+    const rowEmail = normalizeEmail(row.clientEmail);
+    const ownsByEmail = Boolean(
+      claimEmail && rowEmail && claimEmail === rowEmail
+    );
     if (row.used && alreadyBound && alreadyBound !== claimDevice) {
-      const err = new Error("This license is locked to another phone");
-      err.status = 403;
-      throw err;
+      if (!ownsByEmail) {
+        const err = new Error("This license is locked to another phone");
+        err.status = 403;
+        throw err;
+      }
+      const next = {
+        ...row,
+        used: true,
+        usedAt: row.usedAt || now,
+        deviceId: claimDevice,
+        boundAt: now,
+        updatedAt: now,
+        clientEmail: row.clientEmail || claimEmail,
+      };
+      licenses[idx] = next;
+      result = next;
+      return licenses;
     }
     if (row.used && (!alreadyBound || alreadyBound === claimDevice)) {
       const next = {
