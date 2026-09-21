@@ -1250,15 +1250,13 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
   // Always keep a local copy first so a failed remote write cannot drop keys.
   writeLocalStore(normalized, nextDeleted);
 
+  // Compact JSON — pretty-print pushes the store over GitHub Contents API limits
+  // once base64-encoded (~1MB). isomorphic-git can still push either form.
   const payload =
-    JSON.stringify(
-      {
-        licenses: normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-        deletedKeys: nextDeleted,
-      },
-      null,
-      2
-    ) + "\n";
+    JSON.stringify({
+      licenses: normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+      deletedKeys: nextDeleted,
+    }) + "\n";
 
   const durable = await durableWrite({
     raw: payload,
