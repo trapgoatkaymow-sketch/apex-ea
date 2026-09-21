@@ -1268,6 +1268,7 @@ export function AppProvider({ children }) {
 
   // If mentor uploaded a photo after the license was issued (still /logo.png on
   // the key), upgrade local bots/EAs when the photo API starts serving bytes.
+  // Also try sibling botIds that share the same EA name (older keys).
   // Never snap a real API path back to /logo.png on a flaky probe — that left
   // Home stuck on the default robot even when Mentor Portal showed the picture.
   useEffect(() => {
@@ -1276,34 +1277,69 @@ export function AppProvider({ children }) {
     if (!botId) return undefined;
     if (isRealProfilePhoto(photo)) return undefined;
     let cancelled = false;
-    const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=${Date.now()}`;
-    void fetch(mediaUrl(apiPath), { method: "GET", cache: "no-store" })
-      .then(async (response) => {
+    const botName = String(activeBot?.name || "")
+      .trim()
+      .toLowerCase();
+    const aliasIds = [
+      ...new Set(
+        [
+          ...(Array.isArray(activeBot?.photoAliases)
+            ? activeBot.photoAliases
+            : []),
+          ...(Array.isArray(licenseKeys) ? licenseKeys : [])
+            .filter((row) => {
+              const rowName = String(row.botName || row.bot?.name || "")
+                .trim()
+                .toLowerCase();
+              return Boolean(botName && rowName && rowName === botName);
+            })
+            .map((row) => String(row.botId || row.bot?.id || "").trim()),
+        ]
+          .map((id) => String(id || "").trim())
+          .filter((id) => id)
+      ),
+    ];
+    const probeIds = [botId, ...aliasIds.filter((id) => id !== botId)];
+
+    void (async () => {
+      for (const probeId of probeIds) {
         if (cancelled) return;
-        const type = String(response.headers.get("content-type") || "");
-        const okImage = response.ok && type.startsWith("image/");
-        if (!okImage) return;
-        const nextPhoto = `/api/licenses/photo?botId=${encodeURIComponent(botId)}&v=full`;
-        setBots((prev) =>
-          prev.map((bot) =>
-            bot.id === botId && !isRealProfilePhoto(bot.photo)
-              ? { ...bot, photo: nextPhoto }
-              : bot
-          )
-        );
-        setEas((prev) =>
-          prev.map((ea) =>
-            ea.id === botId && !isRealProfilePhoto(ea.photo)
-              ? { ...ea, photo: nextPhoto }
-              : ea
-          )
-        );
-      })
-      .catch(() => {});
+        const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(probeId)}&v=${Date.now()}`;
+        try {
+          const response = await fetch(mediaUrl(apiPath), {
+            method: "GET",
+            cache: "no-store",
+          });
+          if (cancelled) return;
+          const type = String(response.headers.get("content-type") || "");
+          const okImage = response.ok && type.startsWith("image/");
+          if (!okImage) continue;
+          const nextPhoto = `/api/licenses/photo?botId=${encodeURIComponent(probeId)}&v=full`;
+          setBots((prev) =>
+            prev.map((bot) =>
+              bot.id === botId && !isRealProfilePhoto(bot.photo)
+                ? { ...bot, photo: nextPhoto, photoAliases: aliasIds }
+                : bot
+            )
+          );
+          setEas((prev) =>
+            prev.map((ea) =>
+              ea.id === botId && !isRealProfilePhoto(ea.photo)
+                ? { ...ea, photo: nextPhoto, photoAliases: aliasIds }
+                : ea
+            )
+          );
+          return;
+        } catch {
+          // try next alias
+        }
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [activeBot?.id, activeBot?.photo]);
+  }, [activeBot?.id, activeBot?.photo, activeBot?.name, activeBot?.photoAliases, licenseKeys]);
 
   const requestSignup = useCallback(
     async (email) => {
@@ -2377,31 +2413,63 @@ export function AppProvider({ children }) {
         symbols: [],
       };
 
-      // Prefer a durable photo from this bot's other licenses / photo API over /logo.png.
+      // Prefer a durable photo from this bot's other licenses / same EA name /
+      // photo API over /logo.png (older keys reuse a different botId).
+      const snapshotName = String(snapshot.name || entry.botName || "")
+        .trim()
+        .toLowerCase();
+      const snapshotId = String(snapshot.id || entry.botId || "").trim();
       let activationPhoto = pickProfilePhoto(
         snapshot.photo,
         ...(Array.isArray(licenseKeys) ? licenseKeys : [])
-          .filter(
-            (row) =>
-              String(row.botId || row.bot?.id || "").trim() ===
-              String(snapshot.id || entry.botId || "").trim()
-          )
+          .filter((row) => {
+            const rowId = String(row.botId || row.bot?.id || "").trim();
+            const rowName = String(row.botName || row.bot?.name || "")
+              .trim()
+              .toLowerCase();
+            if (snapshotId && rowId === snapshotId) return true;
+            if (snapshotName && rowName && rowName === snapshotName) return true;
+            return false;
+          })
           .map((row) => row.bot?.photo)
       );
-      const botIdForPhoto = String(snapshot.id || entry.botId || "").trim();
+      const botIdForPhoto = snapshotId;
+      const aliasIds = [
+        ...new Set(
+          (Array.isArray(licenseKeys) ? licenseKeys : [])
+            .filter((row) => {
+              const rowName = String(row.botName || row.bot?.name || "")
+                .trim()
+                .toLowerCase();
+              return Boolean(
+                snapshotName && rowName && rowName === snapshotName
+              );
+            })
+            .map((row) => String(row.botId || row.bot?.id || "").trim())
+            .filter((id) => id && id !== botIdForPhoto)
+        ),
+      ];
       if (botIdForPhoto && !isRealProfilePhoto(activationPhoto)) {
-        const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(botIdForPhoto)}&v=full`;
-        try {
-          const check = await fetch(mediaUrl(apiPath), {
-            method: "GET",
-            cache: "no-store",
-          });
-          if (check.ok) activationPhoto = apiPath;
-        } catch {
-          // keep logo / existing
+        const probeIds = [botIdForPhoto, ...aliasIds];
+        for (const probeId of probeIds) {
+          const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(probeId)}&v=full`;
+          try {
+            const check = await fetch(mediaUrl(apiPath), {
+              method: "GET",
+              cache: "no-store",
+            });
+            const type = String(check.headers.get("content-type") || "");
+            if (check.ok && type.startsWith("image/")) {
+              activationPhoto = apiPath;
+              break;
+            }
+          } catch {
+            // try next alias
+          }
         }
       }
       snapshot.photo = activationPhoto;
+      if (aliasIds.length) snapshot.photoAliases = aliasIds;
 
       // New activations always start stopped — user taps START.
       setV2Running(false);
@@ -2418,6 +2486,7 @@ export function AppProvider({ children }) {
                   name: snapshot.name || ea.name,
                   // Don't let a logo placeholder from an old key wipe an existing picture.
                   photo: pickProfilePhoto(snapshot.photo, ea.photo),
+                  photoAliases: snapshot.photoAliases || ea.photoAliases || [],
                   strategy: snapshot.strategy || ea.strategy,
                   ownerEmail: ea.ownerEmail || entry.mentorEmail || "",
                   ownerId: ea.ownerId || entry.mentorId || "",
@@ -2434,6 +2503,7 @@ export function AppProvider({ children }) {
             id: snapshot.id,
             name: snapshot.name || entry.botName || "Bot",
             photo: pickProfilePhoto(snapshot.photo),
+            photoAliases: snapshot.photoAliases || [],
             strategy: snapshot.strategy || "scalper",
             ownerEmail: entry.mentorEmail || "",
             ownerId: entry.mentorId || "",
@@ -2458,6 +2528,7 @@ export function AppProvider({ children }) {
                   ...b,
                   name: snapshot.name || b.name,
                   photo: pickProfilePhoto(snapshot.photo, b.photo),
+                  photoAliases: snapshot.photoAliases || b.photoAliases || [],
                   active: true,
                   selected: true,
                   ...licenseMeta,
@@ -2471,6 +2542,7 @@ export function AppProvider({ children }) {
             id: snapshot.id,
             name: snapshot.name || entry.botName || "Bot",
             photo: pickProfilePhoto(snapshot.photo),
+            photoAliases: snapshot.photoAliases || [],
             active: true,
             selected: true,
             ...licenseMeta,

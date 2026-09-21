@@ -59,6 +59,7 @@ const GITHUB_EA_PHOTO_BASE =
 export function eaPhotoCandidates(bot) {
   const id = String(bot?.id || "").trim();
   const photo = String(bot?.photo || "").trim();
+  const name = String(bot?.name || "").trim();
   const list = [];
   const push = (value) => {
     const src = String(value || "").trim();
@@ -69,11 +70,36 @@ export function eaPhotoCandidates(bot) {
   if (photo.startsWith("data:image/") || photo.startsWith("blob:")) push(photo);
   if (/^https?:\/\//i.test(photo)) push(photo);
   if (photo.startsWith("/api/")) push(mediaUrl(photo));
+
+  const ids = new Set();
+  if (id) ids.add(id);
+  // Alias ids passed from Home (same EA name, different license botId).
+  for (const alias of Array.isArray(bot?.photoAliases) ? bot.photoAliases : []) {
+    const aliasId = String(alias || "").trim();
+    if (aliasId) ids.add(aliasId);
+  }
+  // Strip random suffix so GitHub/raw can hit a shared slug if present.
   if (id) {
-    const enc = encodeURIComponent(id);
+    const prefix = id.replace(/-[a-z0-9]{5,14}$/i, "");
+    if (prefix && prefix !== id) ids.add(prefix);
+  }
+
+  for (const candidateId of ids) {
+    const enc = encodeURIComponent(candidateId);
     push(`https://www.apex-ea.com/api/licenses/photo?botId=${enc}&v=full`);
     for (const ext of ["jpg", "jpeg", "png", "webp"]) {
       push(`${GITHUB_EA_PHOTO_BASE}/${enc}.${ext}`);
+    }
+  }
+
+  // Name-slug fallback (ZETA SCALPER AI → zeta-scalper-ai.jpg) when ids miss.
+  const nameSlug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (nameSlug) {
+    for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+      push(`${GITHUB_EA_PHOTO_BASE}/${nameSlug}.${ext}`);
     }
   }
   return list;
