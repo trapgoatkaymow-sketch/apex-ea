@@ -13,10 +13,17 @@ let warmPromise = null;
 function rawPhotoCandidates(botId) {
   const id = String(botId || "").trim();
   if (!id) return [];
-  const enc = encodeURIComponent(id);
-  return ["jpg", "jpeg", "png", "webp"].map(
-    (ext) => `${GITHUB_RAW_BASE}/${enc}.${ext}`
-  );
+  const ids = [id];
+  const prefix = id.replace(/-[a-z0-9]{5,14}$/i, "");
+  if (prefix && prefix !== id) ids.push(prefix);
+  const urls = [];
+  for (const candidate of ids) {
+    const enc = encodeURIComponent(candidate);
+    for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+      urls.push(`${GITHUB_RAW_BASE}/${enc}.${ext}`);
+    }
+  }
+  return urls;
 }
 
 function openDb() {

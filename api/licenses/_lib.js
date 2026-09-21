@@ -336,6 +336,76 @@ function safePhotoId(botId) {
   );
 }
 
+/** Strip the random suffix (e.g. -mtybr0x3) so sibling EA ids share a photo. */
+function botPhotoNamePrefix(botId) {
+  const id = safePhotoId(botId);
+  const stripped = id.replace(/-[a-z0-9]{5,14}$/i, "");
+  return stripped || id;
+}
+
+function normalizeBotDisplayName(name) {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Other botIds that likely share the same mentor artwork — same name prefix
+ * on disk, or another license with the same botName that already has a photo.
+ */
+async function findSiblingPhotoBotIds(botId) {
+  const id = safePhotoId(botId);
+  if (!id) return [];
+  const prefix = botPhotoNamePrefix(id);
+  const found = new Set();
+
+  for (const dir of [TMP_PHOTO_DIR, BUNDLED_PHOTO_DIR]) {
+    try {
+      if (!fs.existsSync(dir)) continue;
+      for (const name of fs.readdirSync(dir)) {
+        const match = String(name).match(/^(.*)\.(jpe?g|png|webp)$/i);
+        if (!match) continue;
+        const fileId = safePhotoId(match[1]);
+        if (!fileId || fileId === id) continue;
+        if (prefix && (fileId === prefix || fileId.startsWith(`${prefix}-`))) {
+          found.add(fileId);
+        }
+      }
+    } catch {
+      // try next dir
+    }
+  }
+
+  try {
+    const licenses = await listLicenses();
+    const self =
+      licenses.find(
+        (row) => safePhotoId(row.botId || row.bot?.id) === id
+      ) || null;
+    const selfName = normalizeBotDisplayName(
+      self?.botName || self?.bot?.name || ""
+    );
+    for (const row of licenses) {
+      const rowId = safePhotoId(row.botId || row.bot?.id);
+      if (!rowId || rowId === id) continue;
+      const photo = String(row.bot?.photo || "").trim();
+      if (!photo || photo === "/logo.png") continue;
+      const rowName = normalizeBotDisplayName(
+        row.botName || row.bot?.name || ""
+      );
+      const sameName = Boolean(selfName && rowName && selfName === rowName);
+      const samePrefix =
+        Boolean(prefix) && botPhotoNamePrefix(rowId) === prefix;
+      if (sameName || samePrefix) found.add(rowId);
+    }
+  } catch {
+    // best-effort
+  }
+
+  return [...found];
+}
+
 function parseDataImage(dataUrl) {
   const raw = String(dataUrl || "");
   const match = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/);
@@ -525,8 +595,8 @@ function rawBotPhotoUrl(id, ext) {
 export async function resolveRawBotPhotoUrl(botId) {
   const id = safePhotoId(botId);
   if (!id) return null;
-  const tryExt = async (ext) => {
-    const url = rawBotPhotoUrl(id, ext);
+  const tryExt = async (targetId, ext) => {
+    const url = rawBotPhotoUrl(targetId, ext);
     const res = await fetch(url, { method: "HEAD", cache: "no-store" });
     if (!res.ok) {
       const err = new Error("raw photo miss");
@@ -535,13 +605,24 @@ export async function resolveRawBotPhotoUrl(botId) {
     }
     return url;
   };
+  const tryId = async (targetId) =>
+    Promise.any(["jpg", "jpeg", "png", "webp"].map((ext) => tryExt(targetId, ext)));
+
   try {
-    return await Promise.any(
-      ["jpg", "jpeg", "png", "webp"].map((ext) => tryExt(ext))
-    );
+    return await tryId(id);
   } catch {
-    return null;
+    // fall through to siblings
   }
+
+  const siblings = await findSiblingPhotoBotIds(id);
+  for (const sibling of siblings) {
+    try {
+      return await tryId(sibling);
+    } catch {
+      // try next
+    }
+  }
+  return null;
 }
 
 async function fetchRawBotPhoto(id) {
@@ -578,47 +659,73 @@ export async function readBotPhoto(botId) {
   const local = readLocalBotPhoto(id);
   if (local) return local;
 
-  // 1) Raw CDN binary (fast). 2) Contents API base64 (fallback).
-  try {
-    const photo = await fetchRawBotPhoto(id);
-    memoryPhotos.set(id, photo);
+  const loadExact = async (targetId) => {
+    // 1) Raw CDN binary (fast). 2) Contents API base64 (fallback).
     try {
-      const ext = photo.mime?.includes("png")
-        ? "png"
-        : photo.mime?.includes("webp")
-          ? "webp"
-          : "jpg";
-      writeLocalBotPhoto(id, ext, photo.buffer, photo.mime || "image/jpeg");
+      const photo = await fetchRawBotPhoto(targetId);
+      memoryPhotos.set(targetId, photo);
+      try {
+        const ext = photo.mime?.includes("png")
+          ? "png"
+          : photo.mime?.includes("webp")
+            ? "webp"
+            : "jpg";
+        writeLocalBotPhoto(targetId, ext, photo.buffer, photo.mime || "image/jpeg");
+      } catch {
+        // optional
+      }
+      return photo;
     } catch {
-      // optional
+      // fall through to Contents API
     }
-    return photo;
-  } catch {
-    // fall through to Contents API
-  }
 
-  const tryExt = async (ext) => {
-    const filePath = `data/ea-photos/${id}.${ext}`;
-    const file = await ghFetch(
-      `${API}/contents/${filePath}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    const base64 = String(file.content || "").replace(/\n/g, "");
-    if (!base64) {
-      const err = new Error("empty photo");
-      err.status = 404;
-      throw err;
+    const tryExt = async (ext) => {
+      const filePath = `data/ea-photos/${targetId}.${ext}`;
+      const file = await ghFetch(
+        `${API}/contents/${filePath}?ref=${encodeURIComponent(BRANCH)}`,
+        { cache: "no-store" }
+      );
+      const base64 = String(file.content || "").replace(/\n/g, "");
+      if (!base64) {
+        const err = new Error("empty photo");
+        err.status = 404;
+        throw err;
+      }
+      const mime =
+        ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+      return { mime, buffer: Buffer.from(base64, "base64") };
+    };
+
+    try {
+      const photo = await Promise.any(
+        ["jpg", "jpeg", "png", "webp"].map((ext) => tryExt(ext))
+      );
+      memoryPhotos.set(targetId, photo);
+      try {
+        const ext = photo.mime?.includes("png")
+          ? "png"
+          : photo.mime?.includes("webp")
+            ? "webp"
+            : "jpg";
+        writeLocalBotPhoto(targetId, ext, photo.buffer, photo.mime || "image/jpeg");
+      } catch {
+        // optional
+      }
+      return photo;
+    } catch {
+      return null;
     }
-    const mime =
-      ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
-    return { mime, buffer: Buffer.from(base64, "base64") };
   };
 
-  try {
-    const photo = await Promise.any(
-      ["jpg", "jpeg", "png", "webp"].map((ext) => tryExt(ext))
-    );
-    memoryPhotos.set(id, photo);
+  const exact = await loadExact(id);
+  if (exact?.buffer?.length) return exact;
+
+  // Logo-only / older bot ids: reuse artwork from a sibling EA with the same name.
+  const siblings = await findSiblingPhotoBotIds(id);
+  for (const sibling of siblings) {
+    const localSibling = readLocalBotPhoto(sibling);
+    const photo = localSibling || (await loadExact(sibling));
+    if (!photo?.buffer?.length) continue;
     try {
       const ext = photo.mime?.includes("png")
         ? "png"
@@ -627,12 +734,12 @@ export async function readBotPhoto(botId) {
           : "jpg";
       writeLocalBotPhoto(id, ext, photo.buffer, photo.mime || "image/jpeg");
     } catch {
-      // optional
+      memoryPhotos.set(id, photo);
     }
     return photo;
-  } catch {
-    return null;
   }
+
+  return null;
 }
 
 /** Rewrite mentorName on every license owned by this mentor email. */
@@ -660,7 +767,7 @@ export async function syncMentorNameToLicenses(mentorEmail, mentorName) {
   return updated;
 }
 
-/** Rewrite bot.photo on every license that belongs to this EA. */
+/** Rewrite bot.photo on every license that belongs to this EA (id or same name). */
 export async function syncBotPhotoToLicenses(botId, photoPath) {
   const id = String(botId || "").trim();
   const photo = String(photoPath || "").trim();
@@ -669,16 +776,40 @@ export async function syncBotPhotoToLicenses(botId, photoPath) {
   let updated = [];
   await mutateStore((licenses) => {
     updated = [];
+    const source =
+      licenses.find(
+        (row) => String(row.botId || row.bot?.id || "").trim() === id
+      ) || null;
+    const sourceName = normalizeBotDisplayName(
+      source?.botName || source?.bot?.name || ""
+    );
+    const prefix = botPhotoNamePrefix(id);
+
     return licenses.map((row) => {
       const rowBotId = String(row.botId || row.bot?.id || "").trim();
-      if (rowBotId !== id) return row;
+      const rowName = normalizeBotDisplayName(
+        row.botName || row.bot?.name || ""
+      );
+      const sameId = rowBotId === id;
+      const sameName = Boolean(sourceName && rowName && sourceName === rowName);
+      const samePrefix =
+        Boolean(prefix) &&
+        rowBotId &&
+        botPhotoNamePrefix(rowBotId) === prefix;
+      if (!sameId && !sameName && !samePrefix) return row;
+      if (!shouldReplacePhoto(row.bot?.photo, photo)) return row;
       const next = {
         ...row,
         botName: row.botName || row.bot?.name || "Bot",
         updatedAt: Date.now(),
         bot: {
-          ...(row.bot || { id, name: row.botName || "Bot", strategy: "scalper", symbols: [] }),
-          id,
+          ...(row.bot || {
+            id: rowBotId || id,
+            name: row.botName || "Bot",
+            strategy: "scalper",
+            symbols: [],
+          }),
+          id: rowBotId || id,
           photo,
         },
       };
