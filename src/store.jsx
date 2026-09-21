@@ -143,8 +143,7 @@ function normalizeEmail(email) {
 function normalizeSymbol(raw) {
   return String(raw || "")
     .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9._/-]/g, "");
+    .replace(/[^A-Za-z0-9._/-]/g, "");
 }
 
 function randomLicenseKey() {
@@ -857,7 +856,11 @@ export function AppProvider({ children }) {
   }, [eas]);
 
   const ensureCatalog = useCallback((symbol) => {
-    setCatalog((prev) => (prev.includes(symbol) ? prev : [...prev, symbol]));
+    const clean = normalizeSymbol(symbol);
+    if (!clean) return;
+    setCatalog((prev) =>
+      prev.some((s) => s.toLowerCase() === clean.toLowerCase()) ? prev : [...prev, clean]
+    );
   }, []);
 
   const getSymbolMeta = useCallback(
@@ -1771,7 +1774,13 @@ export function AppProvider({ children }) {
 
   const upsertEa = useCallback(
     async ({ id, name, strategy, photo, symbols, ownerEmail = "", ownerId = "" }) => {
-      const cleanSymbols = symbols.map(normalizeSymbol).filter(Boolean);
+      const cleanSymbols = [];
+      for (const raw of symbols) {
+        const symbol = normalizeSymbol(raw);
+        if (!symbol) continue;
+        if (cleanSymbols.some((s) => s.toLowerCase() === symbol.toLowerCase())) continue;
+        cleanSymbols.push(symbol);
+      }
       cleanSymbols.forEach(ensureCatalog);
       let photoValue = String(photo || "").trim();
       const hasProfilePhoto =

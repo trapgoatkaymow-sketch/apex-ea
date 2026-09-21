@@ -197,7 +197,6 @@ export default function AdminPortal() {
     resetClientScans,
     deleteLicense,
     refreshLicenses,
-    catalog,
     ensureCatalog,
     normalizeSymbol,
     showToast,
@@ -1574,15 +1573,15 @@ export default function AdminPortal() {
       return;
     }
     ensureCatalog(symbol);
-    setDraftSymbols((prev) => (prev.includes(symbol) ? prev : [...prev, symbol]));
+    setDraftSymbols((prev) =>
+      prev.some((s) => s.toLowerCase() === symbol.toLowerCase()) ? prev : [...prev, symbol]
+    );
     setCustomSymbol("");
     showToast("Symbol added");
   }
 
-  function toggleDraftSymbol(symbol) {
-    setDraftSymbols((prev) =>
-      prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]
-    );
+  function removeDraftSymbol(symbol) {
+    setDraftSymbols((prev) => prev.filter((s) => s !== symbol));
   }
 
   function onPhotoChange(event) {
@@ -1651,7 +1650,9 @@ export default function AdminPortal() {
       const symbol = normalizeSymbol(customSymbol);
       if (symbol) {
         ensureCatalog(symbol);
-        if (!symbols.includes(symbol)) symbols.push(symbol);
+        if (!symbols.some((s) => s.toLowerCase() === symbol.toLowerCase())) {
+          symbols.push(symbol);
+        }
       }
     }
     if (!name.trim()) {
@@ -2815,34 +2816,9 @@ export default function AdminPortal() {
                     required
                   />
                 </label>
-                <label className="ea-field">
-                  <span>Strategy</span>
-                  <select
-                    className="admin-input"
-                    value={strategy}
-                    onChange={(e) => setStrategy(e.target.value)}
-                  >
-                    <option value="scalper">Scalper</option>
-                    <option value="trend">Trend Follower</option>
-                    <option value="grid">Grid</option>
-                    <option value="news">News Trader</option>
-                  </select>
-                </label>
                 <div className="ea-field">
                   <span>Symbols</span>
-                  <p className="ea-hint">Pick from the list or type your own symbol below.</p>
-                  <div className="ea-symbol-picker">
-                    {catalog.map((symbol) => (
-                      <button
-                        key={symbol}
-                        type="button"
-                        className={`ea-pick-chip${draftSymbols.includes(symbol) ? " is-on" : ""}`}
-                        onClick={() => toggleDraftSymbol(symbol)}
-                      >
-                        {symbol}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="ea-hint">Type a symbol and tap Add. Lowercase and uppercase are both fine.</p>
                   <div className="ea-manual-symbol">
                     <input
                       className="admin-input"
@@ -2854,7 +2830,10 @@ export default function AdminPortal() {
                           addCustomSymbol();
                         }
                       }}
-                      placeholder="Write your own symbol (e.g. US500)"
+                      placeholder="e.g. eurusd or XAUUSD"
+                      autoCapitalize="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                     />
                     <button
                       className="admin-btn admin-btn-outline"
@@ -2871,7 +2850,7 @@ export default function AdminPortal() {
                       draftSymbols.map((symbol) => (
                         <span className="ea-sym-chip" key={symbol}>
                           <span>{symbol}</span>
-                          <button type="button" onClick={() => toggleDraftSymbol(symbol)}>
+                          <button type="button" onClick={() => removeDraftSymbol(symbol)}>
                             ×
                           </button>
                         </span>
