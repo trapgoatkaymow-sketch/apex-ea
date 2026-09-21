@@ -442,13 +442,19 @@ export async function fetchLicenses() {
 
 export async function fetchLicense(key) {
   const variants = licenseKeyVariants(key);
-  for (const candidate of variants) {
-    try {
-      const data = await apiFetch(`?key=${encodeURIComponent(candidate)}`);
-      const row = normalizeLicense(data?.license);
-      if (row) return row;
-    } catch {
-      // try next lookalike
+  for (let pass = 0; pass < 2; pass += 1) {
+    for (const candidate of variants) {
+      try {
+        const data = await apiFetch(`?key=${encodeURIComponent(candidate)}`);
+        const row = normalizeLicense(data?.license);
+        if (row) return row;
+      } catch {
+        // try next lookalike
+      }
+    }
+    // Brief pause then retry — newly generated keys can lag one serverless hop.
+    if (pass === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 450));
     }
   }
   return null;

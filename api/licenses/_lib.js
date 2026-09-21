@@ -1354,8 +1354,8 @@ async function mutateStore(mutator, message) {
   throw lastError || new Error("Could not update licenses store");
 }
 
-export async function listLicenses() {
-  const store = await readStore();
+export async function listLicenses(options = {}) {
+  const store = await readStore(options);
   let licenses = store.licenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   // Fill missing mentorName from the mentor portal username so client headers
@@ -2001,7 +2001,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   const claimEmail = normalizeEmail(email);
 
   // Peek current license + signup before mutate so commission rules use paid/first-access.
-  const currentList = await listLicenses();
+  const currentList = await listLicenses({ preferFresh: true });
   const current =
     currentList.find((row) => variants.includes(row.key)) || null;
   if (!current) {
@@ -2498,7 +2498,10 @@ export async function findLicense(rawKey) {
   if (!variants.size) return null;
   const compactOf = (value) => normalizeLicenseKey(value).replace(/-/g, "");
   const wantCompact = compactOf(rawKey);
-  const licenses = await listLicenses();
+  // Unlock/generate must not use a stale memory TTL that predates a key written
+  // on another serverless instance.
+  const store = await readStore({ preferFresh: true });
+  const licenses = store.licenses;
   return (
     licenses.find((row) => {
       const key = normalizeLicenseKey(row.key);
@@ -2511,8 +2514,26 @@ export async function findLicense(rawKey) {
 export async function findLicensesByEmail(email) {
   const key = normalizeEmail(email);
   if (!key) return [];
-  const licenses = await listLicenses();
-  return licenses.filter((row) => normalizeEmail(row.clientEmail) === key);
+  const store = await readStore({ preferFresh: true });
+  return store.licenses.filter((row) => normalizeEmail(row.clientEmail) === key);
+}
+
+/** Push the merged license store to every durable backend (Firebase/Blob/GitHub). */
+export async function mirrorLicensesToDurableStores() {
+  const store = await readStore({ preferFresh: true });
+  const write = await writeStore(
+    store.licenses,
+    store.sha,
+    "chore: mirror full license store to durable backends",
+    store.deletedKeys
+  );
+  return {
+    ok: write?.durable !== false,
+    durable: write?.durable !== false,
+    source: write?.source || null,
+    count: Array.isArray(store.licenses) ? store.licenses.length : 0,
+    error: write?.error || null,
+  };
 }
 
 /** Wipe every license key so all portals start from zero. */
