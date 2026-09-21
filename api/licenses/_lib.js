@@ -1850,7 +1850,7 @@ export async function claimLicenseViaInvite(payload = {}) {
  * Bind a license to the activating phone.
  * Same phone can re-open automatically.
  * A different phone is rejected — unless the CoverLock email matches the
- * license clientEmail (owner reclaim after reinstall / cleared WebView storage).
+ * license clientEmail or mentorEmail (owner/mentor reclaim after reinstall).
  */
 export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}) {
   const variants = licenseKeyVariants(rawKey);
