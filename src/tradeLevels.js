@@ -100,16 +100,16 @@ export function buildSafeMultiTpLevels({
     entry: entryOut,
     stopLoss: formatTradePrice(dir === "BUY" ? entryOut - safeRisk : entryOut + safeRisk),
     takeProfit1: formatTradePrice(
-      dir === "BUY" ? entryOut + safeRisk * 1 : entryOut - safeRisk * 1
-    ),
-    takeProfit2: formatTradePrice(
       dir === "BUY" ? entryOut + safeRisk * 2 : entryOut - safeRisk * 2
     ),
-    takeProfit3: formatTradePrice(
+    takeProfit2: formatTradePrice(
       dir === "BUY" ? entryOut + safeRisk * 3 : entryOut - safeRisk * 3
     ),
+    takeProfit3: formatTradePrice(
+      dir === "BUY" ? entryOut + safeRisk * 4 : entryOut - safeRisk * 4
+    ),
     takeProfit: formatTradePrice(
-      dir === "BUY" ? entryOut + safeRisk * 3 : entryOut - safeRisk * 3
+      dir === "BUY" ? entryOut + safeRisk * 4 : entryOut - safeRisk * 4
     ),
     minDist,
     widened: risk < minDist + 1e-12,
