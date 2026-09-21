@@ -142,9 +142,7 @@ function normalizeEmail(email) {
 }
 
 function normalizeSymbol(raw) {
-  return String(raw || "")
-    .trim()
-    .replace(/[^A-Za-z0-9._/-]/g, "");
+  return normalizeBrokerSymbol(raw);
 }
 
 function randomLicenseKey() {
