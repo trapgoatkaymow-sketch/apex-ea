@@ -1850,7 +1850,7 @@ export async function claimLicenseViaInvite(payload = {}) {
  * Bind a license to the activating phone.
  * Same phone can re-open automatically.
  * A different phone is rejected — unless the CoverLock email matches the
- * license clientEmail (owner reclaim after reinstall / cleared WebView storage).
+ * license clientEmail or mentorEmail (owner/mentor reclaim after reinstall).
  */
 export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}) {
   const variants = licenseKeyVariants(rawKey);
@@ -1881,8 +1881,14 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
 
   const boundDevice = String(current.deviceId || "").trim();
   const licenseEmail = normalizeEmail(current.clientEmail);
+  const mentorEmail = normalizeEmail(current.mentorEmail || current.ownerEmail);
+  // Owner client email OR the mentor who issued the key can reclaim after
+  // reinstall (Android clears storage → new device id). Mentors often sign in
+  // with their portal email while the key's clientEmail is a personal inbox.
   const emailOwnsLicense = Boolean(
-    claimEmail && licenseEmail && claimEmail === licenseEmail
+    claimEmail &&
+      ((licenseEmail && claimEmail === licenseEmail) ||
+        (mentorEmail && claimEmail === mentorEmail))
   );
 
   // Used on another phone — allow reclaim only when email matches the key owner

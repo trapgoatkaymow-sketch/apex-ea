@@ -516,7 +516,9 @@ export default function CoverLock() {
     }
 
     setLockStep("license");
-    showToast("Enter your license key to unlock");
+    // No toast here — the license form is the instruction. A sticky
+    // "Access restored — enter your license key" left people stuck tapping Unlock
+    // on keys issued under a different client email than the CoverLock account.
     // Persist paid flag in the background — never block the unlock UI on it.
     void updateSignupAccessPaid(key)
       .then((remote) => {
@@ -1051,7 +1053,7 @@ export default function CoverLock() {
                 : claimedKey
                   ? `Your key is ready below. Tap Unlock app to continue.`
                   : coverEmail
-                    ? `Approved · ${coverEmail}. Enter the license key for this email — old keys work again after reinstall.`
+                    ? `Approved · ${coverEmail}. Enter your old license key — it works again on this phone after reinstall.`
                     : "Enter your license key to unlock the app."}
             </p>
             {claimedKey ? (
