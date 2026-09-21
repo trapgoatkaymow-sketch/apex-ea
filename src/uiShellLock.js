@@ -26,20 +26,23 @@
  * Gen 71 — Old license keys reclaim on same email after reinstall.
  * Gen 72 — Mentor or client email can reclaim used keys; drop stuck restore toast.
  * Gen 73 — Android EA photos: name/sibling botId fallback when key still has logo.
+ * Gen 73 FREEZE — User confirmed product is good. Do not change Interface 1/2,
+ * CoverLock, scanner, EA photos, or license reclaim without an explicit new ask.
+ * Floor raised to 73 so older shells cannot stick on phones.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
 export const UI_SHELL_GENERATION = 73;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-ea-photos";
+export const UI_SHELL_LABEL = "product-frozen-stable";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 72;
+export const UI_SHELL_FLOOR = 73;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
