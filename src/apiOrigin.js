@@ -52,6 +52,33 @@ export function mediaUrl(src) {
  * blocked on /api/licenses/photo. Only use the API path when the bot record
  * already points there (real uploaded photo).
  */
+const GITHUB_EA_PHOTO_BASE =
+  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/data/ea-photos";
+
+/** Absolute URLs that can paint an EA photo in a WebView <img> (no fetch/CORS). */
+export function eaPhotoCandidates(bot) {
+  const id = String(bot?.id || "").trim();
+  const photo = String(bot?.photo || "").trim();
+  const list = [];
+  const push = (value) => {
+    const src = String(value || "").trim();
+    if (!src || list.includes(src) || /logo\.png(\?|$)/i.test(src)) return;
+    list.push(src);
+  };
+
+  if (photo.startsWith("data:image/") || photo.startsWith("blob:")) push(photo);
+  if (/^https?:\/\//i.test(photo)) push(photo);
+  if (photo.startsWith("/api/")) push(mediaUrl(photo));
+  if (id) {
+    const enc = encodeURIComponent(id);
+    push(`https://www.apex-ea.com/api/licenses/photo?botId=${enc}&v=full`);
+    for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+      push(`${GITHUB_EA_PHOTO_BASE}/${enc}.${ext}`);
+    }
+  }
+  return list;
+}
+
 export function resolveBotPhotoSrc(bot, fallback = "/logo.png") {
   const photo = String(bot?.photo || "").trim();
   const fb = fallback || "/logo.png";

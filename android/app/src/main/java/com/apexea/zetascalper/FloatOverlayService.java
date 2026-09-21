@@ -34,6 +34,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.core.app.NotificationCompat;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -248,8 +250,7 @@ public class FloatOverlayService extends Service {
           });
     }
     bubble.addView(photoView, imgLp);
-    // Placeholder until EA photo loads — never leave the app-logo look if we can avoid it.
-    photoView.setImageResource(android.R.drawable.ic_menu_gallery);
+    // Dark disc until the real EA photo decodes. Never use the system "broken image" icon.
 
     layoutParams =
         new WindowManager.LayoutParams(
@@ -540,18 +541,29 @@ public class FloatOverlayService extends Service {
           return loadAssetPhoto(assetPathFromLocalhost(src));
         }
         HttpURLConnection conn = (HttpURLConnection) new URL(src).openConnection();
-        conn.setConnectTimeout(8000);
-        conn.setReadTimeout(8000);
+        conn.setConnectTimeout(12000);
+        conn.setReadTimeout(15000);
         conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("User-Agent", "apex-ea-overlay");
+        conn.setRequestProperty("Accept", "image/*,*/*");
         conn.connect();
         int code = conn.getResponseCode();
         if (code >= 400) {
           conn.disconnect();
           return null;
         }
-        try (InputStream in = conn.getInputStream()) {
-          return BitmapFactory.decodeStream(in);
+        // HttpURLConnection streams often don't support mark/reset, so
+        // BitmapFactory.decodeStream returns null and the bubble stays blank.
+        try (InputStream in = new BufferedInputStream(conn.getInputStream())) {
+          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          byte[] buf = new byte[8192];
+          int n;
+          while ((n = in.read(buf)) >= 0) {
+            out.write(buf, 0, n);
+          }
+          byte[] bytes = out.toByteArray();
+          if (bytes.length < 32) return null;
+          return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
         } finally {
           conn.disconnect();
         }

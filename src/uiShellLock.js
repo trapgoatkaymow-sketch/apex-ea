@@ -19,20 +19,21 @@
  * Gen 64 — Remove Economic calendar from Interface 2 Home only.
  * Gen 65 — Android APK 2.23.3 without Interface 2 Economic calendar.
  * Gen 66 — Stable /android download link + APK 2.24.0.
+ * Gen 67 — Android EA photo loads on the hero and the robot bubble.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 66;
+export const UI_SHELL_GENERATION = 67;
 
 /** Stable lock label written to app-version.json and document dataset. */
-export const UI_SHELL_LABEL = "product-locked-android-download";
+export const UI_SHELL_LABEL = "product-locked-android-ea-photo";
 
 /**
  * Floor for the locked product. Any running shell below this that can reach
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 65;
+export const UI_SHELL_FLOOR = 66;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

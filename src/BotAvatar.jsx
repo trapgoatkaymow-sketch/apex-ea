@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { resolveBotPhotoSrc } from "./apiOrigin.js";
+import { eaPhotoCandidates, resolveBotPhotoSrc } from "./apiOrigin.js";
 import {
   getCachedBotPhotoSync,
   resolveCachedBotPhoto,
@@ -16,8 +16,8 @@ function isLocalInstantSrc(src) {
 }
 
 /**
- * Robot / hero avatar that paints a local asset on first frame, then upgrades
- * to a cached/remote photo only after it successfully decodes — never a broken ?.
+ * Robot / hero avatar. Paints a local asset first, then swaps to the real EA
+ * photo only after it decodes — never a broken image icon.
  */
 export default function BotAvatar({
   bot,
@@ -38,99 +38,73 @@ export default function BotAvatar({
     if (cached) return cached;
     const photo = String(bot?.photo || "").trim();
     if (photo.startsWith("data:image/") || photo.startsWith("blob:")) return photo;
-    // Durable API / CDN paths: paint immediately (browser loads the image).
-    if (photo.startsWith("/api/licenses/photo") || /^https?:\/\//i.test(photo)) {
-      return remote || safeFallback;
-    }
-    // Local packaged assets paint with the rest of the UI (same frame).
-    if (isLocalInstantSrc(remote)) return remote || safeFallback;
-    // Unknown remote: show fallback instantly, swap after decode.
+    if (isLocalInstantSrc(remote) && remote !== safeFallback) return remote;
     return safeFallback;
   });
 
   useEffect(() => {
     let cancelled = false;
+    let probe = null;
 
-    const paintInstant = () => {
-      const cached = getCachedBotPhotoSync(id);
-      if (cached) {
-        setSrc(cached);
-        return cached;
+    const cached = getCachedBotPhotoSync(id);
+    if (cached) setSrc(cached);
+
+    const candidates = [];
+    const push = (value) => {
+      const next = String(value || "").trim();
+      if (!next || candidates.includes(next) || /logo\.png(\?|$)/i.test(next)) return;
+      candidates.push(next);
+    };
+    push(cached);
+    for (const url of eaPhotoCandidates(bot)) push(url);
+    push(remote);
+
+    const tryAt = (index) => {
+      if (cancelled) return;
+      if (index >= candidates.length) {
+        setSrc(safeFallback);
+        return;
       }
-      const photo = String(bot?.photo || "").trim();
-      if (photo.startsWith("data:image/") || photo.startsWith("blob:")) {
-        setSrc(photo);
-        return photo;
+      const url = candidates[index];
+      if (url.startsWith("data:image/") || url.startsWith("blob:") || isLocalInstantSrc(url)) {
+        setSrc(url);
+        return;
       }
-      if (photo.startsWith("/api/licenses/photo") || /^https?:\/\//i.test(photo)) {
-        const next = remote || safeFallback;
-        setSrc(next);
-        return next;
-      }
-      if (isLocalInstantSrc(remote)) {
-        setSrc(remote || safeFallback);
-        return remote || safeFallback;
-      }
-      setSrc(safeFallback);
-      return safeFallback;
+      probe = new Image();
+      probe.decoding = "async";
+      probe.onload = () => {
+        if (!cancelled) setSrc(url);
+      };
+      probe.onerror = () => tryAt(index + 1);
+      probe.src = url;
     };
 
-    paintInstant();
+    tryAt(0);
 
     warmBotPhotoCache()
       .then(() => {
         if (cancelled) return;
-        const cached = getCachedBotPhotoSync(id);
-        if (cached) setSrc(cached);
+        const hit = getCachedBotPhotoSync(id);
+        if (hit) setSrc(hit);
       })
       .catch(() => {});
 
-    // Hit the network whenever we have a botId — even /logo.png may have a
-    // mentor-uploaded picture on the photo API / GitHub CDN.
-    const photoStr = String(bot?.photo || "").trim();
-    const needsNetwork =
-      Boolean(id) &&
-      (photoStr.startsWith("/api/licenses/photo") ||
-        /^https?:\/\//i.test(photoStr) ||
-        !photoStr ||
-        photoStr === "/logo.png" ||
-        (remote && !isLocalInstantSrc(remote) && remote !== safeFallback));
-
-    if (!needsNetwork) {
-      return () => {
-        cancelled = true;
-      };
+    if (id) {
+      resolveCachedBotPhoto(bot, safeFallback)
+        .then((url) => {
+          if (cancelled || !url) return;
+          if (url === safeFallback || /logo\.png(\?|$)/i.test(url)) return;
+          setSrc(url);
+        })
+        .catch(() => {});
     }
-
-    resolveCachedBotPhoto(bot, safeFallback)
-      .then((url) => {
-        if (cancelled || !url) return;
-        // Keep showing logo if hydrate found nothing better.
-        if (url === safeFallback || url === "/logo.png") return;
-        // Prefer cached blob / data URL when available.
-        if (isLocalInstantSrc(url) || String(url).startsWith("blob:")) {
-          setSrc(url);
-          return;
-        }
-        // Absolute HTTP(S) / API path — paint directly; do not probe-fail back to logo.
-        if (/^https?:\/\//i.test(url) || String(url).startsWith("/api/")) {
-          setSrc(url);
-          return;
-        }
-        const probe = new Image();
-        probe.decoding = "async";
-        probe.onload = () => {
-          if (!cancelled) setSrc(url);
-        };
-        probe.onerror = () => {
-          // Stay on whatever we already painted (logo or prior good src).
-        };
-        probe.src = url;
-      })
-      .catch(() => {});
 
     return () => {
       cancelled = true;
+      if (probe) {
+        probe.onload = null;
+        probe.onerror = null;
+      }
     };
   }, [id, bot?.photo, remote, safeFallback]);
 
@@ -146,19 +120,7 @@ export default function BotAvatar({
       fetchPriority={fetchPriority}
       onError={(event) => {
         const node = event.currentTarget;
-        if (!node) return;
-        const current = String(node.src || "");
-        // Never permanently lock onto logo while a durable API photo path exists —
-        // flaky probes used to wipe mentor uploads and leave Home on the blue robot.
-        const photo = String(bot?.photo || "").trim();
-        if (
-          photo.startsWith("/api/licenses/photo") ||
-          /^https?:\/\//i.test(photo) ||
-          current.includes("/api/licenses/photo")
-        ) {
-          return;
-        }
-        if (node.dataset.fallbackApplied === "1") return;
+        if (!node || node.dataset.fallbackApplied === "1") return;
         node.dataset.fallbackApplied = "1";
         setSrc(safeFallback);
         node.src = safeFallback;

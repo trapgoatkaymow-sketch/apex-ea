@@ -7,6 +7,7 @@ import {
   loadTradeHistory,
 } from "./dailyTradeHistory.js";
 import { resolveBotPhotoSrc } from "./apiOrigin.js";
+import BotAvatar from "./BotAvatar.jsx";
 import {
   ensureFloatOverlayPermission,
   hideFloatOverlay,
@@ -424,30 +425,13 @@ export default function TradeScriptOrb({
         >
           <span className="trade-float-orb-ring" aria-hidden="true" />
           <span className="trade-float-orb-ring trade-float-orb-ring--outer" aria-hidden="true" />
-          <img
+          <BotAvatar
             className="trade-float-orb-photo"
-            src={orbPhoto}
+            bot={bot}
+            fallback="/logo.png"
             alt=""
-            draggable={false}
-            onError={(event) => {
-              const node = event.currentTarget;
-              if (!node || node.dataset.fallbackApplied === "1") return;
-              const id = String(botId || bot?.id || "").trim();
-              const botPath = resolveBotPhotoSrc(bot, "");
-              if (
-                botPath &&
-                !/logo\.png(\?|$)/i.test(botPath) &&
-                node.src !== botPath &&
-                !node.src.includes(botPath)
-              ) {
-                node.src = botPath;
-                return;
-              }
-              if (id) {
-                node.dataset.fallbackApplied = "1";
-                node.src = `https://www.apex-ea.com/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`;
-              }
-            }}
+            fetchPriority="high"
+            decoding="async"
           />
         </button>
       ) : null}
