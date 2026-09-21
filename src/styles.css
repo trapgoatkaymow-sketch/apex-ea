@@ -5156,6 +5156,14 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   background: #000;
 }
 
+/* Classic Chart Scanner on Interface 2 — purple wash matching the Zeta reference */
+.phone[data-interface="v2"]:has(.view-scanner.cs-locked-hud:not([hidden])) .v2-stage {
+  background:
+    radial-gradient(120% 70% at 50% -8%, rgba(var(--pink-rgb, 192, 38, 211), 0.34), transparent 52%),
+    radial-gradient(90% 50% at 100% 18%, rgba(168, 85, 247, 0.12), transparent 45%),
+    linear-gradient(180deg, #1a0b28 0%, #07040d 48%, #050508 100%);
+}
+
 .v2-view {
   display: none;
   flex: 1;
@@ -10921,7 +10929,7 @@ html.is-native .phone:has(#view-scanner:not([hidden])) > .glow-soft {
   animation: breathe-glow-native 7s ease-in-out infinite;
 }
 
-/* Keep V2 scanner portal spinning on Android like the web */
+/* Keep portal anim ready if any residual markup remains */
 html.is-native .view-scanner .cs-v2-portal-orbit--a,
 html.is-native .view-scanner .cs-v2-portal-orbit--b,
 html.is-native .view-scanner .cs-v2-portal-aura,
@@ -10935,63 +10943,21 @@ html.is-native .view-scanner .cs-v2-portal-label i {
 }
 
 /*
- * Lock Chart Scanner HUD on Android — same purple SCAN LOCK / Shoot / Import /
- * desk Trading Engine look as web on both Interface 1 and Interface 2.
- * Do not demote portal glows, stage glass, or capture chips.
+ * Lock Chart Scanner HUD on Android — classic purple glowing robot orb,
+ * Shoot/Import, and track Trading Engine on both Interface 1 and Interface 2
+ * (exact match to the Zeta Chart Scanner reference).
  */
 html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-stage {
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(var(--pink-rgb), 0.16), transparent 55%),
+    radial-gradient(120% 90% at 50% 0%, rgba(var(--pink-rgb), 0.18), transparent 55%),
     linear-gradient(180deg, rgba(14, 10, 18, 0.96), rgba(6, 6, 10, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.28),
     inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 0 28px rgba(var(--pink-rgb), 0.12);
+    0 0 28px rgba(var(--pink-rgb), 0.14);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-}
-
-html.is-native .view-scanner.cs-locked-hud .cs-v2-portal {
-  width: clamp(176px, 50vw, 220px);
-  height: clamp(176px, 50vw, 220px);
-}
-
-html.is-native .view-scanner.cs-locked-hud .cs-v2-portal-aura {
-  filter: none;
-  background: radial-gradient(
-    circle at 50% 45%,
-    rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.5),
-    rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.14) 48%,
-    transparent 72%
-  );
-  animation: cs-v2-breathe 2.8s ease-in-out infinite;
-}
-
-html.is-native .view-scanner.cs-locked-hud .cs-v2-portal-orbit {
-  box-shadow: 0 0 22px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.4);
-}
-
-html.is-native .view-scanner.cs-locked-hud .cs-v2-portal-core {
-  border-color: rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.75);
-  box-shadow:
-    0 0 0 4px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.16),
-    0 0 32px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.5),
-    inset 0 0 18px rgba(0, 0, 0, 0.45);
-  animation: cs-v2-core-pulse 2.8s ease-in-out infinite;
-}
-
-html.is-native .view-scanner.cs-locked-hud .cs-v2-portal-sweep {
-  mix-blend-mode: normal;
-  opacity: 0.9;
-}
-
-html.is-native .view-scanner.cs-locked-hud .cs-v2-portal-label {
-  bottom: -2%;
-  box-shadow:
-    0 0 18px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  text-shadow: 0 0 14px rgba(var(--cs-v2-portal-rgb, var(--pink-rgb)), 0.95);
 }
 
 html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-viewport,
@@ -10999,30 +10965,58 @@ html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-empty {
   overflow: visible;
 }
 
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-frame {
+  width: clamp(132px, 38vw, 176px);
+  height: clamp(132px, 38vw, 176px);
+}
+
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-glow {
+  filter: none;
+  opacity: 0.85;
+  background:
+    radial-gradient(circle, rgba(var(--pink-rgb), 0.55) 0%, transparent 62%),
+    radial-gradient(circle, rgba(var(--pink-hot-rgb, var(--pink-rgb)), 0.35) 0%, transparent 70%);
+  animation: cs-breathe-native 3.2s ease-in-out infinite;
+}
+
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-robot-orb {
+  overflow: visible;
+  box-shadow:
+    0 0 0 3px rgba(var(--pink-rgb), 0.95),
+    0 0 0 6px rgba(8, 6, 12, 0.95),
+    0 0 28px rgba(var(--pink-rgb), 0.9),
+    0 0 64px rgba(var(--pink-hot-rgb, var(--pink-rgb)), 0.5),
+    inset 0 0 18px rgba(0, 0, 0, 0.4);
+  animation: cs-breathe-native 3.2s ease-in-out infinite;
+}
+
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-particle-field-energy.is-outer {
+  display: block;
+  opacity: 0.6;
+  transform: scale(2.6);
+}
+
 html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-capture-btn.is-camera {
-  box-shadow: 0 0 18px rgba(var(--pink-rgb), 0.35);
+  box-shadow: 0 0 18px rgba(var(--pink-rgb), 0.4);
 }
 
 html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-scans-left {
-  box-shadow: 0 0 16px rgba(var(--pink-rgb), 0.35);
+  box-shadow: 0 0 16px rgba(var(--pink-rgb), 0.4);
 }
 
-html.is-native .view-scanner.cs-locked-hud .cs-engine.is-desk {
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgba(192, 38, 211, 0.32), transparent 55%),
-    linear-gradient(145deg, rgba(28, 12, 40, 0.96), rgba(8, 6, 14, 0.98));
-  border: 1px solid rgba(192, 38, 211, 0.48);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 12px 28px rgba(0, 0, 0, 0.35),
-    0 0 28px rgba(192, 38, 211, 0.28);
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-engine {
+  background: rgba(12, 10, 16, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-html.is-native .view-scanner.cs-locked-hud .cs-engine.is-desk .cs-engine-wave i,
-html.is-native .view-scanner.cs-locked-hud .cs-engine.is-desk .cs-engine-kicker i {
-  animation-play-state: running;
+html.is-native .view-scanner.cs-locked-hud:not(.cs-v2) .cs-engine-gear {
+  color: var(--pink-soft, #e879f9);
+  background: rgba(var(--pink-rgb), 0.16);
+  border: 1px solid rgba(var(--pink-soft-rgb, var(--pink-rgb)), 0.4);
+  box-shadow: 0 0 12px rgba(var(--pink-rgb), 0.25);
 }
 
 /* Pause continuous motion when the app is backgrounded (class from MainActivity). */
