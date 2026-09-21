@@ -1120,6 +1120,20 @@ export default function AdminPortal() {
             banking: keepBanking,
             licenseKeysAllowed,
             licenseKeysUpdatedAt,
+            // Keep a newer in-memory app color if refresh returned a stale store.
+            ...(() => {
+              const prevColor = normalizeHexColor(m?.appColor || "", "");
+              const nextColor = normalizeHexColor(incoming?.appColor || "", "");
+              const prevAt = Number(m?.appColorUpdatedAt) || 0;
+              const nextAt = Number(incoming?.appColorUpdatedAt) || 0;
+              if (prevColor && (!nextColor || prevAt > nextAt)) {
+                return {
+                  appColor: prevColor,
+                  appColorUpdatedAt: prevAt || Date.now(),
+                };
+              }
+              return {};
+            })(),
           });
         }
         return Array.from(map.values());

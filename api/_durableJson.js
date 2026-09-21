@@ -439,11 +439,27 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
           Number(primary.licenseKeysUpdatedAt) || 0,
           Number(secondary.licenseKeysUpdatedAt) || 0
         ) || null,
-      appColor: primary.appColor || secondary.appColor || "",
-      appColorUpdatedAt: Math.max(
-        Number(primary.appColorUpdatedAt) || 0,
-        Number(secondary.appColorUpdatedAt) || 0
-      ) || null,
+      // Newest appColorUpdatedAt wins — a stale GitHub purple must not beat a
+      // freshly saved Firebase/portal pink (same bug as password hashes).
+      ...(() => {
+        const a = String(primary.appColor || "").trim();
+        const b = String(secondary.appColor || "").trim();
+        const aAt = Number(primary.appColorUpdatedAt) || 0;
+        const bAt = Number(secondary.appColorUpdatedAt) || 0;
+        if (a && b) {
+          if (aAt || bAt) {
+            if (aAt >= bAt) {
+              return { appColor: a, appColorUpdatedAt: aAt || null };
+            }
+            return { appColor: b, appColorUpdatedAt: bAt || null };
+          }
+          // Untamped tie: keep secondary (earlier/Firebase) over GitHub.
+          return { appColor: b, appColorUpdatedAt: null };
+        }
+        if (a) return { appColor: a, appColorUpdatedAt: aAt || null };
+        if (b) return { appColor: b, appColorUpdatedAt: bAt || null };
+        return { appColor: "", appColorUpdatedAt: null };
+      })(),
       withdrawalRequests: (() => {
         const a = Array.isArray(primary.withdrawalRequests)
           ? primary.withdrawalRequests
