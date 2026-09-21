@@ -223,12 +223,17 @@ export function isSignalExecuteOpen(event, now = new Date()) {
 export function parseSignalTrade(text) {
   const raw = String(text || "").trim().toUpperCase();
   if (!raw) return null;
+  // Allow broker forms like .US30. / US30Cash / EURUSD.m before BUY|SELL.
   const match = raw.match(
-    /\b([A-Z][A-Z0-9]{2,11})\s+(BUY|SELL)\b/
+    /\b(\.?[A-Z][A-Z0-9.]{1,18}\.?)\s+(BUY|SELL)\b/
   );
   if (!match) return null;
+  const symbol = String(match[1] || "")
+    .replace(/\.{2,}/g, ".")
+    .trim();
+  if (!symbol || symbol.length < 2) return null;
   return {
-    symbol: match[1],
+    symbol,
     side: match[2],
   };
 }
