@@ -166,6 +166,7 @@ export default function CoverLock() {
     requestSignup,
     getSignup,
     activateLicense,
+    restoreLicensesByEmail,
     showToast,
     openAdmin,
     refreshSignups,
@@ -494,10 +495,28 @@ export default function CoverLock() {
     // Stamp local signup immediately so resolveLockStep cannot bounce back to paywall.
     const paidRow = persistPaidLocally(key, current);
     ingestSignup?.(paidRow);
-    // Returning clients skip payment, but must type their license key again.
-    // Same phone: key works. Different phone: key stays locked.
+
+    // Returning clients: reclaim old keys owned by this email (survives reinstall /
+    // new device id). Only ask them to type a key when nothing could be restored.
+    try {
+      const restored = await restoreLicensesByEmail?.(key);
+      if (restored) {
+        setLockStep("cover");
+        showToast("Welcome back — your robots are ready");
+        void updateSignupAccessPaid(key)
+          .then((remote) => {
+            if (remote) ingestSignup?.(remote);
+            else refreshSignups?.();
+          })
+          .catch(() => {});
+        return true;
+      }
+    } catch {
+      // Fall through to manual key entry.
+    }
+
     setLockStep("license");
-    showToast("Access restored — enter your license key");
+    showToast("Enter your license key to unlock");
     // Persist paid flag in the background — never block the unlock UI on it.
     void updateSignupAccessPaid(key)
       .then((remote) => {
@@ -1032,7 +1051,7 @@ export default function CoverLock() {
                 : claimedKey
                   ? `Your key is ready below. Tap Unlock app to continue.`
                   : coverEmail
-                    ? `Approved · ${coverEmail}. Enter your license key to unlock — type it again after reinstall.`
+                    ? `Approved · ${coverEmail}. Enter the license key for this email — old keys work again after reinstall.`
                     : "Enter your license key to unlock the app."}
             </p>
             {claimedKey ? (
