@@ -1,0 +1,192 @@
+/**
+ * Minimum stop / take-profit distance by instrument class.
+ * Chart AI often returns SL/TP that are only a few points from entry; brokers
+ * then reject or instantly stop-out the fill. These floors keep protective
+ * levels safely away from the live price.
+ */
+
+function toFiniteNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const cleaned = String(value ?? "")
+    .replace(/,/g, "")
+    .replace(/[^\d.\-]/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function symbolCoreName(raw) {
+  return String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^\.+/, "")
+    .replace(/\.+$/, "")
+    .replace(/CASH$/i, "")
+    .replace(/\.(MIC|M|PRO|RAW|ECN|STD|CASH|SPOT|R|I)$/i, "")
+    .replace(/([A-Z0-9])M$/i, "$1")
+    .split(".")[0];
+}
+
+/** Absolute price distance required between fill and SL/TP. */
+export function minStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(1.5, e * 0.0006);
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(0.05, e * 0.0015);
+  if (/^BTC/.test(core)) return Math.max(80, e * 0.002);
+  if (/^ETH/.test(core)) return Math.max(8, e * 0.0025);
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(25, e * 0.0005);
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(0.25, e * 0.0025);
+  if (/JPY$/.test(core)) return Math.max(0.15, e * 0.00012); // ~15 pips
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(0.0015, e * 0.00012); // ~15 pips on 5-digit FX
+  }
+  if (e >= 1000) return Math.max(20, e * 0.0005);
+  if (e >= 100) return Math.max(2, e * 0.001);
+  if (e >= 10) return Math.max(0.1, e * 0.0015);
+  return Math.max(0.0015, e * 0.0015);
+}
+
+export function formatTradePrice(value) {
+  const n = toFiniteNumber(value);
+  if (n == null) return null;
+  const abs = Math.abs(n);
+  let digits = 5;
+  if (abs >= 1000) digits = 2;
+  else if (abs >= 100) digits = 3;
+  else if (abs >= 10) digits = 4;
+  return Number(n.toFixed(digits));
+}
+
+/**
+ * Widen / re-anchor SL & TP so they cannot sit on top of the live fill.
+ * Returns null levels unchanged when input was empty/invalid.
+ */
+export function normalizeProtectiveLevels({
+  symbol = "",
+  side = "BUY",
+  entryPrice,
+  stopLoss,
+  takeProfit,
+} = {}) {
+  const dir = String(side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
+  const entry = toFiniteNumber(entryPrice);
+  let sl = toFiniteNumber(stopLoss);
+  let tp = toFiniteNumber(takeProfit);
+  let widened = false;
+  const minDist = entry != null ? minStopDistance(symbol, entry) : 0;
+
+  if (entry != null && entry > 0 && minDist > 0) {
+    if (sl != null && sl > 0) {
+      if (dir === "BUY") {
+        if (!(sl <= entry - minDist)) {
+          sl = entry - minDist;
+          widened = true;
+        }
+      } else if (!(sl >= entry + minDist)) {
+        sl = entry + minDist;
+        widened = true;
+      }
+    }
+
+    if (tp != null && tp > 0) {
+      if (dir === "BUY") {
+        if (!(tp >= entry + minDist)) {
+          tp = entry + minDist;
+          widened = true;
+        }
+      } else if (!(tp <= entry - minDist)) {
+        tp = entry - minDist;
+        widened = true;
+      }
+    }
+  }
+
+  return {
+    side: dir,
+    entry: entry != null ? formatTradePrice(entry) : null,
+    stopLoss: sl != null && sl > 0 ? formatTradePrice(sl) : null,
+    takeProfit: tp != null && tp > 0 ? formatTradePrice(tp) : null,
+    minDist,
+    widened,
+  };
+}
+
+/**
+ * Build Entry / SL / TP1–TP3 with a class-aware minimum risk distance.
+ * Tight AI stops are widened before R:R targets are computed.
+ */
+export function buildSafeMultiTpLevels({
+  symbol = "",
+  side = "BUY",
+  entry,
+  stopLoss,
+} = {}) {
+  const dir = String(side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
+  let e = toFiniteNumber(entry);
+  let sl = toFiniteNumber(stopLoss);
+  if (e == null || e <= 0) e = 1;
+
+  const minDist = minStopDistance(symbol, e);
+  const fallbackRisk = Math.max(
+    minDist,
+    Math.abs(e) * 0.0025,
+    e >= 1000 ? 25 : e >= 100 ? 2 : e >= 10 ? 0.1 : 0.0015
+  );
+
+  if (dir === "BUY") {
+    if (sl == null || !(sl < e)) sl = e - fallbackRisk;
+  } else if (sl == null || !(sl > e)) {
+    sl = e + fallbackRisk;
+  }
+
+  let risk = Math.abs(e - sl);
+  if (risk < minDist) {
+    risk = minDist;
+    sl = dir === "BUY" ? e - risk : e + risk;
+  }
+
+  const tp1 = dir === "BUY" ? e + risk * 1 : e - risk * 1;
+  const tp2 = dir === "BUY" ? e + risk * 2 : e - risk * 2;
+  const tp3 = dir === "BUY" ? e + risk * 3 : e - risk * 3;
+
+  // Re-run through protective normalizer so rounding cannot collapse levels.
+  const safeSl = normalizeProtectiveLevels({
+    symbol,
+    side: dir,
+    entryPrice: e,
+    stopLoss: sl,
+    takeProfit: tp1,
+  });
+
+  const finalEntry = safeSl.entry ?? formatTradePrice(e);
+  const finalSl = safeSl.stopLoss ?? formatTradePrice(sl);
+  const finalRisk = Math.abs((finalEntry || e) - (finalSl || sl));
+  const safeRisk = Math.max(finalRisk, minDist);
+
+  return {
+    side: dir,
+    entry: finalEntry,
+    stopLoss: finalSl,
+    takeProfit1: formatTradePrice(
+      dir === "BUY" ? finalEntry + safeRisk * 1 : finalEntry - safeRisk * 1
+    ),
+    takeProfit2: formatTradePrice(
+      dir === "BUY" ? finalEntry + safeRisk * 2 : finalEntry - safeRisk * 2
+    ),
+    takeProfit3: formatTradePrice(
+      dir === "BUY" ? finalEntry + safeRisk * 3 : finalEntry - safeRisk * 3
+    ),
+    takeProfit: formatTradePrice(
+      dir === "BUY" ? finalEntry + safeRisk * 3 : finalEntry - safeRisk * 3
+    ),
+    minDist,
+    widened: safeSl.widened || risk < minDist + 1e-12,
+  };
+}

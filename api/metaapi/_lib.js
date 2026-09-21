@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { FALLBACK_METAAPI_TOKEN } from "./_fallbackToken.js";
 import { applyCorsHeaders } from "../_cors.js";
 import { candidateSymbols as buildCandidateSymbols } from "../_symbolResolve.js";
+import { normalizeProtectiveLevels } from "../_tradeLevels.js";
 
 const PROVISIONING_BASE =
   process.env.METAAPI_PROVISIONING_URL ||
@@ -931,11 +932,20 @@ export async function placeMarketTrade({
       .replace(/apexea/gi, "APEXEA")
       .slice(0, 31),
   };
+  const safe = normalizeProtectiveLevels({
+    symbol: resolved.symbol,
+    side,
+    entryPrice: null,
+    stopLoss,
+    takeProfit,
+  });
+  // Without a live fill here, still widen using class floors relative to SL/TP span
+  // when levels are present; if entry unknown, leave as-is when distance already ok.
   if (Number.isFinite(Number(stopLoss)) && Number(stopLoss) > 0) {
-    body.stopLoss = Number(stopLoss);
+    body.stopLoss = Number(safe.stopLoss ?? stopLoss);
   }
   if (Number.isFinite(Number(takeProfit)) && Number(takeProfit) > 0) {
-    body.takeProfit = Number(takeProfit);
+    body.takeProfit = Number(safe.takeProfit ?? takeProfit);
   }
 
   const url = `${clientApiBase(resolved.region)}/users/current/accounts/${encodeURIComponent(id)}/trade`;

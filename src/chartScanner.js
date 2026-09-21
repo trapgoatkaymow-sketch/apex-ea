@@ -1,4 +1,5 @@
 import { apiUrl } from "./apiOrigin.js";
+import { buildSafeMultiTpLevels } from "./tradeLevels.js";
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -193,47 +194,20 @@ async function buildLocalFallbackSetup(dataUrl, { hintSymbol = "" } = {}) {
  * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
  * BUY:  SL < Entry < TP1 < TP2 < TP3
  * SELL: SL > Entry > TP1 > TP2 > TP3
+ * Enforces instrument-class minimum stop distance so SL/TP are not too close.
  */
 function ensureCompleteSetup(partial = {}) {
-  const side = String(partial.side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
-  let entry = toFiniteNumber(partial.entry);
-  let stopLoss = toFiniteNumber(partial.stopLoss);
-
-  if (entry == null) entry = 1;
-  const magnitude = Math.max(
-    Math.abs(entry) * 0.0025,
-    entry >= 1000 ? 3 : entry >= 100 ? 1 : entry >= 10 ? 0.05 : 0.0015
-  );
-
-  if (side === "BUY") {
-    if (stopLoss == null || !(stopLoss < entry)) stopLoss = entry - magnitude;
-  } else if (stopLoss == null || !(stopLoss > entry)) {
-    stopLoss = entry + magnitude;
-  }
-
-  const risk = Math.abs(entry - stopLoss);
-  let takeProfit1;
-  let takeProfit2;
-  let takeProfit3;
-  if (side === "BUY") {
-    takeProfit1 = entry + risk * 1;
-    takeProfit2 = entry + risk * 2;
-    takeProfit3 = entry + risk * 3;
-  } else {
-    takeProfit1 = entry - risk * 1;
-    takeProfit2 = entry - risk * 2;
-    takeProfit3 = entry - risk * 3;
-  }
-
-  entry = formatPrice(entry);
-  stopLoss = formatPrice(stopLoss);
-  takeProfit1 = formatPrice(takeProfit1);
-  takeProfit2 = formatPrice(takeProfit2);
-  takeProfit3 = formatPrice(takeProfit3);
+  const symbol = String(partial.symbol || partial.detectedSymbol || "").trim();
+  const levels = buildSafeMultiTpLevels({
+    symbol,
+    side: partial.side,
+    entry: partial.entry,
+    stopLoss: partial.stopLoss,
+  });
 
   const analysis =
     String(partial.analysis || "").trim() ||
-    (side === "BUY"
+    (levels.side === "BUY"
       ? "Bullish structure supports a BUY setup toward higher resistance"
       : "Bearish structure supports a SELL setup toward lower support");
 
@@ -241,14 +215,14 @@ function ensureCompleteSetup(partial = {}) {
     ...partial,
     status: CHART_DETECTION_STATUS.SETUP_READY,
     isChart: true,
-    side,
+    side: levels.side,
     confidence: Math.max(55, Math.min(95, Math.round(Number(partial.confidence) || 70))),
-    entry,
-    stopLoss,
-    takeProfit1,
-    takeProfit2,
-    takeProfit3,
-    takeProfit: takeProfit3,
+    entry: levels.entry,
+    stopLoss: levels.stopLoss,
+    takeProfit1: levels.takeProfit1,
+    takeProfit2: levels.takeProfit2,
+    takeProfit3: levels.takeProfit3,
+    takeProfit: levels.takeProfit3,
     riskReward: "1:1 · 1:2 · 1:3",
     timeframe: String(partial.timeframe || "M15").trim().toUpperCase() || "M15",
     analysis,

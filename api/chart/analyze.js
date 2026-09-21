@@ -4,6 +4,7 @@ import {
   resolveCatalogSymbol,
   symbolCore,
 } from "../_symbolResolve.js";
+import { buildSafeMultiTpLevels } from "../_tradeLevels.js";
 function sendJson(res, status, payload) {
   res.statusCode = status;
   applyCorsHeaders(res);
@@ -79,38 +80,10 @@ function formatRiskReward(entry, stopLoss, takeProfit) {
  * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
  * BUY:  SL < Entry < TP1 < TP2 < TP3
  * SELL: SL > Entry > TP1 > TP2 > TP3
+ * Enforces instrument-class minimum stop distance so levels are not too close.
  */
-function ensureMultiTpLevels({ side, entry, stopLoss }) {
-  const dir = String(side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
-  let e = toFiniteNumber(entry);
-  let sl = toFiniteNumber(stopLoss);
-
-  if (e == null) e = 1;
-  const riskMag = Math.max(
-    Math.abs(e) * 0.0025,
-    e >= 1000 ? 3 : e >= 100 ? 1 : e >= 10 ? 0.05 : 0.0015
-  );
-
-  if (dir === "BUY") {
-    if (sl == null || !(sl < e)) sl = e - riskMag;
-  } else if (sl == null || !(sl > e)) {
-    sl = e + riskMag;
-  }
-
-  const risk = Math.abs(e - sl);
-  const tp1 = dir === "BUY" ? e + risk * 1 : e - risk * 1;
-  const tp2 = dir === "BUY" ? e + risk * 2 : e - risk * 2;
-  const tp3 = dir === "BUY" ? e + risk * 3 : e - risk * 3;
-
-  return {
-    side: dir,
-    entry: formatPrice(e),
-    stopLoss: formatPrice(sl),
-    takeProfit1: formatPrice(tp1),
-    takeProfit2: formatPrice(tp2),
-    takeProfit3: formatPrice(tp3),
-    takeProfit: formatPrice(tp3),
-  };
+function ensureMultiTpLevels({ side, entry, stopLoss, symbol = "" }) {
+  return buildSafeMultiTpLevels({ side, entry, stopLoss, symbol });
 }
 
 function buildNoChartResult() {
@@ -229,13 +202,10 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
   if (!symbol) symbol = resolveCatalogSymbol(parsed?.symbol || "", catalog);
 
   const levels = ensureMultiTpLevels({
+    symbol,
     side: parsed?.side || parsed?.direction,
     entry: parsed?.entry ?? parsed?.entryPrice,
     stopLoss: parsed?.stopLoss ?? parsed?.sl,
-    takeProfit1: parsed?.takeProfit1 ?? parsed?.tp1,
-    takeProfit2: parsed?.takeProfit2 ?? parsed?.tp2,
-    takeProfit3: parsed?.takeProfit3 ?? parsed?.tp3,
-    takeProfit: parsed?.takeProfit ?? parsed?.tp,
   });
 
   const confidence = Math.max(
@@ -360,6 +330,8 @@ export async function analyzeChartSetupWithOpenAI({
             "Set take-profit targets using fixed risk/reward multiples of the stop distance: " +
             "TP1 = 1:1, TP2 = 1:2, TP3 = 1:3. Set riskReward to \"1:1 · 1:2 · 1:3\". " +
             "Read entry and stop from chart structure (support/resistance, swings). " +
+            "Keep stopLoss FAR enough from entry for the instrument — never a few ticks: " +
+            "FX ≥ ~15 pips, XAUUSD ≥ ~$1.50, US30/NAS100/DE40 ≥ ~25 points, BTC ≥ ~0.2%. " +
             "BUY must satisfy: stopLoss < entry < takeProfit1 < takeProfit2 < takeProfit3. " +
             "SELL must satisfy: stopLoss > entry > takeProfit1 > takeProfit2 > takeProfit3. " +
             "OCR the instrument from the chart header/title/tab EXACTLY as shown — keep broker dots " +

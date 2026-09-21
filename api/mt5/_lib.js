@@ -1,5 +1,6 @@
 import { applyCorsHeaders } from "../_cors.js";
 import { candidateSymbols, pickBestSymbolFromList } from "../_symbolResolve.js";
+import { normalizeProtectiveLevels } from "../_tradeLevels.js";
 
 /** Self-hosted MT5API RESTful — https://66.23.225.158/swagger/index.html */
 export const MT5_API_BASE = (
@@ -1075,6 +1076,19 @@ export async function placeMarketTrade({
     : [];
   const defaultTp = Number(takeProfit);
 
+  // Anchor SL/TP to the live fill so stale chart levels cannot sit inside the
+  // broker's stop distance (that caused instant self-closes).
+  const fillPrice =
+    Number.isFinite(price) && price > 0 ? price : null;
+  const safeSl = normalizeProtectiveLevels({
+    symbol: tradeSymbol || requested,
+    side: action,
+    entryPrice: fillPrice,
+    stopLoss,
+    takeProfit: null,
+  });
+  const anchoredSl = safeSl.stopLoss;
+
   const fills = [];
   for (let i = 0; i < times; i += 1) {
     // Cycle TP1 → TP2 → TP3 for every thread (T1=TP1, T2=TP2, T3=TP3, T4=TP1, …).
@@ -1086,6 +1100,15 @@ export async function placeMarketTrade({
     } else if (Number.isFinite(defaultTp) && defaultTp > 0) {
       tpForThread = defaultTp;
     }
+
+    const safeTp = normalizeProtectiveLevels({
+      symbol: tradeSymbol || requested,
+      side: action,
+      entryPrice: fillPrice,
+      stopLoss: null,
+      takeProfit: tpForThread,
+    });
+    tpForThread = safeTp.takeProfit;
 
     const threadLabel = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
     // MT5 comment stays ea~APEXEA only — never append |TP1/TP2/TP3.
@@ -1105,7 +1128,7 @@ export async function placeMarketTrade({
       comment: threadComment,
     });
     if (Number.isFinite(price) && price > 0) params.set("price", String(price));
-    const sl = Number(stopLoss);
+    const sl = Number(anchoredSl);
     if (Number.isFinite(sl) && sl > 0) params.set("stoploss", String(sl));
     if (Number.isFinite(tpForThread) && tpForThread > 0) {
       params.set("takeprofit", String(tpForThread));
