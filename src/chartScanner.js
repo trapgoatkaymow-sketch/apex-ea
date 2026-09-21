@@ -72,14 +72,17 @@ function estimateEntryForSymbol(symbol) {
   const raw = String(symbol || "")
     .toUpperCase()
     .replace(/^\.+/, "")
-    .replace(/\.+$/, "");
+    .replace(/\.+$/, "")
+    .replace(/CASH$/i, "")
+    .replace(/\.(MIC|M|PRO|RAW|ECN|STD|CASH|SPOT)$/i, "");
   const base = raw.split(".")[0] || raw;
   const table = [
-    [/^(US30|DJ30|WS30|DJI|USA30)/, 45000],
-    [/^(NAS100|USTEC|NDX|NASDAQ)/, 20000],
-    [/^(SPX500|US500|SP500)/, 5600],
-    [/^(GER40|DE40|DAX|DE30)/, 18500],
+    [/^(US30|DJ30|WS30|DJI|USA30|USWALLST30|DOW30)/, 45000],
+    [/^(NAS100|USTEC|NDX|NASDAQ|US100|USATECH100|TECH100)/, 20000],
+    [/^(SPX500|US500|SP500|SPX)/, 5600],
+    [/^(GER40|DE40|DAX|DE30|GER30|GDAXI)/, 18500],
     [/^(UK100|FTSE)/, 8200],
+    [/^(JP225|JPN225|NI225|NIKKEI)/, 38000],
     [/^(XAU|GOLD)/, 2650],
     [/^(XAG|SILVER)/, 31],
     [/^(BTC)/, 95000],

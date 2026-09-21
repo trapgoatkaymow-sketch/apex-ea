@@ -1,4 +1,9 @@
 import { applyCorsHeaders, endOptions } from "../_cors.js";
+import {
+  normalizeBrokerSymbol,
+  resolveCatalogSymbol,
+  symbolCore,
+} from "../_symbolResolve.js";
 function sendJson(res, status, payload) {
   res.statusCode = status;
   applyCorsHeaders(res);
@@ -17,34 +22,11 @@ async function readJsonBody(req) {
 }
 
 function normalizeSymbol(raw) {
-  let s = String(raw || "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "")
-    .replace(/[\/_\-]/g, "")
-    .replace(/[^A-Z0-9.]/g, "");
-  s = s.replace(/\.{2,}/g, ".");
-  return s;
+  return normalizeBrokerSymbol(raw);
 }
 
 function symbolBase(raw) {
-  return normalizeSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "").split(".")[0];
-}
-
-function resolveCatalogSymbol(symbol, catalog = []) {
-  const normalized = normalizeSymbol(symbol);
-  if (!normalized) return "";
-  const base = symbolBase(normalized);
-  const list = Array.isArray(catalog) ? catalog : [];
-  const exact = list.find((item) => normalizeSymbol(item) === normalized);
-  if (exact) return normalizeSymbol(exact);
-  if (/^\./.test(normalized) || /\.$/.test(normalized)) return normalized;
-  const baseHit = list.find((item) => symbolBase(item) === base);
-  if (baseHit) {
-    const catalogNorm = normalizeSymbol(baseHit);
-    if (symbolBase(catalogNorm) === base) return catalogNorm;
-  }
-  return normalized;
+  return symbolCore(raw);
 }
 
 function requireOpenAiKey() {

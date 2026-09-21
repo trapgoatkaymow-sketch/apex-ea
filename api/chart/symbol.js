@@ -1,4 +1,9 @@
 import { applyCorsHeaders, endOptions } from "../_cors.js";
+import {
+  normalizeBrokerSymbol,
+  resolveCatalogSymbol,
+  symbolCore,
+} from "../_symbolResolve.js";
 function sendJson(res, status, payload) {
   res.statusCode = status;
   applyCorsHeaders(res);
@@ -20,19 +25,11 @@ async function readJsonBody(req) {
  * Keeps leading/trailing broker dots (e.g. .DE30. / .US30Cash).
  */
 function normalizeSymbol(raw) {
-  let s = String(raw || "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "")
-    .replace(/[\/_\-]/g, "")
-    .replace(/[^A-Z0-9.]/g, "");
-  // Collapse accidental multi-dots but keep a single leading/trailing broker dot.
-  s = s.replace(/\.{2,}/g, ".");
-  return s;
+  return normalizeBrokerSymbol(raw);
 }
 
 function symbolBase(raw) {
-  return normalizeSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "").split(".")[0];
+  return symbolCore(raw);
 }
 
 function looksLikeTradingSymbol(raw) {
@@ -87,23 +84,6 @@ function buildSymbolUnclearResult(chartConfidence = 0, suggestedSymbol = null) {
     symbolConfidence: 0,
     source: "openai",
   };
-}
-
-function resolveCatalogSymbol(symbol, catalog = []) {
-  const normalized = normalizeSymbol(symbol);
-  if (!normalized) return "";
-  const base = symbolBase(normalized);
-  const list = Array.isArray(catalog) ? catalog : [];
-  const exact = list.find((item) => normalizeSymbol(item) === normalized);
-  if (exact) return normalizeSymbol(exact);
-  // Prefer keeping the OCR'd broker form (.DE30.) over a plain catalog alias.
-  if (/^\./.test(normalized) || /\.$/.test(normalized)) return normalized;
-  const baseHit = list.find((item) => symbolBase(item) === base);
-  if (baseHit) {
-    const catalogNorm = normalizeSymbol(baseHit);
-    if (symbolBase(catalogNorm) === base) return catalogNorm;
-  }
-  return normalized;
 }
 
 function normalizeAnalysis(parsed = {}) {

@@ -1,4 +1,5 @@
 import { applyCorsHeaders } from "../_cors.js";
+import { candidateSymbols, pickBestSymbolFromList } from "../_symbolResolve.js";
 
 /** Self-hosted MT5API RESTful — https://66.23.225.158/swagger/index.html */
 export const MT5_API_BASE = (
@@ -1026,20 +1027,47 @@ export async function placeMarketTrade({
 
   const sym = await resolveTradeSymbol(id, requested);
 
+  async function fetchQuotePrice(symbolName) {
+    try {
+      const quote = await mt5Fetch(
+        `/GetQuote?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(symbolName)}`,
+        { timeoutMs: 12000 }
+      );
+      const bid = Number(quote?.bid ?? quote?.Bid ?? quote?.bidPrice);
+      const ask = Number(quote?.ask ?? quote?.Ask ?? quote?.askPrice);
+      const mid = Number(quote?.price ?? quote?.last ?? quote?.Last);
+      if (action === "Buy" && Number.isFinite(ask) && ask > 0) return { price: ask, symbol: symbolName };
+      if (action === "Sell" && Number.isFinite(bid) && bid > 0) return { price: bid, symbol: symbolName };
+      if (Number.isFinite(mid) && mid > 0) return { price: mid, symbol: symbolName };
+      if (Number.isFinite(bid) && bid > 0 && Number.isFinite(ask) && ask > 0) {
+        return { price: (bid + ask) / 2, symbol: symbolName };
+      }
+    } catch {
+      // try next candidate
+    }
+    return null;
+  }
+
   let price = null;
-  try {
-    const quote = await mt5Fetch(
-      `/GetQuote?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(sym)}`,
-      { timeoutMs: 12000 }
-    );
-    const bid = Number(quote?.bid ?? quote?.Bid ?? quote?.bidPrice);
-    const ask = Number(quote?.ask ?? quote?.Ask ?? quote?.askPrice);
-    const mid = Number(quote?.price ?? quote?.last ?? quote?.Last);
-    if (action === "Buy" && Number.isFinite(ask) && ask > 0) price = ask;
-    else if (action === "Sell" && Number.isFinite(bid) && bid > 0) price = bid;
-    else if (Number.isFinite(mid) && mid > 0) price = mid;
-  } catch {
-    price = null;
+  let tradeSymbol = sym;
+  const quoted = await fetchQuotePrice(sym);
+  if (quoted) {
+    price = quoted.price;
+    tradeSymbol = quoted.symbol;
+  } else {
+    // First spelling had no rate — walk broker-style aliases until GetQuote answers.
+    const tried = new Set([String(sym || "").toUpperCase()]);
+    for (const alt of candidateSymbols(requested)) {
+      if (tried.has(alt)) continue;
+      tried.add(alt);
+      const hit = await fetchQuotePrice(alt);
+      if (hit) {
+        price = hit.price;
+        tradeSymbol = hit.symbol;
+        break;
+      }
+      if (tried.size >= 12) break;
+    }
   }
 
   const tpList = Array.isArray(takeProfits)
@@ -1070,7 +1098,7 @@ export async function placeMarketTrade({
 
     const params = new URLSearchParams({
       id,
-      symbol: sym,
+      symbol: tradeSymbol,
       operation: action,
       volume: String(lots),
       slippage: "100",
@@ -1118,18 +1146,15 @@ export async function placeMarketTrade({
     tickets: fills.map((o) => o?.ticket ?? o?.order ?? null).filter((v) => v != null),
     count: fills.length,
     ticket: last?.ticket ?? last?.order ?? null,
-    symbol: sym,
+    symbol: tradeSymbol,
     volume: lots,
     side: action.toUpperCase(),
   };
 }
 
-/** Pick the broker's real symbol name for a requested pair (XAUUSD → XAUUSD.mic, etc.). */
+/** Pick the broker's real symbol name for a requested pair (XAUUSD → XAUUSD.mic, .US30. → US30Cash, etc.). */
 async function resolveTradeSymbol(accountId, requested) {
-  const want = String(requested || "")
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9.]/g, "");
+  const want = String(requested || "").trim();
   if (!want) return requested;
 
   let symbols = [];
@@ -1146,32 +1171,10 @@ async function resolveTradeSymbol(accountId, requested) {
         .filter(Boolean);
     }
   } catch {
-    return want;
+    // Fall through — still return a cleaned candidate so GetQuote can try.
+    return pickBestSymbolFromList(want, []) || want;
   }
 
-  const upper = symbols.map((s) => ({ raw: s, u: String(s).toUpperCase() }));
-  const exact = upper.find((s) => s.u === want);
-  if (exact) return exact.raw;
-
-  const base = want.replace(/\.(MIC|M|I|PRO|RAW|ECN|STD)$/i, "");
-  const candidates = upper.filter(
-    (s) =>
-      s.u === base ||
-      s.u.startsWith(base) ||
-      s.u.includes(base) ||
-      (base === "XAUUSD" && /XAU|GOLD/i.test(s.u)) ||
-      (base === "XAGUSD" && /XAG|SILVER/i.test(s.u))
-  );
-  if (!candidates.length) return want;
-
-  // Prefer common broker suffixes for gold/FX.
-  const rank = (u) => {
-    if (u === base) return 0;
-    if (u === `${base}.MIC`) return 1;
-    if (u === `${base}M` || u === `${base}.M`) return 2;
-    if (u.startsWith(base)) return 3;
-    return 4;
-  };
-  candidates.sort((a, b) => rank(a.u) - rank(b.u) || a.u.length - b.u.length);
-  return candidates[0].raw;
+  const resolved = pickBestSymbolFromList(want, symbols);
+  return resolved || want;
 }
