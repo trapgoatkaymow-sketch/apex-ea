@@ -213,13 +213,19 @@ export async function resolveCachedBotPhoto(bot, fallback = "/logo.png") {
 
   const task = (async () => {
     // Race GitHub raw CDN + durable API path — first successful image blob wins.
-    const apiFallback = id
-      ? mediaUrl(`/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`)
-      : "";
+    const aliasIds = Array.isArray(bot?.photoAliases)
+      ? bot.photoAliases.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+    const apiFallbacks = [id, ...aliasIds]
+      .filter(Boolean)
+      .map((probeId) =>
+        mediaUrl(`/api/licenses/photo?botId=${encodeURIComponent(probeId)}&v=full`)
+      );
     const candidates = [
       ...rawPhotoCandidates(id),
+      ...aliasIds.flatMap((probeId) => rawPhotoCandidates(probeId)),
       remote && remote !== fb && !logoOnly ? mediaUrl(remote) : "",
-      apiFallback,
+      ...apiFallbacks,
     ].filter(Boolean);
 
     const tryUrl = async (url) => {
