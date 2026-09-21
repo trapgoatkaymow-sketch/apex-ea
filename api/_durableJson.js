@@ -641,10 +641,37 @@ async function githubPutViaGit({ repo, branch, filePath, raw, message }) {
       fs.writeFileSync(abs, body, "utf8");
       await git.add({ fs, dir, filepath: relPath });
       // Skip empty commits when merge equals tip (another writer already landed).
+      // But never report success for licenses when the working tree still has far
+      // fewer keys than the intended payload — that left GitHub stuck at ~55 keys.
       try {
         const status = await git.status({ fs, dir, filepath: relPath });
         if (status === "unmodified") {
-          return { ok: true, durable: "github-git", sha: null, merged: true };
+          if (isLicensesFile) {
+            let intendedCount = 0;
+            let remoteCount = 0;
+            try {
+              intendedCount = Array.isArray(
+                JSON.parse(intendedBody || "{}")?.licenses
+              )
+                ? JSON.parse(intendedBody || "{}").licenses.length
+                : 0;
+              const tip = fs.readFileSync(abs, "utf8");
+              remoteCount = Array.isArray(JSON.parse(tip || "{}")?.licenses)
+                ? JSON.parse(tip || "{}").licenses.length
+                : 0;
+            } catch {
+              intendedCount = 0;
+            }
+            if (intendedCount > remoteCount + 5) {
+              // Force a rewrite so the next status sees a real change.
+              fs.writeFileSync(abs, `${intendedBody}\n`, "utf8");
+              await git.add({ fs, dir, filepath: relPath });
+            } else {
+              return { ok: true, durable: "github-git", sha: null, merged: true };
+            }
+          } else {
+            return { ok: true, durable: "github-git", sha: null, merged: true };
+          }
         }
       } catch {
         // continue to commit
