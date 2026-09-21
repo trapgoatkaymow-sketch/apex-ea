@@ -559,7 +559,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
     if (action === "BUY" || action === "SELL") side = action;
 
     const tradeComment = buildBotTradeComment(activeBot?.name);
-    const orbComment = tradeComment;
+    const orbComment = isPremiumScanner
+      ? `${tradeComment}|premium`.slice(0, 31)
+      : tradeComment;
     const threads = buildTpThreads({
       tradeCount,
       lot,
@@ -600,6 +602,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
       pushEngineLog(
         `Thread map · ${threads.map((t) => `T${t.tradeNo}→${t.target}`).join(" · ")}`
       );
+      if (isPremiumScanner) {
+        pushEngineLog("Premium scanner · MT5 comments tagged premium");
+      }
 
       const nextFills = [];
       let lastError = "";
@@ -611,6 +616,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
         const { target, takeProfit, tradeNo, volume } = thread;
         const tradeCommentTag = buildScannerFillComment({
           botName: activeBot?.name,
+          variant: isPremiumScanner ? "v2" : "default",
+          premium: isPremiumScanner,
         });
         setEngineStep(0);
         try {
@@ -623,7 +630,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             takeProfit,
             region: mt5Session.region || "",
             comment: tradeCommentTag,
-            // Always chart-scanner for API gate; comment is ea~APEXEA only.
+            // Always chart-scanner for API gate; Interface 2 carries |premium in comment.
             source: "chart-scanner",
           });
           const filledSymbol = normalizeBrokerSymbol(
@@ -655,7 +662,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             target,
           });
           pushEngineLog(
-            `Trade ${tradeNo} · ${target} · ${filledSymbol || tradeSymbol} · TP ${takeProfit} · comment ${tradeCommentTag}`
+            `Trade ${tradeNo} · ${target}${isPremiumScanner ? " · premium" : ""} · ${filledSymbol || tradeSymbol} · TP ${takeProfit} · comment ${tradeCommentTag}`
           );
         } catch (error) {
           lastError = error.message || "Trade failed";

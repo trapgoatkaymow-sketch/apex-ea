@@ -1112,9 +1112,8 @@ export async function placeMarketTrade({
     tpForThread = safeTp.takeProfit;
 
     const threadLabel = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
-    // MT5 comment stays ea~APEXEA only — never append |TP1/TP2/TP3.
+    // Keep |premium for Interface 2; never append |TP1/TP2/TP3.
     const threadComment = String(comment || "bot~APEXEA")
-      .replace(/\|premium\b/gi, "")
       .replace(/\|TP[123]\b/gi, "")
       .replace(/\|+/g, "|")
       .replace(/\|$/g, "")
