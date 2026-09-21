@@ -330,6 +330,8 @@ export async function analyzeChartSetupWithOpenAI({
             "Set take-profit targets using fixed risk/reward multiples of the stop distance: " +
             "TP1 = 1:1, TP2 = 1:2, TP3 = 1:3. Set riskReward to \"1:1 · 1:2 · 1:3\". " +
             "Read entry and stop from chart structure (support/resistance, swings). " +
+            "Keep stopLoss FAR enough from entry for the instrument — never a few ticks: " +
+            "FX ≥ ~15 pips, XAUUSD ≥ ~$1.50, US30/NAS100/DE40 ≥ ~25 points, BTC ≥ ~0.2%. " +
             "BUY must satisfy: stopLoss < entry < takeProfit1 < takeProfit2 < takeProfit3. " +
             "SELL must satisfy: stopLoss > entry > takeProfit1 > takeProfit2 > takeProfit3. " +
             "OCR the instrument from the chart header/title/tab EXACTLY as shown — keep broker dots " +
