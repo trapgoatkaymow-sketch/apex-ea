@@ -489,12 +489,21 @@ export default function V2TrapScannerView({
 
           <button
             type="button"
-            className="tg-execute"
+            className={`tg-execute${busy && engineMode === "trading" ? " is-executing" : ""}`}
             onClick={executeTrade}
             disabled={busy || !connected}
           >
+            <span className="tg-execute-fx" aria-hidden="true">
+              <i className="tg-execute-fx-ripple" />
+              <i className="tg-execute-fx-ripple" />
+              <i className="tg-execute-fx-shine" />
+              <i className="tg-execute-fx-spark tg-execute-fx-spark--1" />
+              <i className="tg-execute-fx-spark tg-execute-fx-spark--2" />
+              <i className="tg-execute-fx-spark tg-execute-fx-spark--3" />
+              <i className="tg-execute-fx-spark tg-execute-fx-spark--4" />
+            </span>
             <span className="tg-execute-icon" aria-hidden="true">
-              ✈
+              {busy && engineMode === "trading" ? "…" : "✈"}
             </span>
             <span className="tg-execute-copy">
               <strong>
@@ -504,7 +513,11 @@ export default function V2TrapScannerView({
                     ? "Connect MT5"
                     : "Execute"}
               </strong>
-              <em>Manual execution only</em>
+              <em>
+                {busy && engineMode === "trading"
+                  ? "Opening trades…"
+                  : "Manual execution only"}
+              </em>
             </span>
           </button>
 

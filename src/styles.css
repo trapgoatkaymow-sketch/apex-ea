@@ -7740,7 +7740,13 @@ html.is-native.is-paused .cs-scan-eye-beam {
 /* Interface 2 — robot sniper scope HUD */
 .cs-scan-eye-stage.is-sniper {
   background:
-    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.62) 72%);
+    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.48) 72%);
+  gap: 8px;
+}
+
+.cs-scan-eye-stage.is-sniper .cs-scan-eye-caption {
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
 }
 
 .cs-sniper {
@@ -7751,13 +7757,38 @@ html.is-native.is-paused .cs-scan-eye-beam {
 }
 
 .cs-sniper--lg {
-  width: min(58vw, 200px);
+  /* Compact sniper reticle — readable but not dominating the chart */
+  width: min(28vw, 92px);
   aspect-ratio: 1;
 }
 
 .cs-sniper--sm {
   width: 26px;
   height: 26px;
+}
+
+.cs-sniper--lg .cs-sniper-scope {
+  filter: drop-shadow(0 0 6px rgba(232, 121, 249, 0.4));
+}
+
+.cs-sniper--lg .cs-sniper-readout {
+  font-size: 0.4rem;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.cs-sniper--lg .cs-sniper-corner {
+  width: 11px;
+  height: 11px;
+}
+
+.cs-sniper--lg .cs-sniper-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.cs-sniper--lg .cs-sniper-pulse {
+  inset: 38%;
 }
 
 .cs-sniper-scope {
@@ -11895,7 +11926,6 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 
 .tg-execute.is-executing:disabled {
   opacity: 1;
-  animation: cs-execute-pulse 1.2s ease-in-out infinite;
 }
 
 .tg-result {
@@ -12115,9 +12145,78 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 }
 
 .tg-execute {
+  position: relative;
+  overflow: hidden;
   justify-content: flex-start;
   padding: 0 16px;
   text-align: left;
+  isolation: isolate;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.22s ease,
+    filter 0.22s ease;
+}
+
+.tg-execute:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+.tg-execute-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+.tg-execute-fx-shine {
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 36%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 42%,
+    rgba(255, 255, 255, 0.38) 50%,
+    rgba(255, 255, 255, 0.08) 58%,
+    transparent 100%
+  );
+  transform: skewX(-18deg) translateX(-120%);
+  opacity: 0;
+}
+
+.tg-execute-fx-ripple {
+  position: absolute;
+  left: 34px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+.tg-execute-fx-spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(251, 207, 232, 0.95);
+  opacity: 0;
+  left: 34px;
+  top: 50%;
+}
+
+.tg-execute-icon,
+.tg-execute-copy {
+  position: relative;
+  z-index: 1;
 }
 
 .tg-execute-icon {
@@ -12128,6 +12227,7 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   place-items: center;
   background: rgba(255, 255, 255, 0.12);
   font-size: 1rem;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .tg-execute-copy {
@@ -12147,6 +12247,154 @@ html.is-native.is-paused .cs-scan-grid.is-on {
   letter-spacing: 0.04em;
   text-transform: none;
   opacity: 0.75;
+}
+
+/* Launch animation while trades are sending */
+.tg-execute.is-executing {
+  opacity: 1 !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 0 28px rgba(232, 121, 249, 0.55),
+    0 16px 36px rgba(124, 31, 160, 0.5);
+  animation: tg-execute-glow 1.1s ease-in-out infinite;
+}
+
+.tg-execute.is-executing .tg-execute-icon {
+  animation: tg-execute-plane 0.85s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.tg-execute.is-executing .tg-execute-fx-shine {
+  opacity: 1;
+  animation: tg-execute-shine 1.15s ease-in-out infinite;
+}
+
+.tg-execute.is-executing .tg-execute-fx-ripple {
+  animation: tg-execute-ripple 1.15s ease-out infinite;
+}
+
+.tg-execute.is-executing .tg-execute-fx-ripple:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+.tg-execute.is-executing .tg-execute-fx-spark--1 {
+  animation: tg-execute-spark-1 0.9s ease-out infinite;
+}
+.tg-execute.is-executing .tg-execute-fx-spark--2 {
+  animation: tg-execute-spark-2 0.95s ease-out infinite 0.08s;
+}
+.tg-execute.is-executing .tg-execute-fx-spark--3 {
+  animation: tg-execute-spark-3 1s ease-out infinite 0.14s;
+}
+.tg-execute.is-executing .tg-execute-fx-spark--4 {
+  animation: tg-execute-spark-4 0.88s ease-out infinite 0.2s;
+}
+
+@keyframes tg-execute-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.14);
+  }
+}
+
+@keyframes tg-execute-shine {
+  0% {
+    transform: skewX(-18deg) translateX(-140%);
+  }
+  100% {
+    transform: skewX(-18deg) translateX(420%);
+  }
+}
+
+@keyframes tg-execute-ripple {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.45);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(6.5);
+  }
+}
+
+@keyframes tg-execute-plane {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  35% {
+    transform: translate(6px, -4px) rotate(-12deg) scale(1.08);
+  }
+  70% {
+    transform: translate(18px, -10px) rotate(-18deg) scale(0.92);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tg-execute-spark-1 {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(42px, -18px) scale(0.2);
+  }
+}
+@keyframes tg-execute-spark-2 {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(48px, 8px) scale(0.2);
+  }
+}
+@keyframes tg-execute-spark-3 {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(28px, -26px) scale(0.15);
+  }
+}
+@keyframes tg-execute-spark-4 {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(56px, -4px) scale(0.25);
+  }
+}
+
+html.is-native.is-paused .tg-execute.is-executing,
+html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon,
+html.is-native.is-paused .tg-execute.is-executing .tg-execute-fx-shine,
+html.is-native.is-paused .tg-execute.is-executing .tg-execute-fx-ripple,
+html.is-native.is-paused .tg-execute.is-executing .tg-execute-fx-spark {
+  animation: none !important;
 }
 
 .tg-note,

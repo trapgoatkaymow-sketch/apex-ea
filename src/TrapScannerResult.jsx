@@ -161,6 +161,15 @@ export default function TrapScannerResult({
         onClick={executeTrade}
         disabled={busy || !connected}
       >
+        <span className="tg-execute-fx" aria-hidden="true">
+          <i className="tg-execute-fx-ripple" />
+          <i className="tg-execute-fx-ripple" />
+          <i className="tg-execute-fx-shine" />
+          <i className="tg-execute-fx-spark tg-execute-fx-spark--1" />
+          <i className="tg-execute-fx-spark tg-execute-fx-spark--2" />
+          <i className="tg-execute-fx-spark tg-execute-fx-spark--3" />
+          <i className="tg-execute-fx-spark tg-execute-fx-spark--4" />
+        </span>
         <span className="tg-execute-icon" aria-hidden="true">
           {executingLabel ? "…" : "✈"}
         </span>
