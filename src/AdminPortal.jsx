@@ -485,9 +485,22 @@ export default function AdminPortal() {
     .toLowerCase();
 
   const filteredClients = useMemo(() => {
-    const list = [...(signups || [])].sort(
-      (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-    );
+    // Client Management only lists paid or payment-bypassed accounts.
+    const list = [...(signups || [])]
+      .filter((s) => Boolean(s?.accessPaid) || Boolean(s?.accessBypassed))
+      .sort((a, b) => {
+        const aAt =
+          Number(a.accessBypassedAt) ||
+          Number(a.accessPaidAt) ||
+          Number(a.createdAt) ||
+          0;
+        const bAt =
+          Number(b.accessBypassedAt) ||
+          Number(b.accessPaidAt) ||
+          Number(b.createdAt) ||
+          0;
+        return bAt - aAt;
+      });
     if (!clientMgmtQuery) return list;
     return list.filter((s) =>
       String(s?.email || "")
@@ -496,12 +509,25 @@ export default function AdminPortal() {
     );
   }, [signups, clientMgmtQuery]);
 
-  const filteredPendingClients = useMemo(
+  const filteredPaidClients = useMemo(
     () =>
       filteredClients.filter(
-        (s) => String(s?.status || "").toLowerCase() === "pending"
+        (s) => Boolean(s?.accessPaid) && !Boolean(s?.accessBypassed)
       ),
     [filteredClients]
+  );
+
+  const filteredBypassClients = useMemo(
+    () => filteredClients.filter((s) => Boolean(s?.accessBypassed)),
+    [filteredClients]
+  );
+
+  const filteredPendingClients = useMemo(
+    () =>
+      (signups || []).filter(
+        (s) => String(s?.status || "").toLowerCase() === "pending"
+      ),
+    [signups]
   );
 
   const filteredPendingMentors = useMemo(() => {
@@ -1481,13 +1507,9 @@ export default function AdminPortal() {
   }
 
   async function bulkApprovePendingClients() {
-    const list = filteredPendingClients;
+    const list = pending;
     if (!list.length) {
-      showToast(
-        clientMgmtQuery
-          ? "No pending clients match your search"
-          : "No pending clients to approve"
-      );
+      showToast("No pending clients to approve");
       return;
     }
     if (clientBulkBusy) return;
@@ -2482,7 +2504,9 @@ export default function AdminPortal() {
         {isSuperAdmin && adminPage === "clients" && (
           <section className="admin-page is-active">
             <h2 className="admin-h1">Client Management</h2>
-            <p className="admin-sub">Manage client access and payment bypasses</p>
+            <p className="admin-sub">
+              Paid and payment-bypassed clients only. Pending signups stay under Activate Accounts.
+            </p>
 
             <div className="admin-toolbar admin-client-mgmt-toolbar">
               <input
@@ -2490,99 +2514,120 @@ export default function AdminPortal() {
                 type="search"
                 value={clientMgmtSearch}
                 onChange={(e) => setClientMgmtSearch(e.target.value)}
-                placeholder="Search clients by email"
-                aria-label="Search clients by email"
+                placeholder="Search paid / bypass clients by email"
+                aria-label="Search paid or bypass clients by email"
               />
               <button
-                className={`admin-btn admin-btn-solid admin-btn-sm${clientBulkBusy ? " is-loading" : ""}`}
+                className="admin-btn admin-btn-outline admin-btn-sm"
                 type="button"
-                disabled={clientBulkBusy || filteredPendingClients.length === 0}
-                onClick={() => void bulkApprovePendingClients()}
+                onClick={() => setBypassOpen((open) => !open)}
               >
-                <AdminBusyLabel busy={clientBulkBusy} busyText="Approving…">
-                  {`Bulk Approve${
-                    filteredPendingClients.length
-                      ? ` (${filteredPendingClients.length})`
-                      : ""
-                  }`}
-                </AdminBusyLabel>
+                {bypassOpen ? "Hide bypass" : "Payment bypass"}
               </button>
             </div>
+
+            {bypassOpen ? (
+              <div className="admin-card admin-bypass-card" style={{ marginBottom: 12 }}>
+                <div className="admin-card-head">
+                  <h3 className="admin-card-title">Payment bypass</h3>
+                </div>
+                <p className="ea-hint">
+                  Enter a client email, then choose what to bypass without PayPal.
+                </p>
+                <label className="ea-field">
+                  <span>Client email</span>
+                  <input
+                    className="admin-input"
+                    type="email"
+                    value={bypassEmail}
+                    onChange={(e) => setBypassEmail(e.target.value)}
+                    placeholder="client@email.com"
+                  />
+                </label>
+                <div className="admin-bypass-actions">
+                  <button
+                    className={`admin-btn admin-btn-solid admin-btn-block${bypassBusy ? " is-loading" : ""}`}
+                    type="button"
+                    disabled={bypassBusy}
+                    onClick={async () => {
+                      setBypassBusy(true);
+                      try {
+                        await bypassAppAccess?.(bypassEmail);
+                        setBypassEmail("");
+                      } finally {
+                        setBypassBusy(false);
+                      }
+                    }}
+                  >
+                    <AdminBusyLabel busy={bypassBusy} busyText="Bypassing…">
+                      App access bypass
+                    </AdminBusyLabel>
+                  </button>
+                  <button
+                    className={`admin-btn admin-btn-outline admin-btn-block${bypassBusy ? " is-loading" : ""}`}
+                    type="button"
+                    disabled={bypassBusy}
+                    onClick={async () => {
+                      setBypassBusy(true);
+                      try {
+                        await bypassPremiumScanner?.(bypassEmail);
+                      } finally {
+                        setBypassBusy(false);
+                      }
+                    }}
+                  >
+                    <AdminBusyLabel busy={bypassBusy} busyText="Bypassing…">
+                      Premium scanner bypass
+                    </AdminBusyLabel>
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="admin-card">
               <p className="admin-card-meta">
                 {clientMgmtQuery
-                  ? `Showing ${filteredClients.length} of ${signups.length} clients`
-                  : `Total clients: ${signups.length}`}
+                  ? `Showing ${filteredClients.length} match${filteredClients.length === 1 ? "" : "es"}`
+                  : `Paid / bypass clients: ${filteredClients.length}`}
+                {` · ${filteredPaidClients.length} paid · ${filteredBypassClients.length} bypassed`}
                 {filteredPendingClients.length
-                  ? ` · ${filteredPendingClients.length} pending`
+                  ? ` · ${filteredPendingClients.length} pending (on Activate)`
                   : ""}
               </p>
               <div className="admin-table-head admin-table-head-2">
                 <span>Email</span>
-                <span>Status</span>
+                <span>Access</span>
               </div>
-              {signups.length === 0 ? (
-                <p className="admin-empty">No clients yet</p>
-              ) : filteredClients.length === 0 ? (
+              {filteredClients.length === 0 ? (
                 <p className="admin-empty">
-                  No clients match “{clientMgmtSearch.trim()}”
+                  {clientMgmtQuery
+                    ? `No paid / bypass clients match “${clientMgmtSearch.trim()}”`
+                    : "No paid or bypassed clients yet"}
                 </p>
               ) : (
                 filteredClients.map((s) => {
-                  const status = String(s.status || "").toLowerCase();
-                  const isPending = status === "pending";
+                  const bypassed = Boolean(s.accessBypassed);
+                  const paid = Boolean(s.accessPaid) && !bypassed;
+                  const label = bypassed ? "Bypassed" : paid ? "Paid" : "Access";
                   return (
                     <div
-                      className={`admin-table-row admin-table-row-2${
-                        isPending ? " has-actions" : ""
-                      }`}
+                      className="admin-table-row admin-table-row-2"
                       key={s.email}
                     >
                       <span className="admin-name">{s.email}</span>
                       <div className="admin-client-status-cell">
                         <span
                           className={`admin-badge ${
-                            status === "approved"
-                              ? "is-approved"
-                              : status === "declined"
-                                ? "is-declined"
-                                : "is-pending"
+                            bypassed ? "is-pending" : "is-approved"
                           }`}
+                          title={
+                            bypassed
+                              ? "Payment bypassed — no PayPal"
+                              : "Access paid"
+                          }
                         >
-                          {status === "approved"
-                            ? "Approved"
-                            : status === "declined"
-                              ? "Declined"
-                              : "Pending"}
+                          {label}
                         </span>
-                        {isPending ? (
-                          <div className="admin-row-actions">
-                            <button
-                              className={`admin-btn admin-btn-solid admin-btn-sm${
-                                signupActionBusy ===
-                                `${String(s.email || "").trim().toLowerCase()}:approved`
-                                  ? " is-loading"
-                                  : ""
-                              }`}
-                              type="button"
-                              disabled={Boolean(signupActionBusy)}
-                              onClick={() =>
-                                void runSignupStatus(s.email, "approved")
-                              }
-                            >
-                              <AdminBusyLabel
-                                busy={
-                                  signupActionBusy ===
-                                  `${String(s.email || "").trim().toLowerCase()}:approved`
-                                }
-                                busyText="Approving…"
-                              >
-                                Approve
-                              </AdminBusyLabel>
-                            </button>
-                          </div>
-                        ) : null}
                       </div>
                     </div>
                   );
@@ -2603,23 +2648,34 @@ export default function AdminPortal() {
                 <h3>Pending signups</h3>
                 <span className="admin-badge">{pending.length}</span>
               </div>
-              <button
-                className={`admin-btn admin-btn-sm${refreshBusy === "signups" ? " is-loading" : ""}`}
-                type="button"
-                style={{ marginBottom: 10 }}
-                disabled={refreshBusy === "signups"}
-                onClick={() => {
-                  if (refreshBusy === "signups") return;
-                  setRefreshBusy("signups");
-                  Promise.resolve(refreshSignups?.())
-                    .then(() => showToast("Pending list refreshed"))
-                    .finally(() => setRefreshBusy(""));
-                }}
-              >
-                <AdminBusyLabel busy={refreshBusy === "signups"} busyText="Refreshing…">
-                  Refresh pending
-                </AdminBusyLabel>
-              </button>
+              <div className="admin-toolbar" style={{ marginBottom: 10, gap: 8 }}>
+                <button
+                  className={`admin-btn admin-btn-sm${refreshBusy === "signups" ? " is-loading" : ""}`}
+                  type="button"
+                  disabled={refreshBusy === "signups"}
+                  onClick={() => {
+                    if (refreshBusy === "signups") return;
+                    setRefreshBusy("signups");
+                    Promise.resolve(refreshSignups?.())
+                      .then(() => showToast("Pending list refreshed"))
+                      .finally(() => setRefreshBusy(""));
+                  }}
+                >
+                  <AdminBusyLabel busy={refreshBusy === "signups"} busyText="Refreshing…">
+                    Refresh pending
+                  </AdminBusyLabel>
+                </button>
+                <button
+                  className={`admin-btn admin-btn-solid admin-btn-sm${clientBulkBusy ? " is-loading" : ""}`}
+                  type="button"
+                  disabled={clientBulkBusy || pending.length === 0}
+                  onClick={() => void bulkApprovePendingClients()}
+                >
+                  <AdminBusyLabel busy={clientBulkBusy} busyText="Approving…">
+                    {`Bulk Approve${pending.length ? ` (${pending.length})` : ""}`}
+                  </AdminBusyLabel>
+                </button>
+              </div>
               <div className="admin-activate-list">
                 {pending.length === 0 ? (
                   <p className="admin-empty">No pending accounts</p>
