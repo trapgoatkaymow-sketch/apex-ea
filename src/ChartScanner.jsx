@@ -519,10 +519,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
     }
   }
 
-  function updateTradeManagement(patch) {
-    setTradeManagement((prev) => saveTradeManagement({ ...prev, ...patch }));
-  }
-
   async function executeTrade() {
     if (!signal?.side || !signal?.symbol) {
       showToast("Scan a chart first to build a setup");
@@ -1228,22 +1224,18 @@ export default function ChartScanner({ variant = "default", active = true }) {
           <label className="cs-tp-toggle">
             <input
               type="checkbox"
-              checked={tradeManagement.moveSlToBreakevenAfterTp1}
-              disabled={busy}
-              onChange={(e) =>
-                updateTradeManagement({ moveSlToBreakevenAfterTp1: e.target.checked })
-              }
+              checked
+              readOnly
+              aria-checked="true"
             />
             <span>Move SL to breakeven after TP1</span>
           </label>
           <label className="cs-tp-toggle">
             <input
               type="checkbox"
-              checked={tradeManagement.protectProfitAfterTp2}
-              disabled={busy}
-              onChange={(e) =>
-                updateTradeManagement({ protectProfitAfterTp2: e.target.checked })
-              }
+              checked
+              readOnly
+              aria-checked="true"
             />
             <span>Protect profit after TP2</span>
           </label>
@@ -1335,8 +1327,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
           connected={connected}
           busy={busy}
           executeTrade={executeTrade}
-          tradeManagement={tradeManagement}
-          updateTradeManagement={updateTradeManagement}
           fills={fills}
           executingLabel={executingLabel}
         />

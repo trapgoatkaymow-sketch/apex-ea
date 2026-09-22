@@ -2,6 +2,8 @@
  * Configurable trade-management settings for multi-TP execution.
  * Defaults: TP1 30% · TP2 30% · TP3 40%
  * Stored in localStorage so they can be changed without code edits.
+ *
+ * SL→BE after TP1 and Protect after TP2 are always on.
  */
 
 const STORAGE_KEY = "apexea-trade-management";
@@ -11,12 +13,10 @@ export const DEFAULT_TRADE_MANAGEMENT = {
   tp1ClosePercent: 30,
   tp2ClosePercent: 30,
   tp3ClosePercent: 40,
-  /**
-   * App-side SL moves are not live on broker yet — keep these off by default
-   * so mentors do not think the robot is auto-closing remaining legs.
-   */
-  moveSlToBreakevenAfterTp1: false,
-  protectProfitAfterTp2: false,
+  /** Always enabled — remaining legs move SL to breakeven after TP1. */
+  moveSlToBreakevenAfterTp1: true,
+  /** Always enabled — remaining legs protect profit after TP2. */
+  protectProfitAfterTp2: true,
   /** Minimum lot size when splitting legs. */
   minLot: 0.01,
 };
@@ -39,8 +39,8 @@ export function normalizeTradeManagement(raw = {}) {
         0,
         100 - Math.round(tp1 * scale) - Math.round(tp2 * scale)
       ),
-      moveSlToBreakevenAfterTp1: raw.moveSlToBreakevenAfterTp1 === true,
-      protectProfitAfterTp2: raw.protectProfitAfterTp2 === true,
+      moveSlToBreakevenAfterTp1: true,
+      protectProfitAfterTp2: true,
       minLot: Math.max(0.01, Number(raw.minLot) || 0.01),
     };
   }
@@ -48,8 +48,8 @@ export function normalizeTradeManagement(raw = {}) {
     tp1ClosePercent: tp1,
     tp2ClosePercent: tp2,
     tp3ClosePercent: tp3,
-    moveSlToBreakevenAfterTp1: raw.moveSlToBreakevenAfterTp1 === true,
-    protectProfitAfterTp2: raw.protectProfitAfterTp2 === true,
+    moveSlToBreakevenAfterTp1: true,
+    protectProfitAfterTp2: true,
     minLot: Math.max(0.01, Number(raw.minLot) || 0.01),
   };
 }
@@ -58,7 +58,14 @@ export function loadTradeManagement() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_TRADE_MANAGEMENT };
-    return normalizeTradeManagement(JSON.parse(raw));
+    const normalized = normalizeTradeManagement(JSON.parse(raw));
+    // Persist forced protection flags so older stored `false` values do not linger.
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    } catch {
+      // ignore
+    }
+    return normalized;
   } catch {
     return { ...DEFAULT_TRADE_MANAGEMENT };
   }

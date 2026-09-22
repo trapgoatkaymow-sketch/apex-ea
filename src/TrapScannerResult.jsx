@@ -37,8 +37,6 @@ export default function TrapScannerResult({
   connected,
   busy,
   executeTrade,
-  tradeManagement,
-  updateTradeManagement,
   fills,
   executingLabel = null,
 }) {
@@ -135,22 +133,18 @@ export default function TrapScannerResult({
         <label>
           <input
             type="checkbox"
-            checked={tradeManagement.moveSlToBreakevenAfterTp1}
-            disabled={busy}
-            onChange={(e) =>
-              updateTradeManagement({ moveSlToBreakevenAfterTp1: e.target.checked })
-            }
+            checked
+            readOnly
+            aria-checked="true"
           />
           <span>SL → BE after TP1</span>
         </label>
         <label>
           <input
             type="checkbox"
-            checked={tradeManagement.protectProfitAfterTp2}
-            disabled={busy}
-            onChange={(e) =>
-              updateTradeManagement({ protectProfitAfterTp2: e.target.checked })
-            }
+            checked
+            readOnly
+            aria-checked="true"
           />
           <span>Protect after TP2</span>
         </label>
@@ -163,16 +157,33 @@ export default function TrapScannerResult({
         disabled={busy || !connected}
       >
         <span className="tg-execute-fx" aria-hidden="true">
-          <i className="tg-execute-fx-ripple" />
-          <i className="tg-execute-fx-ripple" />
+          <i className="tg-execute-fx-glow" />
           <i className="tg-execute-fx-shine" />
+          <i className="tg-execute-fx-ripple" />
+          <i className="tg-execute-fx-ripple" />
           <i className="tg-execute-fx-spark tg-execute-fx-spark--1" />
           <i className="tg-execute-fx-spark tg-execute-fx-spark--2" />
           <i className="tg-execute-fx-spark tg-execute-fx-spark--3" />
           <i className="tg-execute-fx-spark tg-execute-fx-spark--4" />
+          <i className="tg-execute-fx-spark tg-execute-fx-spark--5" />
         </span>
         <span className="tg-execute-icon" aria-hidden="true">
-          {executingLabel ? "…" : "✈"}
+          {executingLabel ? (
+            <span className="tg-execute-icon-spin" />
+          ) : (
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+              <path
+                d="M3.5 12.5 20 4l-3.2 16.2-4.3-5.1-4.8 2.4 1.1-5.4L3.5 12.5Z"
+                fill="currentColor"
+                opacity="0.95"
+              />
+              <path
+                d="M12.5 15.1 20 4l-7.5 11.1Z"
+                fill="currentColor"
+                opacity="0.55"
+              />
+            </svg>
+          )}
         </span>
         <span className="tg-execute-copy">
           <strong>
