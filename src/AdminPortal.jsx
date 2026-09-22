@@ -538,11 +538,6 @@ export default function AdminPortal() {
     [signups]
   );
 
-  const bypassedClientsTotal = useMemo(
-    () => (signups || []).filter((s) => Boolean(s?.accessBypassed)).length,
-    [signups]
-  );
-
   const filteredPendingClients = useMemo(
     () =>
       (signups || []).filter(
@@ -2629,19 +2624,6 @@ export default function AdminPortal() {
                     <p className="admin-stat-label">Paid clients</p>
                     <p className="admin-stat-value is-ok">{paidRealClientsTotal}</p>
                     <p className="admin-card-meta">Real PayPal · not bypassed</p>
-                  </button>
-                  <button
-                    type="button"
-                    className="admin-stat-card admin-stat-card-action admin-stat-card-btn"
-                    onClick={() => {
-                      setClientMgmtSearch("");
-                      setAdminPage("clients");
-                      setDrawerOpen(false);
-                    }}
-                  >
-                    <p className="admin-stat-label">Bypassed</p>
-                    <p className="admin-stat-value is-warn">{bypassedClientsTotal}</p>
-                    <p className="admin-card-meta">Free access · excluded from paid</p>
                   </button>
                 </div>
               </>
