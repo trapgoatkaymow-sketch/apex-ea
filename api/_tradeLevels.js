@@ -17,9 +17,10 @@ function toFiniteNumber(value) {
 /**
  * Normalize scanner/AI direction labels.
  * Prefer explicit BUY/SELL; also accept LONG/SHORT. When entry+SL are present,
- * trust stop geometry over a conflicting label (SL below entry = BUY).
+ * trust stop geometry over a conflicting label (SL below entry = BUY) —
+ * unless `trustSide` is set (live OrderSend must never flip Buy↔Sell).
  */
-export function normalizeTradeSide(side, { entry, stopLoss } = {}) {
+export function normalizeTradeSide(side, { entry, stopLoss, trustSide = false } = {}) {
   const raw = String(side || "")
     .trim()
     .toUpperCase();
@@ -32,7 +33,7 @@ export function normalizeTradeSide(side, { entry, stopLoss } = {}) {
 
   const e = toFiniteNumber(entry);
   const sl = toFiniteNumber(stopLoss);
-  if (e != null && sl != null && e !== sl) {
+  if (!trustSide && e != null && sl != null && e !== sl) {
     const fromLevels = sl < e ? "BUY" : "SELL";
     // Geometry wins when the text label conflicts or is missing.
     if (!dir || dir !== fromLevels) dir = fromLevels;
@@ -58,8 +59,8 @@ export function minStopDistance(symbol, entryPrice) {
   const core = symbolCoreName(symbol);
   const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
 
-  if (/^(XAU|GOLD)/.test(core)) return Math.max(1.5, e * 0.0006);
-  if (/^(XAG|SILVER)/.test(core)) return Math.max(0.05, e * 0.0015);
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(3.0, e * 0.0008);
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(0.08, e * 0.0018);
   if (/^BTC/.test(core)) return Math.max(80, e * 0.002);
   if (/^ETH/.test(core)) return Math.max(8, e * 0.0025);
   if (
@@ -93,7 +94,8 @@ export function formatTradePrice(value) {
 
 /**
  * Widen / re-anchor SL & TP so they cannot sit on top of the live fill.
- * Returns null levels unchanged when input was empty/invalid.
+ * Always trusts the requested trade side (Buy/Sell) — never flips direction
+ * from SL geometry (that caused "Invalid stops" when price moved past chart SL).
  */
 export function normalizeProtectiveLevels({
   symbol = "",
@@ -102,12 +104,14 @@ export function normalizeProtectiveLevels({
   stopLoss,
   takeProfit,
 } = {}) {
-  const dir = normalizeTradeSide(side, { entry: entryPrice, stopLoss });
+  const dir = normalizeTradeSide(side, { trustSide: true });
   const entry = toFiniteNumber(entryPrice);
   let sl = toFiniteNumber(stopLoss);
   let tp = toFiniteNumber(takeProfit);
   let widened = false;
-  const minDist = entry != null ? minStopDistance(symbol, entry) : 0;
+  // Extra buffer vs chart min — brokers reject stops inside freeze/stops level.
+  const minDist =
+    entry != null ? Math.max(minStopDistance(symbol, entry) * 1.35, minStopDistance(symbol, entry)) : 0;
 
   if (entry != null && entry > 0 && minDist > 0) {
     if (sl != null && sl > 0) {

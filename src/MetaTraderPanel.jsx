@@ -15,6 +15,58 @@ import { removeMt5Account, upsertMt5Account } from "./mt5AccountsApi.js";
 import { useApp } from "./store.jsx";
 
 const emptyLogin = { login: "", password: "", server: "" };
+const MT5_CREDS_KEY = "apexea-mt5-creds-v1";
+
+function loadSavedMt5Creds() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(MT5_CREDS_KEY) || "null");
+    if (!raw || typeof raw !== "object") return null;
+    const login = String(raw.login || "").trim();
+    const password = String(raw.password || "");
+    const server = String(raw.server || "").trim();
+    if (!login || !password || !server) return null;
+    return {
+      login,
+      password,
+      server,
+      platform: String(raw.platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5",
+      company: String(raw.company || "").trim(),
+      savedAt: Number(raw.savedAt) || 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistMt5Creds(creds) {
+  try {
+    if (!creds?.login || !creds?.password || !creds?.server) {
+      localStorage.removeItem(MT5_CREDS_KEY);
+      return;
+    }
+    localStorage.setItem(
+      MT5_CREDS_KEY,
+      JSON.stringify({
+        login: String(creds.login).trim(),
+        password: String(creds.password),
+        server: String(creds.server).trim(),
+        platform: String(creds.platform || "MT5"),
+        company: String(creds.company || "").trim(),
+        savedAt: Date.now(),
+      })
+    );
+  } catch {
+    // ignore quota
+  }
+}
+
+function clearSavedMt5Creds() {
+  try {
+    localStorage.removeItem(MT5_CREDS_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 function BrokerLogo({ broker }) {
   const candidates = useMemo(() => resolveBrokerLogoCandidates(broker), [broker]);
@@ -137,11 +189,85 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
   const [apiChecking, setApiChecking] = useState(true);
   const [closingPositions, setClosingPositions] = useState(false);
   const searchRef = useRef(0);
+  const reconnectRef = useRef(false);
 
   const hasQuery = query.trim().length > 0;
   const session = mt5Session;
   const apiOnline = apiHealth?.online === true;
   const apiOffline = apiHealth?.online === false;
+
+  async function tryAutoReconnect(reason = "") {
+    if (reconnectRef.current) return false;
+    if (apiHealth?.online === false) return false;
+    const saved = loadSavedMt5Creds();
+    if (!saved) return false;
+    reconnectRef.current = true;
+    try {
+      const connected = await connectAccount({
+        login: saved.login,
+        password: saved.password,
+        server: saved.server,
+        platform: saved.platform || "MT5",
+        company: saved.company || "",
+      });
+      const nextSession = {
+        accountId: connected.accountId,
+        login: connected.login || saved.login,
+        server: connected.server || saved.server,
+        company: connected.company || saved.company || saved.server,
+        platform: connected.platform || saved.platform || "MT5",
+        connectionStatus: connected.connectionStatus || "CONNECTED",
+        subscribed: connected.subscribed,
+        strategyId: connected.strategyId,
+        subscriptionError: connected.subscriptionError,
+        region: connected.region || null,
+        connectedAt: Date.now(),
+        balance: connected.balance ?? null,
+        equity: connected.equity ?? null,
+        profit: floatingFromStatus(connected),
+        currency: connected.currency || "",
+      };
+      setMt5Session(nextSession);
+      if (
+        connected.balance != null ||
+        connected.equity != null ||
+        connected.currency
+      ) {
+        setAccountMetrics({
+          balance: connected.balance ?? null,
+          equity: connected.equity ?? null,
+          profit: floatingFromStatus(connected),
+          currency: connected.currency || "",
+        });
+      }
+      await syncHostedAccount(nextSession, coverEmail);
+      if (reason) {
+        showToast("Trading account restored — still logged in");
+      }
+      return true;
+    } catch {
+      return false;
+    } finally {
+      reconnectRef.current = false;
+    }
+  }
+
+  async function dropSessionSoft(toastMsg) {
+    // Prefer silent auto-reconnect so clients stay logged in.
+    const restored = await tryAutoReconnect("expired");
+    if (restored) return;
+    setMt5Session(null);
+    setAccountMetrics(null);
+    const accountEmail = normalizeEmail(coverEmail);
+    if (accountEmail) {
+      try {
+        await removeMt5Account(accountEmail);
+      } catch {
+        /* best-effort */
+      }
+    }
+    if (toastMsg) showToast(toastMsg);
+  }
 
   async function syncHostedAccount(sessionRow, email = coverEmail) {
     const accountEmail = normalizeEmail(email);
@@ -169,6 +295,22 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when session or cover email changes
   }, [session?.accountId, coverEmail]);
 
+  // Restore remembered broker login so clients stay logged in across app opens.
+  useEffect(() => {
+    if (session?.accountId) return undefined;
+    if (apiHealth?.online === false) return undefined;
+    let cancelled = false;
+    (async () => {
+      const saved = loadSavedMt5Creds();
+      if (!saved || cancelled) return;
+      await tryAutoReconnect("boot");
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot restore when API comes online
+  }, [session?.accountId, apiHealth?.online]);
+
   // Keep MT5API session warm and re-register for mentor Self Hosting.
   useEffect(() => {
     if (!session?.accountId) return undefined;
@@ -182,21 +324,9 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         });
         if (cancelled) return;
         if (status?.transient) return;
-        const disconnected =
-          status?.disconnected === true ||
-          String(status?.connectionStatus || "").toUpperCase().includes("DISCONNECT") ||
-          String(status?.state || "").toUpperCase() === "UNDEPLOYED";
-        if (disconnected) {
-          showToast("Broker session expired — reconnect MetaTrader");
-          setMt5Session(null);
-          const accountEmail = normalizeEmail(coverEmail);
-          if (accountEmail) {
-            try {
-              await removeMt5Account(accountEmail);
-            } catch {
-              /* best-effort */
-            }
-          }
+        // Only hard-drop on explicit disconnected flag from the API.
+        if (status?.disconnected === true) {
+          await dropSessionSoft("Broker session expired — reconnecting…");
           return;
         }
         await syncHostedAccount(session, coverEmail);
@@ -286,22 +416,17 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         if (status?.transient) return;
         const state = String(status?.state || "").toUpperCase();
         const connection = String(status?.connectionStatus || "").toUpperCase();
+        if (status?.disconnected === true) {
+          await dropSessionSoft("MetaTrader session ended — restoring login…");
+          return;
+        }
+        // Soft states (UNKNOWN / empty) must not kick the client out.
         if (
-          status?.disconnected === true ||
-          state === "UNDEPLOYED" ||
-          connection.includes("DISCONNECTED")
+          connection.includes("DISCONNECTED") &&
+          state === "UNDEPLOYED" &&
+          status?.transient !== true
         ) {
-          setMt5Session(null);
-          setAccountMetrics(null);
-          const accountEmail = normalizeEmail(coverEmail);
-          if (accountEmail) {
-            try {
-              await removeMt5Account(accountEmail);
-            } catch {
-              // ignore
-            }
-          }
-          showToast("MetaTrader session ended");
+          await dropSessionSoft("MetaTrader session ended — restoring login…");
           return;
         }
         if (
@@ -489,6 +614,13 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         profit: floatingFromStatus(connected),
         currency: connected.currency || "",
       };
+      persistMt5Creds({
+        login,
+        password,
+        server,
+        platform: nextSession.platform,
+        company: nextSession.company,
+      });
       setMt5Session(nextSession);
       if (
         connected.balance != null ||
@@ -522,6 +654,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
   async function clearSession() {
     const accountId = session?.accountId;
     const accountEmail = normalizeEmail(coverEmail);
+    clearSavedMt5Creds();
     setMt5Session(null);
     setAccountMetrics(null);
     if (accountId) {

@@ -15,9 +15,10 @@ function toFiniteNumber(value) {
 /**
  * Normalize scanner/AI direction labels.
  * Prefer explicit BUY/SELL; also accept LONG/SHORT. When entry+SL are present,
- * trust stop geometry over a conflicting label (SL below entry = BUY).
+ * trust stop geometry over a conflicting label (SL below entry = BUY) —
+ * unless `trustSide` is set (live OrderSend must never flip Buy↔Sell).
  */
-export function normalizeTradeSide(side, { entry, stopLoss } = {}) {
+export function normalizeTradeSide(side, { entry, stopLoss, trustSide = false } = {}) {
   const raw = String(side || "")
     .trim()
     .toUpperCase();
@@ -30,7 +31,7 @@ export function normalizeTradeSide(side, { entry, stopLoss } = {}) {
 
   const e = toFiniteNumber(entry);
   const sl = toFiniteNumber(stopLoss);
-  if (e != null && sl != null && e !== sl) {
+  if (!trustSide && e != null && sl != null && e !== sl) {
     const fromLevels = sl < e ? "BUY" : "SELL";
     if (!dir || dir !== fromLevels) dir = fromLevels;
   }
@@ -54,8 +55,8 @@ export function minStopDistance(symbol, entryPrice) {
   const core = symbolCoreName(symbol);
   const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
 
-  if (/^(XAU|GOLD)/.test(core)) return Math.max(1.5, e * 0.0006);
-  if (/^(XAG|SILVER)/.test(core)) return Math.max(0.05, e * 0.0015);
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(3.0, e * 0.0008);
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(0.08, e * 0.0018);
   if (/^BTC/.test(core)) return Math.max(80, e * 0.002);
   if (/^ETH/.test(core)) return Math.max(8, e * 0.0025);
   if (
