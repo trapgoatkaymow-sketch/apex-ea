@@ -73,6 +73,14 @@ export async function updateSignupAccessBypassed(email) {
   return data?.signup || null;
 }
 
+export async function clearSignupAccessBypassed(email) {
+  const data = await apiFetch("", {
+    method: "PATCH",
+    body: { email, accessBypassed: false, action: "clearAccessBypass" },
+  });
+  return data?.signup || null;
+}
+
 export function mergeSignups(localList = [], remoteList = []) {
   const map = new Map();
   [...localList, ...remoteList].forEach((item) => {
@@ -117,11 +125,17 @@ export function mergeSignups(localList = [], remoteList = []) {
       Number(prev.accessPaidAt) || 0,
       Number(item.accessPaidAt) || 0
     );
-    const accessBypassed = Boolean(prev.accessBypassed || item.accessBypassed);
-    const accessBypassedAt = Math.max(
-      Number(prev.accessBypassedAt) || 0,
-      Number(item.accessBypassedAt) || 0
-    );
+    // Explicit false clears bypass (admin remove); otherwise keep OR so sync never loses it.
+    const accessBypassed =
+      item.accessBypassed === false
+        ? false
+        : Boolean(prev.accessBypassed || item.accessBypassed);
+    const accessBypassedAt = accessBypassed
+      ? Math.max(
+          Number(prev.accessBypassedAt) || 0,
+          Number(item.accessBypassedAt) || 0
+        )
+      : 0;
     const unlockStamps = [prev.appAccessUnlockedAt, item.appAccessUnlockedAt]
       .map((n) => Number(n) || 0)
       .filter((n) => n > 0);

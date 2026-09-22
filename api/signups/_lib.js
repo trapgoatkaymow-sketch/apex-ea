@@ -539,6 +539,11 @@ export async function setSignupAccessBypassed(email, bypassed = true) {
       result = signups[idx];
       return signups;
     }
+    // Clearing bypass on an unknown email — nothing to do.
+    if (!accessBypassed) {
+      result = null;
+      return signups;
+    }
     result = normalizeSignup({
       email: key,
       status: "approved",

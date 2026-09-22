@@ -184,6 +184,7 @@ export default function AdminPortal() {
     signups,
     setSignupStatus,
     bypassAppAccess,
+    clearAppAccessBypass,
     bypassPremiumScanner,
     refreshSignups,
     eas,
@@ -2805,23 +2806,44 @@ export default function AdminPortal() {
                   const label = bypassed ? "Bypassed" : paid ? "Paid" : "Access";
                   return (
                     <div
-                      className="admin-table-row admin-table-row-2"
+                      className="admin-table-row admin-table-row-2 has-actions"
                       key={s.email}
                     >
                       <span className="admin-name">{s.email}</span>
                       <div className="admin-client-status-cell">
-                        <span
-                          className={`admin-badge ${
-                            bypassed ? "is-pending" : "is-approved"
-                          }`}
-                          title={
-                            bypassed
-                              ? "Payment bypassed — no PayPal"
-                              : "Access paid"
-                          }
-                        >
-                          {label}
-                        </span>
+                        <div className="admin-client-access-row">
+                          <span
+                            className={`admin-badge ${
+                              bypassed ? "is-pending" : "is-approved"
+                            }`}
+                            title={
+                              bypassed
+                                ? "Payment bypassed — no PayPal"
+                                : "Access paid"
+                            }
+                          >
+                            {label}
+                          </span>
+                          {bypassed ? (
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn-outline admin-btn-sm admin-bypass-remove-btn"
+                              title={`Remove bypass for ${s.email}`}
+                              aria-label={`Remove bypass for ${s.email}`}
+                              disabled={bypassBusy}
+                              onClick={async () => {
+                                setBypassBusy(true);
+                                try {
+                                  await clearAppAccessBypass?.(s.email);
+                                } finally {
+                                  setBypassBusy(false);
+                                }
+                              }}
+                            >
+                              Remove
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   );
