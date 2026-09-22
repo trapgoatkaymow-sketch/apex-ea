@@ -428,7 +428,10 @@ export async function handleMentorTrade(req, res) {
     }
 
     const lot = Number.isFinite(volume) && volume > 0 ? volume : 0.01;
-    const comment = String(body.comment || "mentor~APEXEA")
+    const hostedByAdmin = normalizeEmail(body.hostedByAdmin || body.adminEmail);
+    const comment = String(
+      body.comment || (hostedByAdmin ? "admin~APEXEA" : "mentor~APEXEA")
+    )
       .replace(/apexea/gi, "APEXEA")
       .slice(0, 31);
     const results = [];
@@ -475,7 +478,8 @@ export async function handleMentorTrade(req, res) {
             stopLoss,
             takeProfit,
             comment,
-            source: "self-hosting",
+            source: hostedByAdmin ? "admin-self-hosting" : "self-hosting",
+            hostedByAdmin: hostedByAdmin || undefined,
             at: Date.now(),
           });
         } catch {
@@ -517,6 +521,7 @@ export async function handleMentorTrade(req, res) {
     sendJson(res, 200, {
       ok: ordersPlaced > 0,
       mentorEmail: mentor.email,
+      hostedByAdmin: hostedByAdmin || "",
       symbol,
       side,
       volume: lot,

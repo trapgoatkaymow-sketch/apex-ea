@@ -286,6 +286,8 @@ export default function AdminPortal() {
   const [hostVolume, setHostVolume] = useState("0.01");
   const [hostSl, setHostSl] = useState("");
   const [hostTp, setHostTp] = useState("");
+  /** Super admin: mentor whose EA clients to host for. Mentors ignore this. */
+  const [hostMentorEmail, setHostMentorEmail] = useState("");
   const [hostAccounts, setHostAccounts] = useState([]);
   const [hostLoading, setHostLoading] = useState(false);
   const [hostBusy, setHostBusy] = useState(false);
@@ -811,7 +813,8 @@ export default function AdminPortal() {
       adminPage === "mentor-keys" ||
       adminPage === "top-mentors" ||
       adminPage === "dashboard" ||
-      adminPage === "licenses"
+      adminPage === "licenses" ||
+      adminPage === "self-hosting"
         ? 8000
         : 25000;
     const timer = setInterval(loadMentors, ms);
@@ -822,24 +825,45 @@ export default function AdminPortal() {
   }, [adminOpen, adminSession, adminPage]);
 
   useEffect(() => {
-    if (!adminOpen || !adminSession || isSuperAdminSession(adminSession)) return;
-    // Keep robot registry warm on Dashboard + Self Hosting so Connected
-    // matches live MT sessions (not only when the Self Hosting tab is open).
-    if (adminPage !== "self-hosting" && adminPage !== "dashboard") return;
-    setHostRecent(loadSelfHostRecent(adminSession.email));
+    if (!adminOpen || !adminSession) return undefined;
+    const isSuper = isSuperAdminSession(adminSession);
+    // Mentors: warm registry on Dashboard + Self Hosting.
+    // Super admin: only on Self Hosting, and only after a mentor is picked.
+    if (isSuper) {
+      if (adminPage !== "self-hosting") return undefined;
+    } else if (adminPage !== "self-hosting" && adminPage !== "dashboard") {
+      return undefined;
+    }
+    const targetMentorEmail = isSuper
+      ? normalizeAdminEmail(hostMentorEmail)
+      : normalizeAdminEmail(adminSession.email);
+    if (!targetMentorEmail) {
+      setHostAccounts([]);
+      setHostRecent([]);
+      setHostLoading(false);
+      return undefined;
+    }
+    // Super admin recent trades keyed per hosted mentor line.
+    const recentKey = isSuper
+      ? `admin:${normalizeAdminEmail(adminSession.email)}:${targetMentorEmail}`
+      : targetMentorEmail;
+    setHostRecent(loadSelfHostRecent(recentKey));
     let cancelled = false;
     async function loadHosted() {
       setHostLoading(true);
       try {
-        const accounts = await listMentorHostedAccounts(adminSession.email);
+        const accounts = await listMentorHostedAccounts(targetMentorEmail);
         if (cancelled) return;
         // Also surface robot sessions stamped on local license rows — durable
         // across refreshes even when /api/mt5-accounts /tmp is empty on this hit.
         const fromLicenses = (Array.isArray(licenseKeys) ? licenseKeys : [])
           .filter((row) => {
             const mentor = normalizeAdminEmail(row.mentorEmail);
-            const mine = normalizeAdminEmail(adminSession.email);
-            return mentor && mine && mentor === mine && String(row.robotAccountId || "").trim();
+            return (
+              mentor &&
+              mentor === targetMentorEmail &&
+              String(row.robotAccountId || "").trim()
+            );
           })
           .map((row) => ({
             email: String(row.clientEmail || "").trim().toLowerCase(),
@@ -880,7 +904,7 @@ export default function AdminPortal() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [adminOpen, adminSession, adminPage, showToast, licenseKeys]);
+  }, [adminOpen, adminSession, adminPage, showToast, licenseKeys, hostMentorEmail]);
 
   useEffect(() => {
     if (!hostScheduled?.runAt) return undefined;
@@ -1673,18 +1697,27 @@ export default function AdminPortal() {
       takeProfit,
       clients,
     } = payload;
+    const isSuper = isSuperAdminSession(adminSession);
+    const targetMentorEmail = isSuper
+      ? normalizeAdminEmail(hostMentorEmail)
+      : normalizeAdminEmail(adminSession.email);
+    if (!targetMentorEmail) {
+      showToast(isSuper ? "Select a mentor to host for" : "Not signed in");
+      return null;
+    }
     setHostBusy(true);
     try {
       const result = await executeMentorSelfHostTrade({
-        mentorEmail: adminSession.email,
+        mentorEmail: targetMentorEmail,
         symbol,
         side,
         volume: Number.isFinite(volume) && volume > 0 ? volume : 0.01,
         tradesCount,
         stopLoss,
         takeProfit,
-        comment: "mentor~APEXEA",
+        comment: isSuper ? "admin~APEXEA" : "mentor~APEXEA",
         clients,
+        hostedByAdmin: isSuper ? normalizeAdminEmail(adminSession.email) : "",
       });
       setHostResult(result);
       setHostScheduled(null);
@@ -1700,8 +1733,13 @@ export default function AdminPortal() {
         targeted: Number(result.targeted || result.connected || 0),
         placed: Number(result.placed || 0),
         offline: Number(result.offline || result.failed || 0),
+        mentorEmail: targetMentorEmail,
+        hostedByAdmin: isSuper,
       };
-      setHostRecent(saveSelfHostRecent(adminSession.email, entry));
+      const recentKey = isSuper
+        ? `admin:${normalizeAdminEmail(adminSession.email)}:${targetMentorEmail}`
+        : targetMentorEmail;
+      setHostRecent(saveSelfHostRecent(recentKey, entry));
       const placed = Number(result?.placed || 0);
       if (placed > 0) {
         showToast(
@@ -1728,6 +1766,13 @@ export default function AdminPortal() {
 
   function confirmHostTrade() {
     if (hostBusy || hostScheduled) return;
+    if (
+      isSuperAdminSession(adminSession) &&
+      !normalizeAdminEmail(hostMentorEmail)
+    ) {
+      showToast("Select a mentor to host for");
+      return;
+    }
     const symbol = normalizeBrokerSymbol(hostSymbol || "");
     const rawSl = Number(hostSl);
     const rawTp = Number(hostTp);
@@ -2528,6 +2573,7 @@ export default function AdminPortal() {
         ["emails", "Send Emails"],
         ["manage-ea", "Manage EAs"],
         ["licenses", "License Keys"],
+        ["self-hosting", "Self Hosting"],
         ["settings", "Settings"],
         ["mentor-keys", "Mentor Keys"],
       ]
@@ -4242,20 +4288,71 @@ export default function AdminPortal() {
           </section>
         )}
 
-        {!isSuperAdmin && adminPage === "self-hosting" && (
+        {adminPage === "self-hosting" && (
           <section className="admin-page is-active">
             <div className="admin-card self-host-card">
               <h2 className="admin-h1 self-host-title">SELF HOSTING</h2>
               <p className="admin-sub">
-                Place a trade and automatically send it to your connected robot clients.
-                Stop loss and take profit are optional.
+                {isSuperAdmin
+                  ? "Host for a mentor who does not want to trade their own line — pick their account, then place trades for their connected robot clients."
+                  : "Place a trade and automatically send it to your connected robot clients. Stop loss and take profit are optional."}
               </p>
+
+              {isSuperAdmin ? (
+                <label className="ea-field" style={{ marginBottom: 16 }}>
+                  <span>Mentor to host for *</span>
+                  <select
+                    className="admin-input"
+                    value={hostMentorEmail}
+                    onChange={(e) => {
+                      const next = normalizeAdminEmail(e.target.value);
+                      setHostMentorEmail(next);
+                      setHostAccounts([]);
+                      setHostResult(null);
+                      setHostDetailsOpen(false);
+                      if (hostScheduleTimerRef.current) {
+                        clearTimeout(hostScheduleTimerRef.current);
+                        hostScheduleTimerRef.current = null;
+                      }
+                      setHostScheduled(null);
+                      setHostBusy(false);
+                    }}
+                    required
+                  >
+                    <option value="">Select a mentor…</option>
+                    {approvedMentors
+                      .filter((m) => {
+                        const role = String(m.role || "").toLowerCase();
+                        const email = normalizeAdminEmail(m.email);
+                        return (
+                          role !== "superadmin" &&
+                          email &&
+                          email !== normalizeAdminEmail(SUPER_ADMIN_EMAIL)
+                        );
+                      })
+                      .map((m) => (
+                        <option key={m.email} value={normalizeAdminEmail(m.email)}>
+                          {String(m.username || m.email || "Mentor").trim()}
+                          {" — "}
+                          {normalizeAdminEmail(m.email)}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="ea-hint" style={{ marginTop: 6 }}>
+                    Trades open on that mentor’s EA clients who have MetaTrader connected in the app.
+                  </p>
+                </label>
+              ) : null}
 
               <form
                 className="license-form self-host-form"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (hostBusy) return;
+                  if (isSuperAdmin && !normalizeAdminEmail(hostMentorEmail)) {
+                    showToast("Select a mentor to host for");
+                    return;
+                  }
                   const symbol = normalizeBrokerSymbol(hostSymbol || "");
                   const volume = Number(hostVolume);
                   const tradesCount = Math.max(
@@ -4275,7 +4372,11 @@ export default function AdminPortal() {
                     return;
                   }
                   if (!hostAccounts.length) {
-                    showToast("No connected robot clients yet");
+                    showToast(
+                      isSuperAdmin
+                        ? "No connected robot clients for this mentor yet"
+                        : "No connected robot clients yet"
+                    );
                     return;
                   }
                   setHostResult(null);
@@ -4295,6 +4396,7 @@ export default function AdminPortal() {
                     placeholder="XAUUSDp"
                     autoCapitalize="off"
                     required
+                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4305,6 +4407,7 @@ export default function AdminPortal() {
                       type="button"
                       className={`self-host-side-btn${hostSide === "BUY" ? " is-active is-buy" : ""}`}
                       onClick={() => setHostSide("BUY")}
+                      disabled={isSuperAdmin && !hostMentorEmail}
                     >
                       BUY
                     </button>
@@ -4319,12 +4422,14 @@ export default function AdminPortal() {
                         value={hostTradesCount}
                         onChange={(e) => setHostTradesCount(e.target.value)}
                         aria-label="Number of trades to open"
+                        disabled={isSuperAdmin && !hostMentorEmail}
                       />
                     </label>
                     <button
                       type="button"
                       className={`self-host-side-btn${hostSide === "SELL" ? " is-active is-sell" : ""}`}
                       onClick={() => setHostSide("SELL")}
+                      disabled={isSuperAdmin && !hostMentorEmail}
                     >
                       SELL
                     </button>
@@ -4345,6 +4450,7 @@ export default function AdminPortal() {
                     onChange={(e) => setHostVolume(e.target.value)}
                     placeholder="0.01"
                     required
+                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4357,6 +4463,7 @@ export default function AdminPortal() {
                     value={hostSl}
                     onChange={(e) => setHostSl(e.target.value)}
                     placeholder="SL price"
+                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4369,6 +4476,7 @@ export default function AdminPortal() {
                     value={hostTp}
                     onChange={(e) => setHostTp(e.target.value)}
                     placeholder="TP price"
+                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4376,16 +4484,22 @@ export default function AdminPortal() {
                   <p className="self-host-status-label">CONNECTED ROBOT CLIENTS</p>
                   <p className="self-host-status-value">
                     <span className={`self-host-dot${hostAccounts.length ? " is-on" : ""}`} />
-                    {hostLoading && !hostAccounts.length
-                      ? "Checking connections…"
-                      : `${hostAccounts.length} client${hostAccounts.length === 1 ? "" : "s"} connected`}
+                    {isSuperAdmin && !hostMentorEmail
+                      ? "Select a mentor first"
+                      : hostLoading && !hostAccounts.length
+                        ? "Checking connections…"
+                        : `${hostAccounts.length} client${hostAccounts.length === 1 ? "" : "s"} connected`}
                   </p>
                 </div>
 
                 <button
                   className={`admin-btn admin-btn-solid admin-btn-block self-host-execute${hostBusy ? " is-loading" : ""}`}
                   type="submit"
-                  disabled={hostBusy || !hostAccounts.length}
+                  disabled={
+                    hostBusy ||
+                    !hostAccounts.length ||
+                    (isSuperAdmin && !hostMentorEmail)
+                  }
                 >
                   <AdminBusyLabel
                     busy={hostBusy}
@@ -4509,7 +4623,15 @@ export default function AdminPortal() {
                   aria-label="Confirm trade"
                 >
                   <p className="self-host-modal-question">
-                    Execute this trade for all connected clients?
+                    {isSuperAdmin
+                      ? `Execute this trade for ${
+                          approvedMentors.find(
+                            (m) =>
+                              normalizeAdminEmail(m.email) ===
+                              normalizeAdminEmail(hostMentorEmail)
+                          )?.username || hostMentorEmail
+                        }’s connected clients?`
+                      : "Execute this trade for all connected clients?"}
                   </p>
                   <p className="self-host-modal-trade">
                     {hostSide} {normalizeBrokerSymbol(hostSymbol || "")}
