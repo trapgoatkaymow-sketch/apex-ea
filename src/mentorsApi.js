@@ -793,4 +793,4 @@ export const COMMISSION_ZAR = 50;
 export const COMMISSION_PERCENT = Number(
   ((COMMISSION_USD / 35.6) * 100).toFixed(2)
 );
-export const WITHDRAW_MIN_KEYS = 5;
+export const WITHDRAW_MIN_KEYS = 10;
