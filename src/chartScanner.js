@@ -1,6 +1,6 @@
 import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
-import { buildSafeMultiTpLevels, normalizeTradeSide } from "./tradeLevels.js";
+import { buildSafeMultiTpLevels, normalizeTradeSide, normalizeChartTimeframe, tpRiskRewardLabel } from "./tradeLevels.js";
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -204,13 +204,16 @@ async function buildLocalFallbackSetup(dataUrl, { hintSymbol = "" } = {}) {
 
 /**
  * Always produce Entry, SL, TP1, TP2, TP3 with fixed R:R targets.
- * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
+ * H4 → TP1 1:1 · TP2 1:2 · TP3 1:3
+ * All other timeframes → TP1 1:2 · TP2 1:3 · TP3 1:4
  * BUY:  SL < Entry < TP1 < TP2 < TP3
  * SELL: SL > Entry > TP1 > TP2 > TP3
  * Enforces instrument-class minimum stop distance so SL/TP are not too close.
  */
 function ensureCompleteSetup(partial = {}) {
   const symbol = String(partial.symbol || partial.detectedSymbol || "").trim();
+  const timeframe =
+    normalizeChartTimeframe(partial.timeframe || partial.tf || "M15") || "M15";
   const levels = buildSafeMultiTpLevels({
     symbol,
     side: normalizeTradeSide(partial.side, {
@@ -219,6 +222,7 @@ function ensureCompleteSetup(partial = {}) {
     }),
     entry: partial.entry,
     stopLoss: partial.stopLoss,
+    timeframe,
   });
 
   const analysis =
@@ -239,8 +243,8 @@ function ensureCompleteSetup(partial = {}) {
     takeProfit2: levels.takeProfit2,
     takeProfit3: levels.takeProfit3,
     takeProfit: levels.takeProfit3,
-    riskReward: "1:1 · 1:2 · 1:3",
-    timeframe: String(partial.timeframe || "M15").trim().toUpperCase() || "M15",
+    riskReward: levels.riskReward || tpRiskRewardLabel(timeframe),
+    timeframe,
     analysis,
     reasons: Array.isArray(partial.reasons) && partial.reasons.length
       ? partial.reasons

@@ -6,6 +6,8 @@
  * SL→BE after TP1 and Protect after TP2 are always on.
  */
 
+import { tpRiskRewardLabel } from "./tradeLevels.js";
+
 const STORAGE_KEY = "apexea-trade-management";
 
 export const DEFAULT_TRADE_MANAGEMENT = {
@@ -175,11 +177,11 @@ export function splitVolumeAcrossTargets(totalVolume, management = DEFAULT_TRADE
  * Actual broker-side SL moves after TP hits depend on MetaTrader/EA support;
  * we encode the intended plan with the split legs (each TP on its own ticket).
  */
-export function describeManagementPlan(management = DEFAULT_TRADE_MANAGEMENT) {
+export function describeManagementPlan(management = DEFAULT_TRADE_MANAGEMENT, timeframe = "M15") {
   const cfg = normalizeTradeManagement(management);
   return {
     ...cfg,
-    summary: "TP targets · 1:1 · 1:2 · 1:3",
+    summary: `TP targets · ${tpRiskRewardLabel(timeframe)}`,
     breakevenNote: cfg.moveSlToBreakevenAfterTp1
       ? "After TP1, remaining SL moves toward breakeven when supported"
       : "Breakeven move after TP1 disabled",

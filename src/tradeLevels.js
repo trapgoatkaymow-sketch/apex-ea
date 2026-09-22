@@ -88,11 +88,47 @@ export function formatTradePrice(value) {
   return Number(n.toFixed(digits));
 }
 
+/**
+ * Normalize chart timeframe labels (H4 / 4H / 240 → H4).
+ */
+export function normalizeChartTimeframe(raw) {
+  const tf = String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  if (!tf) return "M15";
+  if (/^(H4|4H|240M?|240)$/.test(tf)) return "H4";
+  if (/^(H1|1H|60M?|60)$/.test(tf)) return "H1";
+  if (/^(M15|15M|15)$/.test(tf)) return "M15";
+  if (/^(M5|5M|5)$/.test(tf)) return "M5";
+  if (/^(M1|1M|1)$/.test(tf)) return "M1";
+  if (/^(M30|30M|30)$/.test(tf)) return "M30";
+  if (/^(H2|2H|120)$/.test(tf)) return "H2";
+  if (/^(D1|1D|DAILY)$/.test(tf)) return "D1";
+  return tf;
+}
+
+/** H4 keeps the classic 1:1 ladder; every other TF starts at 1:2. */
+export function isH4Timeframe(raw) {
+  return normalizeChartTimeframe(raw) === "H4";
+}
+
+/** TP1/TP2/TP3 reward multiples of stop distance. */
+export function tpRewardMultiples(timeframe) {
+  return isH4Timeframe(timeframe) ? [1, 2, 3] : [2, 3, 4];
+}
+
+export function tpRiskRewardLabel(timeframe) {
+  const [a, b, c] = tpRewardMultiples(timeframe);
+  return `1:${a} · 1:${b} · 1:${c}`;
+}
+
 export function buildSafeMultiTpLevels({
   symbol = "",
   side = "BUY",
   entry,
   stopLoss,
+  timeframe = "M15",
 } = {}) {
   const dir = normalizeTradeSide(side, { entry, stopLoss });
   let e = toFiniteNumber(entry);
@@ -121,24 +157,27 @@ export function buildSafeMultiTpLevels({
   const entryOut = formatTradePrice(e);
   const slOut = formatTradePrice(sl);
   const safeRisk = Math.max(Math.abs(entryOut - slOut), minDist);
+  const [m1, m2, m3] = tpRewardMultiples(timeframe);
 
   return {
     side: dir,
     entry: entryOut,
     stopLoss: formatTradePrice(dir === "BUY" ? entryOut - safeRisk : entryOut + safeRisk),
     takeProfit1: formatTradePrice(
-      dir === "BUY" ? entryOut + safeRisk * 1 : entryOut - safeRisk * 1
+      dir === "BUY" ? entryOut + safeRisk * m1 : entryOut - safeRisk * m1
     ),
     takeProfit2: formatTradePrice(
-      dir === "BUY" ? entryOut + safeRisk * 2 : entryOut - safeRisk * 2
+      dir === "BUY" ? entryOut + safeRisk * m2 : entryOut - safeRisk * m2
     ),
     takeProfit3: formatTradePrice(
-      dir === "BUY" ? entryOut + safeRisk * 3 : entryOut - safeRisk * 3
+      dir === "BUY" ? entryOut + safeRisk * m3 : entryOut - safeRisk * m3
     ),
     takeProfit: formatTradePrice(
-      dir === "BUY" ? entryOut + safeRisk * 3 : entryOut - safeRisk * 3
+      dir === "BUY" ? entryOut + safeRisk * m3 : entryOut - safeRisk * m3
     ),
     minDist,
     widened: risk < minDist + 1e-12,
+    riskReward: tpRiskRewardLabel(timeframe),
+    tpMultiples: [m1, m2, m3],
   };
 }

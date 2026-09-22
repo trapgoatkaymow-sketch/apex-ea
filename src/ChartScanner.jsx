@@ -28,6 +28,7 @@ import {
   describeManagementPlan,
   loadTradeManagement,
 } from "./tradeManagement.js";
+import { tpRewardMultiples, tpRiskRewardLabel } from "./tradeLevels.js";
 
 /** Android WebView: keep motion close to web, with a lighter particle count. */
 const SCANNER_PARTICLE_COUNT = isNativeApp() ? 12 : 18;
@@ -239,9 +240,17 @@ export default function ChartScanner({ variant = "default", active = true }) {
       signal?.takeProfit3 != null
   );
   const managementPlan = useMemo(
-    () => describeManagementPlan(tradeManagement),
-    [tradeManagement]
+    () => describeManagementPlan(tradeManagement, signal?.timeframe),
+    [tradeManagement, signal?.timeframe]
   );
+  const tpLadder = useMemo(() => {
+    const multiples = tpRewardMultiples(signal?.timeframe || "M15");
+    return {
+      multiples,
+      labels: multiples.map((m) => `1:${m}`),
+      summary: tpRiskRewardLabel(signal?.timeframe || "M15"),
+    };
+  }, [signal?.timeframe]);
   const activeStepLabel =
     engineMode === "trading"
       ? EXECUTE_ENGINE_STEPS[
@@ -1209,15 +1218,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
           <div className="cs-tp-config-row" role="group" aria-label="Fixed TP ratios">
             <div className="cs-tp-ratio">
               <span>TP1</span>
-              <strong>1:1</strong>
+              <strong>{tpLadder.labels[0]}</strong>
             </div>
             <div className="cs-tp-ratio">
               <span>TP2</span>
-              <strong>1:2</strong>
+              <strong>{tpLadder.labels[1]}</strong>
             </div>
             <div className="cs-tp-ratio">
               <span>TP3</span>
-              <strong>1:3</strong>
+              <strong>{tpLadder.labels[2]}</strong>
             </div>
           </div>
           <label className="cs-tp-toggle">
@@ -1351,27 +1360,29 @@ export default function ChartScanner({ variant = "default", active = true }) {
               {formatSetupPrice(signal.stopLoss)}
             </span>
             <span className="cs-tp cs-tp--1">
-              <em>TP1 · 1:1</em>
+              <em>TP1 · {tpLadder.labels[0]}</em>
               {formatSetupPrice(signal.takeProfit1)}
             </span>
             <span className="cs-tp cs-tp--2">
-              <em>TP2 · 1:2</em>
+              <em>TP2 · {tpLadder.labels[1]}</em>
               {formatSetupPrice(signal.takeProfit2)}
             </span>
             <span className="cs-tp cs-tp--3">
-              <em>TP3 · 1:3</em>
+              <em>TP3 · {tpLadder.labels[2]}</em>
               {formatSetupPrice(signal.takeProfit3)}
             </span>
             <span>
               <em>Risk / Reward</em>
-              1:1 · 1:2 · 1:3
+              {signal.riskReward || tpLadder.summary}
             </span>
           </div>
 
           <span className="cs-setup-analysis">
             {signal.analysis || signal.reasons?.[0] || "Setup from chart structure"}
           </span>
-          <span className="cs-setup-plan">TP targets · 1:1 · 1:2 · 1:3</span>
+          <span className="cs-setup-plan">
+            TP targets · {signal.riskReward || tpLadder.summary}
+          </span>
 
           {fills.length ? (
             <span>

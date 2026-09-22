@@ -4,7 +4,12 @@ import {
   resolveCatalogSymbol,
   symbolCore,
 } from "../_symbolResolve.js";
-import { buildSafeMultiTpLevels, normalizeTradeSide } from "../_tradeLevels.js";
+import {
+  buildSafeMultiTpLevels,
+  normalizeTradeSide,
+  normalizeChartTimeframe,
+  tpRiskRewardLabel,
+} from "../_tradeLevels.js";
 function sendJson(res, status, payload) {
   res.statusCode = status;
   applyCorsHeaders(res);
@@ -77,13 +82,13 @@ function formatRiskReward(entry, stopLoss, takeProfit) {
 
 /**
  * Ensure Entry / SL / TP1 / TP2 / TP3 with fixed R:R targets.
- * TP1 = 1:1 · TP2 = 1:2 · TP3 = 1:3 (reward vs stop distance).
+ * H4 → 1:1 · 1:2 · 1:3 · all other TFs → 1:2 · 1:3 · 1:4
  * BUY:  SL < Entry < TP1 < TP2 < TP3
  * SELL: SL > Entry > TP1 > TP2 > TP3
  * Enforces instrument-class minimum stop distance so levels are not too close.
  */
-function ensureMultiTpLevels({ side, entry, stopLoss, symbol = "" }) {
-  return buildSafeMultiTpLevels({ side, entry, stopLoss, symbol });
+function ensureMultiTpLevels({ side, entry, stopLoss, symbol = "", timeframe = "M15" }) {
+  return buildSafeMultiTpLevels({ side, entry, stopLoss, symbol, timeframe });
 }
 
 function buildNoChartResult() {
@@ -201,6 +206,8 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
   let symbol = resolveCatalogSymbol(hintSymbol, catalog);
   if (!symbol) symbol = resolveCatalogSymbol(parsed?.symbol || "", catalog);
 
+  const timeframe = normalizeChartTimeframe(parsed?.timeframe || parsed?.tf || "M15");
+
   const levels = ensureMultiTpLevels({
     symbol,
     side: normalizeTradeSide(parsed?.side || parsed?.direction, {
@@ -209,17 +216,13 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
     }),
     entry: parsed?.entry ?? parsed?.entryPrice,
     stopLoss: parsed?.stopLoss ?? parsed?.sl,
+    timeframe,
   });
 
   const confidence = Math.max(
     55,
     Math.min(95, Math.round(Number(parsed?.confidence) || 70))
   );
-
-  const timeframe = String(parsed?.timeframe || parsed?.tf || "M15")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "") || "M15";
 
   const analysis = String(
     parsed?.analysis ||
@@ -232,8 +235,8 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
     ? parsed.reasons.map((r) => String(r)).filter(Boolean).slice(0, 4)
     : [analysis];
 
-  // Fixed R:R ladder: TP1 1:1 · TP2 1:2 · TP3 1:3
-  const riskReward = "1:1 · 1:2 · 1:3";
+  // H4 keeps 1:1 ladder; every other timeframe starts at 1:2.
+  const riskReward = levels.riskReward || tpRiskRewardLabel(timeframe);
 
   let priceTop = toFiniteNumber(parsed?.priceTop ?? parsed?.axisTop);
   let priceBottom = toFiniteNumber(parsed?.priceBottom ?? parsed?.axisBottom);
@@ -335,8 +338,9 @@ export async function analyzeChartSetupWithOpenAI({
             "Green/blue/cyan/teal candles rising = BUY bias. Red/orange/magenta candles falling = SELL bias. " +
             "Do NOT default to BUY. Do NOT invent direction from the symbol name. Prefer the MOST RECENT right-side price action. " +
             "If bullish and bearish clues conflict, choose the clearer recent impulse and lower confidence. " +
-            "Set take-profit targets using fixed risk/reward multiples of the stop distance: " +
-            "TP1 = 1:1, TP2 = 1:2, TP3 = 1:3. Set riskReward to \"1:1 · 1:2 · 1:3\". " +
+            "Set take-profit targets using fixed risk/reward multiples of the stop distance based on the chart timeframe: " +
+            "If timeframe is H4 (or 4H), use TP1 = 1:1, TP2 = 1:2, TP3 = 1:3 and set riskReward to \"1:1 · 1:2 · 1:3\". " +
+            "For EVERY other timeframe (M1/M5/M15/M30/H1/H2/D1/etc), use TP1 = 1:2, TP2 = 1:3, TP3 = 1:4 and set riskReward to \"1:2 · 1:3 · 1:4\". " +
             "Read entry and stop from chart structure (support/resistance, swings). " +
             "Keep stopLoss FAR enough from entry for the instrument — never a few ticks: " +
             "FX ≥ ~15 pips, XAUUSD ≥ ~$1.50, US30/NAS100/DE40 ≥ ~25 points, BTC ≥ ~0.2%. " +

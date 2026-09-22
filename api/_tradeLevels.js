@@ -93,6 +93,41 @@ export function formatTradePrice(value) {
 }
 
 /**
+ * Normalize chart timeframe labels (H4 / 4H / 240 → H4).
+ */
+export function normalizeChartTimeframe(raw) {
+  const tf = String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  if (!tf) return "M15";
+  if (/^(H4|4H|240M?|240)$/.test(tf)) return "H4";
+  if (/^(H1|1H|60M?|60)$/.test(tf)) return "H1";
+  if (/^(M15|15M|15)$/.test(tf)) return "M15";
+  if (/^(M5|5M|5)$/.test(tf)) return "M5";
+  if (/^(M1|1M|1)$/.test(tf)) return "M1";
+  if (/^(M30|30M|30)$/.test(tf)) return "M30";
+  if (/^(H2|2H|120)$/.test(tf)) return "H2";
+  if (/^(D1|1D|DAILY)$/.test(tf)) return "D1";
+  return tf;
+}
+
+/** H4 keeps the classic 1:1 ladder; every other TF starts at 1:2. */
+export function isH4Timeframe(raw) {
+  return normalizeChartTimeframe(raw) === "H4";
+}
+
+/** TP1/TP2/TP3 reward multiples of stop distance. */
+export function tpRewardMultiples(timeframe) {
+  return isH4Timeframe(timeframe) ? [1, 2, 3] : [2, 3, 4];
+}
+
+export function tpRiskRewardLabel(timeframe) {
+  const [a, b, c] = tpRewardMultiples(timeframe);
+  return `1:${a} · 1:${b} · 1:${c}`;
+}
+
+/**
  * Widen / re-anchor SL & TP so they cannot sit on top of the live fill.
  * Always trusts the requested trade side (Buy/Sell) — never flips direction
  * from SL geometry (that caused "Invalid stops" when price moved past chart SL).
@@ -152,12 +187,14 @@ export function normalizeProtectiveLevels({
 /**
  * Build Entry / SL / TP1–TP3 with a class-aware minimum risk distance.
  * Tight AI stops are widened before R:R targets are computed.
+ * H4 → 1:1 / 1:2 / 1:3 · all other timeframes → 1:2 / 1:3 / 1:4.
  */
 export function buildSafeMultiTpLevels({
   symbol = "",
   side = "BUY",
   entry,
   stopLoss,
+  timeframe = "M15",
 } = {}) {
   const dir = normalizeTradeSide(side, { entry, stopLoss });
   let e = toFiniteNumber(entry);
@@ -183,9 +220,10 @@ export function buildSafeMultiTpLevels({
     sl = dir === "BUY" ? e - risk : e + risk;
   }
 
-  const tp1 = dir === "BUY" ? e + risk * 1 : e - risk * 1;
-  const tp2 = dir === "BUY" ? e + risk * 2 : e - risk * 2;
-  const tp3 = dir === "BUY" ? e + risk * 3 : e - risk * 3;
+  const [m1, m2, m3] = tpRewardMultiples(timeframe);
+  const tp1 = dir === "BUY" ? e + risk * m1 : e - risk * m1;
+  const tp2 = dir === "BUY" ? e + risk * m2 : e - risk * m2;
+  const tp3 = dir === "BUY" ? e + risk * m3 : e - risk * m3;
 
   // Re-run through protective normalizer so rounding cannot collapse levels.
   const safeSl = normalizeProtectiveLevels({
@@ -206,18 +244,20 @@ export function buildSafeMultiTpLevels({
     entry: finalEntry,
     stopLoss: finalSl,
     takeProfit1: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 1 : finalEntry - safeRisk * 1
+      dir === "BUY" ? finalEntry + safeRisk * m1 : finalEntry - safeRisk * m1
     ),
     takeProfit2: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 2 : finalEntry - safeRisk * 2
+      dir === "BUY" ? finalEntry + safeRisk * m2 : finalEntry - safeRisk * m2
     ),
     takeProfit3: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 3 : finalEntry - safeRisk * 3
+      dir === "BUY" ? finalEntry + safeRisk * m3 : finalEntry - safeRisk * m3
     ),
     takeProfit: formatTradePrice(
-      dir === "BUY" ? finalEntry + safeRisk * 3 : finalEntry - safeRisk * 3
+      dir === "BUY" ? finalEntry + safeRisk * m3 : finalEntry - safeRisk * m3
     ),
     minDist,
     widened: safeSl.widened || risk < minDist + 1e-12,
+    riskReward: tpRiskRewardLabel(timeframe),
+    tpMultiples: [m1, m2, m3],
   };
 }
