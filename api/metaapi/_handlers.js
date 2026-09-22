@@ -7,6 +7,7 @@ import {
 } from "../mt5-accounts/_lib.js";
 import { enqueueTradeEvent } from "../trade-events/_lib.js";
 import { endOptions } from "../_cors.js";
+import { normalizeBrokerSymbol } from "../_symbolResolve.js";
 import {
   closeAllPositions as mt5CloseAllPositions,
   connectAccount as mt5ConnectAccount,
@@ -276,9 +277,11 @@ export async function handleMentorTrade(req, res) {
   try {
     const body = await readJsonBody(req);
     const mentor = await assertApprovedMentor(body.mentorEmail);
-    const symbol = String(body.symbol || "")
-      .trim()
-      .toUpperCase();
+    // Keep broker suffix casing (XAUUSDp) — never force full uppercase.
+    const symbol =
+      normalizeBrokerSymbol(body.symbol) ||
+      String(body.symbol || "")
+        .trim();
     const side = String(body.side || body.action || "BUY")
       .trim()
       .toUpperCase();

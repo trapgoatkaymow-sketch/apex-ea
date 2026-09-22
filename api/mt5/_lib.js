@@ -1,5 +1,10 @@
 import { applyCorsHeaders } from "../_cors.js";
-import { candidateSymbols, normalizeBrokerSymbol, pickBestSymbolFromList } from "../_symbolResolve.js";
+import {
+  candidateSymbols,
+  normalizeBrokerSymbol,
+  pickBestSymbolFromList,
+  sameInstrumentFamily,
+} from "../_symbolResolve.js";
 import { normalizeProtectiveLevels } from "../_tradeLevels.js";
 
 /** Self-hosted MT5API RESTful — https://66.23.225.158/swagger/index.html */
@@ -1028,7 +1033,8 @@ export async function placeMarketTrade({
     // Soft-fail check — still attempt OrderSend (some builds return odd CheckConnect bodies)
   }
 
-  const sym = await resolveTradeSymbol(id, requested);
+  const requestedNorm = normalizeBrokerSymbol(requested) || String(requested || "").trim();
+  const sym = await resolveTradeSymbol(id, requestedNorm);
 
   async function fetchQuotePrice(symbolName) {
     try {
@@ -1058,11 +1064,16 @@ export async function placeMarketTrade({
     price = quoted.price;
     tradeSymbol = quoted.symbol;
   } else {
-    // First spelling had no rate — walk broker-style aliases until GetQuote answers.
+    // First spelling had no rate — walk family aliases until GetQuote answers.
+    // Mentors often send XAUUSD while clients trade XAUUSDm / XAUUSDp / GOLD.
     const tried = new Set([String(sym || "").toLowerCase()]);
-    for (const alt of candidateSymbols(requested)) {
+    const aliases = candidateSymbols(requestedNorm);
+    // Prefer family hits from the live /Symbols list (already resolved once above).
+    const familyFirst = aliases.filter((alt) => sameInstrumentFamily(requestedNorm, alt));
+    const probe = [...familyFirst, ...aliases];
+    for (const alt of probe) {
       const key = String(alt || "").toLowerCase();
-      if (tried.has(key)) continue;
+      if (!key || tried.has(key)) continue;
       tried.add(key);
       const hit = await fetchQuotePrice(alt);
       if (hit) {
@@ -1070,7 +1081,7 @@ export async function placeMarketTrade({
         tradeSymbol = hit.symbol;
         break;
       }
-      if (tried.size >= 12) break;
+      if (tried.size >= 28) break;
     }
   }
 
@@ -1243,9 +1254,67 @@ export async function placeMarketTrade({
   };
 }
 
-/** Pick the broker's real symbol name for a requested pair (XAUUSD → XAUUSD.mic, .US30. → US30Cash, etc.). */
+/** Pull plain symbol names out of MT5API /Symbols payloads (string or object rows). */
+function extractSymbolNames(data) {
+  const out = [];
+  const push = (v) => {
+    if (v == null) return;
+    if (typeof v === "string" || typeof v === "number") {
+      const s = String(v).trim();
+      if (s && s !== "[object Object]") out.push(s);
+      return;
+    }
+    if (typeof v === "object") {
+      const name =
+        v.Symbol ??
+        v.symbol ??
+        v.Name ??
+        v.name ??
+        v.symbolName ??
+        v.SymbolName ??
+        v.path ??
+        v.Path ??
+        null;
+      if (name != null) push(name);
+    }
+  };
+
+  if (Array.isArray(data)) {
+    for (const row of data) push(row);
+  } else if (data && typeof data === "object") {
+    if (Array.isArray(data.symbols)) for (const row of data.symbols) push(row);
+    else if (Array.isArray(data.Symbols)) for (const row of data.Symbols) push(row);
+    else if (Array.isArray(data.result)) for (const row of data.result) push(row);
+    else if (typeof data === "string") {
+      String(data)
+        .split(/[\s,;]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .forEach(push);
+    }
+  } else if (typeof data === "string") {
+    data
+      .split(/[\s,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach(push);
+  }
+
+  // De-dupe case-insensitively, keep first casing from broker.
+  const seen = new Set();
+  const unique = [];
+  for (const s of out) {
+    const key = s.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(s);
+  }
+  return unique;
+}
+
+/** Pick the broker's real symbol name for a requested pair (XAUUSD → XAUUSDm / GOLD / …). */
 async function resolveTradeSymbol(accountId, requested) {
-  const want = String(requested || "").trim();
+  const want = normalizeBrokerSymbol(requested) || String(requested || "").trim();
   if (!want) return requested;
 
   let symbols = [];
@@ -1253,16 +1322,9 @@ async function resolveTradeSymbol(accountId, requested) {
     const data = await mt5Fetch(`/Symbols?id=${encodeURIComponent(accountId)}`, {
       timeoutMs: 20000,
     });
-    if (Array.isArray(data)) symbols = data.map(String);
-    else if (Array.isArray(data?.symbols)) symbols = data.symbols.map(String);
-    else if (typeof data === "string") {
-      symbols = data
-        .split(/[\s,;]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
+    symbols = extractSymbolNames(data);
   } catch {
-    // Fall through — still return a cleaned candidate so GetQuote can try.
+    // Fall through — still return a cleaned candidate so GetQuote can try aliases.
     return pickBestSymbolFromList(want, []) || want;
   }
 

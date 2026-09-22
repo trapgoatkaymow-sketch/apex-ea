@@ -7,7 +7,7 @@
  */
 
 const BROKER_SUFFIX_RE =
-  /^(?<core>.+?)(?<suffix>(?:\.(?:mic|pro|raw|ecn|std|cash|spot|[mpabric]))|(?:mic|pro|raw|ecn|std|cash|spot)|[mpabric])$/i;
+  /^(?<core>.+?)(?<suffix>(?:\.(?:micro|mic|pro|raw|ecn|std|cash|spot|[mpabric]))|(?:micro|mic|pro|raw|ecn|std|cash|spot)|[mpabric])$/i;
 
 function looksLikeInstrumentCore(core) {
   const c = String(core || "").replace(/\./g, "");
@@ -66,9 +66,9 @@ export function symbolCore(raw) {
   let s = normalizeBrokerSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "");
   if (!s) return "";
   // Drop dotted suffixes: EURUSD.mic → EURUSD, XAUUSD.m → XAUUSD
-  s = s.replace(/\.(MIC|PRO|RAW|ECN|STD|CASH|SPOT|M|P|R|I|A|B|C)$/i, "");
-  // Undotted suffixes: EURUSDm, XAUUSDp, US30Cash, XAUUSDpro
-  s = s.replace(/(MIC|PRO|RAW|ECN|STD|CASH|SPOT)$/i, "");
+  s = s.replace(/\.(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT|M|P|R|I|A|B|C)$/i, "");
+  // Undotted suffixes: EURUSDm, XAUUSDp, US30Cash, XAUUSDpro, XAUUSDmicro
+  s = s.replace(/(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT)$/i, "");
   s = s.replace(/([A-Z0-9])[MPABCRI]$/i, "$1");
   s = s.split(".")[0] || s;
   return s.toUpperCase();
@@ -89,13 +89,16 @@ const INDEX_ALIASES = {
   AUS200: ["AUS200", "AU200", "ASX200"],
   FRA40: ["FRA40", "CAC40", "FR40"],
   HK50: ["HK50", "HKG33", "HSI"],
+  // Gold — mentor XAUUSD must map onto broker GOLD renames (suffixes added below).
   XAUUSD: ["XAUUSD", "GOLD", "XAU"],
+  GOLD: ["GOLD", "XAUUSD", "XAU"],
   XAGUSD: ["XAGUSD", "SILVER", "XAG"],
+  SILVER: ["SILVER", "XAGUSD", "XAG"],
   BTCUSD: ["BTCUSD", "BTCUSDT", "BITCOIN", "BTC"],
   ETHUSD: ["ETHUSD", "ETHUSDT", "ETHEREUM", "ETH"],
 };
 
-function aliasesForCore(core) {
+export function aliasesForCore(core) {
   const key = String(core || "").toUpperCase();
   if (!key) return [];
   if (INDEX_ALIASES[key]) return [...INDEX_ALIASES[key]];
@@ -104,6 +107,42 @@ function aliasesForCore(core) {
     if (list.includes(key)) return [canon, ...list];
   }
   return [key];
+}
+
+/** True when candidate is the same tradable instrument family (gold, US30, …). */
+export function sameInstrumentFamily(requested, candidate) {
+  const want = normalizeBrokerSymbol(requested);
+  const cand = normalizeBrokerSymbol(candidate);
+  if (!want || !cand) return false;
+  const wantCore = symbolCore(want);
+  const candCore = symbolCore(cand);
+  if (!wantCore || !candCore) return false;
+  if (wantCore === candCore) return true;
+  const wantAliases = aliasesForCore(wantCore).map((a) => String(a).toUpperCase());
+  const candAliases = aliasesForCore(candCore).map((a) => String(a).toUpperCase());
+  if (wantAliases.includes(candCore) || candAliases.includes(wantCore)) return true;
+  if (wantAliases.some((a) => candAliases.includes(a))) return true;
+
+  // Gold family: XAUUSD* / GOLD* only (never XAUEUR / XAUAUD).
+  const wantGold =
+    wantAliases.includes("XAUUSD") ||
+    wantAliases.includes("GOLD") ||
+    /^XAUUSD/i.test(wantCore) ||
+    /^GOLD$/i.test(wantCore);
+  if (wantGold) {
+    return /^XAUUSD/i.test(candCore) || /^GOLD/i.test(candCore);
+  }
+
+  // Silver family
+  const wantSilver =
+    wantAliases.includes("XAGUSD") ||
+    wantAliases.includes("SILVER") ||
+    /^XAGUSD/i.test(wantCore);
+  if (wantSilver) {
+    return /^XAGUSD/i.test(candCore) || /^SILVER/i.test(candCore);
+  }
+
+  return false;
 }
 
 /** Expand a requested symbol into likely broker catalog spellings. */
@@ -127,17 +166,22 @@ export function candidateSymbols(symbol) {
   push(raw.replace(/\s+/g, "").replace(/[\/_\-]/g, ""));
 
   const cores = aliasesForCore(core);
+  // High-priority broker suffix spellings first — self-host GetQuote walk is capped.
   for (const base of cores) {
     push(base);
+    push(`${base}m`);
+    push(`${base}p`);
+    push(`${base}.m`);
+    push(`${base}.p`);
+    push(`${base}micro`);
+    push(`${base}Micro`);
+  }
+  for (const base of cores) {
     push(`.${base}`);
     push(`.${base}.`);
     push(`${base}.`);
     push(`${base}.mic`);
     push(`.${base}.mic`);
-    push(`${base}.m`);
-    push(`${base}m`);
-    push(`${base}.p`);
-    push(`${base}p`);
     push(`${base}.r`);
     push(`${base}.i`);
     push(`${base}.a`);
@@ -166,15 +210,20 @@ function matchRank(requestedCore, candidateNorm, requestedNorm) {
   const candBare = cand.replace(/^\.+/, "").replace(/\.+$/, "");
   const reqBare = req.replace(/^\.+/, "").replace(/\.+$/, "");
   if (candBare.toLowerCase() === reqBare.toLowerCase()) return 1;
-  if (candBare.toLowerCase() === String(requestedCore || "").toLowerCase()) return 2;
-  if (cand.toLowerCase() === `${String(requestedCore || "").toLowerCase()}p`) return 3;
-  if (cand.toLowerCase() === `${String(requestedCore || "").toLowerCase()}m`) return 3;
-  if (cand.toLowerCase() === `${String(requestedCore || "").toLowerCase()}.mic`) return 4;
-  if (candL.endsWith("cash") && candBare.toLowerCase().startsWith(String(requestedCore || "").toLowerCase())) {
+  const candCore = symbolCore(cand);
+  const reqCore = String(requestedCore || "").toUpperCase();
+  if (candCore === reqCore) return 2;
+  if (candL === `${reqCore.toLowerCase()}p`) return 3;
+  if (candL === `${reqCore.toLowerCase()}m`) return 3;
+  if (candL === `${reqCore.toLowerCase()}.mic`) return 4;
+  // Prefer GOLD when mentor asked for XAUUSD (and vice versa).
+  if (reqCore === "XAUUSD" && candCore === "GOLD") return 4;
+  if (reqCore === "GOLD" && candCore === "XAUUSD") return 4;
+  if (candL.endsWith("cash") && candBare.toLowerCase().startsWith(reqCore.toLowerCase())) {
     return 5;
   }
-  if (candBare.toLowerCase().startsWith(String(requestedCore || "").toLowerCase())) return 6;
-  if (candL.includes(String(requestedCore || "").toLowerCase())) return 7;
+  if (candBare.toLowerCase().startsWith(reqCore.toLowerCase())) return 6;
+  if (candL.includes(reqCore.toLowerCase())) return 7;
   return 9;
 }
 
@@ -188,7 +237,9 @@ export function pickBestSymbolFromList(requested, symbolsList = []) {
   const list = Array.isArray(symbolsList) ? symbolsList.map(String).filter(Boolean) : [];
   if (!list.length) return want;
 
-  const rows = list.map((s) => ({ raw: s, u: normalizeBrokerSymbol(s) }));
+  const rows = list
+    .map((s) => ({ raw: s, u: normalizeBrokerSymbol(s) }))
+    .filter((s) => s.u);
   const candidates = candidateSymbols(want);
   const candidateSet = new Set(candidates.map((c) => c.toLowerCase()));
 
@@ -204,22 +255,8 @@ export function pickBestSymbolFromList(requested, symbolsList = []) {
     return exactHits[0].raw;
   }
 
-  // Fuzzy fallback for odd suffixes not in the candidate generator.
-  const cores = aliasesForCore(symbolCore(want));
-  const fuzzy = rows.filter((s) => {
-    const sCore = symbolCore(s.u);
-    if (cores.includes(sCore)) return true;
-    if (cores.some((c) => s.u.toLowerCase().includes(c.toLowerCase()) || sCore.includes(c))) {
-      return true;
-    }
-    if (want.toUpperCase().includes("XAU") || cores.includes("XAUUSD")) {
-      if (/XAU|GOLD/i.test(s.u)) return true;
-    }
-    if (want.toUpperCase().includes("XAG") || cores.includes("XAGUSD")) {
-      if (/XAG|SILVER/i.test(s.u)) return true;
-    }
-    return false;
-  });
+  // Family fallback — gold/XAUUSD maps to GOLD / XAUUSDm / XAUUSDp on that broker.
+  const fuzzy = rows.filter((s) => sameInstrumentFamily(want, s.u));
   if (!fuzzy.length) return want;
 
   const core = symbolCore(want);
