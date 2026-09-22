@@ -27,7 +27,6 @@ import {
 import {
   describeManagementPlan,
   loadTradeManagement,
-  saveTradeManagement,
 } from "./tradeManagement.js";
 
 /** Android WebView: keep motion close to web, with a lighter particle count. */
@@ -161,7 +160,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [busy, setBusy] = useState(false);
   const [execProgress, setExecProgress] = useState({ done: 0, total: 0 });
   const [engineProgress, setEngineProgress] = useState(0);
-  const [tradeManagement, setTradeManagement] = useState(() => loadTradeManagement());
+  const [tradeManagement] = useState(() => loadTradeManagement());
 
   useEffect(() => {
     if (active) setScansLeft(loadScansLeft(variant));
