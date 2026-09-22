@@ -14,6 +14,33 @@ function toFiniteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Normalize scanner/AI direction labels.
+ * Prefer explicit BUY/SELL; also accept LONG/SHORT. When entry+SL are present,
+ * trust stop geometry over a conflicting label (SL below entry = BUY).
+ */
+export function normalizeTradeSide(side, { entry, stopLoss } = {}) {
+  const raw = String(side || "")
+    .trim()
+    .toUpperCase();
+  let dir = null;
+  if (/^(SELL|SHORT|BEAR|PUT)$/.test(raw) || /\bSELL\b|\bSHORT\b/.test(raw)) {
+    dir = "SELL";
+  } else if (/^(BUY|LONG|BULL|CALL)$/.test(raw) || /\bBUY\b|\bLONG\b/.test(raw)) {
+    dir = "BUY";
+  }
+
+  const e = toFiniteNumber(entry);
+  const sl = toFiniteNumber(stopLoss);
+  if (e != null && sl != null && e !== sl) {
+    const fromLevels = sl < e ? "BUY" : "SELL";
+    // Geometry wins when the text label conflicts or is missing.
+    if (!dir || dir !== fromLevels) dir = fromLevels;
+  }
+
+  return dir === "SELL" ? "SELL" : "BUY";
+}
+
 export function symbolCoreName(raw) {
   return String(raw || "")
     .trim()
@@ -75,7 +102,7 @@ export function normalizeProtectiveLevels({
   stopLoss,
   takeProfit,
 } = {}) {
-  const dir = String(side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
+  const dir = normalizeTradeSide(side, { entry: entryPrice, stopLoss });
   const entry = toFiniteNumber(entryPrice);
   let sl = toFiniteNumber(stopLoss);
   let tp = toFiniteNumber(takeProfit);
@@ -128,7 +155,7 @@ export function buildSafeMultiTpLevels({
   entry,
   stopLoss,
 } = {}) {
-  const dir = String(side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY";
+  const dir = normalizeTradeSide(side, { entry, stopLoss });
   let e = toFiniteNumber(entry);
   let sl = toFiniteNumber(stopLoss);
   if (e == null || e <= 0) e = 1;

@@ -553,10 +553,10 @@ export default function ChartScanner({ variant = "default", active = true }) {
       return;
     }
 
-    const meta = getSymbolMeta(tradeSymbol);
-    const action = String(meta.action || "BOTH").toUpperCase();
-    let side = signal.side;
-    if (action === "BUY" || action === "SELL") side = action;
+    // Always trade the scanner chart direction — never flip BUY/SELL from
+    // a locked pair preference (that was blowing accounts with wrong bias).
+    const side =
+      String(signal.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
 
     const tradeComment = buildBotTradeComment(activeBot?.name);
     const orbComment = isPremiumScanner
@@ -585,7 +585,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       comment: orbComment,
       symbol: tradeSymbol,
       lotSize: lot,
-      action: side || action,
+      action: side,
       side,
       entry: signal.entry,
       stopLoss: signal.stopLoss,

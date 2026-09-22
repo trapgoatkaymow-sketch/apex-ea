@@ -1,6 +1,6 @@
 import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
-import { buildSafeMultiTpLevels } from "./tradeLevels.js";
+import { buildSafeMultiTpLevels, normalizeTradeSide } from "./tradeLevels.js";
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -108,13 +108,14 @@ function estimateEntryForSymbol(symbol) {
 }
 
 /**
- * Infer BUY/SELL from candle-color dominance on the right side of the image.
- * Falls back to SELL when colors are ambiguous (common bearish screenshots).
+ * Infer BUY/SELL from recent candle colors (right edge of the chart).
+ * Bullish = green / lime / cyan / blue candles; bearish = red / orange / magenta.
+ * Weights the newest (rightmost) candles more heavily so a late reversal wins.
  */
 async function inferSideFromChartImage(dataUrl) {
   try {
     const img = await loadImage(dataUrl);
-    const w = Math.min(320, img.naturalWidth || img.width || 320);
+    const w = Math.min(360, img.naturalWidth || img.width || 360);
     const h = Math.max(
       80,
       Math.round((w / Math.max(1, img.naturalWidth || img.width || w)) * (img.naturalHeight || img.height || w))
@@ -123,32 +124,45 @@ async function inferSideFromChartImage(dataUrl) {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return "SELL";
+    if (!ctx) return "BUY";
     ctx.drawImage(img, 0, 0, w, h);
-    const x0 = Math.floor(w * 0.55);
-    const y0 = Math.floor(h * 0.18);
-    const y1 = Math.floor(h * 0.82);
-    const data = ctx.getImageData(x0, y0, w - x0, Math.max(1, y1 - y0)).data;
-    let green = 0;
-    let red = 0;
+    // Focus on the price plot: skip headers / price axis chrome.
+    const x0 = Math.floor(w * 0.48);
+    const x1 = Math.floor(w * 0.92);
+    const y0 = Math.floor(h * 0.16);
+    const y1 = Math.floor(h * 0.84);
+    const data = ctx.getImageData(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0)).data;
+    const plotW = Math.max(1, x1 - x0);
+    let bull = 0;
+    let bear = 0;
     for (let i = 0; i < data.length; i += 16) {
+      const px = (i / 4) % plotW;
+      // Newer candles (right side) count more.
+      const weight = 1 + (px / plotW) * 2.2;
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
       const a = data[i + 3];
       if (a < 40) continue;
-      // Skip near-white / near-black UI chrome.
       if (r > 230 && g > 230 && b > 230) continue;
       if (r < 28 && g < 28 && b < 28) continue;
-      if (g > r + 18 && g > b + 10) green += 1;
-      else if (r > g + 18 && r > b + 10) red += 1;
+      const isBull =
+        (g > r + 16 && g > b + 8) || // green / lime
+        (b > r + 18 && b > g + 6) || // blue / cyan bull themes
+        (g > 140 && b > 140 && r < 110); // teal
+      const isBear =
+        (r > g + 16 && r > b + 8) || // red / orange
+        (r > 150 && b > 140 && g < 110); // magenta / pink bear themes
+      if (isBull && !isBear) bull += weight;
+      else if (isBear && !isBull) bear += weight;
     }
-    if (green === 0 && red === 0) return "SELL";
-    if (green > red * 1.08) return "BUY";
-    if (red > green * 1.08) return "SELL";
-    return green >= red ? "BUY" : "SELL";
+    if (bull === 0 && bear === 0) return "BUY";
+    // Require a clearer majority before flipping — avoids noise from UI chrome.
+    if (bull > bear * 1.12) return "BUY";
+    if (bear > bull * 1.12) return "SELL";
+    return bull >= bear ? "BUY" : "SELL";
   } catch {
-    return "SELL";
+    return "BUY";
   }
 }
 
@@ -199,7 +213,10 @@ function ensureCompleteSetup(partial = {}) {
   const symbol = String(partial.symbol || partial.detectedSymbol || "").trim();
   const levels = buildSafeMultiTpLevels({
     symbol,
-    side: partial.side,
+    side: normalizeTradeSide(partial.side, {
+      entry: partial.entry,
+      stopLoss: partial.stopLoss,
+    }),
     entry: partial.entry,
     stopLoss: partial.stopLoss,
   });
