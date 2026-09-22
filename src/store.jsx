@@ -13,6 +13,7 @@ import {
   fetchSignups,
   mergeSignups,
   submitSignup,
+  clearSignupAccessBypassed,
   updateSignupAccessBypassed,
   updateSignupAccessPaid,
   updateSignupPremiumScanner,
@@ -42,6 +43,7 @@ import {
 } from "./licensesApi.js";
 import { getOrCreateDeviceId } from "./deviceId.js";
 import {
+  clearDeviceBypass,
   hasDeviceAccess,
   isSignupEntitled,
   rememberDeviceAccess,
@@ -1460,6 +1462,47 @@ export function AppProvider({ children }) {
       return true;
     },
     [setSignupStatus, showToast]
+  );
+
+  const clearAppAccessBypass = useCallback(
+    async (email) => {
+      const key = normalizeEmail(email);
+      if (!key || !key.includes("@")) {
+        showToast("Enter a valid email");
+        return false;
+      }
+      try {
+        const remote = await clearSignupAccessBypassed(key);
+        if (remote) {
+          setSignups((prev) =>
+            mergeSignups(prev, [{ ...remote, accessBypassed: false }])
+          );
+        } else {
+          setSignups((prev) =>
+            prev.map((row) =>
+              normalizeEmail(row.email) === key
+                ? { ...row, accessBypassed: false, accessBypassedAt: null }
+                : row
+            )
+          );
+        }
+      } catch (error) {
+        setSignups((prev) =>
+          prev.map((row) =>
+            normalizeEmail(row.email) === key
+              ? { ...row, accessBypassed: false, accessBypassedAt: null }
+              : row
+          )
+        );
+        showToast(error.message || `Removed bypass for ${key} (local)`);
+        clearDeviceBypass(key);
+        return true;
+      }
+      clearDeviceBypass(key);
+      showToast(`Removed bypass for ${key}`);
+      return true;
+    },
+    [showToast]
   );
 
   const bypassPremiumScanner = useCallback(
@@ -2980,6 +3023,7 @@ export function AppProvider({ children }) {
     ingestSignup,
     setSignupStatus,
     bypassAppAccess,
+    clearAppAccessBypass,
     bypassPremiumScanner,
     refreshSignups,
     getSignup,

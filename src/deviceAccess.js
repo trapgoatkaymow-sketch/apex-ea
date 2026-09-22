@@ -46,6 +46,29 @@ export function rememberDeviceAccess(email, { paid = false, bypassed = false } =
   return device[key];
 }
 
+/** Clear admin bypass memory for an email on this device (paid flag kept). */
+export function clearDeviceBypass(email) {
+  const key = normalizeEmail(email);
+  if (!key.includes("@")) return null;
+  const deviceId = getOrCreateDeviceId();
+  const store = readStore();
+  const device = store[deviceId] && typeof store[deviceId] === "object" ? store[deviceId] : {};
+  const prev = device[key] && typeof device[key] === "object" ? device[key] : null;
+  if (!prev) return null;
+  if (prev.paid) {
+    device[key] = {
+      ...prev,
+      bypassed: false,
+      updatedAt: Date.now(),
+    };
+  } else {
+    delete device[key];
+  }
+  store[deviceId] = device;
+  writeStore(store);
+  return device[key] || null;
+}
+
 /** True when this phone previously paid or was bypassed for the email. */
 export function hasDeviceAccess(email) {
   const key = normalizeEmail(email);

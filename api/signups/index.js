@@ -97,6 +97,16 @@ export default async function handler(req, res) {
         sendJson(res, 200, { signup, accessBypassed: true });
         return;
       }
+      if (
+        body.accessBypassed === false ||
+        body.action === "clearAccessBypass" ||
+        body.action === "removeAccessBypass" ||
+        body.action === "clearBypass"
+      ) {
+        const signup = await setSignupAccessBypassed(body.email, false);
+        sendJson(res, 200, { signup, accessBypassed: false });
+        return;
+      }
       const signup = await setSignupStatus(body.email, body.status);
       sendJson(res, 200, { signup });
       return;
