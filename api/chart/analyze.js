@@ -4,7 +4,7 @@ import {
   resolveCatalogSymbol,
   symbolCore,
 } from "../_symbolResolve.js";
-import { buildSafeMultiTpLevels } from "../_tradeLevels.js";
+import { buildSafeMultiTpLevels, normalizeTradeSide } from "../_tradeLevels.js";
 function sendJson(res, status, payload) {
   res.statusCode = status;
   applyCorsHeaders(res);
@@ -203,7 +203,10 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
 
   const levels = ensureMultiTpLevels({
     symbol,
-    side: parsed?.side || parsed?.direction,
+    side: normalizeTradeSide(parsed?.side || parsed?.direction, {
+      entry: parsed?.entry ?? parsed?.entryPrice,
+      stopLoss: parsed?.stopLoss ?? parsed?.sl,
+    }),
     entry: parsed?.entry ?? parsed?.entryPrice,
     stopLoss: parsed?.stopLoss ?? parsed?.sl,
   });
@@ -327,6 +330,11 @@ export async function analyzeChartSetupWithOpenAI({
             "If not a chart: status=no_chart, isChart=false, and leave trade fields null. " +
             "If it IS a chart: ALWAYS return a COMPLETE trade setup with THREE take-profit levels. NEVER say incomplete. " +
             "ALWAYS provide side, confidence, entry, stopLoss, takeProfit1, takeProfit2, takeProfit3, riskReward, timeframe, and analysis. " +
+            "DIRECTION IS CRITICAL — wrong BUY/SELL blows accounts. Decide side ONLY from visible chart structure: " +
+            "last candles, break of structure, higher-highs/higher-lows vs lower-highs/lower-lows, and where price sits vs support/resistance. " +
+            "Green/blue/cyan/teal candles rising = BUY bias. Red/orange/magenta candles falling = SELL bias. " +
+            "Do NOT default to BUY. Do NOT invent direction from the symbol name. Prefer the MOST RECENT right-side price action. " +
+            "If bullish and bearish clues conflict, choose the clearer recent impulse and lower confidence. " +
             "Set take-profit targets using fixed risk/reward multiples of the stop distance: " +
             "TP1 = 1:1, TP2 = 1:2, TP3 = 1:3. Set riskReward to \"1:1 · 1:2 · 1:3\". " +
             "Read entry and stop from chart structure (support/resistance, swings). " +
@@ -334,6 +342,7 @@ export async function analyzeChartSetupWithOpenAI({
             "FX ≥ ~15 pips, XAUUSD ≥ ~$1.50, US30/NAS100/DE40 ≥ ~25 points, BTC ≥ ~0.2%. " +
             "BUY must satisfy: stopLoss < entry < takeProfit1 < takeProfit2 < takeProfit3. " +
             "SELL must satisfy: stopLoss > entry > takeProfit1 > takeProfit2 > takeProfit3. " +
+            "side must be exactly \"BUY\" or \"SELL\" (never LONG/SHORT). " +
             "OCR the instrument from the chart header/title/tab EXACTLY as shown — keep broker dots AND " +
             "lowercase suffixes (e.g. .DE30. , .US30Cash , EURUSD.m , XAUUSDp , US30). " +
             "Keep suffix letters exactly as on the chart — XAUUSDp must stay XAUUSDp (lowercase p), never XAUUSDP. " +
@@ -356,6 +365,7 @@ export async function analyzeChartSetupWithOpenAI({
               text:
                 "Validate whether this is a trading chart. If yes, generate a complete trade setup with Entry, SL, TP1, TP2, and TP3, " +
                 "plus overlay geometry (priceTop, priceBottom, chartArea, trendlines). " +
+                "Choose BUY or SELL carefully from the latest candle structure — do not guess randomly. " +
                 "OCR the exact symbol from the chart header (any instrument shown) — keep lowercase " +
                 "broker suffixes like XAUUSDp / EURUSDm. Do not guess from the catalog." +
                 (hintSymbol
