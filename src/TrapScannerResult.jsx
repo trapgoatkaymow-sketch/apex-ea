@@ -1,4 +1,5 @@
 import BotAvatar from "./BotAvatar.jsx";
+import TrapLevelTiles from "./TrapLevelTiles.jsx";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 
 function formatPrice(value) {
@@ -116,18 +117,7 @@ export default function TrapScannerResult({
         </div>
       </div>
 
-      <div className="tg-levels">
-        {levels.map((row) => (
-          <div key={row.key} className={`tg-level is-${row.tone}`}>
-            <span className="tg-level-tag">
-              <i aria-hidden="true" />
-              {row.label}
-            </span>
-            <strong>{formatPrice(row.price)}</strong>
-            <em>{row.pct || "—"}</em>
-          </div>
-        ))}
-      </div>
+      <TrapLevelTiles levels={levels} />
 
       <div className="tg-manage">
         <label>
