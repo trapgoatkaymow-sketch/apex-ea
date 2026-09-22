@@ -6566,12 +6566,13 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   position: relative;
   z-index: 2;
   font-family: var(--font-v2);
-  font-size: 0.5rem;
+  font-size: 0.48rem;
   font-weight: 400;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-align: center;
   line-height: 1.1;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .v2-tab.is-active {

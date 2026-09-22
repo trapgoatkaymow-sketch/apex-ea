@@ -466,7 +466,7 @@ export default function V2Interface() {
               />
             </svg>
           </span>
-          <span className="v2-tab-label">Chart</span>
+          <span className="v2-tab-label">AI Chart</span>
         </button>
         <button
           className={`v2-tab${v2View === "metatrader" ? " is-active" : ""}`}
