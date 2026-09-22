@@ -361,7 +361,7 @@ export default function AdminPortal() {
 
   async function onResetClientScans(key) {
     if (!isSuperAdmin) {
-      showToast("Only super admin can reset client daily scans");
+      showToast("Only super admin can reset client daily charts");
       return;
     }
     const actionKey = `reset-scans:${key}`;
@@ -2794,7 +2794,7 @@ export default function AdminPortal() {
                     }}
                   >
                     <AdminBusyLabel busy={bypassBusy} busyText="Bypassing…">
-                      Premium scanner bypass
+                      Premium chart bypass
                     </AdminBusyLabel>
                   </button>
                 </div>
@@ -3524,14 +3524,14 @@ export default function AdminPortal() {
                               }`}
                               type="button"
                               disabled={Boolean(licenseActionBusy)}
-                              title="Refill this client's daily scan quota for today"
+                              title="Refill this client's daily chart quota for today"
                               onClick={() => void onResetClientScans(entry.key)}
                             >
                               <AdminBusyLabel
                                 busy={licenseActionBusy === `reset-scans:${entry.key}`}
-                                busyText="Resetting scans…"
+                                busyText="Resetting charts…"
                               >
-                                Reset scans
+                                Reset charts
                               </AdminBusyLabel>
                             </button>
                           </>
@@ -3682,7 +3682,7 @@ export default function AdminPortal() {
           <section className="admin-page is-active">
             <h2 className="admin-h1">Settings</h2>
             <p className="admin-sub">
-              Choose an app accent color, then press Save. Home robot, buttons, highlights, and scanner accents update for your clients after you save.
+              Choose an app accent color, then press Save. Home robot, buttons, highlights, and chart accents update for your clients after you save.
             </p>
             <div className="admin-card">
               <div className="admin-card-title-row">
@@ -3697,7 +3697,7 @@ export default function AdminPortal() {
                 <div>
                   <strong>Preview</strong>
                   <p className="ea-hint">
-                    Pick a color, then press Save. Home robot, lock, and scanner accents update for your clients after save.
+                    Pick a color, then press Save. Home robot, lock, and chart accents update for your clients after save.
                   </p>
                 </div>
               </div>
@@ -4810,7 +4810,7 @@ export default function AdminPortal() {
                     }}
                   >
                     <AdminBusyLabel busy={bypassBusy} busyText="Bypassing…">
-                      Premium scanner bypass
+                      Premium chart bypass
                     </AdminBusyLabel>
                   </button>
                 </div>
@@ -5586,9 +5586,9 @@ export default function AdminPortal() {
                 >
                   <AdminBusyLabel
                     busy={licenseActionBusy === `reset-scans:${latestKey}`}
-                    busyText="Resetting scans…"
+                    busyText="Resetting charts…"
                   >
-                    Reset daily scans
+                    Reset daily charts
                   </AdminBusyLabel>
                 </button>
               </>

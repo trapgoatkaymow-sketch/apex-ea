@@ -198,7 +198,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         if (result?.applied) {
           setScansLeft(loadScansLeft(variant));
           showToast(
-            `Daily scans restored · I1 ${result.zeta} · I2 ${result.v2}`
+            `Daily charts restored · I1 ${result.zeta} · I2 ${result.v2}`
           );
           return;
         }
@@ -267,8 +267,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
     if (connected) return true;
     showToast(
       action === "capture"
-        ? "Connect a trading account before scanning charts"
-        : "Connect a trading account to use the scanner"
+        ? "Connect a trading account before analyzing charts"
+        : "Connect a trading account to use Chart Setup"
     );
     setZetaView("metatrader");
     setV2View("metatrader");
@@ -338,7 +338,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       if (detection?.quotaFallback) {
         showToast(
           detection.message ||
-            "Chart ready — type the symbol to keep scanning"
+            "Chart ready — type the symbol to continue"
         );
       } else if (
         status === CHART_DETECTION_STATUS.NO_CHART &&
@@ -349,7 +349,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       ) {
         showToast(
           /credit|quota|billing/i.test(String(detection.error))
-            ? "AI scanner offline — type the symbol, then Scan"
+            ? "AI offline — type the symbol, then Analyze"
             : detection.message || detection.error || "Chart analysis unavailable"
         );
       } else if (status === CHART_DETECTION_STATUS.NO_CHART) {
@@ -376,7 +376,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!connected) {
-      showToast("Connect a trading account before scanning charts");
+      showToast("Connect a trading account before analyzing charts");
       setZetaView("metatrader");
       setV2View("metatrader");
       event.target.value = "";
@@ -412,7 +412,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     if (remaining !== scansLeft) setScansLeft(remaining);
     if (remaining <= 0) {
       showToast(
-        `No scans left today (${scanQuota(variant)} / day)`
+        `No charts left today (${scanQuota(variant)} / day)`
       );
       return;
     }
@@ -488,8 +488,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
       );
       showToast(
         result.source === "local-fallback"
-          ? `${result.side} ${tradeSymbol} setup ready (offline AI) · ${nextScans} scans left`
-          : `${result.side} ${tradeSymbol} setup ready · ${nextScans} scans left`
+          ? `${result.side} ${tradeSymbol} setup ready (offline AI) · ${nextScans} charts left`
+          : `${result.side} ${tradeSymbol} setup ready · ${nextScans} charts left`
       );
       await sleep(SCAN_SETTLE_MS);
       setEngineMode("idle");
@@ -506,12 +506,12 @@ export default function ChartScanner({ variant = "default", active = true }) {
       } else if (error.code === "SYMBOL_UNCLEAR") {
         setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
         setDetectionMessage(error.message || "Chart detected — symbol unclear");
-        setDetectionHint(error.uiMessage || "Type the chart symbol, then Scan.");
-        showToast("Type the chart symbol, then tap Scan");
+        setDetectionHint(error.uiMessage || "Type the chart symbol, then Analyze.");
+        showToast("Type the chart symbol, then tap Analyze");
       } else if (error.code === "ANALYSIS_UNAVAILABLE") {
         showToast(error.message || "Live analysis unavailable — retry");
       } else {
-        showToast(error.message || "Scan failed");
+        showToast(error.message || "Analyze failed");
       }
     } finally {
       setBusy(false);
@@ -520,7 +520,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
   async function executeTrade() {
     if (!signal?.side || !signal?.symbol) {
-      showToast("Scan a chart first to build a setup");
+      showToast("Analyze a chart first to build a setup");
       return;
     }
     if (
@@ -598,7 +598,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         `Thread map · ${threads.map((t) => `T${t.tradeNo}→${t.target}`).join(" · ")}`
       );
       if (isPremiumScanner) {
-        pushEngineLog("Premium scanner · MT5 comments tagged premium");
+        pushEngineLog("Premium chart · MT5 comments tagged premium");
       }
 
       const nextFills = [];
@@ -738,8 +738,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
       <header className="cs-head">
         <div className="cs-head-main">
           <p className="cs-kicker">{activeBot?.name || "ApexEA"}</p>
-          <h2 className="cs-title">Chart Scanner</h2>
-          <p className="cs-tagline">Scan · Analyze · Trade Smarter</p>
+          <h2 className="cs-title">Chart Setup</h2>
+          <p className="cs-tagline">Capture · Analyze · Trade Smarter</p>
         </div>
         <div className="cs-head-meta">
           <button
@@ -773,7 +773,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 <circle cx="12" cy="12" r="2.2" fill="currentColor" />
               </svg>
             </span>
-            {`${scansLeft} scans left`}
+            {`${scansLeft} charts left`}
           </span>
           <span className={`cs-mt-pill${connected ? " is-on" : ""}`}>
             {connected ? (
@@ -803,7 +803,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 <img
                   className="cs-chart"
                   src={preview}
-                  alt="Chart to scan"
+                  alt="Chart preview"
                   decoding="async"
                 />
               </div>
@@ -830,7 +830,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
                     </span>
                     <span className="cs-v2-portal-label">
                       <i />
-                      SCAN LOCK
+                      CHART LOCK
                     </span>
                   </div>
                 ) : (
@@ -877,7 +877,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             {engineActive ? (
               <div className="cs-engine-chip">
                 <span className="cs-engine-pulse" />
-                <span>{engineMode === "scanning" ? "Scanning" : "Trading"}</span>
+                <span>{engineMode === "scanning" ? "Analyzing" : "Trading"}</span>
               </div>
             ) : null}
             {engineMode === "scanning" ? (
@@ -887,7 +887,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               >
                 {useTrapResult ? (
                   <>
-                    <SniperScan size="lg" label="Robot sniper scanning" />
+                    <SniperScan size="lg" label="Robot sniper locking" />
                     <span className="cs-scan-eye-caption">Sniper lock · hunting signal</span>
                   </>
                 ) : (
@@ -999,7 +999,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 aria-hidden="true"
               >
                 {engineMode === "scanning" ? (
-                  <SniperScan size="sm" label="Robot sniper scanning" />
+                  <SniperScan size="sm" label="Robot sniper locking" />
                 ) : (
                   <>
                     <strong>
@@ -1100,9 +1100,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
             <span>
               Symbol
               {detectingSymbol
-                ? " · scanner reading…"
+                ? " · reading chart…"
                 : symbolSource === "scanner"
-                  ? " · from scanner"
+                  ? " · from chart"
                   : symbol
                     ? " · edit if needed"
                     : " · auto from chart"}
@@ -1272,14 +1272,14 @@ export default function ChartScanner({ variant = "default", active = true }) {
             : detectingSymbol
               ? "Analyzing chart…"
               : !connected
-                ? "Connect MT5 to Scan"
+                ? "Connect MT5 to Analyze"
                 : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
                   ? "Upload a trading chart"
                   : !symbol
                     ? detectionStatus === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR
-                      ? "Type symbol, then Scan"
+                      ? "Type symbol, then Analyze"
                       : "Waiting for symbol…"
-                    : "Scan Chart"}
+                    : "Analyze Chart"}
         </button>
       ) : (
         <div className="cs-post-scan-actions">
@@ -1297,10 +1297,10 @@ export default function ChartScanner({ variant = "default", active = true }) {
             }
           >
             {busy && engineMode === "scanning"
-              ? "Scanning again…"
+              ? "Analyzing again…"
               : scansLeft <= 0
-                ? "No scans left today"
-                : "Scan Again"}
+                ? "No charts left today"
+                : "Analyze Again"}
           </button>
           {!useTrapResult ? (
             <button
@@ -1399,7 +1399,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             setV2View("metatrader");
           }}
         >
-          Connect a trading account to unlock the scanner →
+          Connect a trading account to unlock Chart Setup →
         </button>
       ) : null}
     </section>

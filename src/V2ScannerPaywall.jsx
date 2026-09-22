@@ -89,10 +89,10 @@ export default function V2ScannerPaywall({ onClose }) {
             await refreshSignupsRef.current?.();
             if (result?.purpose === "scanner" || result?.premiumScanner) {
               unlockScannerRef.current?.(result?.email || activeBuyer);
-              showToastRef.current("Premium scanner unlocked — 20 scans per day");
+              showToastRef.current("Premium chart unlocked — 20 charts per day");
             } else {
               showToastRef.current(
-                "That payment was for app access only. Chart Scanner needs its own payment."
+                "That payment was for app access only. Chart Setup needs its own payment."
               );
             }
           },
@@ -159,10 +159,10 @@ export default function V2ScannerPaywall({ onClose }) {
       const signup = fromRemote || getSignup?.(buyer);
       if (signup?.premiumScanner) {
         unlockV2ScannerPremium?.(buyer);
-        showToast("Premium scanner restored for this email");
+        showToast("Premium chart restored for this email");
       } else {
         showToast(
-          "No premium scanner payment found for this email. App access payment does not unlock the scanner — please pay again."
+          "No premium chart payment found for this email. App access payment does not unlock Chart Setup — please pay again."
         );
       }
     } catch (error) {
@@ -173,18 +173,18 @@ export default function V2ScannerPaywall({ onClose }) {
   }
 
   return (
-    <section className="v2-scanner-paywall" aria-label="Premium scanner unlock">
+    <section className="v2-scanner-paywall" aria-label="Premium chart unlock">
       <div className="v2-scanner-paywall-card">
         <p className="v2-scanner-paywall-eyebrow">Premium</p>
-        <h2 className="v2-scanner-paywall-title">Unlock Chart Scanner</h2>
+        <h2 className="v2-scanner-paywall-title">Unlock Chart Setup</h2>
         <p className="v2-scanner-paywall-copy">
-          Interface 2 Chart Scanner is a separate premium purchase. Pay{" "}
+          Interface 2 Chart Setup is a separate premium purchase. Pay{" "}
           <strong>${amount} USD</strong> once with your debit or credit card.
-          The premium scanner comes with <strong>20 scans per day</strong>.
+          Premium Chart Setup comes with <strong>20 charts per day</strong>.
         </p>
         <p className="v2-scanner-paywall-note">
-          App access / homepage subscription does not unlock this scanner — even
-          with the same email, you must pay for the scanner separately.
+          App access / homepage subscription does not unlock Chart Setup — even
+          with the same email, you must pay for Chart Setup separately.
         </p>
 
         {!coverEmail ? (
@@ -246,7 +246,7 @@ export default function V2ScannerPaywall({ onClose }) {
               type="submit"
               disabled={checking}
             >
-              {checking ? "Checking…" : "Restore scanner access"}
+              {checking ? "Checking…" : "Restore chart access"}
             </button>
             <button
               className="v2-scanner-paywall-already"

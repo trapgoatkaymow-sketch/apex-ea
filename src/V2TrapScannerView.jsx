@@ -149,7 +149,7 @@ export default function V2TrapScannerView({
           <img className="tg-brand-logo" src="/logo.png" alt="" width="36" height="36" />
           <div className="tg-brand-copy">
             <strong>TrapGoat</strong>
-            <em>SCANNER</em>
+            <em>CHART</em>
           </div>
         </div>
         <div className="tg-top-actions">
@@ -193,7 +193,7 @@ export default function V2TrapScannerView({
       <div className="tg-intro">
         <div className="tg-intro-copy">
           <p className="tg-breadcrumb">Analyze · Detect · Execute</p>
-          <h2 className="tg-title">Chart Scanner</h2>
+          <h2 className="tg-title">Chart Setup</h2>
           <p className="tg-subtitle">
             Find real trading symbols from your chart screenshot.
           </p>
@@ -203,7 +203,7 @@ export default function V2TrapScannerView({
             <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.7" />
             <circle cx="12" cy="12" r="2.4" fill="currentColor" />
           </svg>
-          {scansLeft} scans left
+          {scansLeft} charts left
         </span>
       </div>
 
@@ -245,11 +245,11 @@ export default function V2TrapScannerView({
                 <i />
               </span>
               {scanning
-                ? "Scanning…"
+                ? "Analyzing…"
                 : setupReady
                   ? "Setup ready"
                   : preview
-                    ? "Ready to scan"
+                    ? "Ready to analyze"
                     : "Awaiting chart"}
             </div>
             {scanning ? (
@@ -405,10 +405,10 @@ export default function V2TrapScannerView({
             : detectingSymbol
               ? "Analyzing chart…"
               : !connected
-                ? "Connect MT5 to Scan"
+                ? "Connect MT5 to Analyze"
                 : !symbol
                   ? "Waiting for symbol…"
-                  : "Scan Chart"}
+                  : "Analyze Chart"}
         </button>
       ) : null}
 

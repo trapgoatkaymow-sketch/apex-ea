@@ -377,7 +377,7 @@ export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
         symbol: null,
         suggestedSymbol: null,
         message: "Chart ready — type the symbol (AI temporarily offline)",
-        uiMessage: "Enter the chart symbol to continue scanning.",
+        uiMessage: "Enter the chart symbol to continue.",
         chartConfidence: 70,
         symbolConfidence: 0,
         confidence: 0,

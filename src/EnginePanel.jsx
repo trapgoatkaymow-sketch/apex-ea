@@ -23,7 +23,7 @@ export default function EnginePanel({
     (mode === "connecting"
       ? "Connecting Engine"
       : mode === "scanning"
-        ? "Trading Engine · Scanning"
+        ? "Trading Engine · Analyzing"
         : "Trading Engine · Executing");
 
   return (

@@ -5,7 +5,7 @@
 export default function SniperScan({
   className = "",
   size = "lg",
-  label = "Sniper scan locked on",
+  label = "Sniper lock on",
 }) {
   return (
     <div
@@ -36,7 +36,7 @@ export default function SniperScan({
 
         <span className="cs-sniper-readout cs-sniper-readout--tl">RNG 0.00</span>
         <span className="cs-sniper-readout cs-sniper-readout--tr">LOCK</span>
-        <span className="cs-sniper-readout cs-sniper-readout--bl">AZ · SCAN</span>
+        <span className="cs-sniper-readout cs-sniper-readout--bl">AZ · LOCK</span>
         <span className="cs-sniper-readout cs-sniper-readout--br">BOT-01</span>
       </div>
     </div>

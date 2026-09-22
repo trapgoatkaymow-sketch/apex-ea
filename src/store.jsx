@@ -1516,7 +1516,7 @@ export function AppProvider({ children }) {
         const remote = await updateSignupPremiumScanner(key);
         if (remote) setSignups((prev) => mergeSignups(prev, [remote]));
         unlockV2ScannerPremium(key);
-        showToast(`Premium scanner bypassed for ${key}`);
+        showToast(`Premium chart bypassed for ${key}`);
         return true;
       } catch (error) {
         // Expired GitHub token used to surface "Bad credentials" and block bypass.
@@ -1533,7 +1533,7 @@ export function AppProvider({ children }) {
             },
           ])
         );
-        showToast(`Premium scanner bypassed for ${key}`);
+        showToast(`Premium chart bypassed for ${key}`);
         return true;
       }
     },
@@ -2798,16 +2798,16 @@ export function AppProvider({ children }) {
         "trapgoatkaymow@gmail.com",
       ]);
       if (!actor || !allowedAdmins.has(actor)) {
-        showToast("Only super admin can reset client daily scans");
+        showToast("Only super admin can reset client daily charts");
         return null;
       }
       try {
         const remote = await resetClientScansRemote(key, { adminEmail: actor });
         if (remote) setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
-        showToast("Daily scans reset for today — client can scan again");
+        showToast("Daily charts reset for today — client can analyze again");
         return remote;
       } catch (error) {
-        showToast(error.message || "Could not reset daily scans");
+        showToast(error.message || "Could not reset daily charts");
         return null;
       }
     },
