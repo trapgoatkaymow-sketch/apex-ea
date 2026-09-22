@@ -286,8 +286,6 @@ export default function AdminPortal() {
   const [hostVolume, setHostVolume] = useState("0.01");
   const [hostSl, setHostSl] = useState("");
   const [hostTp, setHostTp] = useState("");
-  /** Super admin: mentor whose EA clients to host for. Mentors ignore this. */
-  const [hostMentorEmail, setHostMentorEmail] = useState("");
   const [hostAccounts, setHostAccounts] = useState([]);
   const [hostLoading, setHostLoading] = useState(false);
   const [hostBusy, setHostBusy] = useState(false);
@@ -828,32 +826,70 @@ export default function AdminPortal() {
     if (!adminOpen || !adminSession) return undefined;
     const isSuper = isSuperAdminSession(adminSession);
     // Mentors: warm registry on Dashboard + Self Hosting.
-    // Super admin: only on Self Hosting, and only after a mentor is picked.
+    // Super admin: Self Hosting loads every approved mentor’s connected clients.
     if (isSuper) {
       if (adminPage !== "self-hosting") return undefined;
     } else if (adminPage !== "self-hosting" && adminPage !== "dashboard") {
       return undefined;
     }
-    const targetMentorEmail = isSuper
-      ? normalizeAdminEmail(hostMentorEmail)
-      : normalizeAdminEmail(adminSession.email);
-    if (!targetMentorEmail) {
+
+    const hostableMentorEmails = isSuper
+      ? [
+          ...new Set(
+            (Array.isArray(mentors) ? mentors : [])
+              .filter((m) => {
+                const status = String(m.status || "").toLowerCase();
+                const role = String(m.role || "").toLowerCase();
+                const email = normalizeAdminEmail(m.email);
+                if (!email || !email.includes("@")) return false;
+                if (role === "superadmin") return false;
+                if (email === normalizeAdminEmail(SUPER_ADMIN_EMAIL)) return false;
+                return status === "approved";
+              })
+              .map((m) => normalizeAdminEmail(m.email))
+              .filter(Boolean)
+          ),
+        ]
+      : [normalizeAdminEmail(adminSession.email)].filter(Boolean);
+
+    if (!hostableMentorEmails.length) {
       setHostAccounts([]);
-      setHostRecent([]);
+      setHostRecent(
+        loadSelfHostRecent(
+          isSuper
+            ? `admin:${normalizeAdminEmail(adminSession.email)}:all`
+            : normalizeAdminEmail(adminSession.email)
+        )
+      );
       setHostLoading(false);
       return undefined;
     }
-    // Super admin recent trades keyed per hosted mentor line.
+
     const recentKey = isSuper
-      ? `admin:${normalizeAdminEmail(adminSession.email)}:${targetMentorEmail}`
-      : targetMentorEmail;
+      ? `admin:${normalizeAdminEmail(adminSession.email)}:all`
+      : hostableMentorEmails[0];
     setHostRecent(loadSelfHostRecent(recentKey));
+    const mentorEmailSet = new Set(hostableMentorEmails);
     let cancelled = false;
+
     async function loadHosted() {
       setHostLoading(true);
       try {
-        const accounts = await listMentorHostedAccounts(targetMentorEmail);
+        const remoteLists = await Promise.all(
+          hostableMentorEmails.map(async (mentorEmail) => {
+            try {
+              const accounts = await listMentorHostedAccounts(mentorEmail);
+              return (accounts || []).map((row) => ({
+                ...row,
+                mentorEmail,
+              }));
+            } catch {
+              return [];
+            }
+          })
+        );
         if (cancelled) return;
+
         // Also surface robot sessions stamped on local license rows — durable
         // across refreshes even when /api/mt5-accounts /tmp is empty on this hit.
         const fromLicenses = (Array.isArray(licenseKeys) ? licenseKeys : [])
@@ -861,7 +897,7 @@ export default function AdminPortal() {
             const mentor = normalizeAdminEmail(row.mentorEmail);
             return (
               mentor &&
-              mentor === targetMentorEmail &&
+              mentorEmailSet.has(mentor) &&
               String(row.robotAccountId || "").trim()
             );
           })
@@ -874,16 +910,25 @@ export default function AdminPortal() {
             platform: String(row.robotPlatform || "MT5").trim() || "MT5",
             connectedAt: Number(row.robotConnectedAt) || Date.now(),
             updatedAt: Number(row.updatedAt || row.robotConnectedAt) || Date.now(),
+            mentorEmail: normalizeAdminEmail(row.mentorEmail),
             source: "license-local",
           }))
           .filter((row) => row.email && row.accountId);
+
         const byEmail = new Map();
-        for (const row of [...fromLicenses, ...(accounts || [])]) {
+        for (const row of [...fromLicenses, ...remoteLists.flat()]) {
           const email = String(row.email || "").trim().toLowerCase();
           if (!email) continue;
           const prev = byEmail.get(email);
           if (!prev || (row.updatedAt || 0) >= (prev.updatedAt || 0)) {
-            byEmail.set(email, row);
+            byEmail.set(email, {
+              ...row,
+              email,
+              mentorEmail:
+                normalizeAdminEmail(row.mentorEmail) ||
+                normalizeAdminEmail(prev?.mentorEmail) ||
+                "",
+            });
           }
         }
         setHostAccounts(Array.from(byEmail.values()));
@@ -904,7 +949,7 @@ export default function AdminPortal() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [adminOpen, adminSession, adminPage, showToast, licenseKeys, hostMentorEmail]);
+  }, [adminOpen, adminSession, adminPage, showToast, licenseKeys, mentors]);
 
   useEffect(() => {
     if (!hostScheduled?.runAt) return undefined;
@@ -1698,59 +1743,188 @@ export default function AdminPortal() {
       clients,
     } = payload;
     const isSuper = isSuperAdminSession(adminSession);
-    const targetMentorEmail = isSuper
-      ? normalizeAdminEmail(hostMentorEmail)
-      : normalizeAdminEmail(adminSession.email);
-    if (!targetMentorEmail) {
-      showToast(isSuper ? "Select a mentor to host for" : "Not signed in");
+    const lot = Number.isFinite(volume) && volume > 0 ? volume : 0.01;
+    const adminEmail = normalizeAdminEmail(adminSession?.email);
+
+    if (!isSuper) {
+      const targetMentorEmail = adminEmail;
+      if (!targetMentorEmail) {
+        showToast("Not signed in");
+        return null;
+      }
+      setHostBusy(true);
+      try {
+        const result = await executeMentorSelfHostTrade({
+          mentorEmail: targetMentorEmail,
+          symbol,
+          side,
+          volume: lot,
+          tradesCount,
+          stopLoss,
+          takeProfit,
+          comment: "mentor~APEXEA",
+          clients,
+        });
+        setHostResult(result);
+        setHostScheduled(null);
+        const entry = {
+          id: `${Date.now()}-${symbol}-${side}`,
+          at: Date.now(),
+          symbol: result.symbol || symbol,
+          side: result.side || side,
+          volume: result.volume || lot,
+          tradesCount,
+          stopLoss,
+          takeProfit,
+          targeted: Number(result.targeted || result.connected || 0),
+          placed: Number(result.placed || 0),
+          offline: Number(result.offline || result.failed || 0),
+          mentorEmail: targetMentorEmail,
+        };
+        setHostRecent(saveSelfHostRecent(targetMentorEmail, entry));
+        const placed = Number(result?.placed || 0);
+        if (placed > 0) {
+          showToast(
+            `Opened ${placed} trade${placed === 1 ? "" : "s"} on connected clients`
+          );
+        } else {
+          const detail =
+            result?.error ||
+            result?.results?.find((r) => !r.ok)?.error ||
+            "No trades were placed";
+          showToast(detail);
+        }
+        return result;
+      } catch (error) {
+        showToast(error.message || "Could not execute trade");
+        setHostResult(error.data || { error: error.message });
+        setHostScheduled(null);
+        throw error;
+      } finally {
+        setHostBusy(false);
+        hostScheduleTimerRef.current = null;
+      }
+    }
+
+    // Super admin: host for every mentor that has connected clients.
+    const byMentor = new Map();
+    for (const row of clients || []) {
+      const mentorEmail = normalizeAdminEmail(row.mentorEmail);
+      if (!mentorEmail) continue;
+      if (!byMentor.has(mentorEmail)) byMentor.set(mentorEmail, []);
+      byMentor.get(mentorEmail).push(row);
+    }
+    if (!byMentor.size) {
+      showToast("No connected robot clients across mentors yet");
       return null;
     }
+
     setHostBusy(true);
     try {
-      const result = await executeMentorSelfHostTrade({
-        mentorEmail: targetMentorEmail,
+      const settled = await Promise.all(
+        [...byMentor.entries()].map(async ([mentorEmail, mentorClients]) => {
+          try {
+            const result = await executeMentorSelfHostTrade({
+              mentorEmail,
+              symbol,
+              side,
+              volume: lot,
+              tradesCount,
+              stopLoss,
+              takeProfit,
+              comment: "admin~APEXEA",
+              clients: mentorClients,
+              hostedByAdmin: adminEmail,
+            });
+            return { mentorEmail, ok: true, result };
+          } catch (error) {
+            return {
+              mentorEmail,
+              ok: false,
+              result: {
+                error: error.message || "Could not execute trade",
+                results: error.data?.results || [],
+                placed: 0,
+                targeted: mentorClients.length,
+                failed: mentorClients.length,
+                offline: 0,
+              },
+            };
+          }
+        })
+      );
+
+      const mergedResults = [];
+      let placed = 0;
+      let targeted = 0;
+      let failed = 0;
+      let offline = 0;
+      let mentorsHit = 0;
+      for (const row of settled) {
+        const result = row.result || {};
+        targeted += Number(result.targeted || result.connected || 0);
+        placed += Number(result.placed || 0);
+        failed += Number(result.failed || 0);
+        offline += Number(result.offline || 0);
+        if (Number(result.placed || 0) > 0) mentorsHit += 1;
+        for (const item of Array.isArray(result.results) ? result.results : []) {
+          mergedResults.push({ ...item, mentorEmail: row.mentorEmail });
+        }
+        if (!row.ok && !(Array.isArray(result.results) && result.results.length)) {
+          mergedResults.push({
+            ok: false,
+            email: row.mentorEmail,
+            error: result.error || "Mentor trade failed",
+            mentorEmail: row.mentorEmail,
+          });
+        }
+      }
+
+      const result = {
+        ok: placed > 0,
         symbol,
         side,
-        volume: Number.isFinite(volume) && volume > 0 ? volume : 0.01,
+        volume: lot,
         tradesCount,
         stopLoss,
         takeProfit,
-        comment: isSuper ? "admin~APEXEA" : "mentor~APEXEA",
-        clients,
-        hostedByAdmin: isSuper ? normalizeAdminEmail(adminSession.email) : "",
-      });
+        targeted,
+        connected: targeted,
+        placed,
+        failed,
+        offline,
+        mentors: byMentor.size,
+        mentorsHit,
+        hostedByAdmin: adminEmail,
+        results: mergedResults,
+        error: placed > 0 ? "" : settled.find((r) => r.result?.error)?.result?.error || "No trades were placed",
+      };
       setHostResult(result);
       setHostScheduled(null);
       const entry = {
         id: `${Date.now()}-${symbol}-${side}`,
         at: Date.now(),
-        symbol: result.symbol || symbol,
-        side: result.side || side,
-        volume: result.volume || volume,
+        symbol,
+        side,
+        volume: lot,
         tradesCount,
         stopLoss,
         takeProfit,
-        targeted: Number(result.targeted || result.connected || 0),
-        placed: Number(result.placed || 0),
-        offline: Number(result.offline || result.failed || 0),
-        mentorEmail: targetMentorEmail,
-        hostedByAdmin: isSuper,
+        targeted,
+        placed,
+        offline,
+        mentors: byMentor.size,
+        hostedByAdmin: true,
       };
-      const recentKey = isSuper
-        ? `admin:${normalizeAdminEmail(adminSession.email)}:${targetMentorEmail}`
-        : targetMentorEmail;
-      setHostRecent(saveSelfHostRecent(recentKey, entry));
-      const placed = Number(result?.placed || 0);
+      setHostRecent(
+        saveSelfHostRecent(`admin:${adminEmail}:all`, entry)
+      );
       if (placed > 0) {
         showToast(
-          `Opened ${placed} trade${placed === 1 ? "" : "s"} on connected clients`
+          `Opened ${placed} trade${placed === 1 ? "" : "s"} across ${mentorsHit} mentor${mentorsHit === 1 ? "" : "s"}`
         );
       } else {
-        const detail =
-          result?.error ||
-          result?.results?.find((r) => !r.ok)?.error ||
-          "No trades were placed";
-        showToast(detail);
+        showToast(result.error || "No trades were placed");
       }
       return result;
     } catch (error) {
@@ -1766,13 +1940,6 @@ export default function AdminPortal() {
 
   function confirmHostTrade() {
     if (hostBusy || hostScheduled) return;
-    if (
-      isSuperAdminSession(adminSession) &&
-      !normalizeAdminEmail(hostMentorEmail)
-    ) {
-      showToast("Select a mentor to host for");
-      return;
-    }
     const symbol = normalizeBrokerSymbol(hostSymbol || "");
     const rawSl = Number(hostSl);
     const rawTp = Number(hostTp);
@@ -1792,6 +1959,7 @@ export default function AdminPortal() {
       platform: row.platform,
       connectedAt: row.connectedAt,
       updatedAt: row.updatedAt,
+      mentorEmail: normalizeAdminEmail(row.mentorEmail),
     }));
     const payload = {
       symbol,
@@ -4294,65 +4462,15 @@ export default function AdminPortal() {
               <h2 className="admin-h1 self-host-title">SELF HOSTING</h2>
               <p className="admin-sub">
                 {isSuperAdmin
-                  ? "Host for a mentor who does not want to trade their own line — pick their account, then place trades for their connected robot clients."
+                  ? "Trades go to every approved mentor’s connected robot clients automatically — no mentor pick needed."
                   : "Place a trade and automatically send it to your connected robot clients. Stop loss and take profit are optional."}
               </p>
-
-              {isSuperAdmin ? (
-                <label className="ea-field" style={{ marginBottom: 16 }}>
-                  <span>Mentor to host for *</span>
-                  <select
-                    className="admin-input"
-                    value={hostMentorEmail}
-                    onChange={(e) => {
-                      const next = normalizeAdminEmail(e.target.value);
-                      setHostMentorEmail(next);
-                      setHostAccounts([]);
-                      setHostResult(null);
-                      setHostDetailsOpen(false);
-                      if (hostScheduleTimerRef.current) {
-                        clearTimeout(hostScheduleTimerRef.current);
-                        hostScheduleTimerRef.current = null;
-                      }
-                      setHostScheduled(null);
-                      setHostBusy(false);
-                    }}
-                    required
-                  >
-                    <option value="">Select a mentor…</option>
-                    {approvedMentors
-                      .filter((m) => {
-                        const role = String(m.role || "").toLowerCase();
-                        const email = normalizeAdminEmail(m.email);
-                        return (
-                          role !== "superadmin" &&
-                          email &&
-                          email !== normalizeAdminEmail(SUPER_ADMIN_EMAIL)
-                        );
-                      })
-                      .map((m) => (
-                        <option key={m.email} value={normalizeAdminEmail(m.email)}>
-                          {String(m.username || m.email || "Mentor").trim()}
-                          {" — "}
-                          {normalizeAdminEmail(m.email)}
-                        </option>
-                      ))}
-                  </select>
-                  <p className="ea-hint" style={{ marginTop: 6 }}>
-                    Trades open on that mentor’s EA clients who have MetaTrader connected in the app.
-                  </p>
-                </label>
-              ) : null}
 
               <form
                 className="license-form self-host-form"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (hostBusy) return;
-                  if (isSuperAdmin && !normalizeAdminEmail(hostMentorEmail)) {
-                    showToast("Select a mentor to host for");
-                    return;
-                  }
                   const symbol = normalizeBrokerSymbol(hostSymbol || "");
                   const volume = Number(hostVolume);
                   const tradesCount = Math.max(
@@ -4374,7 +4492,7 @@ export default function AdminPortal() {
                   if (!hostAccounts.length) {
                     showToast(
                       isSuperAdmin
-                        ? "No connected robot clients for this mentor yet"
+                        ? "No connected robot clients across mentors yet"
                         : "No connected robot clients yet"
                     );
                     return;
@@ -4396,7 +4514,6 @@ export default function AdminPortal() {
                     placeholder="XAUUSDp"
                     autoCapitalize="off"
                     required
-                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4407,7 +4524,6 @@ export default function AdminPortal() {
                       type="button"
                       className={`self-host-side-btn${hostSide === "BUY" ? " is-active is-buy" : ""}`}
                       onClick={() => setHostSide("BUY")}
-                      disabled={isSuperAdmin && !hostMentorEmail}
                     >
                       BUY
                     </button>
@@ -4422,14 +4538,12 @@ export default function AdminPortal() {
                         value={hostTradesCount}
                         onChange={(e) => setHostTradesCount(e.target.value)}
                         aria-label="Number of trades to open"
-                        disabled={isSuperAdmin && !hostMentorEmail}
                       />
                     </label>
                     <button
                       type="button"
                       className={`self-host-side-btn${hostSide === "SELL" ? " is-active is-sell" : ""}`}
                       onClick={() => setHostSide("SELL")}
-                      disabled={isSuperAdmin && !hostMentorEmail}
                     >
                       SELL
                     </button>
@@ -4450,7 +4564,6 @@ export default function AdminPortal() {
                     onChange={(e) => setHostVolume(e.target.value)}
                     placeholder="0.01"
                     required
-                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4463,7 +4576,6 @@ export default function AdminPortal() {
                     value={hostSl}
                     onChange={(e) => setHostSl(e.target.value)}
                     placeholder="SL price"
-                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4476,7 +4588,6 @@ export default function AdminPortal() {
                     value={hostTp}
                     onChange={(e) => setHostTp(e.target.value)}
                     placeholder="TP price"
-                    disabled={isSuperAdmin && !hostMentorEmail}
                   />
                 </label>
 
@@ -4484,10 +4595,10 @@ export default function AdminPortal() {
                   <p className="self-host-status-label">CONNECTED ROBOT CLIENTS</p>
                   <p className="self-host-status-value">
                     <span className={`self-host-dot${hostAccounts.length ? " is-on" : ""}`} />
-                    {isSuperAdmin && !hostMentorEmail
-                      ? "Select a mentor first"
-                      : hostLoading && !hostAccounts.length
-                        ? "Checking connections…"
+                    {hostLoading && !hostAccounts.length
+                      ? "Checking connections…"
+                      : isSuperAdmin
+                        ? `${hostAccounts.length} client${hostAccounts.length === 1 ? "" : "s"} across all mentors`
                         : `${hostAccounts.length} client${hostAccounts.length === 1 ? "" : "s"} connected`}
                   </p>
                 </div>
@@ -4495,11 +4606,7 @@ export default function AdminPortal() {
                 <button
                   className={`admin-btn admin-btn-solid admin-btn-block self-host-execute${hostBusy ? " is-loading" : ""}`}
                   type="submit"
-                  disabled={
-                    hostBusy ||
-                    !hostAccounts.length ||
-                    (isSuperAdmin && !hostMentorEmail)
-                  }
+                  disabled={hostBusy || !hostAccounts.length}
                 >
                   <AdminBusyLabel
                     busy={hostBusy}
@@ -4624,13 +4731,7 @@ export default function AdminPortal() {
                 >
                   <p className="self-host-modal-question">
                     {isSuperAdmin
-                      ? `Execute this trade for ${
-                          approvedMentors.find(
-                            (m) =>
-                              normalizeAdminEmail(m.email) ===
-                              normalizeAdminEmail(hostMentorEmail)
-                          )?.username || hostMentorEmail
-                        }’s connected clients?`
+                      ? "Execute this trade for all mentors’ connected clients?"
                       : "Execute this trade for all connected clients?"}
                   </p>
                   <p className="self-host-modal-trade">
