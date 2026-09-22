@@ -848,6 +848,8 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
             : String(live);
     const ok =
       live === true ||
+      live == null ||
+      raw === "" ||
       /^ok$/i.test(raw) ||
       /^true$/i.test(raw) ||
       (typeof live === "object" &&
@@ -857,19 +859,19 @@ export async function getAccountStatus(accountId, { company = "" } = {}) {
         live.ok !== false &&
         !live.code);
     if (!ok || /^\[error\]/i.test(raw) || live === false || raw === "false") {
-      // Broker host flaky / gateway errors — keep the session sticky.
+      // Only hard-kill on explicit session/token loss. Everything else stays sticky.
       if (
-        /timeout|unreachable|network|econn|temporar|offline|502|503|504|gateway/i.test(
+        /not\s*found|invalid\s*token|invalid\s*id|unknown\s*id|no\s*such|client\s*not/i.test(
           raw
         )
       ) {
-        return transient;
+        return dead;
       }
-      return dead;
+      return transient;
     }
   } catch (error) {
     const msg = String(error?.message || error?.code || "");
-    if (/INVALID_TOKEN|not found|CLIENT|session/i.test(msg)) return dead;
+    if (/INVALID_TOKEN|not found|unknown id|no such client/i.test(msg)) return dead;
     return transient;
   }
 
@@ -1078,12 +1080,13 @@ export async function placeMarketTrade({
   const defaultTp = Number(takeProfit);
 
   // Anchor SL/TP to the live fill so stale chart levels cannot sit inside the
-  // broker's stop distance (that caused instant self-closes).
+  // broker's stop distance (that caused instant self-closes / Invalid stops).
   const fillPrice =
     Number.isFinite(price) && price > 0 ? price : null;
+  const tradeSide = action === "Sell" ? "SELL" : "BUY";
   const safeSl = normalizeProtectiveLevels({
     symbol: tradeSymbol || requested,
-    side: action,
+    side: tradeSide,
     entryPrice: fillPrice,
     stopLoss,
     takeProfit: null,
@@ -1104,7 +1107,7 @@ export async function placeMarketTrade({
 
     const safeTp = normalizeProtectiveLevels({
       symbol: tradeSymbol || requested,
-      side: action,
+      side: tradeSide,
       entryPrice: fillPrice,
       stopLoss: null,
       takeProfit: tpForThread,
@@ -1119,33 +1122,98 @@ export async function placeMarketTrade({
       .replace(/\|$/g, "")
       .slice(0, 31) || "bot~APEXEA";
 
-    const params = new URLSearchParams({
-      id,
-      symbol: tradeSymbol,
-      operation: action,
-      volume: String(lots),
-      slippage: "100",
-      comment: threadComment,
-    });
-    if (Number.isFinite(price) && price > 0) params.set("price", String(price));
-    const sl = Number(anchoredSl);
-    if (Number.isFinite(sl) && sl > 0) params.set("stoploss", String(sl));
-    if (Number.isFinite(tpForThread) && tpForThread > 0) {
-      params.set("takeprofit", String(tpForThread));
+    async function sendOrder({ slValue, tpValue, includePrice }) {
+      const params = new URLSearchParams({
+        id,
+        symbol: tradeSymbol,
+        operation: action,
+        volume: String(lots),
+        slippage: "100",
+        comment: threadComment,
+      });
+      // Market orders: omit price by default — a stale quote + stops often
+      // triggers broker "Invalid stops".
+      if (includePrice && Number.isFinite(price) && price > 0) {
+        params.set("price", String(price));
+      }
+      if (Number.isFinite(slValue) && slValue > 0) {
+        params.set("stoploss", String(slValue));
+      }
+      if (Number.isFinite(tpValue) && tpValue > 0) {
+        params.set("takeprofit", String(tpValue));
+      }
+      return mt5Fetch(`/OrderSend?${params.toString()}`, { timeoutMs: 45000 });
     }
 
-    const order = await mt5Fetch(`/OrderSend?${params.toString()}`, { timeoutMs: 45000 });
-    const raw =
-      typeof order === "string"
-        ? order.trim()
-        : order && typeof order === "object"
-          ? JSON.stringify(order)
-          : String(order ?? "");
-    if (/^\[error\]/i.test(raw) || (order && order.error) || /invalid|not\s*exist|market\s*closed|trade\s*disabled|no\s*prices/i.test(raw)) {
-      const hint =
+    function orderLooksBad(order) {
+      const raw =
         typeof order === "string"
-          ? order.replace(/^\[error\]:?\s*/i, "").trim()
-          : order?.message || order?.error || raw;
+          ? order.trim()
+          : order && typeof order === "object"
+            ? JSON.stringify(order)
+            : String(order ?? "");
+      return (
+        /^\[error\]/i.test(raw) ||
+        (order && order.error) ||
+        /invalid|not\s*exist|market\s*closed|trade\s*disabled|no\s*prices/i.test(raw)
+      );
+    }
+
+    function orderHint(order) {
+      return typeof order === "string"
+        ? order.replace(/^\[error\]:?\s*/i, "").trim()
+        : order?.message || order?.error || String(order ?? "");
+    }
+
+    let order = await sendOrder({
+      slValue: Number(anchoredSl),
+      tpValue: Number(tpForThread),
+      includePrice: false,
+    });
+
+    // Retry with wider stops if broker rejects Invalid stops (freeze level).
+    if (orderLooksBad(order) && /invalid\s*stops/i.test(orderHint(order))) {
+      const pad = Math.max(
+        Number(safeSl.minDist) || 0,
+        Number(safeTp.minDist) || 0,
+        fillPrice ? Math.abs(fillPrice) * 0.001 : 0
+      ) * 1.8;
+      let retrySl = Number(anchoredSl);
+      let retryTp = Number(tpForThread);
+      if (Number.isFinite(fillPrice) && fillPrice > 0 && pad > 0) {
+        if (tradeSide === "BUY") {
+          if (Number.isFinite(retrySl)) retrySl = Math.min(retrySl, fillPrice - pad);
+          if (Number.isFinite(retryTp)) retryTp = Math.max(retryTp, fillPrice + pad);
+        } else {
+          if (Number.isFinite(retrySl)) retrySl = Math.max(retrySl, fillPrice + pad);
+          if (Number.isFinite(retryTp)) retryTp = Math.min(retryTp, fillPrice - pad);
+        }
+      }
+      order = await sendOrder({
+        slValue: retrySl,
+        tpValue: retryTp,
+        includePrice: false,
+      });
+    }
+
+    // Last resort: open market without stops so clients still get the fill.
+    if (orderLooksBad(order) && /invalid\s*stops/i.test(orderHint(order))) {
+      order = await sendOrder({
+        slValue: null,
+        tpValue: null,
+        includePrice: false,
+      });
+      if (!orderLooksBad(order)) {
+        order = {
+          ...(order && typeof order === "object" ? order : { order }),
+          stopsSkipped: true,
+          warning: "Opened without SL/TP after broker rejected Invalid stops",
+        };
+      }
+    }
+
+    if (orderLooksBad(order)) {
+      const hint = orderHint(order);
       const err = new Error(
         String(hint || "Broker rejected the order").slice(0, 180)
       );
