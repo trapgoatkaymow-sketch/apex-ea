@@ -4759,6 +4759,30 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   gap: 8px;
 }
 
+.admin-stat-card-btn {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.admin-stat-card-btn:active {
+  transform: scale(0.985);
+}
+
+.admin-portal[data-theme="dark"] .admin-stat-card-btn {
+  border-color: rgba(0, 229, 255, 0.28);
+}
+
+.admin-portal[data-theme="dark"] .admin-stat-card-btn:hover,
+.admin-portal[data-theme="dark"] .admin-stat-card-btn:focus-visible {
+  border-color: rgba(0, 229, 255, 0.55);
+  outline: none;
+}
+
 .admin-portal[data-theme="dark"] .admin-withdraw-btn {
   width: 100%;
   position: relative;
