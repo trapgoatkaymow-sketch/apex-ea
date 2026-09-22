@@ -76,9 +76,11 @@ export default function TrapLevelTiles({ levels }) {
           type="button"
           className={`tg-level is-${row.tone}${copiedKey === row.key ? " is-copied" : ""}`}
           onPointerUp={(event) => handleTap(row, event)}
-          onDoubleClick={(event) => {
-            event.preventDefault();
-            copyLevel(row);
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              copyLevel(row);
+            }
           }}
           title={`Double tap to copy ${row.label}`}
           aria-label={`${row.label} ${formatPrice(row.price)}. Double tap to copy`}
