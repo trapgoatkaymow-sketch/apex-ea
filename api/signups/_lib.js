@@ -528,14 +528,29 @@ export async function setSignupAccessBypassed(email, bypassed = true) {
     const idx = signups.findIndex((s) => s.email === key);
     const accessBypassed = Boolean(bypassed);
     if (idx >= 0) {
-      signups[idx] = {
-        ...signups[idx],
-        status: accessBypassed ? "approved" : signups[idx].status,
-        accessBypassed,
-        accessBypassedAt: accessBypassed
-          ? signups[idx].accessBypassedAt || now
-          : null,
-      };
+      const current = signups[idx];
+      if (accessBypassed) {
+        signups[idx] = {
+          ...current,
+          status: "approved",
+          accessBypassed: true,
+          accessBypassedAt: current.accessBypassedAt || now,
+        };
+      } else {
+        // Clearing bypass: unpaid clients lose free access entirely.
+        const paid = Boolean(current.accessPaid);
+        signups[idx] = {
+          ...current,
+          accessBypassed: false,
+          accessBypassedAt: null,
+          ...(paid
+            ? {}
+            : {
+                status: "pending",
+                appAccessUnlockedAt: null,
+              }),
+        };
+      }
       result = signups[idx];
       return signups;
     }
@@ -556,6 +571,54 @@ export async function setSignupAccessBypassed(email, bypassed = true) {
   }, `access bypass ${bypassed ? "on" : "off"}: ${key}`);
 
   return result;
+}
+
+/**
+ * Revoke payment bypass for every client signup except keepEmails (mentors).
+ * Unpaid bypassed accounts go back to pending with unlock cleared.
+ */
+export async function revokeClientAccessBypasses({ keepEmails = [] } = {}) {
+  const keep = new Set(
+    (Array.isArray(keepEmails) ? keepEmails : [])
+      .map((e) => normalizeEmail(e))
+      .filter((e) => e && e.includes("@"))
+  );
+
+  const revoked = [];
+  const skippedMentors = [];
+
+  await mutateStore((signups) => {
+    return signups.map((row) => {
+      if (!row?.accessBypassed) return row;
+      const email = normalizeEmail(row.email);
+      if (!email) return row;
+      if (keep.has(email)) {
+        skippedMentors.push(email);
+        return row;
+      }
+      const paid = Boolean(row.accessPaid);
+      const next = {
+        ...row,
+        accessBypassed: false,
+        accessBypassedAt: null,
+        ...(paid
+          ? {}
+          : {
+              status: "pending",
+              appAccessUnlockedAt: null,
+            }),
+      };
+      revoked.push(next);
+      return next;
+    });
+  }, `revoke ${revoked.length} client access bypasses (kept ${skippedMentors.length} mentors)`);
+
+  return {
+    revokedCount: revoked.length,
+    skippedMentorCount: skippedMentors.length,
+    revokedEmails: revoked.map((r) => r.email),
+    skippedMentorEmails: skippedMentors,
+  };
 }
 
 export async function setSignupAppAccessUnlocked(email, unlockedAt = Date.now()) {

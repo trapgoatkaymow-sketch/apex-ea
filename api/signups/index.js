@@ -9,8 +9,29 @@ import {
   setSignupPremiumScanner,
   setSignupStatus,
   upsertSignup,
+  revokeClientAccessBypasses,
 } from "./_lib.js";
-export const config = { maxDuration: 30 };
+import {
+  listMentors,
+  SUPER_ADMIN_EMAIL,
+} from "../mentors/_lib.js";
+export const config = { maxDuration: 60 };
+
+function normalizeEmail(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function assertSuperAdmin(adminEmail) {
+  const admin = normalizeEmail(adminEmail);
+  const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+  if (!admin || admin !== superAdmin) {
+    const err = new Error("Only super admin can revoke bypassed clients");
+    err.status = 403;
+    throw err;
+  }
+}
 
 async function entitleIfLicenseOwner(email, signup) {
   const key = String(email || "")
@@ -105,6 +126,22 @@ export default async function handler(req, res) {
       ) {
         const signup = await setSignupAccessBypassed(body.email, false);
         sendJson(res, 200, { signup, accessBypassed: false });
+        return;
+      }
+      if (
+        body.action === "revokeAllBypasses" ||
+        body.action === "revoke-bypassed" ||
+        body.action === "removeAllBypassed"
+      ) {
+        assertSuperAdmin(body.adminEmail || body.actorEmail || body.by || "");
+        const mentors = await listMentors();
+        const keepEmails = [
+          SUPER_ADMIN_EMAIL,
+          ...(Array.isArray(mentors) ? mentors : []).map((m) => m.email),
+          ...(Array.isArray(body.keepEmails) ? body.keepEmails : []),
+        ];
+        const result = await revokeClientAccessBypasses({ keepEmails });
+        sendJson(res, 200, { ok: true, ...result });
         return;
       }
       const signup = await setSignupStatus(body.email, body.status);
