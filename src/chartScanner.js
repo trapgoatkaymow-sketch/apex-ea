@@ -537,3 +537,41 @@ export const EXECUTE_ENGINE_STEPS = [
   { id: "route", label: "Routing order to connected MT5" },
   { id: "fill", label: "Confirming broker fill" },
 ];
+
+/**
+ * Short trader-facing “why” for a scanned setup (1–2 sentences).
+ */
+export function shortTradeWhy(signal) {
+  const analysis = String(signal?.analysis || "").trim();
+  const reason = Array.isArray(signal?.reasons)
+    ? String(signal.reasons[0] || "").trim()
+    : "";
+  let text = analysis || reason;
+  if (!text) {
+    const side = String(signal?.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
+    text =
+      side === "BUY"
+        ? "Bullish structure on the chart supports a BUY toward higher targets."
+        : "Bearish structure on the chart supports a SELL toward lower targets.";
+  }
+  // Keep it scannable on mobile — prefer first 1–2 sentences, cap length.
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length > 2) {
+    text = `${sentences[0]} ${sentences[1]}`;
+  }
+  if (text.length > 160) {
+    const cut = text.slice(0, 157);
+    const breakAt = Math.max(
+      cut.lastIndexOf(". "),
+      cut.lastIndexOf("! "),
+      cut.lastIndexOf("? "),
+      cut.lastIndexOf("; "),
+      cut.lastIndexOf(", ")
+    );
+    text = `${(breakAt > 50 ? cut.slice(0, breakAt + 1) : cut).trim()}…`;
+  }
+  return text;
+}

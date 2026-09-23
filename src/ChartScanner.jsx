@@ -9,6 +9,7 @@ import {
   TRADE_ENGINE_STEPS,
   analyzeChartImage,
   detectSymbolFromChart,
+  shortTradeWhy,
   sleep,
 } from "./chartScanner.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
@@ -1378,7 +1379,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
           </div>
 
           <span className="cs-setup-analysis">
-            {signal.analysis || signal.reasons?.[0] || "Setup from chart structure"}
+            <strong>Why</strong> {shortTradeWhy(signal)}
           </span>
           <span className="cs-setup-plan">
             TP targets · {signal.riskReward || tpLadder.summary}

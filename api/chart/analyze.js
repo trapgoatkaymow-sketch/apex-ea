@@ -229,12 +229,14 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
       parsed?.reason ||
       parsed?.summary ||
       `${levels.side} setup from visible price action`
-  ).trim();
+  )
+    .trim()
+    .slice(0, 180);
 
-  const reasons = Array.isArray(parsed?.reasons)
-    ? parsed.reasons.map((r) => String(r)).filter(Boolean).slice(0, 4)
-    : [analysis];
-
+  const reasonsRaw = Array.isArray(parsed?.reasons)
+    ? parsed.reasons.map((r) => String(r).trim()).filter(Boolean).slice(0, 4)
+    : [];
+  const reasons = reasonsRaw.length ? reasonsRaw : analysis ? [analysis] : [];
   // H4 keeps 1:1 ladder; every other timeframe starts at 1:2.
   const riskReward = levels.riskReward || tpRiskRewardLabel(timeframe);
 
@@ -333,6 +335,9 @@ export async function analyzeChartSetupWithOpenAI({
             "If not a chart: status=no_chart, isChart=false, and leave trade fields null. " +
             "If it IS a chart: ALWAYS return a COMPLETE trade setup with THREE take-profit levels. NEVER say incomplete. " +
             "ALWAYS provide side, confidence, entry, stopLoss, takeProfit1, takeProfit2, takeProfit3, riskReward, timeframe, and analysis. " +
+            "analysis must be a SHORT trader why in 1–2 sentences (max ~140 characters): explain WHY this BUY or SELL from visible chart structure " +
+            "(recent candles, break of structure, support/resistance). Plain language for the trader — no fluff, no strategy names, no filler. " +
+            "Also put that same short why (or a tighter version) as reasons[0]. " +
             "DIRECTION IS CRITICAL — wrong BUY/SELL blows accounts. Decide side ONLY from visible chart structure: " +
             "last candles, break of structure, higher-highs/higher-lows vs lower-highs/lower-lows, and where price sits vs support/resistance. " +
             "Green/blue/cyan/teal candles rising = BUY bias. Red/orange/magenta candles falling = SELL bias. " +

@@ -8656,6 +8656,15 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
   line-height: 1.35;
 }
 
+.cs-setup-analysis strong {
+  display: inline-block;
+  margin-right: 0.35em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72em;
+  color: rgba(255, 180, 220, 0.9);
+}
+
 .cs-setup-plan {
   color: rgba(255, 180, 220, 0.82);
   font-size: 0.78rem;
@@ -12824,6 +12833,31 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
   font-size: 0.62rem;
   color: rgba(255, 255, 255, 0.48);
   text-align: center;
+}
+
+.tg-why {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.tg-why strong {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 180, 220, 0.9);
+  font-weight: 700;
+}
+
+.tg-why span {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 @media (max-width: 360px) {

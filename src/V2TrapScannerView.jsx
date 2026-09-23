@@ -3,6 +3,7 @@ import BotAvatar from "./BotAvatar.jsx";
 import ScanEye from "./ScanEye.jsx";
 import TrapLevelTiles from "./TrapLevelTiles.jsx";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
+import { shortTradeWhy } from "./chartScanner.js";
 
 function formatPrice(value) {
   if (value == null || value === "") return "—";
@@ -521,6 +522,11 @@ export default function V2TrapScannerView({
               </em>
             </span>
           </button>
+
+          <p className="tg-why" role="note">
+            <strong>Why</strong>
+            <span>{shortTradeWhy(signal)}</span>
+          </p>
 
           {fills.length ? (
             <p className="tg-fills">
