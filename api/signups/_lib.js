@@ -611,7 +611,7 @@ export async function revokeClientAccessBypasses({ keepEmails = [] } = {}) {
       revoked.push(next);
       return next;
     });
-  }, `revoke ${revoked.length} client access bypasses (kept ${skippedMentors.length} mentors)`);
+  }, "revoke client access bypasses (keep mentors)");
 
   return {
     revokedCount: revoked.length,
