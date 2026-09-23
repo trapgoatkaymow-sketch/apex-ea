@@ -34,10 +34,13 @@ export function rememberDeviceAccess(email, { paid = false, bypassed = false } =
   const store = readStore();
   const device = store[deviceId] && typeof store[deviceId] === "object" ? store[deviceId] : {};
   const prev = device[key] && typeof device[key] === "object" ? device[key] : {};
+  const nextPaid = Boolean(paid);
+  const nextBypassed = Boolean(bypassed);
   device[key] = {
     email: key,
-    paid: Boolean(prev.paid || paid),
-    bypassed: Boolean(prev.bypassed || bypassed),
+    // Explicit flags from caller win — do not sticky-OR bypass into paid.
+    paid: nextPaid,
+    bypassed: nextBypassed,
     unlockedAt: Number(prev.unlockedAt) || Date.now(),
     updatedAt: Date.now(),
   };
@@ -69,14 +72,49 @@ export function clearDeviceBypass(email) {
   return device[key] || null;
 }
 
-/** True when this phone previously paid or was bypassed for the email. */
-export function hasDeviceAccess(email) {
+/** Fully forget device unlock for an email (forces subscription paywall again). */
+export function clearDeviceAccess(email) {
   const key = normalizeEmail(email);
-  if (!key.includes("@")) return false;
+  if (!key.includes("@")) return null;
+  const deviceId = getOrCreateDeviceId();
+  const store = readStore();
+  const device = store[deviceId] && typeof store[deviceId] === "object" ? store[deviceId] : {};
+  if (!device[key]) return null;
+  delete device[key];
+  store[deviceId] = device;
+  writeStore(store);
+  return null;
+}
+
+function readDeviceRow(email) {
+  const key = normalizeEmail(email);
+  if (!key.includes("@")) return null;
   const deviceId = getOrCreateDeviceId();
   const row = readStore()?.[deviceId]?.[key];
-  if (!row || typeof row !== "object") return false;
-  return Boolean(row.paid || row.bypassed || row.unlockedAt);
+  if (!row || typeof row !== "object") return null;
+  return row;
+}
+
+/** True when this phone previously paid (subscription) for the email. */
+export function hasDevicePaidAccess(email) {
+  const row = readDeviceRow(email);
+  return Boolean(row?.paid);
+}
+
+/** True when this phone previously had admin bypass for the email. */
+export function hasDeviceBypassAccess(email) {
+  const row = readDeviceRow(email);
+  return Boolean(row?.bypassed) && !row?.paid;
+}
+
+/**
+ * True when this phone previously paid or was bypassed for the email.
+ * Stale bypass-only stamps without paid still count as bypass until cleared.
+ */
+export function hasDeviceAccess(email) {
+  const row = readDeviceRow(email);
+  if (!row) return false;
+  return Boolean(row.paid || row.bypassed);
 }
 
 /** License was already activated on this exact phone. */
@@ -87,31 +125,27 @@ export function isLicenseBoundToThisDevice(license) {
 }
 
 /**
- * True when this account already paid or was admin-bypassed (server/local signup).
- * Used by "I have paid" so returning clients restore access on any phone.
+ * True when this account already paid the subscription or still has admin bypass.
+ * Approved status / unlock stamps alone do NOT skip payment.
  */
 export function isAccountPaidOrBypassed(signup) {
   if (!signup || typeof signup !== "object") return false;
   if (signup.accessPaid) return true;
   if (signup.accessBypassed) return true;
-  if (signup.appAccessUnlockedAt) return true;
-  const status = String(signup.status || "").toLowerCase();
-  return status === "approved";
+  return false;
 }
 
 /**
  * Payment unlock for CoverLock:
- * - This phone already paid/bypassed for the email, OR
- * - Server shows paid / approved / bypassed for the email.
- * Brand-new emails still must pay.
+ * Subscription (accessPaid) or active admin bypass only.
  */
 export function hasPaidOnThisDevice(email) {
-  return hasDeviceAccess(email);
+  return hasDevicePaidAccess(email);
 }
 
 export function isSignupEntitled(signup, email = "") {
+  if (isAccountPaidOrBypassed(signup)) return true;
   const key = email || signup?.email;
-  // Device unlock wins even when local signup is still "pending" after a stale sync.
-  if (hasDeviceAccess(key)) return true;
-  return isAccountPaidOrBypassed(signup);
+  // Offline returning paid subscribers only — never treat old bypass cache as paid.
+  return hasDevicePaidAccess(key);
 }

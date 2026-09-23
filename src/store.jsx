@@ -43,8 +43,7 @@ import {
 } from "./licensesApi.js";
 import { getOrCreateDeviceId } from "./deviceId.js";
 import {
-  clearDeviceBypass,
-  hasDeviceAccess,
+  clearDeviceAccess,
   isSignupEntitled,
   rememberDeviceAccess,
 } from "./deviceAccess.js";
@@ -1457,7 +1456,7 @@ export function AppProvider({ children }) {
           ])
         );
       }
-      rememberDeviceAccess(key, { paid: true, bypassed: true });
+      rememberDeviceAccess(key, { paid: false, bypassed: true });
       showToast(`App access bypassed for ${key}`);
       return true;
     },
@@ -1495,10 +1494,10 @@ export function AppProvider({ children }) {
           )
         );
         showToast(error.message || `Removed bypass for ${key} (local)`);
-        clearDeviceBypass(key);
+        clearDeviceAccess(key);
         return true;
       }
-      clearDeviceBypass(key);
+      clearDeviceAccess(key);
       showToast(`Removed bypass for ${key}`);
       return true;
     },
@@ -1799,7 +1798,7 @@ export function AppProvider({ children }) {
       return;
     }
     // Device memory OR server paid/bypass → license entry (no PayPal again).
-    if (hasDeviceAccess(coverEmail) || isSignupEntitled(signup, coverEmail)) {
+    if (isSignupEntitled(signup, coverEmail)) {
       setLockStep("license");
       return;
     }
@@ -2651,8 +2650,8 @@ export function AppProvider({ children }) {
       );
 
       rememberDeviceAccess(accountEmail, {
-        paid: Boolean(signup?.accessPaid) || hasDeviceAccess(accountEmail),
-        bypassed: false,
+        paid: Boolean(signup?.accessPaid),
+        bypassed: Boolean(signup?.accessBypassed) && !signup?.accessPaid,
       });
 
       const wasReclaimed =
@@ -2698,35 +2697,16 @@ export function AppProvider({ children }) {
       );
 
       const signup = getSignup(accountEmail);
-      const entitled =
-        isSignupEntitled(signup, accountEmail) || mine.length > 0;
-      if (!entitled) {
-        showToast("Pay or get approved before restoring access");
+      // Subscription / admin bypass required — licenses alone do not unlock.
+      if (!isSignupEntitled(signup, accountEmail)) {
+        clearDeviceAccess(accountEmail);
+        showToast("Pay lifetime access before restoring robots");
         return false;
       }
 
-      if (mine.length && !isSignupEntitled(signup, accountEmail)) {
-        try {
-          const remoteSignup = await updateSignupAccessPaid(accountEmail);
-          if (remoteSignup) setSignups((prev) => mergeSignups(prev, [remoteSignup]));
-        } catch {
-          setSignups((prev) =>
-            mergeSignups(prev, [
-              {
-                email: accountEmail,
-                status: "approved",
-                accessPaid: true,
-                accessPaidAt: Date.now(),
-                createdAt: Date.now(),
-              },
-            ])
-          );
-        }
-      }
-
       rememberDeviceAccess(accountEmail, {
-        paid: true,
-        bypassed: true,
+        paid: Boolean(signup?.accessPaid),
+        bypassed: Boolean(signup?.accessBypassed) && !signup?.accessPaid,
       });
 
       if (!mine.length) {

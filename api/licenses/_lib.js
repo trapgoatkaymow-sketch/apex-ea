@@ -1958,17 +1958,16 @@ export async function claimLicenseViaInvite(payload = {}) {
   }, `invite claim · ${mentorName || mentorEmail} · ${clientEmail}`);
 
   try {
-    const { upsertSignupsInviteBypass } = await import("../signups/_lib.js");
-    await upsertSignupsInviteBypass([clientEmail]);
+    // Invite claims a license only — subscription payment is still required.
   } catch (error) {
-    console.warn("invite claim signup bypass failed", error.message || error);
+    console.warn("invite claim post-license hook failed", error.message || error);
   }
 
   return {
     license,
     created,
     mentorName,
-    accessBypassed: true,
+    accessBypassed: false,
     inviteCode: String(payload.inviteCode || payload.invite || "")
       .trim()
       .toUpperCase(),

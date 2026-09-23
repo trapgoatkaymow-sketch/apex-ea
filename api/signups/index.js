@@ -5,7 +5,6 @@ import {
   sendJson,
   setSignupAccessBypassed,
   setSignupAccessPaid,
-  setSignupAppAccessUnlocked,
   setSignupPremiumScanner,
   setSignupStatus,
   upsertSignup,
@@ -34,29 +33,9 @@ function assertSuperAdmin(adminEmail) {
 }
 
 async function entitleIfLicenseOwner(email, signup) {
-  const key = String(email || "")
-    .trim()
-    .toLowerCase();
-  if (!key.includes("@")) return signup;
-  if (
-    signup &&
-    (signup.accessPaid ||
-      String(signup.status || "").toLowerCase() === "approved" ||
-      signup.appAccessUnlockedAt)
-  ) {
-    return signup;
-  }
-  try {
-    const { findLicensesByEmail } = await import("../licenses/_lib.js");
-    const owned = await findLicensesByEmail(key);
-    if (!owned?.length) return signup;
-    // Reinstall with an existing license: unlock app access without marking
-    // PayPal accessPaid (keeps mentor commission accurate).
-    await setSignupStatus(key, "approved");
-    return (await setSignupAppAccessUnlocked(key)) || signup;
-  } catch {
-    return signup;
-  }
+  // License ownership no longer skips the subscription paywall.
+  // Clients must have accessPaid (PayPal) or accessBypassed (admin) to enter.
+  return signup;
 }
 
 export default async function handler(req, res) {

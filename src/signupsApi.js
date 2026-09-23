@@ -110,6 +110,32 @@ export function mergeSignups(localList = [], remoteList = []) {
       });
       return;
     }
+    const remoteCleared =
+      item.accessPaid === false &&
+      item.accessBypassed === false &&
+      (String(item.status || "").toLowerCase() === "pending" ||
+        String(item.status || "").toLowerCase() === "declined");
+    if (remoteCleared) {
+      map.set(email, {
+        email,
+        status: String(item.status || "pending").toLowerCase(),
+        createdAt: Math.min(
+          Number(prev.createdAt) || Date.now(),
+          Number(item.createdAt) || Date.now()
+        ),
+        premiumScanner: Boolean(prev.premiumScanner || item.premiumScanner),
+        premiumScannerAt: Math.max(
+          Number(prev.premiumScannerAt) || 0,
+          Number(item.premiumScannerAt) || 0
+        ) || null,
+        accessPaid: false,
+        accessPaidAt: null,
+        accessBypassed: false,
+        accessBypassedAt: null,
+        appAccessUnlockedAt: null,
+      });
+      return;
+    }
     const rank = { declined: 0, pending: 1, approved: 2 };
     const nextStatus =
       (rank[item.status] || 0) >= (rank[prev.status] || 0)
@@ -120,11 +146,13 @@ export function mergeSignups(localList = [], remoteList = []) {
       Number(prev.premiumScannerAt) || 0,
       Number(item.premiumScannerAt) || 0
     );
-    const accessPaid = Boolean(prev.accessPaid || item.accessPaid);
-    const accessPaidAt = Math.max(
-      Number(prev.accessPaidAt) || 0,
-      Number(item.accessPaidAt) || 0
-    );
+    const accessPaid =
+      item.accessPaid === false
+        ? false
+        : Boolean(prev.accessPaid || item.accessPaid);
+    const accessPaidAt = accessPaid
+      ? Math.max(Number(prev.accessPaidAt) || 0, Number(item.accessPaidAt) || 0)
+      : 0;
     // Explicit false clears bypass (admin remove); otherwise keep OR so sync never loses it.
     const accessBypassed =
       item.accessBypassed === false
@@ -139,9 +167,12 @@ export function mergeSignups(localList = [], remoteList = []) {
     const unlockStamps = [prev.appAccessUnlockedAt, item.appAccessUnlockedAt]
       .map((n) => Number(n) || 0)
       .filter((n) => n > 0);
-    const appAccessUnlockedAt = unlockStamps.length
-      ? Math.min(...unlockStamps)
-      : null;
+    const appAccessUnlockedAt =
+      item.appAccessUnlockedAt === null || item.appAccessUnlockedAt === 0
+        ? null
+        : unlockStamps.length
+          ? Math.min(...unlockStamps)
+          : null;
     map.set(email, {
       email,
       status: nextStatus,

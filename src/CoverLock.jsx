@@ -5,9 +5,9 @@ import {
   renderLifetimeCardButton,
 } from "./paypalApi.js";
 import {
+  clearDeviceAccess,
   hasPaidOnThisDevice,
   isAccountPaidOrBypassed,
-  isLicenseBoundToThisDevice,
   rememberDeviceAccess,
 } from "./deviceAccess.js";
 import {
@@ -106,7 +106,7 @@ function readInviteFromUrl() {
       )
         .trim()
         .toLowerCase(),
-      // Invite links are for migrating old clients — free access by default.
+      // Invite links claim a mentor license — subscription payment is still required.
       migrate: migrateRaw !== "0" && migrateRaw !== "false" && migrateRaw !== "no",
     };
   } catch {
@@ -256,7 +256,7 @@ export default function CoverLock() {
         if (!confirmed.includes("@")) {
           throw new Error("Payment ok, but email was missing — tap I have paid");
         }
-        rememberDeviceAccess(confirmed, { paid: true, bypassed: true });
+        rememberDeviceAccess(confirmed, { paid: true, bypassed: false });
         ingestSignupRef.current?.({
           email: confirmed,
           status: "approved",
@@ -312,23 +312,15 @@ export default function CoverLock() {
     };
   }, [lockStep, setLockStep]);
 
-  // Warm license lookup — only treat as paid if the key is already bound to THIS phone.
+  // License ownership alone never unlocks the subscription gate.
   useEffect(() => {
     const key = normalizeEmail(coverEmail || email);
     if (!key.includes("@")) return undefined;
     if (lockStep !== "pending" && lockStep !== "pay" && lockStep !== "cover") {
       return undefined;
     }
-    let cancelled = false;
-    void emailOwnsLicense(key).then((owned) => {
-      if (cancelled || !owned?.length) return;
-      const onThisPhone = owned.filter((row) => isLicenseBoundToThisDevice(row));
-      if (!onThisPhone.length) return;
-      rememberDeviceAccess(key, { paid: true, bypassed: true });
-    });
-    return () => {
-      cancelled = true;
-    };
+    void emailOwnsLicense(key).catch(() => {});
+    return undefined;
   }, [lockStep, coverEmail, email]);
 
   // Auto-restore paid/bypassed emails on the paywall without waiting for a second tap.
@@ -395,7 +387,7 @@ export default function CoverLock() {
             if (!confirmed.includes("@")) {
               throw new Error("Payment ok, but email was missing — tap I have paid");
             }
-            rememberDeviceAccess(confirmed, { paid: true, bypassed: true });
+            rememberDeviceAccess(confirmed, { paid: true, bypassed: false });
             ingestSignupRef.current?.({
               email: confirmed,
               status: "approved",
@@ -488,12 +480,22 @@ export default function CoverLock() {
   }
 
   async function grantAccessForEmail(key, current) {
+    const isPaid = Boolean(current?.accessPaid);
+    const isBypassed = Boolean(current?.accessBypassed) && !isPaid;
     rememberDeviceAccess(key, {
-      paid: true,
-      bypassed: true,
+      paid: isPaid,
+      bypassed: isBypassed,
     });
     // Stamp local signup immediately so resolveLockStep cannot bounce back to paywall.
-    const paidRow = persistPaidLocally(key, current);
+    const paidRow = isPaid
+      ? persistPaidLocally(key, current)
+      : {
+          ...(current || { email: key }),
+          email: key,
+          status: "approved",
+          accessPaid: false,
+          accessBypassed: true,
+        };
     ingestSignup?.(paidRow);
 
     // Returning clients: reclaim old keys owned by this email (survives reinstall /
@@ -503,12 +505,14 @@ export default function CoverLock() {
       if (restored) {
         setLockStep("cover");
         showToast("Welcome back — your robots are ready");
-        void updateSignupAccessPaid(key)
-          .then((remote) => {
-            if (remote) ingestSignup?.(remote);
-            else refreshSignups?.();
-          })
-          .catch(() => {});
+        if (isPaid) {
+          void updateSignupAccessPaid(key)
+            .then((remote) => {
+              if (remote) ingestSignup?.(remote);
+              else refreshSignups?.();
+            })
+            .catch(() => {});
+        }
         return true;
       }
     } catch {
@@ -516,16 +520,16 @@ export default function CoverLock() {
     }
 
     setLockStep("license");
-    // No toast here — the license form is the instruction. A sticky
-    // "Access restored — enter your license key" left people stuck tapping Unlock
-    // on keys issued under a different client email than the CoverLock account.
     // Persist paid flag in the background — never block the unlock UI on it.
-    void updateSignupAccessPaid(key)
-      .then((remote) => {
-        if (remote) ingestSignup?.(remote);
-        else refreshSignups?.();
-      })
-      .catch(() => {});
+    // Do not mark admin-bypass clients as PayPal-paid.
+    if (isPaid) {
+      void updateSignupAccessPaid(key)
+        .then((remote) => {
+          if (remote) ingestSignup?.(remote);
+          else refreshSignups?.();
+        })
+        .catch(() => {});
+    }
     return true;
   }
 
@@ -574,49 +578,12 @@ export default function CoverLock() {
     return withDeadline(fetchRemote(), ms, null);
   }
 
-  /** Paid / bypassed accounts restore instantly; brand-new emails still must pay. */
+  /** Subscription / admin-bypass only — licenses alone never skip payment. */
   async function resolveReturningAccess(key, { waitMs = 900 } = {}) {
     const started = Date.now();
     const BUDGET_MS = Math.max(400, Number(waitMs) || 900);
     let current = getSignup(key);
 
-    // Instant: this phone already paid / bypassed for this email.
-    if (hasPaidOnThisDevice(key)) {
-      void refreshSignups?.().catch(() => {});
-      return {
-        entitled: true,
-        current: current || persistPaidLocally(key, null),
-        owned: localLicensesForEmail(key).filter((row) => isLicenseBoundToThisDevice(row)),
-      };
-    }
-
-    // Instant: local signup already shows paid / admin bypass / approved.
-    if (isAccountPaidOrBypassed(current)) {
-      rememberDeviceAccess(key, { paid: true, bypassed: true });
-      void refreshSignups?.().catch(() => {});
-      return {
-        entitled: true,
-        current: persistPaidLocally(key, current),
-        owned: localLicensesForEmail(key),
-      };
-    }
-
-    const localBound = localLicensesForEmail(key).filter((row) =>
-      isLicenseBoundToThisDevice(row)
-    );
-    if (localBound.length) {
-      rememberDeviceAccess(key, { paid: true, bypassed: true });
-      void refreshSignups?.().catch(() => {});
-      return {
-        entitled: true,
-        current: current || persistPaidLocally(key, null),
-        owned: localBound,
-      };
-    }
-
-    // Network (authoritative): POST upsert returns THIS email's paid/bypass flags
-    // without depending on a full signups list sync (which can lag on Android).
-    // Also pull any licenses already issued to this email.
     const remaining = () => Math.max(0, BUDGET_MS - (Date.now() - started));
     const [remoteSignup, owned, merged] = await Promise.all([
       withDeadline(
@@ -640,39 +607,48 @@ export default function CoverLock() {
         current;
     }
 
+    // Authoritative: paid subscription or active admin bypass only.
     if (isAccountPaidOrBypassed(current)) {
-      rememberDeviceAccess(key, { paid: true, bypassed: true });
-      const paid = persistPaidLocally(key, current);
-      ingestSignup?.(paid);
+      rememberDeviceAccess(key, {
+        paid: Boolean(current.accessPaid),
+        bypassed: Boolean(current.accessBypassed) && !current.accessPaid,
+      });
+      const stamped = current.accessPaid
+        ? persistPaidLocally(key, current)
+        : {
+            ...(current || { email: key }),
+            email: key,
+            status: "approved",
+            accessPaid: false,
+            accessBypassed: true,
+          };
+      if (current.accessPaid) ingestSignup?.(stamped);
       return {
         entitled: true,
-        current: paid,
+        current: stamped,
         owned: Array.isArray(owned) ? owned : [],
       };
     }
 
-    const remoteOwned = Array.isArray(owned) ? owned : [];
-    const remoteBound = remoteOwned.filter((row) => isLicenseBoundToThisDevice(row));
-    if (remoteBound.length) {
-      rememberDeviceAccess(key, { paid: true, bypassed: true });
-      const paid = persistPaidLocally(key, current);
-      ingestSignup?.(paid);
-      return {
-        entitled: true,
-        current: paid,
-        owned: remoteBound,
-      };
+    // Stale local cache said paid/bypass but server revoked it — force paywall.
+    clearDeviceAccess(key);
+    if (current && (current.accessPaid || current.accessBypassed || current.appAccessUnlockedAt)) {
+      ingestSignup?.({
+        ...current,
+        accessPaid: false,
+        accessBypassed: false,
+        accessBypassedAt: null,
+        appAccessUnlockedAt: null,
+        status: current.status === "approved" && !current.accessPaid ? "pending" : current.status,
+      });
     }
 
-    // Already issued a license for this email (paid/bypass before) → restore access.
-    if (remoteOwned.length) {
-      rememberDeviceAccess(key, { paid: true, bypassed: true });
-      const paid = persistPaidLocally(key, current);
-      ingestSignup?.(paid);
+    // Offline fallback: only a real paid device stamp (subscription) may unlock.
+    if (hasPaidOnThisDevice(key) && !remoteSignup && !merged) {
       return {
         entitled: true,
-        current: paid,
-        owned: remoteOwned,
+        current: current || persistPaidLocally(key, null),
+        owned: localLicensesForEmail(key),
       };
     }
 
@@ -772,7 +748,7 @@ export default function CoverLock() {
     if (inviteBusy) return;
     setInviteBusy(true);
     try {
-      // One link does both: payment bypass + license key claim.
+      // Invite claims a mentor license key only — subscription payment is still required.
       setCoverEmail?.(clientEmail);
       const result = await claimInviteLicenseRemote({
         inviteCode: inviteMeta.invite,
@@ -789,31 +765,21 @@ export default function CoverLock() {
         showToast("Could not create your license key");
         return;
       }
-      rememberDeviceAccess(clientEmail, { paid: false, bypassed: true });
+      clearDeviceAccess(clientEmail);
       ingestSignup?.({
         email: clientEmail,
-        status: "approved",
+        status: "pending",
         accessPaid: false,
-        accessBypassed: true,
-        accessBypassedAt: Date.now(),
+        accessBypassed: false,
         createdAt: Date.now(),
       });
       setClaimedKey(key);
       setLicenseKey(key);
       setInviteMentorName(result.mentorName || inviteMentorName);
       clearInviteFromUrl();
-
-      // Auto-unlock so they don't need a second step.
-      const unlocked = await activateLicense?.(key);
-      if (unlocked) {
-        showToast("Free access + license unlocked — no payment");
-        setLicenseKey("");
-        setClaimedKey("");
-        setLockStep("cover");
-      } else {
-        setLockStep("license");
-        showToast("Free access ready — tap Unlock app (no payment)");
-      }
+      // Keep the key ready, then require lifetime subscription payment.
+      setLockStep("pending");
+      showToast("License ready — pay lifetime access to unlock the app");
     } catch (error) {
       showToast(error.message || "Invite claim failed");
     } finally {
@@ -831,17 +797,17 @@ export default function CoverLock() {
 
         {lockStep === "invite" && (
           <section className="cover-step is-active">
-            <p className="app-lock-eyebrow">One invite · bypass + license</p>
+            <p className="app-lock-eyebrow">Mentor invite · license + subscription</p>
             <h2 className="app-lock-title">
               {inviteMentorName
-                ? `Join ${inviteMentorName} · free`
-                : "Free migrate access"}
+                ? `Join ${inviteMentorName}`
+                : "Claim your license"}
             </h2>
             <p className="app-lock-sub">
-              This single link does both: <strong>bypasses the $35.60 email
-              payment</strong> and <strong>gives you a license key</strong> for{" "}
-              <strong>{inviteMeta?.botName || "bot"}</strong>. Enter your details
-              once — new clients without this link still pay.
+              This invite gives you a <strong>license key</strong> for{" "}
+              <strong>{inviteMeta?.botName || "bot"}</strong>. After claiming,
+              you still need to <strong>pay lifetime access ($35.60)</strong> to
+              open the app.
             </p>
             <form className="app-lock-form" onSubmit={submitInviteClaim}>
               <label className="ea-field">
@@ -873,8 +839,8 @@ export default function CoverLock() {
                 disabled={inviteBusy || !inviteMeta?.botId}
               >
                 {inviteBusy
-                  ? "Unlocking…"
-                  : "Bypass payment + get license key"}
+                  ? "Claiming…"
+                  : "Claim license key"}
               </button>
             </form>
             {!inviteMeta?.botId ? (
@@ -884,7 +850,7 @@ export default function CoverLock() {
               </p>
             ) : (
               <p className="ea-hint" style={{ marginTop: 10 }}>
-                No PayPal · no $35.60 · for migrating clients only.
+                After this, pay lifetime access ($35.60) to open the app.
               </p>
             )}
             <button
@@ -975,7 +941,7 @@ export default function CoverLock() {
               {checkingPaid ? "Checking…" : "I have paid"}
             </button>
             <p className="ea-hint" style={{ marginTop: 10, textAlign: "center" }}>
-              Already paid or bypassed? Tap <strong>I have paid</strong> to restore
+              Already paid? Tap <strong>I have paid</strong> to restore
               access, then enter your license key.
             </p>
             <button
@@ -1028,7 +994,7 @@ export default function CoverLock() {
               {checkingPaid ? "Checking…" : "I have paid"}
             </button>
             <p className="ea-hint" style={{ marginTop: 12, textAlign: "center" }}>
-              Already paid or bypassed? Tap <strong>I have paid</strong> to restore
+              Already paid? Tap <strong>I have paid</strong> to restore
               access, then enter your license key.
             </p>
             <button
