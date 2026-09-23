@@ -208,7 +208,7 @@ export default function ZetaInterface() {
       <nav className="tabbar" aria-label="Primary">
         {[
           ["home", "Home"],
-          ["scanner", "AI Chart"],
+          ["scanner", "EA Chart"],
           ["metatrader", "MetaTrader"],
         ].map(([id, label]) => (
           <button
