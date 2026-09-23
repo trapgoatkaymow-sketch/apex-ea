@@ -23,7 +23,7 @@ is baked into the APK.
 - Also works: https://www.apex-ea.com/download
 - **API download (always forces the APK file):** https://www.apex-ea.com/api/download-apk
 - **Direct APK:** https://www.apex-ea.com/apex-ea.apk
-- Versioned: https://www.apex-ea.com/apex-ea-v2.24.apk
+- Versioned: https://www.apex-ea.com/apex-ea-v2.32.apk
 - Legacy URL (same package): https://www.apex-ea.com/ZETA-SCALPER-AI.apk
 
 ## Rebuild
@@ -34,7 +34,7 @@ cp android/keystore/signing.properties.example android/keystore/signing.properti
 export ANDROID_HOME=/home/ubuntu/android-sdk
 npm run android:apk
 cp android/app/build/outputs/apk/release/app-release.apk public/apex-ea.apk
-cp public/apex-ea.apk public/apex-ea-v2.24.apk
+cp public/apex-ea.apk public/apex-ea-v2.32.apk
 cp public/apex-ea.apk public/ZETA-SCALPER-AI.apk
 ```
 
