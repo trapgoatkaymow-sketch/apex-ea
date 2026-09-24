@@ -172,6 +172,8 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
       application_context: {
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
+        // BILLING surfaces guest card entry instead of forcing a PayPal login.
+        landing_page: kind === "robot" ? "BILLING" : "NO_PREFERENCE",
         brand_name: kind === "robot" ? "ZETA SCALPER AI" : "ApexEA",
         return_url: safeReturn,
         cancel_url: safeCancel,

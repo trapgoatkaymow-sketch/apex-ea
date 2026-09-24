@@ -26,6 +26,7 @@
         --line: rgba(255, 179, 71, 0.28);
         --ok: #3ddc97;
         --err: #ff6b6b;
+        --field: rgba(255, 255, 255, 0.06);
       }
       * { box-sizing: border-box; }
       body {
@@ -78,7 +79,7 @@
       input {
         width: 100%;
         border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.04);
+        background: var(--field);
         color: var(--text);
         border-radius: 12px;
         padding: 12px 14px;
@@ -109,6 +110,7 @@
         font-size: 0.82rem;
         color: var(--muted);
         line-height: 1.4;
+<<<<<<< HEAD
       }
       #card-buttons {
         min-height: 55px;
@@ -139,6 +141,71 @@
       }
       #paypal-buttons {
         min-height: 0;
+=======
+      }
+      .card-box {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        margin-bottom: 12px;
+      }
+      .card-box h2 {
+        margin: 0 0 12px;
+        font-family: Syne, sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .card-field {
+        border: 1px solid var(--line);
+        background: var(--field);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        min-height: 48px;
+      }
+      .card-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      #pay-card-btn {
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        color: #1a0f05;
+        background: linear-gradient(135deg, var(--fire2), var(--fire));
+        box-shadow: 0 10px 28px rgba(255, 106, 0, 0.35);
+      }
+      #pay-card-btn:disabled {
+        opacity: 0.55;
+        cursor: wait;
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
+      }
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 16px 0 12px;
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+      #card-button-fallback,
+      #paypal-buttons {
+        min-height: 0;
       }
       .msg {
         margin-top: 14px;
@@ -165,6 +232,7 @@
         line-height: 1.4;
       }
       a { color: var(--fire2); }
+      .hidden { display: none !important; }
     </style>
   </head>
   <body>
@@ -172,7 +240,11 @@
       <h1 class="brand">ZETA SCALPER AI</h1>
       <p class="sub">
         One-time payment. Lifetime mobile robot license — emailed automatically.
+<<<<<<< HEAD
         No mentor has to generate a key.
+=======
+        Pay by card — no PayPal account required.
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
       </p>
 
       <form id="buy-form" onsubmit="return false;">
@@ -195,12 +267,39 @@
         </div>
 
         <p class="hint">
+<<<<<<< HEAD
           Pay with <strong style="color:var(--text)">debit / credit card</strong> —
           no PayPal account needed. PayPal wallet is optional below.
         </p>
 
         <div id="card-buttons" aria-label="Debit or credit card"></div>
         <div class="divider">or</div>
+=======
+          Enter your <strong style="color:var(--text)">debit or credit card</strong> below.
+          You do not need a PayPal account.
+        </p>
+
+        <div id="card-fields-box" class="card-box">
+          <h2>Card details</h2>
+          <label>Card number</label>
+          <div id="card-number" class="card-field"></div>
+          <div class="card-row">
+            <div>
+              <label>Expiry</label>
+              <div id="card-expiry" class="card-field"></div>
+            </div>
+            <div>
+              <label>CVV</label>
+              <div id="card-cvv" class="card-field"></div>
+            </div>
+          </div>
+          <button id="pay-card-btn" type="button">Pay with card</button>
+        </div>
+
+        <div id="card-button-fallback" class="hidden" aria-label="Card button fallback"></div>
+
+        <div class="divider" id="or-divider">or PayPal</div>
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
         <div id="paypal-buttons" aria-label="PayPal account (optional)"></div>
       </form>
 
@@ -219,6 +318,7 @@
       const msg = document.getElementById("msg");
       const keybox = document.getElementById("keybox");
       const priceLabel = document.getElementById("price-label");
+<<<<<<< HEAD
       const cardHost = document.getElementById("card-buttons");
       const paypalHost = document.getElementById("paypal-buttons");
       const nameInput = document.getElementById("name");
@@ -226,6 +326,18 @@
 
       let clientId = "";
       let buttonsReady = false;
+=======
+      const nameInput = document.getElementById("name");
+      const emailInput = document.getElementById("email");
+      const payCardBtn = document.getElementById("pay-card-btn");
+      const cardFieldsBox = document.getElementById("card-fields-box");
+      const cardFallback = document.getElementById("card-button-fallback");
+      const paypalHost = document.getElementById("paypal-buttons");
+      const orDivider = document.getElementById("or-divider");
+
+      let clientId = "";
+      let cardFieldsApi = null;
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
 
       function setMsg(text, kind) {
         msg.textContent = text || "";
@@ -238,6 +350,16 @@
         keybox.textContent = key;
       }
 
+<<<<<<< HEAD
+=======
+      function hidePayUi() {
+        cardFieldsBox.classList.add("hidden");
+        cardFallback.classList.add("hidden");
+        paypalHost.classList.add("hidden");
+        orDivider.classList.add("hidden");
+      }
+
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
       function readBuyer() {
         const name = String(nameInput.value || "").trim();
         const email = String(emailInput.value || "")
@@ -263,7 +385,11 @@
 
       function loadPaypalSdk(id) {
         return new Promise((resolve, reject) => {
+<<<<<<< HEAD
           if (window.paypal?.Buttons) {
+=======
+          if (window.paypal?.Buttons || window.paypal?.CardFields) {
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
             resolve(window.paypal);
             return;
           }
@@ -272,6 +398,7 @@
             existing.addEventListener("load", () =>
               window.paypal ? resolve(window.paypal) : reject(new Error("PayPal SDK missing"))
             );
+<<<<<<< HEAD
             existing.addEventListener("error", () => reject(new Error("PayPal SDK failed to load")));
             return;
           }
@@ -281,6 +408,19 @@
             "https://www.paypal.com/sdk/js?client-id=" +
             encodeURIComponent(id) +
             "&currency=USD&intent=capture&components=buttons&enable-funding=card&disable-funding=venmo,paylater,credit&commit=true";
+=======
+            existing.addEventListener("error", () =>
+              reject(new Error("PayPal SDK failed to load"))
+            );
+            return;
+          }
+          const script = document.createElement("script");
+          // card-fields = inline debit/credit form (no PayPal login).
+          script.src =
+            "https://www.paypal.com/sdk/js?client-id=" +
+            encodeURIComponent(id) +
+            "&currency=USD&intent=capture&components=buttons,card-fields&enable-funding=card&disable-funding=venmo,paylater&commit=true";
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
           script.async = true;
           script.dataset.zetaPaypal = "1";
           script.onload = () =>
@@ -290,7 +430,43 @@
         });
       }
 
+<<<<<<< HEAD
       function buttonHandlers(paypal) {
+=======
+      async function createRobotOrder() {
+        const { name, email } = readBuyer();
+        if (!name) throw new Error("Enter your name before paying");
+        if (!email.includes("@")) throw new Error("Enter a valid email before paying");
+        const order = await api("/create-order", {
+          email,
+          clientName: name,
+          purpose: "robot",
+        });
+        if (!order?.id) throw new Error("Could not start checkout");
+        return order.id;
+      }
+
+      async function captureRobotOrder(orderId) {
+        const { name, email } = readBuyer();
+        const result = await api("/capture-order", {
+          orderId,
+          email,
+          clientName: name,
+          purpose: "robot",
+        });
+        setMsg(
+          result.reused
+            ? "Already paid — your license key is below (also emailed)."
+            : "Paid! License created and emailed to " + (result.email || email) + ".",
+          "ok"
+        );
+        showKey(result.licenseKey);
+        hidePayUi();
+        return result;
+      }
+
+      function sharedButtonHandlers() {
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
         return {
           style: {
             layout: "vertical",
@@ -301,6 +477,7 @@
             height: 48,
           },
           createOrder: async () => {
+<<<<<<< HEAD
             const { name, email } = readBuyer();
             if (!name) throw new Error("Enter your name before paying");
             if (!email.includes("@")) throw new Error("Enter a valid email before paying");
@@ -333,6 +510,15 @@
               cardHost.style.display = "none";
               paypalHost.style.display = "none";
               document.querySelector(".divider").style.display = "none";
+=======
+            setMsg("Starting secure checkout…");
+            return createRobotOrder();
+          },
+          onApprove: async (data) => {
+            setMsg("Payment received — creating your license…");
+            try {
+              await captureRobotOrder(data.orderID);
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
             } catch (error) {
               setMsg(error.message || "Could not finish payment", "err");
               throw error;
@@ -341,13 +527,18 @@
           onCancel: () => setMsg("Payment cancelled — you can try again."),
           onError: (err) => {
             setMsg(
+<<<<<<< HEAD
               (err && err.message) || "Card payment failed — check details and try again",
+=======
+              (err && err.message) || "Payment failed — check card details and try again",
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
               "err"
             );
           },
         };
       }
 
+<<<<<<< HEAD
       async function renderButtons() {
         if (!clientId || buttonsReady) return;
         const paypal = await loadPaypalSdk(clientId);
@@ -358,11 +549,81 @@
         // Primary: debit/credit card (no PayPal login).
         let cardRendered = false;
         if (paypal.FUNDING?.CARD) {
+=======
+      async function setupCardFields(paypal) {
+        if (typeof paypal.CardFields !== "function") return false;
+        const fields = paypal.CardFields({
+          style: {
+            input: {
+              "font-size": "16px",
+              "font-family": "DM Sans, system-ui, sans-serif",
+              color: "#f7f1e8",
+            },
+            ".invalid": { color: "#ff6b6b" },
+          },
+          createOrder: async () => {
+            setMsg("Starting card payment…");
+            return createRobotOrder();
+          },
+          onApprove: async (data) => {
+            setMsg("Card charged — creating your license…");
+            try {
+              await captureRobotOrder(data.orderID);
+            } catch (error) {
+              setMsg(error.message || "Could not finish payment", "err");
+              throw error;
+            }
+          },
+          onError: (err) => {
+            setMsg(
+              (err && err.message) || "Card payment failed — check details and try again",
+              "err"
+            );
+          },
+        });
+
+        if (typeof fields.isEligible === "function" && !fields.isEligible()) {
+          return false;
+        }
+
+        await Promise.all([
+          fields.NumberField().render("#card-number"),
+          fields.ExpiryField().render("#card-expiry"),
+          fields.CVVField().render("#card-cvv"),
+        ]);
+        cardFieldsApi = fields;
+
+        payCardBtn.onclick = async () => {
+          const { name, email } = readBuyer();
+          if (!name || !email.includes("@")) {
+            setMsg("Enter your name and email before paying", "err");
+            return;
+          }
+          payCardBtn.disabled = true;
+          setMsg("Processing card…");
+          try {
+            await fields.submit();
+          } catch (error) {
+            setMsg(error.message || "Could not charge card", "err");
+            payCardBtn.disabled = false;
+          }
+        };
+        return true;
+      }
+
+      async function setupFallbackButtons(paypal, cardFieldsOk) {
+        const handlers = sharedButtonHandlers();
+
+        // If Card Fields unavailable, show Debit/Credit Card funding button.
+        if (!cardFieldsOk && paypal.FUNDING?.CARD) {
+          cardFallback.classList.remove("hidden");
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
           const cardBtn = paypal.Buttons({
             ...handlers,
             fundingSource: paypal.FUNDING.CARD,
           });
           if (typeof cardBtn.isEligible !== "function" || cardBtn.isEligible()) {
+<<<<<<< HEAD
             await cardBtn.render(cardHost);
             cardRendered = true;
           }
@@ -372,6 +633,12 @@
         }
 
         // Optional: PayPal wallet for people who prefer it.
+=======
+            await cardBtn.render(cardFallback);
+          }
+        }
+
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
         if (paypal.FUNDING?.PAYPAL) {
           const walletBtn = paypal.Buttons({
             ...handlers,
@@ -382,9 +649,12 @@
             await walletBtn.render(paypalHost);
           }
         }
+<<<<<<< HEAD
 
         buttonsReady = true;
         setMsg("");
+=======
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
       }
 
       async function boot() {
@@ -405,7 +675,22 @@
             );
             return;
           }
+<<<<<<< HEAD
           await renderButtons();
+=======
+
+          const paypal = await loadPaypalSdk(clientId);
+          const cardOk = await setupCardFields(paypal);
+          if (!cardOk) {
+            cardFieldsBox.classList.add("hidden");
+            setMsg(
+              "Loading card checkout… if fields don’t appear, use Debit or Credit Card below.",
+              ""
+            );
+          }
+          await setupFallbackButtons(paypal, cardOk);
+          if (cardOk) setMsg("");
+>>>>>>> dc1e509d (Add on-page debit/credit card fields for robot checkout)
         } catch (e) {
           setMsg(e.message || "Could not load payment", "err");
         }
