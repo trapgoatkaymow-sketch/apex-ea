@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Buy ZETA SCALPER AI — Instant License</title>
+    <meta
+      name="description"
+      content="Pay once for ZETA SCALPER AI. Your license key is emailed automatically after PayPal confirms payment."
+    />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg0: #050505;
+        --bg1: #12100c;
+        --fire: #ff6a00;
+        --fire2: #ffb347;
+        --text: #f7f1e8;
+        --muted: #b8a99a;
+        --line: rgba(255, 179, 71, 0.28);
+        --ok: #3ddc97;
+        --err: #ff6b6b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "DM Sans", system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255, 106, 0, 0.28), transparent 55%),
+          radial-gradient(ellipse 70% 40% at 80% 100%, rgba(255, 179, 71, 0.12), transparent 50%),
+          linear-gradient(180deg, var(--bg1), var(--bg0));
+        display: grid;
+        place-items: center;
+        padding: 28px 16px;
+      }
+      main {
+        width: min(440px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px 22px 22px;
+        background: rgba(12, 10, 8, 0.82);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+      }
+      .brand {
+        font-family: Syne, sans-serif;
+        font-weight: 800;
+        font-size: 1.35rem;
+        letter-spacing: 0.02em;
+        margin: 0 0 6px;
+        background: linear-gradient(90deg, var(--fire2), var(--fire));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .sub {
+        margin: 0 0 22px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+      label {
+        display: block;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0 0 6px;
+      }
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+        margin-bottom: 14px;
+        outline: none;
+      }
+      input:focus {
+        border-color: var(--fire);
+        box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.18);
+      }
+      .price {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin: 4px 0 18px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 106, 0, 0.1);
+        border: 1px solid var(--line);
+      }
+      .price strong {
+        font-family: Syne, sans-serif;
+        font-size: 1.35rem;
+      }
+      button {
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        color: #1a0f05;
+        background: linear-gradient(135deg, var(--fire2), var(--fire));
+        box-shadow: 0 10px 28px rgba(255, 106, 0, 0.35);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .msg {
+        margin-top: 14px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        min-height: 1.2em;
+      }
+      .msg.ok { color: var(--ok); }
+      .msg.err { color: var(--err); }
+      .keybox {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px dashed var(--line);
+        font-family: ui-monospace, monospace;
+        letter-spacing: 0.04em;
+        word-break: break-all;
+        display: none;
+      }
+      .foot {
+        margin-top: 18px;
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      a { color: var(--fire2); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 class="brand">ZETA SCALPER AI</h1>
+      <p class="sub">
+        One-time payment. Lifetime mobile robot license — emailed to you automatically.
+        No mentor has to generate a key.
+      </p>
+
+      <form id="buy-form">
+        <label for="name">Your name</label>
+        <input id="name" name="name" autocomplete="name" required placeholder="Full name" />
+
+        <label for="email">Email (license is sent here)</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+          placeholder="you@email.com"
+        />
+
+        <div class="price">
+          <span>Mobile robot</span>
+          <strong id="price-label">R1 500</strong>
+        </div>
+
+        <button id="pay-btn" type="submit">Pay with PayPal</button>
+      </form>
+
+      <p id="msg" class="msg" role="status"></p>
+      <div id="keybox" class="keybox" aria-live="polite"></div>
+
+      <p class="foot">
+        After payment, check your inbox for the license key (and spam).
+        Then open
+        <a href="https://www.apex-ea.com/">apex-ea.com</a>
+        or the Android app, paywall unlocks with this same email, and activate the key.
+      </p>
+    </main>
+
+    <script>
+      const form = document.getElementById("buy-form");
+      const msg = document.getElementById("msg");
+      const keybox = document.getElementById("keybox");
+      const payBtn = document.getElementById("pay-btn");
+      const priceLabel = document.getElementById("price-label");
+
+      const ORDER_KEY = "zeta-robot-paypal-order";
+      const EMAIL_KEY = "zeta-robot-paypal-email";
+      const NAME_KEY = "zeta-robot-paypal-name";
+
+      function setMsg(text, kind) {
+        msg.textContent = text || "";
+        msg.className = "msg" + (kind ? " " + kind : "");
+      }
+
+      function showKey(key) {
+        if (!key) return;
+        keybox.style.display = "block";
+        keybox.textContent = key;
+      }
+
+      async function api(path, body) {
+        const res = await fetch("/api/paypal" + path, {
+          method: body ? "POST" : "GET",
+          headers: {
+            Accept: "application/json",
+            ...(body ? { "Content-Type": "application/json" } : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Request failed");
+        return data;
+      }
+
+      async function loadConfig() {
+        try {
+          const cfg = await api("/config");
+          if (cfg?.robot?.amount) {
+            const cur = cfg.robot.currency || "ZAR";
+            const amount = cfg.robot.amount;
+            priceLabel.textContent =
+              cur === "ZAR" ? "R" + Number(amount).toLocaleString("en-ZA") : amount + " " + cur;
+          }
+          if (!cfg.ready) {
+            setMsg("Payments are not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel.", "err");
+            payBtn.disabled = true;
+          }
+        } catch (e) {
+          setMsg(e.message || "Could not load payment config", "err");
+        }
+      }
+
+      async function captureReturning() {
+        const params = new URLSearchParams(window.location.search || "");
+        const token = params.get("token") || "";
+        const cancelled = params.get("paypal_cancel") === "1";
+        const storedOrder = sessionStorage.getItem(ORDER_KEY) || token;
+        const email = sessionStorage.getItem(EMAIL_KEY) || "";
+        const name = sessionStorage.getItem(NAME_KEY) || "";
+        if (cancelled) {
+          setMsg("Payment cancelled. You can try again.", "err");
+          return;
+        }
+        if (!storedOrder || (!params.get("PayerID") && params.get("paypal_return") !== "1" && !token)) {
+          return;
+        }
+        payBtn.disabled = true;
+        setMsg("Confirming payment and creating your license…");
+        try {
+          const result = await api("/capture-order", {
+            orderId: storedOrder,
+            email,
+            clientName: name,
+            purpose: "robot",
+          });
+          sessionStorage.removeItem(ORDER_KEY);
+          setMsg(
+            result.reused
+              ? "Payment already fulfilled — your license key is below (also emailed)."
+              : "Paid! License created and emailed to " + (result.email || email) + ".",
+            "ok"
+          );
+          showKey(result.licenseKey);
+          // Clean return params from the URL.
+          if (window.history?.replaceState) {
+            window.history.replaceState({}, "", "/buy-zeta.html");
+          }
+        } catch (e) {
+          setMsg(e.message || "Could not finish payment", "err");
+          payBtn.disabled = false;
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const name = String(document.getElementById("name").value || "").trim();
+        const email = String(document.getElementById("email").value || "")
+          .trim()
+          .toLowerCase();
+        if (!name || !email.includes("@")) {
+          setMsg("Enter your name and a valid email", "err");
+          return;
+        }
+        payBtn.disabled = true;
+        setMsg("Opening PayPal…");
+        try {
+          const returnUrl =
+            window.location.origin + "/buy-zeta.html?paypal_return=1";
+          const cancelUrl =
+            window.location.origin + "/buy-zeta.html?paypal_cancel=1";
+          const order = await api("/create-order", {
+            email,
+            clientName: name,
+            purpose: "robot",
+            returnUrl,
+            cancelUrl,
+          });
+          sessionStorage.setItem(ORDER_KEY, order.id);
+          sessionStorage.setItem(EMAIL_KEY, email);
+          sessionStorage.setItem(NAME_KEY, name);
+          if (!order.approveUrl) throw new Error("PayPal did not return a checkout link");
+          window.location.href = order.approveUrl;
+        } catch (e) {
+          setMsg(e.message || "Could not start checkout", "err");
+          payBtn.disabled = false;
+        }
+      });
+
+      loadConfig();
+      captureReturning();
+    </script>
+  </body>
+</html>
