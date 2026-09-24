@@ -904,6 +904,10 @@ function normalizeLicense(row) {
     robotCompany: String(row?.robotCompany || "").trim(),
     robotPlatform: String(row?.robotPlatform || "").trim().toUpperCase() || "",
     robotConnectedAt: row?.robotConnectedAt ? Number(row.robotConnectedAt) : null,
+    // PayPal robot-purchase stamps (idempotent auto-fulfill).
+    purchaseCaptureId: String(row?.purchaseCaptureId || "").trim() || null,
+    purchaseOrderId: String(row?.purchaseOrderId || "").trim() || null,
+    purchaseSource: String(row?.purchaseSource || "").trim() || null,
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
@@ -1544,6 +1548,9 @@ export async function createLicense(payload = {}) {
       boundAt: null,
       emailSentAt: null,
       updatedAt: Date.now(),
+      purchaseCaptureId: String(payload.purchaseCaptureId || "").trim() || null,
+      purchaseOrderId: String(payload.purchaseOrderId || "").trim() || null,
+      purchaseSource: String(payload.purchaseSource || "").trim() || null,
       bot,
     };
     return [result, ...licenses];

@@ -7,6 +7,14 @@ const PAYPAL_API_BASE =
 export const LIFETIME_PRICE = "35.60";
 export const LIFETIME_CURRENCY = "USD";
 
+export {
+  ROBOT_PRICE,
+  ROBOT_CURRENCY,
+  ROBOT_BOT_ID,
+  ROBOT_BOT_NAME,
+  ROBOT_MENTOR_EMAIL,
+} from "./_robotPurchase.js";
+
 /** Public Client ID (safe for browser). Prefer env on Vercel. */
 export const PAYPAL_CLIENT_ID =
   process.env.PAYPAL_CLIENT_ID ||
@@ -97,7 +105,7 @@ export async function getPayPalAccessToken() {
   return cachedToken;
 }
 
-export async function createLifetimeOrder(email, { purpose = "access", returnUrl = "", cancelUrl = "" } = {}) {
+export async function createLifetimeOrder(email, { purpose = "access", returnUrl = "", cancelUrl = "", clientName = "" } = {}) {
   const buyer = normalizeEmail(email);
   if (!buyer || !buyer.includes("@")) {
     const err = new Error("Enter a valid email before paying");
@@ -105,12 +113,41 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
     throw err;
   }
 
-  const kind = String(purpose || "access").toLowerCase() === "scanner" ? "scanner" : "access";
+  const purposeRaw = String(purpose || "access").toLowerCase();
+  const isRobot =
+    purposeRaw === "robot" ||
+    purposeRaw === "license" ||
+    purposeRaw.startsWith("robot:") ||
+    purposeRaw.startsWith("license:");
+  const kind = isRobot
+    ? "robot"
+    : purposeRaw === "scanner" || purposeRaw.startsWith("scanner:")
+      ? "scanner"
+      : "access";
+
+  const { ROBOT_PRICE, ROBOT_CURRENCY } = await import("./_robotPurchase.js");
+  const amountValue = kind === "robot" ? ROBOT_PRICE : LIFETIME_PRICE;
+  const amountCurrency = kind === "robot" ? ROBOT_CURRENCY : LIFETIME_CURRENCY;
+  const nameHint = String(clientName || "")
+    .trim()
+    .replace(/[:|]/g, " ")
+    .slice(0, 40);
+  const customId =
+    kind === "robot"
+      ? `robot:${buyer}${nameHint ? `|${nameHint}` : ""}`.slice(0, 127)
+      : `${kind}:${buyer}`.slice(0, 127);
+
   const accessToken = await getPayPalAccessToken();
   const safeReturn =
-    String(returnUrl || "").trim() || "https://apex-ea.com/?paypal_return=1";
+    String(returnUrl || "").trim() ||
+    (kind === "robot"
+      ? "https://www.apex-ea.com/buy-zeta.html?paypal_return=1"
+      : "https://apex-ea.com/?paypal_return=1");
   const safeCancel =
-    String(cancelUrl || "").trim() || "https://apex-ea.com/?paypal_cancel=1";
+    String(cancelUrl || "").trim() ||
+    (kind === "robot"
+      ? "https://www.apex-ea.com/buy-zeta.html?paypal_cancel=1"
+      : "https://apex-ea.com/?paypal_cancel=1");
 
   return paypalFetch("/v2/checkout/orders", {
     method: "POST",
@@ -120,22 +157,22 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
       purchase_units: [
         {
           amount: {
-            currency_code: LIFETIME_CURRENCY,
-            value: LIFETIME_PRICE,
+            currency_code: amountCurrency,
+            value: amountValue,
           },
           description:
-            kind === "scanner"
-              ? "ApexEA Premium Chart Scanner"
-              : "ApexEA Lifetime Access",
-          custom_id: `${kind}:${buyer}`.slice(0, 127),
+            kind === "robot"
+              ? "ZETA SCALPER AI — Mobile Robot Lifetime License"
+              : kind === "scanner"
+                ? "ApexEA Premium Chart Scanner"
+                : "ApexEA Lifetime Access",
+          custom_id: customId,
         },
       ],
       application_context: {
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
-        brand_name: "ApexEA",
-        // Full redirect checkout — card entry happens on PayPal, not inside our app
-        // (in-app card fields were restarting on mobile).
+        brand_name: kind === "robot" ? "ZETA SCALPER AI" : "ApexEA",
         return_url: safeReturn,
         cancel_url: safeCancel,
       },
@@ -171,8 +208,25 @@ export function extractCaptureEmail(capture) {
     "";
   const payerEmail = capture?.payer?.email_address || "";
   const raw = String(custom || payerEmail || "");
-  const emailPart = raw.includes(":") ? raw.split(":").slice(1).join(":") : raw;
+  // robot:email|Name  OR  access:email  OR  scanner:email
+  let emailPart = raw;
+  if (raw.includes(":")) {
+    emailPart = raw.split(":").slice(1).join(":");
+  }
+  if (emailPart.includes("|")) {
+    emailPart = emailPart.split("|")[0];
+  }
   return normalizeEmail(emailPart || payerEmail);
+}
+
+export function extractCaptureClientName(capture) {
+  const custom =
+    capture?.purchase_units?.[0]?.payments?.captures?.[0]?.custom_id ||
+    capture?.purchase_units?.[0]?.custom_id ||
+    "";
+  const raw = String(custom || "");
+  if (!raw.includes("|")) return "";
+  return String(raw.split("|").slice(1).join("|") || "").trim();
 }
 
 export function extractCapturePurpose(capture) {
@@ -180,8 +234,9 @@ export function extractCapturePurpose(capture) {
     capture?.purchase_units?.[0]?.payments?.captures?.[0]?.custom_id ||
     capture?.purchase_units?.[0]?.custom_id ||
     "";
-  const raw = String(custom || "");
-  if (raw.toLowerCase().startsWith("scanner:")) return "scanner";
+  const raw = String(custom || "").toLowerCase();
+  if (raw.startsWith("scanner:")) return "scanner";
+  if (raw.startsWith("robot:") || raw.startsWith("license:")) return "robot";
   return "access";
 }
 
@@ -201,6 +256,60 @@ export function isLifetimeAmountPaid(capture) {
   const value = String(captureAmount?.value || "").trim();
   const currency = String(captureAmount?.currency_code || "").toUpperCase();
   return value === LIFETIME_PRICE && currency === LIFETIME_CURRENCY;
+}
+
+export async function verifyPayPalWebhookSignature({
+  headers = {},
+  body = "",
+  webhookId = "",
+} = {}) {
+  const id = String(webhookId || process.env.PAYPAL_WEBHOOK_ID || "").trim();
+  if (!id) {
+    // Allow processing when webhook id is not configured (dev) — still auth via HTTPS.
+    return { ok: true, skipped: true, reason: "PAYPAL_WEBHOOK_ID not set" };
+  }
+  const accessToken = await getPayPalAccessToken();
+  const transmissionId = headers["paypal-transmission-id"] || headers["PayPal-Transmission-Id"];
+  const transmissionTime =
+    headers["paypal-transmission-time"] || headers["PayPal-Transmission-Time"];
+  const certUrl = headers["paypal-cert-url"] || headers["PayPal-Cert-Url"];
+  const authAlgo = headers["paypal-auth-algo"] || headers["PayPal-Auth-Algo"];
+  const transmissionSig =
+    headers["paypal-transmission-sig"] || headers["PayPal-Transmission-Sig"];
+  if (!transmissionId || !transmissionTime || !certUrl || !authAlgo || !transmissionSig) {
+    const err = new Error("Missing PayPal webhook signature headers");
+    err.status = 400;
+    throw err;
+  }
+  let webhookEvent = body;
+  if (typeof body === "string") {
+    try {
+      webhookEvent = JSON.parse(body || "{}");
+    } catch {
+      webhookEvent = {};
+    }
+  }
+  const result = await paypalFetch("/v1/notifications/verify-webhook-signature", {
+    method: "POST",
+    accessToken,
+    body: {
+      auth_algo: authAlgo,
+      cert_url: certUrl,
+      transmission_id: transmissionId,
+      transmission_sig: transmissionSig,
+      transmission_time: transmissionTime,
+      webhook_id: id,
+      webhook_event: webhookEvent,
+    },
+  });
+  const status = String(result?.verification_status || "").toUpperCase();
+  if (status !== "SUCCESS") {
+    const err = new Error(`PayPal webhook verification failed (${status || "unknown"})`);
+    err.status = 400;
+    err.data = result;
+    throw err;
+  }
+  return { ok: true, result };
 }
 
 export function sendJson(res, status, payload) {
