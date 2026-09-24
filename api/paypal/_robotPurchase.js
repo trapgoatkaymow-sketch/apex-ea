@@ -6,7 +6,7 @@ import { createLicense, listLicenses, normalizeLicenseKey } from "../licenses/_l
 import { setSignupAccessPaid, upsertSignup } from "../signups/_lib.js";
 import { listMentors, SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
-export const ROBOT_PRICE = String(process.env.ROBOT_PURCHASE_PRICE || "82.50").trim();
+export const ROBOT_PRICE = String(process.env.ROBOT_PURCHASE_PRICE || "95.00").trim();
 export const ROBOT_CURRENCY = String(
   process.env.ROBOT_PURCHASE_CURRENCY || "USD"
 )
