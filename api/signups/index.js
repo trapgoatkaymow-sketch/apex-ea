@@ -110,7 +110,10 @@ export default async function handler(req, res) {
       if (
         body.action === "revokeAllBypasses" ||
         body.action === "revoke-bypassed" ||
-        body.action === "removeAllBypassed"
+        body.action === "removeAllBypassed" ||
+        body.action === "revokeUnpaidAccess" ||
+        body.action === "revoke-unpaid" ||
+        body.action === "revokeFreeAccess"
       ) {
         assertSuperAdmin(body.adminEmail || body.actorEmail || body.by || "");
         const mentors = await listMentors();

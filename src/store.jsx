@@ -1414,10 +1414,10 @@ export function AppProvider({ children }) {
         );
       }
       if (status === "approved" && normalizeEmail(coverEmail) === key) {
-        // Never yank someone out of an active PayPal checkout.
+        // Admin approve alone does not skip lifetime payment.
         if (lockStepRef.current !== "pay") {
-          setLockStep("license");
-          if (!silent) showToast("Approved — enter your license key");
+          setLockStep("pending");
+          if (!silent) showToast("Approved — pay lifetime access to continue");
         }
       }
       if (status === "declined" && normalizeEmail(coverEmail) === key) {
@@ -1802,6 +1802,8 @@ export function AppProvider({ children }) {
       setLockStep("license");
       return;
     }
+    // Revoked / unpaid: force paywall even if local robots are still active.
+    clearDeviceAccess(coverEmail);
     if (!signup) {
       setLockStep("cover");
       return;
@@ -1810,8 +1812,22 @@ export function AppProvider({ children }) {
   }, [coverEmail, getSignup]);
 
   useEffect(() => {
-    if (!hasActiveBot) resolveLockStep();
-  }, [hasActiveBot, resolveLockStep]);
+    resolveLockStep();
+  }, [hasActiveBot, resolveLockStep, signups]);
+
+  // Strip local active robots when subscription/bypass was revoked.
+  useEffect(() => {
+    if (!coverEmail) return;
+    const signup = getSignup(coverEmail);
+    // Wait for a signup row — don't wipe robots during the first boot sync.
+    if (!signup) return;
+    if (isSignupEntitled(signup, coverEmail)) return;
+    if (!hasActiveBot) return;
+    setBots((prev) => {
+      if (!prev.some((b) => b?.active)) return prev;
+      return prev.map((b) => ({ ...b, active: false, selected: false }));
+    });
+  }, [coverEmail, getSignup, hasActiveBot, signups]);
 
   const upsertEa = useCallback(
     async ({ id, name, strategy, photo, symbols, ownerEmail = "", ownerId = "" }) => {
@@ -2059,68 +2075,24 @@ export function AppProvider({ children }) {
       const timing = resolveLicenseExpiry(duration, createdAt);
 
       if (ownerEmail && ownerEmail !== String(SUPER_ADMIN_EMAIL).toLowerCase()) {
-        let allowance = DEFAULT_MENTOR_LICENSE_KEYS;
-        try {
-          const mentors = await fetchMentors();
-          const mentor = (Array.isArray(mentors) ? mentors : []).find(
-            (m) => normalizeEmail(m.email) === ownerEmail
+        // Soft client-side cap only — server createLicense enforces the real quota.
+        // Skipping fetchMentors here saves a full mentor-directory round-trip per key.
+        const allowance = DEFAULT_MENTOR_LICENSE_KEYS;
+        const used = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
+          (row) => normalizeEmail(row.mentorEmail) === ownerEmail
+        ).length;
+        if (used >= allowance) {
+          showToast(
+            `License key limit reached (${used}/${allowance}). Ask super admin to add more keys.`
           );
-          if (mentor && String(mentor.role || "").toLowerCase() === "superadmin") {
-            allowance = null;
-          } else if (mentor?.licenseKeysAllowed != null) {
-            allowance = Number(mentor.licenseKeysAllowed);
-          }
-        } catch {
-          allowance = DEFAULT_MENTOR_LICENSE_KEYS;
-        }
-        if (allowance != null && Number.isFinite(allowance)) {
-          const used = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
-            (row) => normalizeEmail(row.mentorEmail) === ownerEmail
-          ).length;
-          if (used >= allowance) {
-            showToast(
-              `License key limit reached (${used}/${allowance}). Ask super admin to add more keys.`
-            );
-            return null;
-          }
+          return null;
         }
       }
 
-      // Prefer the versioned API photo path so every activation gets the latest
-      // picture. Fall back to an embedded data URL only when upload cannot sync.
-      let photo = String(bot.photo || ea?.photo || "/logo.png").trim() || "/logo.png";
-      const originalPhoto = photo;
-      if (photo.startsWith("data:image/")) {
-        try {
-          const uploaded = await uploadBotPhotoRemote(bot.id, photo);
-          const uploadedPhoto = String(uploaded || "").trim();
-          if (uploadedPhoto.startsWith("/api/licenses/photo")) {
-            try {
-              const check = await fetch(mediaUrl(uploadedPhoto), { method: "GET", cache: "no-store" });
-              photo = check.ok ? uploadedPhoto : originalPhoto;
-            } catch {
-              photo = originalPhoto;
-            }
-          } else if (uploadedPhoto.startsWith("data:image/")) {
-            photo = uploadedPhoto;
-          } else if (isRealProfilePhoto(uploadedPhoto)) {
-            photo = uploadedPhoto;
-          }
-        } catch {
-          // Keep the local data URL — createLicenseRemote will embed it.
-          photo = originalPhoto;
-        }
-      } else if (photo.startsWith("/api/licenses/photo")) {
-        // Verify the synced path still serves; otherwise fall back to logo later.
-        try {
-          const check = await fetch(mediaUrl(photo), { method: "GET", cache: "no-store" });
-          if (!check.ok) photo = await materializePhotoForLicense(originalPhoto);
-        } catch {
-          photo = await materializePhotoForLicense(originalPhoto);
-        }
-      } else {
-        photo = await materializePhotoForLicense(photo);
-      }
+      // Use the bot photo as-is. Server createLicense embeds/persists if needed —
+      // avoid upload + GET verify round-trips that stalled "Generating…".
+      const photo =
+        String(bot.photo || ea?.photo || "/logo.png").trim() || "/logo.png";
 
       const entry = {
         key,
@@ -2149,12 +2121,12 @@ export function AppProvider({ children }) {
         },
       };
 
-      // Keep signup list in sync — license email is approved for activation.
+      // Record the email as pending only — never auto-approve on generate.
+      // Clients must pay lifetime access (or receive admin bypass) to open the app.
       try {
         await submitSignup(email);
-        await updateSignupStatus(email, "approved");
         setSignups((prev) =>
-          mergeSignups(prev, [{ email, status: "approved", createdAt: Date.now() }])
+          mergeSignups(prev, [{ email, status: "pending", createdAt: Date.now() }])
         );
       } catch {
         // license create still proceeds
@@ -2173,9 +2145,8 @@ export function AppProvider({ children }) {
           if (!remote?.key) {
             throw new Error("Server did not return a license key");
           }
-          // Confirm the key is readable from the shared store (not just this response).
-          const verified = await fetchLicense(remote.key);
-          const saved = verified || remote;
+          // Trust the durable create response — a follow-up fetchLicense doubled latency.
+          const saved = remote;
           setLicenseKeys((prev) => mergeLicenses(prev, [saved]));
           const syncedPhoto = saved.bot?.photo;
           if (syncedPhoto && syncedPhoto !== "/logo.png") {
@@ -2195,6 +2166,8 @@ export function AppProvider({ children }) {
             showToast(`License ready for ${name} · emailed ${email}`);
           } else if (mail?.ok && mail?.reason === "already-sent") {
             showToast(`License ready for ${name} · already emailed ${email}`);
+          } else if (mail?.ok && mail?.reason === "queued") {
+            showToast(`License ready for ${name} · emailing ${email}`);
           } else if (mail?.skipped && /brevo|not configured/i.test(String(mail.error || ""))) {
             showToast(
               `License ready for ${name} · email not configured (add Brevo keys on Vercel)`
@@ -2388,15 +2361,11 @@ export function AppProvider({ children }) {
           ((licenseEmail && accountEmail === licenseEmail) ||
             (mentorEmail && accountEmail === mentorEmail))
       );
-      const approved = signup?.status === "approved";
-      // Owning the key is enough after signup-store resets; otherwise require approval.
-      if (!approved && !emailOwnsLicense) {
+      // Lifetime payment or admin bypass required — approved/unlock alone is not enough.
+      if (!isSignupEntitled(signup, accountEmail)) {
+        clearDeviceAccess(accountEmail);
         setLockStep("pending");
-        showToast(
-          signup?.status === "declined"
-            ? "Access was declined by super admin"
-            : "Account must be approved by super admin first"
-        );
+        showToast("Pay lifetime access before activating a license");
         return false;
       }
 
@@ -2641,18 +2610,29 @@ export function AppProvider({ children }) {
       setSignups((prev) =>
         mergeSignups(prev, [
           {
-            ...(signup || { email: accountEmail, status: "approved" }),
+            ...(signup || { email: accountEmail, status: "pending" }),
             email: accountEmail,
-            status: "approved",
-            appAccessUnlockedAt: signup?.appAccessUnlockedAt || usedAt,
+            // Only paid / bypassed accounts stay approved locally.
+            ...(accessPaid || signup?.accessBypassed
+              ? {
+                  status: "approved",
+                  appAccessUnlockedAt: signup?.appAccessUnlockedAt || usedAt,
+                }
+              : {
+                  status: signup?.status === "declined" ? "declined" : "pending",
+                }),
           },
         ])
       );
 
-      rememberDeviceAccess(accountEmail, {
-        paid: Boolean(signup?.accessPaid),
-        bypassed: Boolean(signup?.accessBypassed) && !signup?.accessPaid,
-      });
+      if (accessPaid || signup?.accessBypassed) {
+        rememberDeviceAccess(accountEmail, {
+          paid: Boolean(signup?.accessPaid),
+          bypassed: Boolean(signup?.accessBypassed) && !signup?.accessPaid,
+        });
+      } else {
+        clearDeviceAccess(accountEmail);
+      }
 
       const wasReclaimed =
         entry.used &&

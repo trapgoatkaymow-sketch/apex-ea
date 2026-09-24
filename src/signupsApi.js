@@ -114,7 +114,10 @@ export function mergeSignups(localList = [], remoteList = []) {
       item.accessPaid === false &&
       item.accessBypassed === false &&
       (String(item.status || "").toLowerCase() === "pending" ||
-        String(item.status || "").toLowerCase() === "declined");
+        String(item.status || "").toLowerCase() === "declined") &&
+      (item.appAccessUnlockedAt === null ||
+        item.appAccessUnlockedAt === 0 ||
+        item.appAccessUnlockedAt === undefined);
     if (remoteCleared) {
       map.set(email, {
         email,

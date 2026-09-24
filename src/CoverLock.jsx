@@ -9,6 +9,7 @@ import {
   hasPaidOnThisDevice,
   isAccountPaidOrBypassed,
   rememberDeviceAccess,
+  isSignupEntitled,
 } from "./deviceAccess.js";
 import {
   claimInviteLicenseRemote,
@@ -458,7 +459,11 @@ export default function CoverLock() {
   // testing their own link, or a client adding via invite).
   const addingBot = hasActiveBot && lockStep === "license";
   const claimingInvite = lockStep === "invite";
-  if (hasActiveBot && !addingBot && !claimingInvite) return null;
+  const gateEmail = normalizeEmail(coverEmail || email);
+  const gateSignup = getSignup(gateEmail);
+  const entitledGate = isSignupEntitled(gateSignup, gateEmail);
+  // Revoked / unpaid clients must see the paywall even with leftover local bots.
+  if (hasActiveBot && entitledGate && !addingBot && !claimingInvite) return null;
 
   const signup = getSignup(coverEmail || email);
   const declined = signup?.status === "declined";

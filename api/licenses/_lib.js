@@ -27,6 +27,29 @@ const TMP_FILE = path.join("/tmp", "apexea-licenses.json");
 const BUNDLED_PHOTO_DIR = path.resolve(__dirname, "../../data/ea-photos");
 const TMP_PHOTO_DIR = path.join("/tmp", "apexea-ea-photos");
 
+/** Keep Brevo / post-create work off the HTTP critical path (Vercel waitUntil). */
+function scheduleBackground(task) {
+  const run = Promise.resolve()
+    .then(() => (typeof task === "function" ? task() : task))
+    .catch((error) => {
+      console.warn(
+        "background license task failed",
+        error instanceof Error ? error.message : String(error)
+      );
+    });
+  try {
+    // Dynamic import keeps local/node scripts working without the Vercel runtime.
+    import("@vercel/functions")
+      .then((mod) => {
+        if (typeof mod.waitUntil === "function") mod.waitUntil(run);
+      })
+      .catch(() => {});
+  } catch {
+    // Non-Vercel: promise already started above.
+  }
+  return run;
+}
+
 /** In-process fallback when GitHub auth fails (expired ghs_ token, etc.). */
 let memoryLicenses = null;
 /** Permanently deleted keys → deletedAt — blocks merge/migrate resurrection. */
@@ -503,12 +526,9 @@ export async function resolveEmbeddablePhoto(botId, photo) {
   }
 
   if (value.startsWith("/api/licenses/photo")) {
-    if (await githubPhotoExists(botId)) return value;
-    const local = await readBotPhoto(botId);
-    const embedded = shrinkDataUrl(dataUrlFromPhoto(local));
-    // Never keep a 404-prone API path when GitHub does not have the bytes.
-    if (embedded && embedded !== "/logo.png") return embedded;
-    return "/logo.png";
+    // Trust the synced API path during license create — a GitHub HEAD round-trip
+    // made mentor "Generate" hang for seconds on every key.
+    return value;
   }
 
   return value;
@@ -1565,8 +1585,8 @@ export async function createLicense(payload = {}) {
   const skipEmail =
     payload.sendEmail === false ||
     String(payload.sendEmail || "").toLowerCase() === "false";
-  // Email every newly created key once. Retries of the same key within a few
-  // minutes can retry a failed send; emailSentAt blocks duplicate Brevo sends.
+  // Email every newly created key once — never block the Generate response on Brevo.
+  // emailSentAt / claimLicenseEmailSend still prevent duplicate sends.
   if (!skipEmail) {
     const alreadySent = Number(result?.emailSentAt);
     const keyAgeMs = Date.now() - (Number(result?.createdAt) || Date.now());
@@ -1578,14 +1598,11 @@ export async function createLicense(payload = {}) {
         emailSentAt: alreadySent,
       };
     } else if (createdNew || keyAgeMs < 3 * 60 * 1000) {
-      try {
-        email = await sendLicenseKeyEmailOnce(result, { force: false });
-        if (email?.emailSentAt && result) {
-          result = { ...result, emailSentAt: email.emailSentAt };
-        }
-      } catch (error) {
-        email = { ok: false, error: error?.message || "Email send failed" };
-      }
+      const licenseForEmail = result;
+      email = { ok: true, skipped: true, reason: "queued" };
+      scheduleBackground(async () => {
+        await sendLicenseKeyEmailOnce(licenseForEmail, { force: false });
+      });
     } else {
       // Older key without a stamp — do not re-blast; treat as already delivered.
       email = {
@@ -1777,14 +1794,28 @@ export async function createLicensesBulk(payload = {}) {
     return next;
   }, `bulk licenses · ${botName} · ${normalizedClients.length} clients`);
 
-  // Approve signups in one pass so clients can activate immediately.
+  // Ensure client emails exist as pending signups — do NOT auto-approve.
+  // Lifetime PayPal (accessPaid) or admin bypass is required to open the app.
   try {
-    const { upsertSignupsApprovedBulk } = await import("../signups/_lib.js");
-    await upsertSignupsApprovedBulk(
-      created.map((row) => row.clientEmail).concat(skipped.map((row) => row.clientEmail))
-    );
+    const { upsertSignup } = await import("../signups/_lib.js");
+    const emails = [
+      ...new Set(
+        created
+          .map((row) => row.clientEmail)
+          .concat(skipped.map((row) => row.clientEmail))
+          .map((e) => normalizeEmail(e))
+          .filter((e) => e && e.includes("@"))
+      ),
+    ];
+    for (const email of emails) {
+      try {
+        await upsertSignup(email, { status: "pending" });
+      } catch {
+        // non-fatal
+      }
+    }
   } catch (error) {
-    console.warn("bulk signup approve failed", error.message || error);
+    console.warn("bulk signup upsert failed", error.message || error);
   }
 
   let email = {
@@ -1797,11 +1828,19 @@ export async function createLicensesBulk(payload = {}) {
     payload.sendEmail === false ||
     String(payload.sendEmail || "").toLowerCase() === "false";
   if (!skipEmail && created.length) {
-    try {
+    email = {
+      sentCount: 0,
+      failedCount: 0,
+      skippedCount: created.length,
+      results: [],
+      queued: true,
+    };
+    const toEmail = created.slice();
+    scheduleBackground(async () => {
       const { sendLicenseKeyEmails } = await import("../_brevo.js");
-      email = await sendLicenseKeyEmails(created, { concurrency: 4 });
+      const result = await sendLicenseKeyEmails(toEmail, { concurrency: 4 });
       const stampedAt = Date.now();
-      for (const row of email?.results || []) {
+      for (const row of result?.results || []) {
         if (row?.ok && row?.key) {
           try {
             await markLicenseEmailSent(row.key, stampedAt);
@@ -1810,15 +1849,7 @@ export async function createLicensesBulk(payload = {}) {
           }
         }
       }
-    } catch (error) {
-      email = {
-        sentCount: 0,
-        failedCount: created.length,
-        skippedCount: 0,
-        results: [],
-        error: error?.message || "Bulk email failed",
-      };
-    }
+    });
   } else if (skipEmail) {
     email.skippedCount = created.length;
   }

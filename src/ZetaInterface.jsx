@@ -6,6 +6,7 @@ import {
   resolveCachedBotPhoto,
 } from "./botPhotoCache.js";
 import { isNativeApp, useApp } from "./store.jsx";
+import { isSignupEntitled } from "./deviceAccess.js";
 import ChartScanner from "./ChartScanner.jsx";
 import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
@@ -99,8 +100,8 @@ export default function ZetaInterface() {
 
   function openLicense() {
     const signup = getSignup(coverEmail);
-    // Already unlocked: still open license entry so a new key can add another bot.
-    if (bots.some((b) => b.active) || signup?.status === "approved") {
+    // Already unlocked (paid/bypass) or has bots: open license entry to add another bot.
+    if (bots.some((b) => b.active) || isSignupEntitled(signup, coverEmail)) {
       setLockStep("license");
       return;
     }
