@@ -228,11 +228,17 @@
       async function loadConfig() {
         try {
           const cfg = await api("/config");
-          if (cfg?.robot?.amount) {
-            const cur = cfg.robot.currency || "ZAR";
-            const amount = cfg.robot.amount;
+          const robot = cfg?.robot || {};
+          // Show marketing R1500, charge USD via Orders API (PayPal app rejects ZAR).
+          if (robot.displayAmount && String(robot.displayCurrency || "").toUpperCase() === "ZAR") {
             priceLabel.textContent =
-              cur === "ZAR" ? "R" + Number(amount).toLocaleString("en-ZA") : amount + " " + cur;
+              "R" + Number(robot.displayAmount).toLocaleString("en-ZA");
+          } else if (robot.amount) {
+            const cur = robot.currency || "USD";
+            priceLabel.textContent =
+              cur === "ZAR"
+                ? "R" + Number(robot.amount).toLocaleString("en-ZA")
+                : "$" + Number(robot.amount).toFixed(2);
           }
           if (!cfg.ready) {
             setMsg("Payments are not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel.", "err");

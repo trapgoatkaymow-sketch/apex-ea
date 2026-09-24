@@ -6,9 +6,19 @@ import { createLicense, listLicenses, normalizeLicenseKey } from "../licenses/_l
 import { setSignupAccessPaid, upsertSignup } from "../signups/_lib.js";
 import { listMentors, SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
-export const ROBOT_PRICE = String(process.env.ROBOT_PURCHASE_PRICE || "1500.00").trim();
+export const ROBOT_PRICE = String(process.env.ROBOT_PURCHASE_PRICE || "82.50").trim();
 export const ROBOT_CURRENCY = String(
-  process.env.ROBOT_PURCHASE_CURRENCY || "ZAR"
+  process.env.ROBOT_PURCHASE_CURRENCY || "USD"
+)
+  .trim()
+  .toUpperCase();
+
+/** Marketing-site PayPal NCP links still charge R1500 ZAR. */
+export const ROBOT_NCP_PRICE = String(
+  process.env.ROBOT_NCP_PRICE || "1500.00"
+).trim();
+export const ROBOT_NCP_CURRENCY = String(
+  process.env.ROBOT_NCP_CURRENCY || "ZAR"
 )
   .trim()
   .toUpperCase();
@@ -54,13 +64,21 @@ function randomLicenseKey(existingKeys = new Set()) {
   return `APEX-${chunk()}-${chunk()}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
 }
 
-export function amountsMatchRobot(value, currency) {
+function amountEquals(value, expected) {
   const v = String(value || "").trim();
+  const e = String(expected || "").trim();
+  if (!v || !e) return false;
+  if (v === e) return true;
+  return Number(v) === Number(e);
+}
+
+export function amountsMatchRobot(value, currency) {
   const c = String(currency || "").trim().toUpperCase();
-  if (!v || !c) return false;
-  if (c === ROBOT_CURRENCY && v === ROBOT_PRICE) return true;
-  // Accept whole-rand form without decimals (PayPal sometimes sends "1500").
-  if (c === ROBOT_CURRENCY && Number(v) === Number(ROBOT_PRICE)) return true;
+  if (!c) return false;
+  // Orders API checkout (this PayPal app only supports USD).
+  if (c === ROBOT_CURRENCY && amountEquals(value, ROBOT_PRICE)) return true;
+  // zetascalperai.com NCP payment links (R1500 ZAR).
+  if (c === ROBOT_NCP_CURRENCY && amountEquals(value, ROBOT_NCP_PRICE)) return true;
   return false;
 }
 

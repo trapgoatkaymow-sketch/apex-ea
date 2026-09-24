@@ -8,6 +8,8 @@ import {
 import {
   ROBOT_BOT_NAME,
   ROBOT_CURRENCY,
+  ROBOT_NCP_CURRENCY,
+  ROBOT_NCP_PRICE,
   ROBOT_PRICE,
 } from "./_robotPurchase.js";
 
@@ -32,6 +34,8 @@ export default async function handler(req, res) {
     robot: {
       amount: ROBOT_PRICE,
       currency: ROBOT_CURRENCY,
+      displayAmount: ROBOT_NCP_PRICE,
+      displayCurrency: ROBOT_NCP_CURRENCY,
       botName: ROBOT_BOT_NAME,
       label: "ZETA SCALPER AI Mobile Robot",
     },
