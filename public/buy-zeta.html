@@ -6,7 +6,7 @@
     <title>Buy ZETA SCALPER AI — Instant License</title>
     <meta
       name="description"
-      content="Pay for ZETA SCALPER AI with debit/credit card. License key emailed automatically — PayPal account optional."
+      content="Pay for ZETA SCALPER AI with debit/credit card. License key emailed automatically — no PayPal account required."
     />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -153,17 +153,12 @@
         opacity: 0.55;
         cursor: wait;
       }
-      .pay-btn.secondary {
-        margin-top: 10px;
-        background: transparent;
-        color: var(--text);
-        border: 1px solid var(--line);
-        box-shadow: none;
+      #card-buttons {
+        min-height: 55px;
+        margin-bottom: 8px;
       }
-      #card-buttons,
       #paypal-buttons {
         min-height: 0;
-        margin-top: 8px;
       }
       .divider {
         display: flex;
@@ -238,10 +233,11 @@
         </div>
 
         <p class="hint">
-          Use <strong style="color:var(--text)">debit / credit card</strong>.
-          A PayPal account is optional.
+          Tap <strong style="color:var(--text)">Debit or Credit Card</strong> below and enter your card.
+          You will not be sent to a PayPal login.
         </p>
 
+        <!-- Inline card fields when Advanced Cards is enabled on the merchant -->
         <div id="card-fields-box" class="card-box hidden">
           <h2>Card details</h2>
           <label>Card number</label>
@@ -259,11 +255,8 @@
           <button id="pay-card-fields-btn" class="pay-btn" type="button">Pay with card</button>
         </div>
 
+        <!-- PayPal Debit/Credit Card funding button (guest card form, not wallet login) -->
         <div id="card-buttons" aria-label="Debit or credit card"></div>
-
-        <button id="pay-card-redirect-btn" class="pay-btn" type="button">
-          Pay with debit / credit card
-        </button>
 
         <div class="divider" id="or-divider">or PayPal wallet</div>
         <div id="paypal-buttons" aria-label="PayPal wallet (optional)"></div>
@@ -291,13 +284,6 @@
       const paypalHost = document.getElementById("paypal-buttons");
       const orDivider = document.getElementById("or-divider");
       const payCardFieldsBtn = document.getElementById("pay-card-fields-btn");
-      const payCardRedirectBtn = document.getElementById("pay-card-redirect-btn");
-
-      const ORDER_KEY = "zeta-robot-paypal-order";
-      const EMAIL_KEY = "zeta-robot-paypal-email";
-      const NAME_KEY = "zeta-robot-paypal-name";
-
-      let clientId = "";
 
       function setMsg(text, kind) {
         msg.textContent = text || "";
@@ -315,7 +301,6 @@
         cardButtons.classList.add("hidden");
         paypalHost.classList.add("hidden");
         orDivider.classList.add("hidden");
-        payCardRedirectBtn.classList.add("hidden");
       }
 
       function readBuyer() {
@@ -375,17 +360,13 @@
         const { name, email } = readBuyer();
         if (!name) throw new Error("Enter your name before paying");
         if (!email.includes("@")) throw new Error("Enter a valid email before paying");
-        const returnUrl = window.location.origin + "/buy-zeta.html?paypal_return=1";
-        const cancelUrl = window.location.origin + "/buy-zeta.html?paypal_cancel=1";
         const order = await api("/create-order", {
           email,
           clientName: name,
           purpose: "robot",
-          returnUrl,
-          cancelUrl,
         });
         if (!order?.id) throw new Error("Could not start checkout");
-        return order;
+        return order.id;
       }
 
       async function captureRobotOrder(orderId) {
@@ -407,29 +388,7 @@
         return result;
       }
 
-      async function startCardCheckoutRedirect() {
-        const { name, email } = readBuyer();
-        if (!name || !email.includes("@")) {
-          setMsg("Enter your name and email before paying", "err");
-          return;
-        }
-        payCardRedirectBtn.disabled = true;
-        setMsg("Opening secure card checkout…");
-        try {
-          const order = await createRobotOrder();
-          sessionStorage.setItem(ORDER_KEY, order.id);
-          sessionStorage.setItem(EMAIL_KEY, email);
-          sessionStorage.setItem(NAME_KEY, name);
-          if (!order.approveUrl) throw new Error("PayPal did not return a checkout link");
-          // BILLING landing page prefers guest card entry (no PayPal login required).
-          window.location.href = order.approveUrl;
-        } catch (error) {
-          setMsg(error.message || "Could not start card checkout", "err");
-          payCardRedirectBtn.disabled = false;
-        }
-      }
-
-      function sharedButtonHandlers() {
+      function sharedButtonHandlers(styleOverrides) {
         return {
           style: {
             layout: "vertical",
@@ -437,12 +396,12 @@
             shape: "rect",
             label: "pay",
             tagline: false,
-            height: 48,
+            height: 50,
+            ...(styleOverrides || {}),
           },
           createOrder: async () => {
-            setMsg("Starting secure checkout…");
-            const order = await createRobotOrder();
-            return order.id;
+            setMsg("Starting card checkout…");
+            return createRobotOrder();
           },
           onApprove: async (data) => {
             setMsg("Payment received — creating your license…");
@@ -456,7 +415,7 @@
           onCancel: () => setMsg("Payment cancelled — you can try again."),
           onError: (err) => {
             setMsg(
-              (err && err.message) || "Payment failed — try Debit / Credit Card again",
+              (err && err.message) || "Card payment failed — check details and try again",
               "err"
             );
           },
@@ -478,8 +437,7 @@
             },
             createOrder: async () => {
               setMsg("Starting card payment…");
-              const order = await createRobotOrder();
-              return order.id;
+              return createRobotOrder();
             },
             onApprove: async (data) => {
               setMsg("Card charged — creating your license…");
@@ -529,14 +487,14 @@
         return true;
       }
 
-      async function setupButtons(paypal) {
-        const handlers = sharedButtonHandlers();
+      async function setupButtons(paypal, hideCardFunding) {
         let cardBtnOk = false;
 
-        if (paypal.FUNDING?.CARD) {
+        // Debit/Credit Card funding = guest card form (NOT PayPal wallet redirect).
+        if (!hideCardFunding && paypal.FUNDING?.CARD) {
           try {
             const cardBtn = paypal.Buttons({
-              ...handlers,
+              ...sharedButtonHandlers({ color: "black", label: "pay" }),
               fundingSource: paypal.FUNDING.CARD,
             });
             if (typeof cardBtn.isEligible !== "function" || cardBtn.isEligible()) {
@@ -551,60 +509,28 @@
         if (paypal.FUNDING?.PAYPAL) {
           try {
             const walletBtn = paypal.Buttons({
-              ...handlers,
-              style: { ...handlers.style, color: "gold", label: "paypal" },
+              ...sharedButtonHandlers({ color: "gold", label: "paypal" }),
               fundingSource: paypal.FUNDING.PAYPAL,
             });
             if (typeof walletBtn.isEligible !== "function" || walletBtn.isEligible()) {
               await walletBtn.render(paypalHost);
+            } else {
+              orDivider.classList.add("hidden");
             }
           } catch {
-            // ignore
+            orDivider.classList.add("hidden");
           }
+        } else {
+          orDivider.classList.add("hidden");
         }
 
         return cardBtnOk;
       }
 
-      async function captureReturning() {
-        const params = new URLSearchParams(window.location.search || "");
-        const token = params.get("token") || "";
-        const cancelled = params.get("paypal_cancel") === "1";
-        const storedOrder = sessionStorage.getItem(ORDER_KEY) || token;
-        const email = sessionStorage.getItem(EMAIL_KEY) || "";
-        const name = sessionStorage.getItem(NAME_KEY) || "";
-        if (cancelled) {
-          setMsg("Payment cancelled. You can try again.", "err");
-          return;
-        }
-        if (
-          !storedOrder ||
-          (!params.get("PayerID") && params.get("paypal_return") !== "1" && !token)
-        ) {
-          return;
-        }
-        if (email) emailInput.value = email;
-        if (name) nameInput.value = name;
-        payCardRedirectBtn.disabled = true;
-        setMsg("Confirming payment and creating your license…");
-        try {
-          await captureRobotOrder(storedOrder);
-          sessionStorage.removeItem(ORDER_KEY);
-          if (window.history?.replaceState) {
-            window.history.replaceState({}, "", "/buy-zeta.html");
-          }
-        } catch (e) {
-          setMsg(e.message || "Could not finish payment", "err");
-          payCardRedirectBtn.disabled = false;
-        }
-      }
-
       async function boot() {
-        payCardRedirectBtn.onclick = () => startCardCheckoutRedirect();
-
         try {
           const cfg = await api("/config");
-          clientId = cfg.clientId || "";
+          const clientId = cfg.clientId || "";
           const robot = cfg.robot || {};
           if (
             robot.displayAmount &&
@@ -623,17 +549,20 @@
             return;
           }
 
-          await captureReturning();
-
           const paypal = await loadPaypalSdk(clientId);
           const fieldsOk = await setupCardFields(paypal);
-          const cardBtnOk = await setupButtons(paypal);
+          // If inline fields work, skip the separate Debit/Credit funding button to avoid confusion.
+          const cardBtnOk = await setupButtons(paypal, fieldsOk);
 
-          // Always keep the orange card button — works even when SDK card widgets are ineligible.
-          if (fieldsOk || cardBtnOk) {
-            setMsg("");
+          if (fieldsOk) {
+            setMsg("Enter card details above, then tap Pay with card.", "");
+          } else if (cardBtnOk) {
+            setMsg("Tap Debit or Credit Card, then enter your card details.", "");
           } else {
-            setMsg("Tap Pay with debit / credit card to continue.", "");
+            setMsg(
+              "Card checkout is not available on this PayPal account yet. Use PayPal wallet, or enable Advanced Cards in PayPal Business settings.",
+              "err"
+            );
           }
         } catch (e) {
           setMsg(e.message || "Could not load payment", "err");
