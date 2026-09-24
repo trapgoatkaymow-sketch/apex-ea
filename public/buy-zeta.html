@@ -6,7 +6,7 @@
     <title>Buy ZETA SCALPER AI — Instant License</title>
     <meta
       name="description"
-      content="Pay once for ZETA SCALPER AI. Your license key is emailed automatically after PayPal confirms payment."
+      content="Pay once for ZETA SCALPER AI with debit/credit card. Your license key is emailed automatically — no PayPal account required."
     />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -94,7 +94,7 @@
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        margin: 4px 0 18px;
+        margin: 4px 0 14px;
         padding: 12px 14px;
         border-radius: 14px;
         background: rgba(255, 106, 0, 0.1);
@@ -104,21 +104,41 @@
         font-family: Syne, sans-serif;
         font-size: 1.35rem;
       }
-      button {
-        width: 100%;
-        border: 0;
-        border-radius: 14px;
-        padding: 14px 16px;
-        font: inherit;
-        font-weight: 700;
-        cursor: pointer;
-        color: #1a0f05;
-        background: linear-gradient(135deg, var(--fire2), var(--fire));
-        box-shadow: 0 10px 28px rgba(255, 106, 0, 0.35);
+      .hint {
+        margin: 0 0 14px;
+        font-size: 0.82rem;
+        color: var(--muted);
+        line-height: 1.4;
       }
-      button:disabled {
-        opacity: 0.55;
-        cursor: wait;
+      #card-buttons {
+        min-height: 55px;
+      }
+      #card-buttons:empty::before {
+        content: "Loading card payment…";
+        display: block;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 12px 0;
+      }
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 16px 0 12px;
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+      #paypal-buttons {
+        min-height: 0;
       }
       .msg {
         margin-top: 14px;
@@ -151,11 +171,11 @@
     <main>
       <h1 class="brand">ZETA SCALPER AI</h1>
       <p class="sub">
-        One-time payment. Lifetime mobile robot license — emailed to you automatically.
+        One-time payment. Lifetime mobile robot license — emailed automatically.
         No mentor has to generate a key.
       </p>
 
-      <form id="buy-form">
+      <form id="buy-form" onsubmit="return false;">
         <label for="name">Your name</label>
         <input id="name" name="name" autocomplete="name" required placeholder="Full name" />
 
@@ -174,7 +194,14 @@
           <strong id="price-label">R1 500</strong>
         </div>
 
-        <button id="pay-btn" type="submit">Pay with PayPal</button>
+        <p class="hint">
+          Pay with <strong style="color:var(--text)">debit / credit card</strong> —
+          no PayPal account needed. PayPal wallet is optional below.
+        </p>
+
+        <div id="card-buttons" aria-label="Debit or credit card"></div>
+        <div class="divider">or</div>
+        <div id="paypal-buttons" aria-label="PayPal account (optional)"></div>
       </form>
 
       <p id="msg" class="msg" role="status"></p>
@@ -189,15 +216,16 @@
     </main>
 
     <script>
-      const form = document.getElementById("buy-form");
       const msg = document.getElementById("msg");
       const keybox = document.getElementById("keybox");
-      const payBtn = document.getElementById("pay-btn");
       const priceLabel = document.getElementById("price-label");
+      const cardHost = document.getElementById("card-buttons");
+      const paypalHost = document.getElementById("paypal-buttons");
+      const nameInput = document.getElementById("name");
+      const emailInput = document.getElementById("email");
 
-      const ORDER_KEY = "zeta-robot-paypal-order";
-      const EMAIL_KEY = "zeta-robot-paypal-email";
-      const NAME_KEY = "zeta-robot-paypal-name";
+      let clientId = "";
+      let buttonsReady = false;
 
       function setMsg(text, kind) {
         msg.textContent = text || "";
@@ -208,6 +236,14 @@
         if (!key) return;
         keybox.style.display = "block";
         keybox.textContent = key;
+      }
+
+      function readBuyer() {
+        const name = String(nameInput.value || "").trim();
+        const email = String(emailInput.value || "")
+          .trim()
+          .toLowerCase();
+        return { name, email };
       }
 
       async function api(path, body) {
@@ -225,108 +261,157 @@
         return data;
       }
 
-      async function loadConfig() {
+      function loadPaypalSdk(id) {
+        return new Promise((resolve, reject) => {
+          if (window.paypal?.Buttons) {
+            resolve(window.paypal);
+            return;
+          }
+          const existing = document.querySelector("script[data-zeta-paypal]");
+          if (existing) {
+            existing.addEventListener("load", () =>
+              window.paypal ? resolve(window.paypal) : reject(new Error("PayPal SDK missing"))
+            );
+            existing.addEventListener("error", () => reject(new Error("PayPal SDK failed to load")));
+            return;
+          }
+          const script = document.createElement("script");
+          // Card first — buyers without a PayPal account enter card details inline.
+          script.src =
+            "https://www.paypal.com/sdk/js?client-id=" +
+            encodeURIComponent(id) +
+            "&currency=USD&intent=capture&components=buttons&enable-funding=card&disable-funding=venmo,paylater,credit&commit=true";
+          script.async = true;
+          script.dataset.zetaPaypal = "1";
+          script.onload = () =>
+            window.paypal ? resolve(window.paypal) : reject(new Error("PayPal SDK missing"));
+          script.onerror = () => reject(new Error("PayPal SDK failed to load"));
+          document.head.appendChild(script);
+        });
+      }
+
+      function buttonHandlers(paypal) {
+        return {
+          style: {
+            layout: "vertical",
+            color: "black",
+            shape: "rect",
+            label: "pay",
+            tagline: false,
+            height: 48,
+          },
+          createOrder: async () => {
+            const { name, email } = readBuyer();
+            if (!name) throw new Error("Enter your name before paying");
+            if (!email.includes("@")) throw new Error("Enter a valid email before paying");
+            setMsg("Starting secure checkout…");
+            const order = await api("/create-order", {
+              email,
+              clientName: name,
+              purpose: "robot",
+            });
+            if (!order?.id) throw new Error("Could not start checkout");
+            return order.id;
+          },
+          onApprove: async (data) => {
+            const { name, email } = readBuyer();
+            setMsg("Payment received — creating your license…");
+            try {
+              const result = await api("/capture-order", {
+                orderId: data.orderID,
+                email,
+                clientName: name,
+                purpose: "robot",
+              });
+              setMsg(
+                result.reused
+                  ? "Already paid — your license key is below (also emailed)."
+                  : "Paid! License created and emailed to " + (result.email || email) + ".",
+                "ok"
+              );
+              showKey(result.licenseKey);
+              cardHost.style.display = "none";
+              paypalHost.style.display = "none";
+              document.querySelector(".divider").style.display = "none";
+            } catch (error) {
+              setMsg(error.message || "Could not finish payment", "err");
+              throw error;
+            }
+          },
+          onCancel: () => setMsg("Payment cancelled — you can try again."),
+          onError: (err) => {
+            setMsg(
+              (err && err.message) || "Card payment failed — check details and try again",
+              "err"
+            );
+          },
+        };
+      }
+
+      async function renderButtons() {
+        if (!clientId || buttonsReady) return;
+        const paypal = await loadPaypalSdk(clientId);
+        const handlers = buttonHandlers(paypal);
+        cardHost.innerHTML = "";
+        paypalHost.innerHTML = "";
+
+        // Primary: debit/credit card (no PayPal login).
+        let cardRendered = false;
+        if (paypal.FUNDING?.CARD) {
+          const cardBtn = paypal.Buttons({
+            ...handlers,
+            fundingSource: paypal.FUNDING.CARD,
+          });
+          if (typeof cardBtn.isEligible !== "function" || cardBtn.isEligible()) {
+            await cardBtn.render(cardHost);
+            cardRendered = true;
+          }
+        }
+        if (!cardRendered) {
+          await paypal.Buttons(handlers).render(cardHost);
+        }
+
+        // Optional: PayPal wallet for people who prefer it.
+        if (paypal.FUNDING?.PAYPAL) {
+          const walletBtn = paypal.Buttons({
+            ...handlers,
+            style: { ...handlers.style, color: "gold", label: "paypal" },
+            fundingSource: paypal.FUNDING.PAYPAL,
+          });
+          if (typeof walletBtn.isEligible !== "function" || walletBtn.isEligible()) {
+            await walletBtn.render(paypalHost);
+          }
+        }
+
+        buttonsReady = true;
+        setMsg("");
+      }
+
+      async function boot() {
         try {
           const cfg = await api("/config");
-          const robot = cfg?.robot || {};
-          // Show marketing R1500, charge USD via Orders API (PayPal app rejects ZAR).
+          clientId = cfg.clientId || "";
+          const robot = cfg.robot || {};
           if (robot.displayAmount && String(robot.displayCurrency || "").toUpperCase() === "ZAR") {
             priceLabel.textContent =
               "R" + Number(robot.displayAmount).toLocaleString("en-ZA");
           } else if (robot.amount) {
-            const cur = robot.currency || "USD";
-            priceLabel.textContent =
-              cur === "ZAR"
-                ? "R" + Number(robot.amount).toLocaleString("en-ZA")
-                : "$" + Number(robot.amount).toFixed(2);
+            priceLabel.textContent = "$" + Number(robot.amount).toFixed(2);
           }
-          if (!cfg.ready) {
-            setMsg("Payments are not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel.", "err");
-            payBtn.disabled = true;
+          if (!cfg.ready || !clientId) {
+            setMsg(
+              "Payments are not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel.",
+              "err"
+            );
+            return;
           }
+          await renderButtons();
         } catch (e) {
-          setMsg(e.message || "Could not load payment config", "err");
+          setMsg(e.message || "Could not load payment", "err");
         }
       }
 
-      async function captureReturning() {
-        const params = new URLSearchParams(window.location.search || "");
-        const token = params.get("token") || "";
-        const cancelled = params.get("paypal_cancel") === "1";
-        const storedOrder = sessionStorage.getItem(ORDER_KEY) || token;
-        const email = sessionStorage.getItem(EMAIL_KEY) || "";
-        const name = sessionStorage.getItem(NAME_KEY) || "";
-        if (cancelled) {
-          setMsg("Payment cancelled. You can try again.", "err");
-          return;
-        }
-        if (!storedOrder || (!params.get("PayerID") && params.get("paypal_return") !== "1" && !token)) {
-          return;
-        }
-        payBtn.disabled = true;
-        setMsg("Confirming payment and creating your license…");
-        try {
-          const result = await api("/capture-order", {
-            orderId: storedOrder,
-            email,
-            clientName: name,
-            purpose: "robot",
-          });
-          sessionStorage.removeItem(ORDER_KEY);
-          setMsg(
-            result.reused
-              ? "Payment already fulfilled — your license key is below (also emailed)."
-              : "Paid! License created and emailed to " + (result.email || email) + ".",
-            "ok"
-          );
-          showKey(result.licenseKey);
-          // Clean return params from the URL.
-          if (window.history?.replaceState) {
-            window.history.replaceState({}, "", "/buy-zeta.html");
-          }
-        } catch (e) {
-          setMsg(e.message || "Could not finish payment", "err");
-          payBtn.disabled = false;
-        }
-      }
-
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const name = String(document.getElementById("name").value || "").trim();
-        const email = String(document.getElementById("email").value || "")
-          .trim()
-          .toLowerCase();
-        if (!name || !email.includes("@")) {
-          setMsg("Enter your name and a valid email", "err");
-          return;
-        }
-        payBtn.disabled = true;
-        setMsg("Opening PayPal…");
-        try {
-          const returnUrl =
-            window.location.origin + "/buy-zeta.html?paypal_return=1";
-          const cancelUrl =
-            window.location.origin + "/buy-zeta.html?paypal_cancel=1";
-          const order = await api("/create-order", {
-            email,
-            clientName: name,
-            purpose: "robot",
-            returnUrl,
-            cancelUrl,
-          });
-          sessionStorage.setItem(ORDER_KEY, order.id);
-          sessionStorage.setItem(EMAIL_KEY, email);
-          sessionStorage.setItem(NAME_KEY, name);
-          if (!order.approveUrl) throw new Error("PayPal did not return a checkout link");
-          window.location.href = order.approveUrl;
-        } catch (e) {
-          setMsg(e.message || "Could not start checkout", "err");
-          payBtn.disabled = false;
-        }
-      });
-
-      loadConfig();
-      captureReturning();
+      boot();
     </script>
   </body>
 </html>
