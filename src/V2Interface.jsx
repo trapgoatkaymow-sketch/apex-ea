@@ -9,6 +9,7 @@ import {
 import ChartScanner from "./ChartScanner.jsx";
 import { buildScannerFillComment } from "./metaApi.js";
 import { isNativeApp, useApp } from "./store.jsx";
+import { isSignupEntitled } from "./deviceAccess.js";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import TopBar from "./TopBar.jsx";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
@@ -133,7 +134,7 @@ export default function V2Interface() {
 
   function openLicense() {
     const signup = getSignup(coverEmail);
-    if (activeRobots.length > 0 || signup?.status === "approved") {
+    if (activeRobots.length > 0 || isSignupEntitled(signup, coverEmail)) {
       setLockStep("license");
       return;
     }

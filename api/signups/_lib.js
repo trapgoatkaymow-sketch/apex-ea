@@ -170,10 +170,32 @@ function mergeSignupLists(...lists) {
       map.set(item.email, {
         ...prev,
         ...item,
-        status:
-          item.status === "approved" || prev.status === "approved"
-            ? "approved"
-            : item.status || prev.status,
+        // Never sticky-OR approved for unpaid clients — revoke must stick when
+        // one store copy is pending and another is still stale approved.
+        status: (() => {
+          const paid = Boolean(prev.accessPaid || item.accessPaid);
+          const bypassed = Boolean(prev.accessBypassed || item.accessBypassed);
+          if (paid || bypassed) {
+            // Still demote if either side is an explicit unpaid revoke.
+            const itemRevoked =
+              !item.accessPaid &&
+              !item.accessBypassed &&
+              item.status === "pending";
+            const prevRevoked =
+              !prev.accessPaid &&
+              !prev.accessBypassed &&
+              prev.status === "pending";
+            if ((itemRevoked || prevRevoked) && !paid) return "pending";
+            return "approved";
+          }
+          if (item.status === "declined" || prev.status === "declined") {
+            return "declined";
+          }
+          if (item.status === "pending" || prev.status === "pending") {
+            return "pending";
+          }
+          return item.status || prev.status || "pending";
+        })(),
         premiumScanner: Boolean(prev.premiumScanner || item.premiumScanner),
         premiumScannerAt: Math.max(
           Number(prev.premiumScannerAt) || 0,
@@ -184,10 +206,62 @@ function mergeSignupLists(...lists) {
           Number(prev.accessPaidAt) || 0,
           Number(item.accessPaidAt) || 0
         ) || null,
-        appAccessUnlockedAt: Math.max(
-          Number(prev.appAccessUnlockedAt) || 0,
-          Number(item.appAccessUnlockedAt) || 0
-        ) || null,
+        accessBypassed: (() => {
+          const paid = Boolean(prev.accessPaid || item.accessPaid);
+          if (paid) return false;
+          const itemRevoked =
+            !item.accessPaid &&
+            !item.accessBypassed &&
+            item.status === "pending";
+          const prevRevoked =
+            !prev.accessPaid &&
+            !prev.accessBypassed &&
+            prev.status === "pending";
+          if (itemRevoked || prevRevoked) return false;
+          return Boolean(prev.accessBypassed || item.accessBypassed);
+        })(),
+        accessBypassedAt: (() => {
+          const paid = Boolean(prev.accessPaid || item.accessPaid);
+          if (paid) return null;
+          const itemRevoked =
+            !item.accessPaid &&
+            !item.accessBypassed &&
+            item.status === "pending";
+          const prevRevoked =
+            !prev.accessPaid &&
+            !prev.accessBypassed &&
+            prev.status === "pending";
+          if (itemRevoked || prevRevoked) return null;
+          const bypassed = Boolean(prev.accessBypassed || item.accessBypassed);
+          return bypassed
+            ? Math.max(
+                Number(prev.accessBypassedAt) || 0,
+                Number(item.accessBypassedAt) || 0
+              ) || null
+            : null;
+        })(),
+        appAccessUnlockedAt: (() => {
+          const paid = Boolean(prev.accessPaid || item.accessPaid);
+          const itemRevoked =
+            !item.accessPaid &&
+            !item.accessBypassed &&
+            item.status === "pending";
+          const prevRevoked =
+            !prev.accessPaid &&
+            !prev.accessBypassed &&
+            prev.status === "pending";
+          if (!paid && (itemRevoked || prevRevoked)) return null;
+          const itemUnlock = Number(item.appAccessUnlockedAt) || 0;
+          const prevUnlock = Number(prev.appAccessUnlockedAt) || 0;
+          if (
+            !paid &&
+            item.status === "pending" &&
+            itemUnlock === 0
+          ) {
+            return null;
+          }
+          return Math.max(prevUnlock, itemUnlock) || null;
+        })(),
         createdAt: Math.min(
           Number(prev.createdAt) || Date.now(),
           Number(item.createdAt) || Date.now()
@@ -295,13 +369,9 @@ export async function upsertSignup(email, { status = "pending" } = {}) {
     const idx = signups.findIndex((s) => s.email === key);
     if (idx >= 0) {
       const current = signups[idx];
-      // Paid / previously unlocked clients keep access when they sign in again
-      // (same phone or reinstall) — never demote them back to pending payment.
-      if (
-        current.status === "approved" ||
-        current.accessPaid ||
-        current.appAccessUnlockedAt
-      ) {
+      // Only paid subscription or active admin bypass keeps free re-entry.
+      // Approved status / unlock stamps alone must NOT skip the paywall.
+      if (current.accessPaid || current.accessBypassed) {
         if (current.status !== "approved") {
           signups[idx] = { ...current, status: "approved" };
           result = signups[idx];
@@ -317,6 +387,15 @@ export async function upsertSignup(email, { status = "pending" } = {}) {
       };
       if (status === "pending" && current.status !== "approved") {
         updated.status = "pending";
+      }
+      // Demote unpaid "approved" leftovers (license-generate approve loophole).
+      if (
+        updated.status === "approved" &&
+        !current.accessPaid &&
+        !current.accessBypassed
+      ) {
+        updated.status = "pending";
+        updated.appAccessUnlockedAt = null;
       }
       signups[idx] = updated;
       result = updated;
@@ -574,8 +653,9 @@ export async function setSignupAccessBypassed(email, bypassed = true) {
 }
 
 /**
- * Revoke payment bypass for every client signup except keepEmails (mentors).
- * Unpaid bypassed accounts go back to pending with unlock cleared.
+ * Revoke free client access except keepEmails (mentors / super admin).
+ * Clears: accessBypassed, unpaid approved status, and appAccessUnlockedAt.
+ * Paid subscribers (accessPaid) keep access; only their bypass flag is cleared.
  */
 export async function revokeClientAccessBypasses({ keepEmails = [] } = {}) {
   const keep = new Set(
@@ -589,29 +669,42 @@ export async function revokeClientAccessBypasses({ keepEmails = [] } = {}) {
 
   await mutateStore((signups) => {
     return signups.map((row) => {
-      if (!row?.accessBypassed) return row;
       const email = normalizeEmail(row.email);
       if (!email) return row;
       if (keep.has(email)) {
-        skippedMentors.push(email);
+        if (row.accessBypassed || row.status === "approved" || row.appAccessUnlockedAt) {
+          skippedMentors.push(email);
+        }
         return row;
       }
       const paid = Boolean(row.accessPaid);
+      if (paid) {
+        if (!row.accessBypassed) return row;
+        const next = {
+          ...row,
+          accessBypassed: false,
+          accessBypassedAt: null,
+        };
+        revoked.push(next);
+        return next;
+      }
+      // Unpaid free access via bypass, license-generate approve, or unlock stamp.
+      const hasFreeAccess =
+        Boolean(row.accessBypassed) ||
+        row.status === "approved" ||
+        Boolean(row.appAccessUnlockedAt);
+      if (!hasFreeAccess) return row;
       const next = {
         ...row,
         accessBypassed: false,
         accessBypassedAt: null,
-        ...(paid
-          ? {}
-          : {
-              status: "pending",
-              appAccessUnlockedAt: null,
-            }),
+        status: "pending",
+        appAccessUnlockedAt: null,
       };
       revoked.push(next);
       return next;
     });
-  }, "revoke client access bypasses (keep mentors)");
+  }, "revoke unpaid free client access (keep mentors)");
 
   return {
     revokedCount: revoked.length,
@@ -638,6 +731,7 @@ export async function setSignupAppAccessUnlocked(email, unlockedAt = Date.now())
         result = signups[idx];
         return signups;
       }
+      // Unlock stamp is for mentor commission only — never approve unpaid clients.
       signups[idx] = {
         ...signups[idx],
         appAccessUnlockedAt: stamp,
@@ -647,7 +741,7 @@ export async function setSignupAppAccessUnlocked(email, unlockedAt = Date.now())
     }
     result = normalizeSignup({
       email: key,
-      status: "approved",
+      status: "pending",
       createdAt: Date.now(),
       appAccessUnlockedAt: stamp,
     });
