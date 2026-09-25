@@ -1,6 +1,70 @@
 import { apiUrl } from "./apiOrigin.js";
 
 const API_PATH = "/api/signups";
+const DELETED_SIGNUPS_STORAGE = "apexea-deleted-signup-emails-v1";
+
+function normalizeEmail(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function readDeletedSignupMap() {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(DELETED_SIGNUPS_STORAGE);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      const email = normalizeEmail(k);
+      if (!email || !email.includes("@")) continue;
+      out[email] = Number(v) || Date.now();
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writeDeletedSignupMap(map) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(DELETED_SIGNUPS_STORAGE, JSON.stringify(map || {}));
+  } catch {
+    // quota — ignore
+  }
+}
+
+/** Remember a permanently deleted access email so refresh cannot resurrect it. */
+export function rememberDeletedSignupEmail(rawEmail) {
+  const email = normalizeEmail(rawEmail);
+  if (!email || !email.includes("@")) return;
+  const map = readDeletedSignupMap();
+  map[email] = Date.now();
+  writeDeletedSignupMap(map);
+}
+
+export function forgetDeletedSignupEmail(rawEmail) {
+  const email = normalizeEmail(rawEmail);
+  if (!email) return;
+  const map = readDeletedSignupMap();
+  if (!(email in map)) return;
+  delete map[email];
+  writeDeletedSignupMap(map);
+}
+
+export function isRememberedDeletedSignupEmail(rawEmail) {
+  const email = normalizeEmail(rawEmail);
+  if (!email) return false;
+  return Boolean(readDeletedSignupMap()[email]);
+}
+
+export function filterOutDeletedSignups(list = []) {
+  return (Array.isArray(list) ? list : []).filter(
+    (row) => !isRememberedDeletedSignupEmail(row?.email)
+  );
+}
 
 async function apiFetch(path = "", { method = "GET", body } = {}) {
   const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
@@ -30,10 +94,12 @@ async function apiFetch(path = "", { method = "GET", body } = {}) {
 
 export async function fetchSignups() {
   const data = await apiFetch();
-  return Array.isArray(data?.signups) ? data.signups : [];
+  const list = Array.isArray(data?.signups) ? data.signups : [];
+  return filterOutDeletedSignups(list);
 }
 
 export async function submitSignup(email) {
+  forgetDeletedSignupEmail(email);
   const data = await apiFetch("", {
     method: "POST",
     body: { email, status: "pending" },
@@ -81,6 +147,24 @@ export async function clearSignupAccessBypassed(email) {
   return data?.signup || null;
 }
 
+/** Super admin — permanently remove an access/signup email. */
+export async function deleteSignupRemote(email, adminEmail) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    throw new Error("Enter a valid email");
+  }
+  const data = await apiFetch("", {
+    method: "PATCH",
+    body: {
+      email: key,
+      action: "delete",
+      adminEmail: normalizeEmail(adminEmail),
+    },
+  });
+  rememberDeletedSignupEmail(key);
+  return data;
+}
+
 export function mergeSignups(localList = [], remoteList = []) {
   const map = new Map();
   [...localList, ...remoteList].forEach((item) => {
@@ -88,6 +172,7 @@ export function mergeSignups(localList = [], remoteList = []) {
       .trim()
       .toLowerCase();
     if (!email) return;
+    if (isRememberedDeletedSignupEmail(email)) return;
     const prev = map.get(email);
     if (!prev) {
       map.set(email, {
