@@ -3083,10 +3083,9 @@ export default function AdminPortal() {
                               Remove
                             </button>
                           ) : null}
-                          {/* Paid + bypassed: Delete under the badge (same slot as Remove). */}
                           <button
                             type="button"
-                            className={`admin-btn admin-btn-outline admin-btn-sm admin-bypass-remove-btn${
+                            className={`admin-btn admin-btn-outline admin-btn-sm admin-bypass-remove-btn admin-access-delete-btn${
                               deleting ? " is-loading" : ""
                             }`}
                             title={`Delete access email ${s.email}`}

@@ -2887,6 +2887,7 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
+  min-width: 88px;
 }
 
 .admin-client-access-row {
@@ -2900,11 +2901,25 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 .admin-bypass-remove-btn {
   padding: 4px 10px;
   min-height: 28px;
+  min-width: 72px;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   border-radius: 999px;
   line-height: 1;
+  text-align: center;
+}
+
+.admin-access-delete-btn {
+  border-color: #dc2626;
+  color: #b91c1c;
+  background: #fff;
+}
+
+.admin-portal[data-theme="dark"] .admin-access-delete-btn {
+  border-color: #f87171;
+  color: #fecaca;
+  background: transparent;
 }
 
 .admin-client-status-cell .admin-row-actions {
