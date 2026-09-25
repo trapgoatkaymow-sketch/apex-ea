@@ -185,6 +185,7 @@ export default function AdminPortal() {
     setSignupStatus,
     bypassAppAccess,
     clearAppAccessBypass,
+    deleteAccessEmail,
     bypassPremiumScanner,
     refreshSignups,
     eas,
@@ -2937,6 +2938,7 @@ export default function AdminPortal() {
             <h2 className="admin-h1">Client Management</h2>
             <p className="admin-sub">
               Paid and payment-bypassed clients only. Pending signups stay under Activate Accounts.
+              Super admin can delete an access email to revoke it permanently.
             </p>
 
             <div className="admin-toolbar admin-client-mgmt-toolbar">
@@ -3040,6 +3042,8 @@ export default function AdminPortal() {
                   const bypassed = Boolean(s.accessBypassed);
                   const paid = Boolean(s.accessPaid) && !bypassed;
                   const label = bypassed ? "Bypassed" : paid ? "Paid" : "Access";
+                  const emailKey = normalizeAdminEmail(s.email);
+                  const deleting = signupActionBusy === `delete:${emailKey}`;
                   return (
                     <div
                       className="admin-table-row admin-table-row-2 has-actions"
@@ -3066,7 +3070,7 @@ export default function AdminPortal() {
                               className="admin-btn admin-btn-outline admin-btn-sm admin-bypass-remove-btn"
                               title={`Remove bypass for ${s.email}`}
                               aria-label={`Remove bypass for ${s.email}`}
-                              disabled={bypassBusy}
+                              disabled={bypassBusy || Boolean(signupActionBusy)}
                               onClick={async () => {
                                 setBypassBusy(true);
                                 try {
@@ -3079,6 +3083,36 @@ export default function AdminPortal() {
                               Remove
                             </button>
                           ) : null}
+                          {/* Paid + bypassed: Delete under the badge (same slot as Remove). */}
+                          <button
+                            type="button"
+                            className={`admin-btn admin-btn-outline admin-btn-sm admin-bypass-remove-btn${
+                              deleting ? " is-loading" : ""
+                            }`}
+                            title={`Delete access email ${s.email}`}
+                            aria-label={`Delete access email ${s.email}`}
+                            disabled={bypassBusy || Boolean(signupActionBusy)}
+                            onClick={async () => {
+                              if (signupActionBusy) return;
+                              const ok = window.confirm(
+                                `Delete access email ${s.email}?\n\nThey will lose app access until they pay or sign up again. This cannot be undone.`
+                              );
+                              if (!ok) return;
+                              setSignupActionBusy(`delete:${emailKey}`);
+                              try {
+                                await deleteAccessEmail?.(
+                                  s.email,
+                                  adminSession?.email || SUPER_ADMIN_EMAIL
+                                );
+                              } finally {
+                                setSignupActionBusy("");
+                              }
+                            }}
+                          >
+                            <AdminBusyLabel busy={deleting} busyText="Deleting…">
+                              Delete
+                            </AdminBusyLabel>
+                          </button>
                         </div>
                       </div>
                     </div>

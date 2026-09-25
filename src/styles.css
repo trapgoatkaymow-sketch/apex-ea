@@ -2891,10 +2891,10 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 
 .admin-client-access-row {
   display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 6px;
 }
 
 .admin-bypass-remove-btn {

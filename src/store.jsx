@@ -14,6 +14,9 @@ import {
   mergeSignups,
   submitSignup,
   clearSignupAccessBypassed,
+  deleteSignupRemote,
+  filterOutDeletedSignups,
+  rememberDeletedSignupEmail,
   updateSignupAccessBypassed,
   updateSignupAccessPaid,
   updateSignupPremiumScanner,
@@ -491,7 +494,9 @@ export function AppProvider({ children }) {
     saved?.activeInterface === "v2" ? "v2" : "zeta"
   );
   const [coverEmail, setCoverEmail] = useState(saved?.coverEmail || "");
-  const [signups, setSignups] = useState(saved?.signups || []);
+  const [signups, setSignups] = useState(() =>
+    filterOutDeletedSignups(saved?.signups || [])
+  );
   const [eas, setEas] = useState(saved?.eas || []);
   const [bots, setBots] = useState(saved?.bots || []);
   const [licenseKeys, setLicenseKeys] = useState(() =>
@@ -1500,6 +1505,45 @@ export function AppProvider({ children }) {
       clearDeviceAccess(key);
       showToast(`Removed bypass for ${key}`);
       return true;
+    },
+    [showToast]
+  );
+
+  /** Super admin — permanently delete an access/signup email. */
+  const deleteAccessEmail = useCallback(
+    async (email, actorEmail) => {
+      const key = normalizeEmail(email);
+      const actor = normalizeEmail(actorEmail || SUPER_ADMIN_EMAIL);
+      if (!key || !key.includes("@")) {
+        showToast("Enter a valid email");
+        return false;
+      }
+      if (key === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+        showToast("Cannot delete the super admin email");
+        return false;
+      }
+      if (actor !== normalizeEmail(SUPER_ADMIN_EMAIL)) {
+        showToast("Only super admin can delete access emails");
+        return false;
+      }
+      rememberDeletedSignupEmail(key);
+      setSignups((prev) =>
+        filterOutDeletedSignups(
+          (prev || []).filter((row) => normalizeEmail(row.email) !== key)
+        )
+      );
+      clearDeviceAccess(key);
+      setPremiumScannerEmails((prev) =>
+        (prev || []).filter((e) => normalizeEmail(e) !== key)
+      );
+      try {
+        await deleteSignupRemote(key, actor);
+        showToast(`Deleted access email ${key}`);
+        return true;
+      } catch (error) {
+        showToast(error.message || `Deleted ${key} locally (sync failed)`);
+        return true;
+      }
     },
     [showToast]
   );
@@ -3004,6 +3048,7 @@ export function AppProvider({ children }) {
     setSignupStatus,
     bypassAppAccess,
     clearAppAccessBypass,
+    deleteAccessEmail,
     bypassPremiumScanner,
     refreshSignups,
     getSignup,

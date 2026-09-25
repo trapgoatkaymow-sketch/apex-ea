@@ -8,6 +8,7 @@ import {
   setSignupPremiumScanner,
   setSignupStatus,
   upsertSignup,
+  deleteSignup,
   revokeClientAccessBypasses,
 } from "./_lib.js";
 import {
@@ -22,11 +23,11 @@ function normalizeEmail(value) {
     .toLowerCase();
 }
 
-function assertSuperAdmin(adminEmail) {
+function assertSuperAdmin(adminEmail, message = "Only super admin can do this") {
   const admin = normalizeEmail(adminEmail);
   const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
   if (!admin || admin !== superAdmin) {
-    const err = new Error("Only super admin can revoke bypassed clients");
+    const err = new Error(message);
     err.status = 403;
     throw err;
   }
@@ -112,7 +113,10 @@ export default async function handler(req, res) {
         body.action === "revoke-bypassed" ||
         body.action === "removeAllBypassed"
       ) {
-        assertSuperAdmin(body.adminEmail || body.actorEmail || body.by || "");
+        assertSuperAdmin(
+          body.adminEmail || body.actorEmail || body.by || "",
+          "Only super admin can revoke bypassed clients"
+        );
         const mentors = await listMentors();
         const keepEmails = [
           SUPER_ADMIN_EMAIL,
@@ -123,8 +127,51 @@ export default async function handler(req, res) {
         sendJson(res, 200, { ok: true, ...result });
         return;
       }
+      if (
+        body.action === "delete" ||
+        body.action === "deleteEmail" ||
+        body.action === "deleteAccess" ||
+        body.delete === true
+      ) {
+        assertSuperAdmin(
+          body.adminEmail || body.actorEmail || body.by || "",
+          "Only super admin can delete access emails"
+        );
+        const target = normalizeEmail(body.email);
+        if (target && target === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+          sendJson(res, 400, { error: "Cannot delete the super admin email" });
+          return;
+        }
+        const removed = await deleteSignup(body.email);
+        if (!removed) {
+          sendJson(res, 404, { error: "Access email not found" });
+          return;
+        }
+        sendJson(res, 200, { ok: true, deleted: true, email: removed.email, signup: removed });
+        return;
+      }
       const signup = await setSignupStatus(body.email, body.status);
       sendJson(res, 200, { signup });
+      return;
+    }
+
+    if (req.method === "DELETE") {
+      const body = await readJsonBody(req);
+      assertSuperAdmin(
+        body.adminEmail || body.actorEmail || body.by || "",
+        "Only super admin can delete access emails"
+      );
+      const target = normalizeEmail(body.email);
+      if (target && target === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+        sendJson(res, 400, { error: "Cannot delete the super admin email" });
+        return;
+      }
+      const removed = await deleteSignup(body.email);
+      if (!removed) {
+        sendJson(res, 404, { error: "Access email not found" });
+        return;
+      }
+      sendJson(res, 200, { ok: true, deleted: true, email: removed.email, signup: removed });
       return;
     }
 

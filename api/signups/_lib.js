@@ -574,6 +574,29 @@ export async function setSignupAccessBypassed(email, bypassed = true) {
 }
 
 /**
+ * Permanently remove a signup email from the access list (super admin).
+ * Returns the removed row, or null if it was not found.
+ */
+export async function deleteSignup(email) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("Enter a valid email");
+    err.status = 400;
+    throw err;
+  }
+
+  let removed = null;
+  await mutateStore((signups) => {
+    const idx = signups.findIndex((s) => s.email === key);
+    if (idx < 0) return signups;
+    removed = signups[idx];
+    return [...signups.slice(0, idx), ...signups.slice(idx + 1)];
+  }, `delete signup: ${key}`);
+
+  return removed;
+}
+
+/**
  * Revoke payment bypass for every client signup except keepEmails (mentors).
  * Unpaid bypassed accounts go back to pending with unlock cleared.
  */
