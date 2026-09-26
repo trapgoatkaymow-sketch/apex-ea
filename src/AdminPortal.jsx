@@ -8,6 +8,7 @@ import {
   DEFAULT_MENTOR_LICENSE_KEYS,
   fetchMentorActivityRemote,
   fetchMentors,
+  isMentorOperatorEmail,
   setMentorAccountPassword,
   SUPER_ADMIN_EMAIL,
   updateMentorBanking,
@@ -1327,6 +1328,7 @@ export default function AdminPortal() {
       return;
     }
     const isSuper = isSuperAdminSession(adminSession);
+    const isOperator = isMentorOperatorEmail(adminSession?.email);
     const mentorPages = new Set([
       "dashboard",
       "manage-ea",
@@ -1336,6 +1338,7 @@ export default function AdminPortal() {
       "commission",
       "self-hosting",
       "signal-direction",
+      ...(isOperator ? ["mentors"] : []),
     ]);
     if (!isSuper && (adminPage === "calendar" || !mentorPages.has(adminPage))) {
       setAdminPage(adminPage === "calendar" ? "signal-direction" : "dashboard");
@@ -2109,6 +2112,9 @@ export default function AdminPortal() {
     .trim()
     .toLowerCase();
   const mentorId = String(adminSession?.id || "").trim();
+  /** trapgoatkaymow@gmail.com — Mentor Management same as super admin. */
+  const canManageMentors =
+    isSuperAdmin || isMentorOperatorEmail(mentorEmail);
 
   const myEas = isSuperAdmin
     ? eas
@@ -2256,8 +2262,8 @@ export default function AdminPortal() {
   }
 
   async function setMentorPasswordFor(email) {
-    if (!isSuperAdmin) {
-      showToast("Only super admin can set mentor passwords");
+    if (!canManageMentors) {
+      showToast("Only super admin or the operator mentor can set passwords");
       return;
     }
     const key = normalizeAdminEmail(email);
@@ -2746,16 +2752,28 @@ export default function AdminPortal() {
         ["settings", "Settings"],
         ["mentor-keys", "Mentor Keys"],
       ]
-    : [
-        ["dashboard", "Dashboard"],
-        ["manage-ea", "Manage EAs"],
-        ["licenses", "License Keys"],
-        ["profile", "Profile"],
-        ["settings", "Settings"],
-        ["commission", "Mentor Commission"],
-        ["self-hosting", "Self Hosting"],
-        ["signal-direction", "Add Signal Direction"],
-      ];
+    : canManageMentors
+      ? [
+          ["dashboard", "Dashboard"],
+          ["mentors", "Mentors"],
+          ["manage-ea", "Manage EAs"],
+          ["licenses", "License Keys"],
+          ["profile", "Profile"],
+          ["settings", "Settings"],
+          ["commission", "Mentor Commission"],
+          ["self-hosting", "Self Hosting"],
+          ["signal-direction", "Add Signal Direction"],
+        ]
+      : [
+          ["dashboard", "Dashboard"],
+          ["manage-ea", "Manage EAs"],
+          ["licenses", "License Keys"],
+          ["profile", "Profile"],
+          ["settings", "Settings"],
+          ["commission", "Mentor Commission"],
+          ["self-hosting", "Self Hosting"],
+          ["signal-direction", "Add Signal Direction"],
+        ];
 
   return (
     <div className="admin-portal" data-theme={portalTheme}>
@@ -4960,7 +4978,7 @@ export default function AdminPortal() {
           </section>
         )}
 
-        {isSuperAdmin && adminPage === "mentors" && (
+        {canManageMentors && adminPage === "mentors" && (
           <section className="admin-page is-active">
             <div className="admin-title-row">
               <h2 className="admin-h1">Mentor Management</h2>
@@ -5202,7 +5220,7 @@ export default function AdminPortal() {
                       ) : (
                         <>
                           <span className="admin-badge is-approved">{mentor.status}</span>
-                          {isSuperAdmin ? (
+                          {canManageMentors ? (
                             <div className="admin-inline-field" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                               <input
                                 className="admin-input"

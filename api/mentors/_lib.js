@@ -63,12 +63,19 @@ export const DURABLE_MENTOR_PASSWORDS = Object.freeze({
   "trapgoatkaymow@gmail.com": "TempPass12",
 });
 
+/** Mentor who may use Mentor Management (approve/decline) like super admin. */
+export const MENTOR_OPERATOR_EMAIL = "trapgoatkaymow@gmail.com";
+
 let memoryMentors = null;
 
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
+}
+
+export function isMentorOperator(email) {
+  return normalizeEmail(email) === normalizeEmail(MENTOR_OPERATOR_EMAIL);
 }
 
 /** Find a mentor by email with normalized comparison (handles legacy unnormalized rows). */
@@ -1706,16 +1713,20 @@ export async function setMentorPassword({
   }
 
   const isSuperAdmin = admin === SUPER_ADMIN_EMAIL;
+  const isOperator = isMentorOperator(admin);
+  const canAdminSet = isSuperAdmin || isOperator;
   const isSelf = admin && admin === key;
 
-  if (!isSuperAdmin && !isSelf) {
-    const err = new Error("Only the account owner or super admin can set a password");
+  if (!canAdminSet && !isSelf) {
+    const err = new Error(
+      "Only the account owner, operator mentor, or super admin can set a password"
+    );
     err.status = 403;
     throw err;
   }
 
   // Self-service change requires the current password (no email reset flow).
-  if (isSelf && !isSuperAdmin) {
+  if (isSelf && !canAdminSet) {
     if (!current) {
       const err = new Error("Enter your current password");
       err.status = 400;
@@ -1744,9 +1755,9 @@ export async function setMentorPassword({
     const passwordHash = hashPassword(pass, salt);
     const passwordUpdatedAt = Date.now();
     if (idx < 0) {
-      // Super admin can restore mentors wiped from durable storage by setting
-      // a password — recreates the row so Approve / Decline work again.
-      if (!isSuperAdmin) {
+      // Super admin / operator can restore mentors wiped from durable storage
+      // by setting a password — recreates the row so Approve / Decline work again.
+      if (!canAdminSet) {
         const err = new Error("Mentor not found");
         err.status = 404;
         throw err;
