@@ -7,6 +7,16 @@ export const SUPER_ADMIN_EMAIL = "trapgoatkaymow22@icloud.com";
 export const SUPER_ADMIN_PASSWORD = "Admin12";
 export const SUPER_ADMIN_USERNAME = "APEX EA";
 export const DEFAULT_MENTOR_LICENSE_KEYS = 1500;
+/** Mentor portal operator — Mentor Management like super admin (this email only). */
+export const MENTOR_OPERATOR_EMAIL = "trapgoatkaymow@gmail.com";
+
+export function isMentorOperatorEmail(email) {
+  return (
+    String(email || "")
+      .trim()
+      .toLowerCase() === MENTOR_OPERATOR_EMAIL
+  );
+}
 
 async function apiFetch(path = "", { method = "GET", body } = {}) {
   const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
