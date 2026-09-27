@@ -440,9 +440,18 @@ export default async function handler(req, res) {
       1,
       Math.min(Number(body.concurrency) || 4, 8)
     );
+    const imageUrl = String(body.imageUrl || body.image || "").trim();
+    const downloadUrl = String(
+      body.downloadUrl || body.appUrl || body.apkUrl || ""
+    ).trim();
+    const ctaLabel = String(body.ctaLabel || body.cta || "").trim();
+
     const result = await sendBroadcastEmails(recipients, {
       subject,
       message,
+      imageUrl,
+      downloadUrl,
+      ctaLabel,
       concurrency,
     });
 

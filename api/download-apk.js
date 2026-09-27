@@ -10,21 +10,21 @@ export const config = {
   maxDuration: 60,
 };
 
-const APK_NAME = "apex-ea-v2.33.apk";
+const APK_NAME = "apex-ea-v2.34.apk";
 const GITHUB_RAW_CANDIDATES = [
-  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea-v2.33.apk",
+  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea-v2.34.apk",
   "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea.apk",
-  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea-v2.32.apk",
-  "https://github.com/trapgoatkaymow-sketch/apex-ea/raw/main/public/apex-ea-v2.33.apk",
+  "https://raw.githubusercontent.com/trapgoatkaymow-sketch/apex-ea/main/public/apex-ea-v2.33.apk",
+  "https://github.com/trapgoatkaymow-sketch/apex-ea/raw/main/public/apex-ea-v2.34.apk",
 ];
 
 const LOCAL_CANDIDATES = [
-  path.join(process.cwd(), "public", "apex-ea-v2.33.apk"),
+  path.join(process.cwd(), "public", "apex-ea-v2.34.apk"),
   path.join(process.cwd(), "public", "apex-ea.apk"),
-  path.join(process.cwd(), "public", "apex-ea-v2.32.apk"),
-  path.join(process.cwd(), "apex-ea-v2.33.apk"),
+  path.join(process.cwd(), "public", "apex-ea-v2.33.apk"),
+  path.join(process.cwd(), "apex-ea-v2.34.apk"),
   path.join(process.cwd(), "apex-ea.apk"),
-  path.join(process.cwd(), "dist", "apex-ea-v2.33.apk"),
+  path.join(process.cwd(), "dist", "apex-ea-v2.34.apk"),
   path.join(process.cwd(), "dist", "apex-ea.apk"),
 ];
 
@@ -84,12 +84,7 @@ async function proxyGithubApk(req, res) {
   }
   res.statusCode = 404;
   res.setHeader("Content-Type", "application/json");
-  res.end(
-    JSON.stringify({
-      error: "APK not found on server",
-      hint: lastError,
-    })
-  );
+  res.end(JSON.stringify({ error: lastError }));
   return false;
 }
 
@@ -100,25 +95,22 @@ export default async function handler(req, res) {
   }
   if (req.method !== "GET" && req.method !== "HEAD") {
     res.statusCode = 405;
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ error: "Method not allowed" }));
+    res.end("Method not allowed");
     return;
   }
 
-  const file = findApk();
-  if (!file) {
-    await proxyGithubApk(req, res);
+  const local = findApk();
+  if (local) {
+    const stat = fs.statSync(local);
+    res.statusCode = 200;
+    setApkHeaders(res, stat.size);
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    fs.createReadStream(local).pipe(res);
     return;
   }
 
-  const stat = fs.statSync(file);
-  res.statusCode = 200;
-  setApkHeaders(res, stat.size);
-
-  if (req.method === "HEAD") {
-    res.end();
-    return;
-  }
-
-  fs.createReadStream(file).pipe(res);
+  await proxyGithubApk(req, res);
 }

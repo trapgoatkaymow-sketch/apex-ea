@@ -240,12 +240,17 @@ export function buildBroadcastEmail({
   toName = "",
   subject = "",
   message = "",
+  imageUrl = "",
+  downloadUrl = "",
+  ctaLabel = "",
 } = {}) {
   const safeName = String(toName || "").trim() || "there";
   const safeSubject = String(subject || "Message from ApexEA").trim();
   const bodyText = String(message || "").trim();
   const appUrl = env("PUBLIC_APP_URL", "https://www.apex-ea.com").replace(/\/+$/, "");
-  const downloadUrl = "https://apex-ea.tech";
+  const safeDownload = String(downloadUrl || `${appUrl}/android`).trim() || `${appUrl}/android`;
+  const safeImage = String(imageUrl || "").trim();
+  const safeCta = String(ctaLabel || "Download the new app").trim();
   const paragraphs = bodyText
     .split(/\n+/)
     .map((line) => line.trim())
@@ -259,15 +264,23 @@ export function buildBroadcastEmail({
         .join("")
     : `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:#c8c8d0;">${escapeHtml(bodyText || "—")}</p>`;
 
+  const imageBlock = safeImage
+    ? `<p style="margin:8px 0 18px;"><img src="${escapeHtml(safeImage)}" alt="ApexEA update" width="480" style="display:block;width:100%;max-width:480px;height:auto;border-radius:14px;border:1px solid #2a2a35;" /></p>`
+    : "";
+
   const textContent = [
     `Hi ${safeName},`,
     "",
     bodyText,
     "",
-    `Open ${appUrl} or download the app: ${downloadUrl}`,
+    safeImage ? `Screenshot: ${safeImage}` : null,
+    `${safeCta}: ${safeDownload}`,
+    `Or open ${appUrl}`,
     "",
     "— ApexEA",
-  ].join("\n");
+  ]
+    .filter((line) => line != null)
+    .join("\n");
 
   const htmlContent = `<!DOCTYPE html>
 <html>
@@ -280,9 +293,13 @@ export function buildBroadcastEmail({
           <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;color:#fff;">${escapeHtml(safeSubject)}</h1>
           <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#c8c8d0;">Hi ${escapeHtml(safeName)},</p>
           ${htmlBody}
-          <p style="margin:18px 0 0;font-size:14px;line-height:1.55;color:#c8c8d0;">
-            Open <a href="${escapeHtml(appUrl)}" style="color:#ff7ab5;">${escapeHtml(appUrl)}</a>
-            or <a href="${escapeHtml(downloadUrl)}" style="color:#ff7ab5;">download the app</a>.
+          ${imageBlock}
+          <p style="margin:8px 0 0;">
+            <a href="${escapeHtml(safeDownload)}" style="display:inline-block;padding:14px 20px;border-radius:12px;background:linear-gradient(180deg,#ff7ab5 0%,#ff2d7a 100%);color:#fff;font-size:15px;font-weight:700;text-decoration:none;">${escapeHtml(safeCta)}</a>
+          </p>
+          <p style="margin:16px 0 0;font-size:13px;line-height:1.55;color:#9a9aaa;">
+            Direct link: <a href="${escapeHtml(safeDownload)}" style="color:#ff7ab5;">${escapeHtml(safeDownload)}</a><br/>
+            Or open <a href="${escapeHtml(appUrl)}" style="color:#ff7ab5;">${escapeHtml(appUrl)}</a>
           </p>
         </td></tr>
       </table>
@@ -295,7 +312,10 @@ export function buildBroadcastEmail({
 }
 
 /** Send one custom broadcast email. */
-export async function sendBroadcastEmail(recipient = {}, { subject, message } = {}) {
+export async function sendBroadcastEmail(
+  recipient = {},
+  { subject, message, imageUrl, downloadUrl, ctaLabel } = {}
+) {
   const toEmail = String(recipient.email || recipient.toEmail || "")
     .trim()
     .toLowerCase();
@@ -303,7 +323,14 @@ export async function sendBroadcastEmail(recipient = {}, { subject, message } = 
   if (!toEmail.includes("@")) {
     return { ok: false, error: "Missing recipient email" };
   }
-  const built = buildBroadcastEmail({ toName, subject, message });
+  const built = buildBroadcastEmail({
+    toName,
+    subject,
+    message,
+    imageUrl,
+    downloadUrl,
+    ctaLabel,
+  });
   return sendBrevoEmail({
     toEmail,
     toName,
@@ -384,7 +411,7 @@ export async function sendMentorApprovedEmail({
 /** Send custom emails to many recipients with light concurrency. */
 export async function sendBroadcastEmails(
   recipients = [],
-  { subject, message, concurrency = 4 } = {}
+  { subject, message, imageUrl, downloadUrl, ctaLabel, concurrency = 4 } = {}
 ) {
   const list = Array.isArray(recipients)
     ? recipients.filter((r) => String(r?.email || "").includes("@"))
@@ -396,7 +423,13 @@ export async function sendBroadcastEmails(
       const idx = i;
       i += 1;
       const recipient = list[idx];
-      const sent = await sendBroadcastEmail(recipient, { subject, message });
+      const sent = await sendBroadcastEmail(recipient, {
+        subject,
+        message,
+        imageUrl,
+        downloadUrl,
+        ctaLabel,
+      });
       results[idx] = {
         email: recipient.email || "",
         ...sent,
