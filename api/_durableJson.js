@@ -1201,6 +1201,30 @@ export async function durableRead(opts = {}) {
 /**
  * @returns {Promise<{ ok: boolean, durable: boolean, source?: string, reason?: string, sha?: string|null }>}
  */
+/** Per-path cooldown so high-churn stores cannot burn the GitHub Contents quota. */
+const githubWriteCooldownUntil = new Map();
+
+async function githubCoreRemaining(token) {
+  const auth = String(token || "").trim();
+  if (!auth) return null;
+  try {
+    const res = await fetch("https://api.github.com/rate_limit", {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${auth}`,
+        "User-Agent": "apex-ea-durable",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const n = Number(data?.resources?.core?.remaining);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function durableWrite(opts = {}) {
   const {
     raw,
@@ -1213,6 +1237,14 @@ export async function durableWrite(opts = {}) {
     githubSha,
     message,
     localPaths = [],
+    /**
+     * always — licenses (must mirror)
+     * fallback — only if Firebase + Blob both failed (default for mentors/signups)
+     * never — never touch GitHub (broadcast log, etc.)
+     * throttled — at most once per githubMinIntervalMs when falling back
+     */
+    githubMode,
+    githubMinIntervalMs = 15 * 60 * 1000,
   } = opts;
 
   const body = String(raw ?? "");
@@ -1230,6 +1262,9 @@ export async function durableWrite(opts = {}) {
   const mentorsViaGit = /mentors\.json$/i.test(
     String(githubPath || blobPath || "")
   );
+  const mode = String(
+    githubMode || (licensesViaGit ? "always" : githubPath ? "fallback" : "never")
+  ).toLowerCase();
 
   // Mentors: merge with existing durable copies before any put so a cold
   // instance with a short roster cannot wipe pending signups.
@@ -1248,7 +1283,9 @@ export async function durableWrite(opts = {}) {
           mentorsBody = mergeMentorsDocuments(blob.raw, mentorsBody);
         }
       }
-      if (githubPath) {
+      // Skip GitHub merge reads in fallback/never modes — they burn the
+      // shared Contents quota and Firebase/Blob already hold the roster.
+      if (githubPath && (mode === "always" || mode === "throttled")) {
         const gh = await githubGet({
           repo: githubRepo,
           branch: githubBranch,
@@ -1328,7 +1365,32 @@ export async function durableWrite(opts = {}) {
     if (put.ok) return { ok: true, durable: true, source: "blob" };
   }
 
-  if (githubPath) {
+  if (githubPath && mode !== "never") {
+    // Protect the shared GitHub token — skip when quota is nearly exhausted
+    // (except licenses, which still try git push as last resort).
+    if (!licensesViaGit) {
+      const remaining = await githubCoreRemaining(githubToken());
+      if (remaining != null && remaining < 100) {
+        return {
+          ok: false,
+          durable: false,
+          reason: `github rate-limited (remaining=${remaining}) — firebase/blob unavailable`,
+          status: 403,
+        };
+      }
+      if (mode === "throttled") {
+        const until = Number(githubWriteCooldownUntil.get(githubPath) || 0);
+        if (Date.now() < until) {
+          return {
+            ok: false,
+            durable: false,
+            reason: "github write throttled for this store",
+            status: 429,
+          };
+        }
+      }
+    }
+
     // Licenses store is too large for Contents API (base64 > 1MB). Go straight
     // to git push so Generate/mirror actually updates data/licenses.json.
     if (licensesViaGit) {
@@ -1390,6 +1452,12 @@ export async function durableWrite(opts = {}) {
         message,
       });
       if (put.ok) {
+        if (mode === "throttled") {
+          githubWriteCooldownUntil.set(
+            githubPath,
+            Date.now() + Math.max(60_000, Number(githubMinIntervalMs) || 0)
+          );
+        }
         return { ok: true, durable: true, source: "github", sha: put.sha };
       }
       // Conflict / missing sha — refresh and retry.

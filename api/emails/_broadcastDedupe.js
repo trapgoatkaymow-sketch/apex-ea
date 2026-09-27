@@ -109,6 +109,7 @@ async function writeLog(log, message = "chore: email broadcast dedupe log") {
       blobPath: BLOB_PATH,
       firebasePath: FIREBASE_PATH,
       // Intentionally omit githubPath so we never commit this log to main.
+      githubMode: "never",
       raw,
       message,
     });

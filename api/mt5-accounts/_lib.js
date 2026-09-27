@@ -145,8 +145,10 @@ async function writeStore(accounts, sha, message) {
       ? {
           githubPath: FILE_PATH,
           githubSha: sha && sha !== "local" ? sha : lastRemoteSha,
+          githubMode: "throttled",
+          githubMinIntervalMs: GITHUB_MIRROR_MIN_MS,
         }
-      : {}),
+      : { githubMode: "never" }),
     message,
     localPaths: [TMP_FILE, LOCAL_FILE],
   });

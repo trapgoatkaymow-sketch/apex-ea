@@ -27,11 +27,29 @@ export default async function handler(req, res) {
   }
 
   let firebase = false;
+  let firebaseProbe = null;
   try {
     const fb = await import("./_firebaseRtdb.js");
     firebase = Boolean(fb.firebaseConfigured?.());
-  } catch {
+    if (firebase) {
+      const probePath = "apexea/_healthProbe";
+      const stamp = `health-${Date.now()}`;
+      const put = await fb.firebasePut(probePath, JSON.stringify({ stamp, at: Date.now() }));
+      if (!put?.ok) {
+        firebaseProbe = { ok: false, step: "put", reason: put?.reason || "put failed" };
+      } else {
+        const got = await fb.firebaseGet(probePath);
+        const raw = String(got?.raw || "");
+        firebaseProbe = {
+          ok: raw.includes(stamp),
+          step: "roundtrip",
+          reason: raw.includes(stamp) ? null : "read mismatch",
+        };
+      }
+    }
+  } catch (error) {
     firebase = false;
+    firebaseProbe = { ok: false, step: "exception", reason: error?.message || "firebase error" };
   }
 
   const blob = Boolean(String(process.env.BLOB_READ_WRITE_TOKEN || "").trim());
@@ -79,25 +97,33 @@ export default async function handler(req, res) {
     }
   }
 
-  const ok =
+  const firebaseHealthy = Boolean(firebase && firebaseProbe?.ok !== false);
+  const healthy =
     hasDurableBackend() &&
-    (firebase || blob || github) &&
+    firebaseHealthy &&
     (githubRate?.remaining == null || githubRate.remaining > 50);
 
   sendJson(res, 200, {
-    ok,
+    ok: healthy,
     time: new Date().toISOString(),
     brevo: brevoConfigured(),
     durable: {
       any: hasDurableBackend(),
       firebase,
+      firebaseProbe,
       blob,
       github,
     },
     githubRate,
     notes: [
-      !firebase && !blob
-        ? "Firebase/Blob missing — app falls back to GitHub and can lose memory when rate-limited"
+      !firebase
+        ? "Firebase missing — app falls back to GitHub and can lose memory when rate-limited"
+        : null,
+      firebase && firebaseProbe && !firebaseProbe.ok
+        ? `Firebase configured but write/read probe failed: ${firebaseProbe.reason || "unknown"}`
+        : null,
+      !blob
+        ? "Vercel Blob not configured (BLOB_READ_WRITE_TOKEN) — add a Blob store for backup memory"
         : null,
       githubRate?.remaining != null && githubRate.remaining < 200
         ? "GitHub API quota low — pause high-churn writes"
