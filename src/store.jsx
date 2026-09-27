@@ -642,8 +642,11 @@ export function AppProvider({ children }) {
         return false;
       }
       setEditingSymbol(clean);
-      setSymbolSetupOpen(true);
       setPairsOpen(false);
+      // Full-page form on Interface 1 (same Save Symbol screen as the quotes edit).
+      setActiveInterface("zeta");
+      setZetaView("symbol-edit");
+      setSymbolSetupOpen(false);
       return true;
     },
     [showToast]

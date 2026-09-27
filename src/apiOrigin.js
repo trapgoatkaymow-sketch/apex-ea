@@ -1,18 +1,18 @@
 /** Live production API host — secrets stay on Vercel. */
 export const PROD_API_ORIGIN = "https://www.apex-ea.com";
 
-/** True when the UI host is the live apex-ea.com site (www or apex). */
-export function isProductionHost(hostname = "") {
+/** Canonical live host — apex-ea.com (no www) 308-redirects and can drop POSTs. */
+export function isCanonicalProductionHost(hostname = "") {
   const host = String(hostname || "")
     .trim()
     .toLowerCase();
-  return host === "www.apex-ea.com" || host === "apex-ea.com";
+  return host === "www.apex-ea.com";
 }
 
 /**
- * Native / local / preview / mirror hosts are not the live product origin.
- * Mentors signing in from “other sites” (Vercel previews, mirrors) must hit
- * the production API so passwords match one durable store.
+ * Native / local / preview / apex-ea.com (no www) / mirrors are not safe for
+ * same-origin API POSTs. apex-ea.com 308→www drops mentor login bodies and
+ * shows “Invalid email or password”. Always hit www for those hosts.
  */
 export function needsAbsoluteApi() {
   if (typeof window === "undefined") return false;
@@ -28,7 +28,7 @@ export function needsAbsoluteApi() {
     // ignore
   }
   const host = String(window.location?.hostname || "");
-  if (isProductionHost(host)) return false;
+  if (isCanonicalProductionHost(host)) return false;
   return true;
 }
 

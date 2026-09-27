@@ -33,9 +33,27 @@ export default function ZetaInterface() {
     coverEmail,
     catalog,
     getSymbolMeta,
+    saveSymbolMeta,
+    removeSymbolEverywhere,
+    editingSymbol,
+    setEditingSymbol,
     orbTradeLive,
     clearOrbTrade,
   } = useApp();
+
+  const [lotSize, setLotSize] = useState("0.01");
+  const [action, setAction] = useState("BOTH");
+  const [platform, setPlatform] = useState("MT5");
+  const [trades, setTrades] = useState("1");
+
+  useEffect(() => {
+    if (zetaView !== "symbol-edit" || !editingSymbol) return;
+    const meta = getSymbolMeta(editingSymbol) || {};
+    setLotSize(String(meta.lotSize ?? "0.01"));
+    setAction(meta.action || "BOTH");
+    setPlatform(meta.platform || "MT5");
+    setTrades(String(meta.trades ?? 1));
+  }, [zetaView, editingSymbol, getSymbolMeta]);
 
   const [floatSrc, setFloatSrc] = useState(
     () =>
@@ -196,6 +214,108 @@ export default function ZetaInterface() {
           </section>
         )}
 
+        {zetaView === "symbol-edit" && editingSymbol && (
+          <section className="view is-active view-symbol-edit">
+            <header className="v2-screen-top">
+              <button
+                className="v2-back"
+                type="button"
+                onClick={() => {
+                  setZetaView("home");
+                  setEditingSymbol(null);
+                }}
+              >
+                ←
+              </button>
+              <h2 className="v2-screen-title">{editingSymbol}</h2>
+              <button
+                className="v2-trash"
+                type="button"
+                onClick={() => {
+                  removeSymbolEverywhere(editingSymbol);
+                  setEditingSymbol(null);
+                  setZetaView("home");
+                }}
+                aria-label={`Remove ${editingSymbol}`}
+              >
+                🗑
+              </button>
+            </header>
+            <form
+              className="v2-edit-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveSymbolMeta(editingSymbol, {
+                  lotSize: Number(String(lotSize).replace(",", ".")) || 0.01,
+                  action,
+                  platform,
+                  trades: Math.max(1, Math.floor(Number(trades) || 1)),
+                });
+                setEditingSymbol(null);
+                setZetaView("home");
+              }}
+            >
+              <label className="v2-field">
+                <span>Lot Size</span>
+                <input
+                  className="v2-input"
+                  type="text"
+                  inputMode="decimal"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  placeholder="0.01"
+                  value={lotSize}
+                  onChange={(e) => setLotSize(e.target.value.replace(/[^\d.,]/g, ""))}
+                  onBlur={() => {
+                    const n = Number(String(lotSize).replace(",", "."));
+                    setLotSize(
+                      Number.isFinite(n) && n > 0
+                        ? String(Number(n.toFixed(4)))
+                        : "0.01"
+                    );
+                  }}
+                />
+              </label>
+              <label className="v2-field">
+                <span>Action</span>
+                <select
+                  className="v2-input"
+                  value={action}
+                  onChange={(e) => setAction(e.target.value)}
+                >
+                  <option value="BUY">BUY</option>
+                  <option value="SELL">SELL</option>
+                  <option value="BOTH">BOTH</option>
+                </select>
+              </label>
+              <label className="v2-field">
+                <span>Platform</span>
+                <select
+                  className="v2-input"
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value)}
+                >
+                  <option value="MT4">MT4</option>
+                  <option value="MT5">MT5</option>
+                </select>
+              </label>
+              <label className="v2-field">
+                <span>Number of Trades</span>
+                <input
+                  className="v2-input"
+                  type="number"
+                  min="1"
+                  value={trades}
+                  onChange={(e) => setTrades(e.target.value)}
+                />
+              </label>
+              <button className="v2-save-btn" type="submit">
+                Save Symbol
+              </button>
+            </form>
+          </section>
+        )}
+
         <ChartScanner active={zetaView === "scanner"} />
 
         {zetaView === "metatrader" && (
@@ -213,9 +333,16 @@ export default function ZetaInterface() {
         ].map(([id, label]) => (
           <button
             key={id}
-            className={`tab${zetaView === id ? " is-active" : ""}`}
+            className={`tab${
+              zetaView === id || (id === "home" && zetaView === "symbol-edit")
+                ? " is-active"
+                : ""
+            }`}
             type="button"
-            onClick={() => setZetaView(id)}
+            onClick={() => {
+              setZetaView(id);
+              if (id !== "symbol-edit") setEditingSymbol(null);
+            }}
           >
             <span>{label}</span>
           </button>

@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import AdminPortal from "./AdminPortal.jsx";
 import CoverLock from "./CoverLock.jsx";
 import PairsSheet from "./PairsSheet.jsx";
-import SymbolEditSheet from "./SymbolEditSheet.jsx";
 import V2Interface from "./V2Interface.jsx";
 import ZetaInterface from "./ZetaInterface.jsx";
 import { useApp } from "./store.jsx";
@@ -61,7 +60,6 @@ export default function App() {
 
       <CoverLock />
       <PairsSheet />
-      <SymbolEditSheet />
       <AdminPortal />
 
       {toast ? <div className="toast">{toast}</div> : null}

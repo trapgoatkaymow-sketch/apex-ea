@@ -67,8 +67,6 @@ textarea.v2-input {
 .iface-layer,
 .pairs-sheet,
 .pairs-panel,
-.symbol-setup-sheet,
-.symbol-setup-panel,
 .view-metatrader,
 .v2-view-metatrader,
 .admin-portal,
@@ -1489,130 +1487,23 @@ html:has(.phone[data-interface="v2"]) body {
   color: #fff;
 }
 
-/* —— Symbol setup (Interface 1 — lot / action / platform / trades) —— */
-.symbol-setup-sheet {
-  position: absolute;
-  inset: 0;
-  z-index: 22;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
-.symbol-setup-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(8px);
-}
-
-.symbol-setup-panel {
-  position: relative;
-  z-index: 1;
-  max-height: min(92%, 880px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior-x: none;
-  touch-action: pan-y;
-  padding: 18px 18px calc(22px + var(--safe-bottom));
-  border-radius: 28px 28px 0 0;
-  background:
-    radial-gradient(480px 200px at 10% -10%, rgba(255, 90, 130, 0.2), transparent 58%),
-    linear-gradient(180deg, #14141c 0%, #08080a 100%);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.55);
-  animation: pairs-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.symbol-setup-header {
-  display: grid;
-  grid-template-columns: 42px 1fr 42px;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.symbol-setup-back,
-.symbol-setup-trash {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 1.1rem;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.symbol-setup-title {
-  margin: 0;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 750;
-  letter-spacing: -0.02em;
-  color: #fff;
-}
-
-.symbol-setup-note {
-  margin: 0 0 14px;
-  text-align: center;
-  font-size: 0.84rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.symbol-setup-form {
-  background: #fff;
-  border-radius: 18px;
-  padding: 18px 16px 20px;
+/* Interface 1 symbol-edit — reuse V2 Save Symbol card on Home stage */
+.view-symbol-edit {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  padding: 8px 16px 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
 }
 
-.symbol-setup-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.phone[data-interface="zeta"] .view-symbol-edit .v2-screen-top {
+  margin-bottom: 4px;
 }
 
-.symbol-setup-field > span {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: rgba(26, 6, 16, 0.7);
-}
-
-.symbol-setup-field input,
-.symbol-setup-field select {
-  width: 100%;
-  border: 1px solid rgba(26, 6, 16, 0.14);
-  border-radius: 12px;
-  padding: 12px 14px;
-  font: inherit;
-  font-size: 1rem;
-  color: #1a0610;
-  background: #f7f7f8;
-}
-
-.symbol-setup-field input:focus,
-.symbol-setup-field select:focus {
-  outline: 2px solid rgba(var(--pink-hot-rgb), 0.35);
-  border-color: rgba(var(--pink-hot-rgb), 0.45);
-}
-
-.symbol-setup-save {
-  margin-top: 6px;
-  border: 0;
-  border-radius: 14px;
-  padding: 14px 16px;
-  font: inherit;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(180deg, var(--pink-soft) 0%, var(--pink-hot) 100%);
-  box-shadow: 0 10px 24px rgba(var(--pink-hot-rgb), 0.35);
-  cursor: pointer;
+.phone[data-interface="zeta"] .view-symbol-edit .v2-edit-form {
+  margin-top: 4px;
 }
 
 .pairs-empty {
@@ -5647,7 +5538,6 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 .phone.is-locked .v2-tabbar,
 .phone.is-locked .top,
 .phone.is-locked .pairs-sheet,
-.phone.is-locked .symbol-setup-sheet,
 .phone.is-locked .glow,
 .phone.is-locked .glow-soft,
 .phone.is-locked .iface-layer {
