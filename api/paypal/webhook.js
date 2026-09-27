@@ -10,9 +10,11 @@ import {
   verifyPayPalWebhookSignature,
 } from "./_lib.js";
 import {
+  assertGiveawayActive,
   extractCaptureAmount,
   extractCaptureId,
   fulfillRobotPurchase,
+  getGiveawayWindow,
   isGiveawayPurchaseCapture,
   isRobotPurchaseCapture,
 } from "./_robotPurchase.js";
@@ -171,6 +173,20 @@ export default async function handler(req, res) {
       !giveaway && isRobotPurchaseCapture(capture, { purposeHint: purpose });
 
     if (giveaway || robot) {
+      if (giveaway) {
+        try {
+          assertGiveawayActive();
+        } catch (error) {
+          sendJson(res, 200, {
+            ok: false,
+            error: "giveaway-expired",
+            message: error.message,
+            giveaway: getGiveawayWindow(),
+            eventType,
+          });
+          return;
+        }
+      }
       const email = await resolveEmailFromCapture(capture, resource);
       const clientName = extractCaptureClientName(capture);
       if (!email || !email.includes("@")) {

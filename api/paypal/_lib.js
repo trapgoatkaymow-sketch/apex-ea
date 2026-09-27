@@ -142,7 +142,11 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
     ROBOT_CURRENCY,
     GIVEAWAY_PRICE,
     GIVEAWAY_CURRENCY,
+    assertGiveawayActive,
   } = await import("./_robotPurchase.js");
+  if (kind === "giveaway") {
+    assertGiveawayActive();
+  }
   const amountValue =
     kind === "giveaway"
       ? GIVEAWAY_PRICE

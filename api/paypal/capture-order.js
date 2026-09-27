@@ -10,6 +10,7 @@ import {
   sendJson,
 } from "./_lib.js";
 import {
+  assertGiveawayActive,
   extractCaptureId,
   fulfillRobotPurchase,
   isGiveawayPurchaseCapture,
@@ -65,6 +66,8 @@ export default async function handler(req, res) {
         isRobotPurchaseCapture(capture, { purposeHint }));
 
     if (isGiveaway || isRobot) {
+      // Giveaway must still be inside the 24h window at capture time.
+      if (isGiveaway) assertGiveawayActive();
       const email = extractCaptureEmail(capture) || fallbackEmail;
       const clientName = extractCaptureClientName(capture) || fallbackName;
       const fulfilled = await fulfillRobotPurchase({

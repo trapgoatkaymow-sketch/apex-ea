@@ -66,6 +66,59 @@ export const GIVEAWAY_DISPLAY_CURRENCY = String(
   .trim()
   .toUpperCase();
 
+/**
+ * 24-hour giveaway window.
+ * Set GIVEAWAY_STARTS_AT (ISO) on Vercel to open/restart the window.
+ * Default below is the launch instant for this campaign.
+ */
+export const GIVEAWAY_STARTS_AT = String(
+  process.env.GIVEAWAY_STARTS_AT || "2026-09-27T09:00:00.000Z"
+).trim();
+export const GIVEAWAY_DURATION_MS = Math.max(
+  60_000,
+  (Number(process.env.GIVEAWAY_DURATION_HOURS) || 24) * 60 * 60 * 1000
+);
+
+export function getGiveawayWindow(nowMs = Date.now()) {
+  const startsAt = Date.parse(GIVEAWAY_STARTS_AT);
+  const startMs = Number.isFinite(startsAt) ? startsAt : nowMs;
+  const endMs = startMs + GIVEAWAY_DURATION_MS;
+  const remainingMs = Math.max(0, endMs - nowMs);
+  const notStarted = nowMs < startMs;
+  const expired = nowMs >= endMs;
+  const active = !notStarted && !expired;
+  return {
+    startsAt: new Date(startMs).toISOString(),
+    endsAt: new Date(endMs).toISOString(),
+    durationMs: GIVEAWAY_DURATION_MS,
+    remainingMs,
+    active,
+    expired,
+    notStarted,
+    serverNow: new Date(nowMs).toISOString(),
+  };
+}
+
+/** Throws 410 when the giveaway link is outside its 24h window. */
+export function assertGiveawayActive(nowMs = Date.now()) {
+  const window = getGiveawayWindow(nowMs);
+  if (window.notStarted) {
+    const err = new Error("This giveaway has not started yet");
+    err.status = 403;
+    err.data = { giveaway: window };
+    throw err;
+  }
+  if (window.expired) {
+    const err = new Error(
+      "This 24-hour giveaway has ended — the link no longer works"
+    );
+    err.status = 410;
+    err.data = { giveaway: window };
+    throw err;
+  }
+  return window;
+}
+
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
