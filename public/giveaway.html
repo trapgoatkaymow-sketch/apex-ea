@@ -205,32 +205,60 @@
       .hidden { display: none !important; }
       .timer {
         margin: 0 0 18px;
-        padding: 14px 14px 12px;
-        border-radius: 16px;
+        padding: 16px 14px 14px;
+        border-radius: 18px;
         border: 1px solid var(--line);
-        background: rgba(255, 106, 0, 0.12);
+        background: rgba(255, 106, 0, 0.14);
         text-align: center;
       }
       .timer-label {
-        margin: 0 0 6px;
-        font-size: 0.72rem;
-        letter-spacing: 0.1em;
+        margin: 0 0 10px;
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .timer-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .timer-unit {
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.35);
+        padding: 10px 6px 8px;
+      }
+      .timer-unit b {
+        display: block;
+        font-family: Syne, sans-serif;
+        font-weight: 800;
+        font-size: clamp(1.7rem, 8vw, 2.2rem);
+        line-height: 1;
+        color: var(--fire2);
+        letter-spacing: 0.04em;
+        font-variant-numeric: tabular-nums;
+      }
+      .timer-unit small {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--muted);
       }
-      .timer-value {
-        margin: 0;
-        font-family: Syne, sans-serif;
-        font-weight: 800;
-        font-size: 1.85rem;
-        letter-spacing: 0.04em;
-        color: var(--fire2);
+      .timer-ends {
+        margin: 10px 0 0;
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.35;
       }
       .timer.is-expired {
         background: rgba(255, 107, 107, 0.12);
         border-color: rgba(255, 107, 107, 0.4);
       }
-      .timer.is-expired .timer-value { color: var(--err); }
+      .timer.is-expired .timer-unit b { color: var(--err); }
       .ended-box {
         margin: 0 0 12px;
         padding: 16px;
@@ -252,8 +280,13 @@
       </p>
 
       <div id="timer" class="timer" aria-live="polite">
-        <p class="timer-label">Offer ends in</p>
-        <p id="timer-value" class="timer-value">24:00:00</p>
+        <p class="timer-label" id="timer-label">Offer ends in</p>
+        <div class="timer-grid">
+          <div class="timer-unit"><b id="t-h">24</b><small>Hours</small></div>
+          <div class="timer-unit"><b id="t-m">00</b><small>Minutes</small></div>
+          <div class="timer-unit"><b id="t-s">00</b><small>Seconds</small></div>
+        </div>
+        <p class="timer-ends" id="timer-ends">Ends in 24 hours (real time)</p>
       </div>
       <div id="ended-box" class="ended-box hidden">
         This 24-hour giveaway has ended. The link no longer accepts payments.
@@ -334,35 +367,56 @@
       const payCardFieldsBtn = document.getElementById("pay-card-fields-btn");
       const buyForm = document.getElementById("buy-form");
       const timerEl = document.getElementById("timer");
-      const timerValue = document.getElementById("timer-value");
+      const timerLabel = document.getElementById("timer-label");
+      const timerEnds = document.getElementById("timer-ends");
+      const tH = document.getElementById("t-h");
+      const tM = document.getElementById("t-m");
+      const tS = document.getElementById("t-s");
       const endedBox = document.getElementById("ended-box");
       let giveawayActive = true;
-      let endsAtMs = 0;
+      // Start counting immediately (provisional 24h). Server syncs exact end time.
+      let endsAtMs = Date.now() + 24 * 60 * 60 * 1000;
+      let timerSynced = false;
 
       function setMsg(text, kind) {
         msg.textContent = text || "";
         msg.className = "msg" + (kind ? " " + kind : "");
       }
 
-      function formatRemaining(ms) {
-        const total = Math.max(0, Math.floor(ms / 1000));
+      function pad2(n) {
+        return String(Math.max(0, n)).padStart(2, "0");
+      }
+
+      function formatEndLocal(ms) {
+        try {
+          return new Date(ms).toLocaleString(undefined, {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        } catch {
+          return new Date(ms).toISOString();
+        }
+      }
+
+      function paintDigits(msLeft) {
+        const total = Math.max(0, Math.floor(msLeft / 1000));
         const h = Math.floor(total / 3600);
         const m = Math.floor((total % 3600) / 60);
         const s = total % 60;
-        return (
-          String(h).padStart(2, "0") +
-          ":" +
-          String(m).padStart(2, "0") +
-          ":" +
-          String(s).padStart(2, "0")
-        );
+        tH.textContent = pad2(h);
+        tM.textContent = pad2(m);
+        tS.textContent = pad2(s);
       }
 
       function lockExpiredUi(reason) {
         giveawayActive = false;
         timerEl.classList.add("is-expired");
-        timerValue.textContent = "00:00:00";
-        document.querySelector(".timer-label").textContent = "Offer ended";
+        paintDigits(0);
+        timerLabel.textContent = "Offer ended";
+        timerEnds.textContent = "This link no longer works";
         endedBox.classList.remove("hidden");
         buyForm.classList.add("hidden");
         hidePayUi();
@@ -373,11 +427,20 @@
         if (!endsAtMs) return;
         const left = endsAtMs - Date.now();
         if (left <= 0) {
-          lockExpiredUi("This 24-hour giveaway has ended — the link no longer works.");
+          lockExpiredUi(
+            "This 24-hour giveaway has ended — the link no longer works."
+          );
           return;
         }
-        timerValue.textContent = formatRemaining(left);
+        paintDigits(left);
+        if (timerSynced) {
+          timerEnds.textContent = "Ends " + formatEndLocal(endsAtMs);
+        }
       }
+
+      // Live countdown from first paint — people see seconds move immediately.
+      paintDigits(endsAtMs - Date.now());
+      setInterval(tickTimer, 250);
 
       function showKey(key) {
         if (!key) return;
@@ -637,7 +700,13 @@
             priceLabel.textContent = "$" + Number(giveaway.amount).toFixed(2);
           }
 
-          endsAtMs = Date.parse(windowInfo.endsAt || "") || 0;
+          const serverEnd = Date.parse(windowInfo.endsAt || "");
+          if (Number.isFinite(serverEnd) && serverEnd > 0) {
+            // Align local countdown to the shared server end time (real 24h window).
+            endsAtMs = serverEnd;
+            timerSynced = true;
+            tickTimer();
+          }
           if (windowInfo.expired || (endsAtMs && endsAtMs <= Date.now())) {
             lockExpiredUi(
               "This 24-hour giveaway has ended — the link no longer works."
@@ -648,13 +717,10 @@
             giveawayActive = false;
             buyForm.classList.add("hidden");
             hidePayUi();
-            document.querySelector(".timer-label").textContent = "Starts soon";
-            timerValue.textContent = "—";
+            timerLabel.textContent = "Starts soon";
             setMsg("This giveaway has not started yet. Check back soon.", "err");
             return;
           }
-          tickTimer();
-          setInterval(tickTimer, 1000);
 
           if (!cfg.ready || !clientId) {
             setMsg(

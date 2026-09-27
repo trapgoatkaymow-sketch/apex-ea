@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
     if (isGiveaway || isRobot) {
       // Giveaway must still be inside the 24h window at capture time.
-      if (isGiveaway) assertGiveawayActive();
+      if (isGiveaway) await assertGiveawayActive();
       const email = extractCaptureEmail(capture) || fallbackEmail;
       const clientName = extractCaptureClientName(capture) || fallbackName;
       const fulfilled = await fulfillRobotPurchase({

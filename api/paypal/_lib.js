@@ -145,7 +145,7 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
     assertGiveawayActive,
   } = await import("./_robotPurchase.js");
   if (kind === "giveaway") {
-    assertGiveawayActive();
+    await assertGiveawayActive();
   }
   const amountValue =
     kind === "giveaway"

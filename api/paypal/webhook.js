@@ -14,7 +14,7 @@ import {
   extractCaptureAmount,
   extractCaptureId,
   fulfillRobotPurchase,
-  getGiveawayWindow,
+  resolveGiveawayWindow,
   isGiveawayPurchaseCapture,
   isRobotPurchaseCapture,
 } from "./_robotPurchase.js";
@@ -175,13 +175,13 @@ export default async function handler(req, res) {
     if (giveaway || robot) {
       if (giveaway) {
         try {
-          assertGiveawayActive();
+          await assertGiveawayActive();
         } catch (error) {
           sendJson(res, 200, {
             ok: false,
             error: "giveaway-expired",
             message: error.message,
-            giveaway: getGiveawayWindow(),
+            giveaway: await resolveGiveawayWindow(),
             eventType,
           });
           return;

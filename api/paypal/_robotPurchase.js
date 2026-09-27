@@ -68,40 +68,132 @@ export const GIVEAWAY_DISPLAY_CURRENCY = String(
 
 /**
  * 24-hour giveaway window.
- * Set GIVEAWAY_STARTS_AT (ISO) on Vercel to open/restart the window.
- * Default below is the launch instant for this campaign.
+ * - If GIVEAWAY_STARTS_AT is set on Vercel, that ISO time is the start.
+ * - Otherwise the first live request latches "now" into durable storage so the
+ *   offer ends exactly 24 hours later in real time.
  */
-export const GIVEAWAY_STARTS_AT = String(
-  process.env.GIVEAWAY_STARTS_AT || "2026-09-27T09:00:00.000Z"
+export const GIVEAWAY_STARTS_AT_ENV = String(
+  process.env.GIVEAWAY_STARTS_AT || ""
 ).trim();
 export const GIVEAWAY_DURATION_MS = Math.max(
   60_000,
   (Number(process.env.GIVEAWAY_DURATION_HOURS) || 24) * 60 * 60 * 1000
 );
 
-export function getGiveawayWindow(nowMs = Date.now()) {
-  const startsAt = Date.parse(GIVEAWAY_STARTS_AT);
-  const startMs = Number.isFinite(startsAt) ? startsAt : nowMs;
+const GIVEAWAY_WINDOW_BLOB = "apexea/giveaway-window.json";
+const GIVEAWAY_WINDOW_GITHUB = "data/giveaway-window.json";
+
+/** @type {{ startsAt: string } | null} */
+let memoryGiveawayWindow = null;
+
+function windowFromStart(startMs, nowMs = Date.now()) {
   const endMs = startMs + GIVEAWAY_DURATION_MS;
   const remainingMs = Math.max(0, endMs - nowMs);
   const notStarted = nowMs < startMs;
   const expired = nowMs >= endMs;
-  const active = !notStarted && !expired;
   return {
     startsAt: new Date(startMs).toISOString(),
     endsAt: new Date(endMs).toISOString(),
     durationMs: GIVEAWAY_DURATION_MS,
     remainingMs,
-    active,
+    active: !notStarted && !expired,
     expired,
     notStarted,
     serverNow: new Date(nowMs).toISOString(),
   };
 }
 
-/** Throws 410 when the giveaway link is outside its 24h window. */
-export function assertGiveawayActive(nowMs = Date.now()) {
-  const window = getGiveawayWindow(nowMs);
+/** Sync helper when start is already known (tests / env). */
+export function getGiveawayWindow(nowMs = Date.now()) {
+  const envStart = Date.parse(GIVEAWAY_STARTS_AT_ENV);
+  const startMs = Number.isFinite(envStart)
+    ? envStart
+    : memoryGiveawayWindow?.startsAt
+      ? Date.parse(memoryGiveawayWindow.startsAt)
+      : nowMs;
+  return windowFromStart(
+    Number.isFinite(startMs) ? startMs : nowMs,
+    nowMs
+  );
+}
+
+async function readLatchedStart() {
+  if (memoryGiveawayWindow?.startsAt) {
+    const ms = Date.parse(memoryGiveawayWindow.startsAt);
+    if (Number.isFinite(ms)) return ms;
+  }
+  try {
+    const { durableRead } = await import("../_durableJson.js");
+    const doc = await durableRead({
+      blobPath: GIVEAWAY_WINDOW_BLOB,
+      githubPath: GIVEAWAY_WINDOW_GITHUB,
+      localPaths: ["data/giveaway-window.json"],
+    });
+    let startsAt = "";
+    if (doc?.raw) {
+      try {
+        const parsed = JSON.parse(doc.raw || "{}");
+        startsAt = String(parsed?.startsAt || "").trim();
+      } catch {
+        startsAt = "";
+      }
+    }
+    const ms = Date.parse(startsAt);
+    if (Number.isFinite(ms)) {
+      memoryGiveawayWindow = { startsAt: new Date(ms).toISOString() };
+      return ms;
+    }
+  } catch {
+    // fall through — latch a new start
+  }
+  return null;
+}
+
+async function latchStart(nowMs) {
+  const startsAt = new Date(nowMs).toISOString();
+  memoryGiveawayWindow = { startsAt };
+  const payload = JSON.stringify(
+    {
+      startsAt,
+      durationMs: GIVEAWAY_DURATION_MS,
+      latchedAt: startsAt,
+    },
+    null,
+    2
+  );
+  try {
+    const { durableWrite } = await import("../_durableJson.js");
+    await durableWrite({
+      raw: payload,
+      blobPath: GIVEAWAY_WINDOW_BLOB,
+      githubPath: GIVEAWAY_WINDOW_GITHUB,
+      localPaths: ["data/giveaway-window.json"],
+      message: `giveaway window start ${startsAt}`,
+    });
+  } catch {
+    // memory latch still works for this instance
+  }
+  return nowMs;
+}
+
+/**
+ * Resolve the shared 24h window (latches start on first live hit if unset).
+ */
+export async function resolveGiveawayWindow(nowMs = Date.now()) {
+  const envStart = Date.parse(GIVEAWAY_STARTS_AT_ENV);
+  if (Number.isFinite(envStart)) {
+    return windowFromStart(envStart, nowMs);
+  }
+  let startMs = await readLatchedStart();
+  if (!Number.isFinite(startMs)) {
+    startMs = await latchStart(nowMs);
+  }
+  return windowFromStart(startMs, nowMs);
+}
+
+/** Throws 403/410 when the giveaway link is outside its 24h window. */
+export async function assertGiveawayActive(nowMs = Date.now()) {
+  const window = await resolveGiveawayWindow(nowMs);
   if (window.notStarted) {
     const err = new Error("This giveaway has not started yet");
     err.status = 403;
