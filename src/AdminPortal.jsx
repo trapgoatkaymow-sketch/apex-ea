@@ -1489,6 +1489,8 @@ export default function AdminPortal() {
         adminEmail: adminSession?.email || SUPER_ADMIN_EMAIL,
         subject,
         message,
+        // Dedupe by subject so Send all / double-taps do not spam the same inbox.
+        campaignId: `admin-${subject.trim().toLowerCase().slice(0, 60)}`,
         recipients: selected.map((row) => ({
           email: row.email,
           name: row.name || "",
@@ -1497,9 +1499,12 @@ export default function AdminPortal() {
       const sent = Number(result?.sentCount) || 0;
       const failed = Number(result?.failedCount) || 0;
       const skipped = Number(result?.skippedCount) || 0;
+      const deduped = Number(result?.dedupedSkipped) || 0;
       showToast(
         failed || skipped
-          ? `Sent ${sent} · ${failed} failed${skipped ? ` · ${skipped} skipped` : ""}`
+          ? `Sent ${sent} · ${failed} failed${
+              skipped ? ` · ${skipped} skipped (already sent)` : ""
+            }${deduped && !skipped ? ` · ${deduped} already sent` : ""}`
           : `Sent ${sent} email${sent === 1 ? "" : "s"}`
       );
     } catch (error) {

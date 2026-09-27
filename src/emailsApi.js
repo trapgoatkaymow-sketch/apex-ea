@@ -42,6 +42,11 @@ export async function sendBroadcastEmailsRemote({
   message,
   recipients,
   concurrency = 4,
+  campaignId = "",
+  imageUrl = "",
+  downloadUrl = "",
+  ctaLabel = "",
+  force = false,
 } = {}) {
   return apiFetch("", {
     method: "POST",
@@ -52,6 +57,11 @@ export async function sendBroadcastEmailsRemote({
       message,
       recipients,
       concurrency,
+      ...(campaignId ? { campaignId } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
+      ...(downloadUrl ? { downloadUrl } : {}),
+      ...(ctaLabel ? { ctaLabel } : {}),
+      ...(force ? { force: true } : {}),
     },
   });
 }
