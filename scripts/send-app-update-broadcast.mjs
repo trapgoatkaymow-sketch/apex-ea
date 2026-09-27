@@ -85,6 +85,8 @@ if (DRY) {
 const body = {
   action: "broadcast",
   adminEmail: SUPER_ADMIN,
+  // Stable campaign id — API skips anyone already emailed for this update.
+  campaignId: "app-update-v2.34-pairs-fix",
   subject,
   message,
   imageUrl: IMAGE_URL,
@@ -92,6 +94,7 @@ const body = {
   ctaLabel: "Download new app (v2.34)",
   recipients,
   concurrency: 4,
+  force: process.argv.includes("--force"),
 };
 
 const res = await fetch(API, {

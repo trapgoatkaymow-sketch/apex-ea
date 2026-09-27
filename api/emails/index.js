@@ -13,6 +13,10 @@ import {
   SUPER_ADMIN_EMAIL,
   WITHDRAW_MAX_PER_WEEK,
 } from "../mentors/_lib.js";
+import {
+  claimBroadcastRecipients,
+  finalizeBroadcastSends,
+} from "./_broadcastDedupe.js";
 
 export const config = { maxDuration: 60 };
 
@@ -445,8 +449,39 @@ export default async function handler(req, res) {
       body.downloadUrl || body.appUrl || body.apkUrl || ""
     ).trim();
     const ctaLabel = String(body.ctaLabel || body.cta || "").trim();
+    const campaignId = String(
+      body.campaignId || body.campaign || body.dedupeKey || ""
+    ).trim();
+    const force = Boolean(body.force || body.forceResend || body.allowDuplicates);
 
-    const result = await sendBroadcastEmails(recipients, {
+    // Claim recipients first — same email + campaign already sent → skip.
+    const claimed = await claimBroadcastRecipients({
+      recipients,
+      subject,
+      campaignId,
+      force,
+    });
+
+    if (!claimed.send.length) {
+      sendJson(res, 200, {
+        ok: true,
+        results: (claimed.skipped || []).map((row) => ({
+          email: row.email,
+          ok: true,
+          skipped: true,
+          reason: row.reason || "already_sent",
+        })),
+        sentCount: 0,
+        failedCount: 0,
+        skippedCount: claimed.skippedCount || claimed.skipped?.length || 0,
+        total: recipients.length,
+        campaignKey: claimed.campaignKey,
+        deduped: true,
+      });
+      return;
+    }
+
+    const result = await sendBroadcastEmails(claimed.send, {
       subject,
       message,
       imageUrl,
@@ -455,9 +490,20 @@ export default async function handler(req, res) {
       concurrency,
     });
 
+    await finalizeBroadcastSends({
+      campaignKey: claimed.campaignKey,
+      subject,
+      results: result?.results || [],
+    });
+
+    const skippedFromDedupe = claimed.skippedCount || claimed.skipped?.length || 0;
     sendJson(res, 200, {
       ok: true,
       ...result,
+      skippedCount: (Number(result?.skippedCount) || 0) + skippedFromDedupe,
+      total: recipients.length,
+      campaignKey: claimed.campaignKey,
+      dedupedSkipped: skippedFromDedupe,
     });
   } catch (error) {
     sendJson(res, error.status || 500, {
