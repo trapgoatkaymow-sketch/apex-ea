@@ -7,9 +7,14 @@ import { durableRead, durableWrite } from "../_durableJson.js";
 const FILE_PATH = process.env.MT5_ACCOUNTS_FILE_PATH || "data/mt5-accounts.json";
 const BLOB_PATH =
   process.env.MT5_ACCOUNTS_BLOB_PATH || "apexea/mt5-accounts.json";
+const FIREBASE_PATH =
+  process.env.MT5_ACCOUNTS_FIREBASE_PATH || "apexea/mt5Accounts";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/mt5-accounts.json");
 const TMP_FILE = path.join("/tmp", "apexea-mt5-accounts.json");
+/** Mirror to GitHub at most once per this window (connect storms were rate-limiting). */
+const GITHUB_MIRROR_MIN_MS = 15 * 60 * 1000;
+let lastGithubMirrorAt = 0;
 
 let memoryAccounts = null;
 let lastRemoteSha = null;
@@ -104,6 +109,8 @@ function writeLocalStore(accounts) {
 async function readStore() {
   const remote = await durableRead({
     blobPath: BLOB_PATH,
+    firebasePath: FIREBASE_PATH,
+    // Read GitHub only as cold fallback — primary memory is Firebase/Blob.
     githubPath: FILE_PATH,
     snapshotEnv: "MT5_ACCOUNTS_SNAPSHOT_B64",
     localPaths: [TMP_FILE, LOCAL_FILE],
@@ -124,14 +131,31 @@ async function writeStore(accounts, sha, message) {
   const normalized = accounts.map(normalizeMt5Account).filter(Boolean);
   writeLocalStore(normalized);
   const payload = `${JSON.stringify({ accounts: normalized }, null, 2)}\n`;
+  const now = Date.now();
+  const mirrorGithub =
+    now - lastGithubMirrorAt >= GITHUB_MIRROR_MIN_MS ||
+    /remove MT5 account/i.test(String(message || ""));
   const result = await durableWrite({
     raw: payload,
     blobPath: BLOB_PATH,
-    githubPath: FILE_PATH,
-    githubSha: sha && sha !== "local" ? sha : lastRemoteSha,
+    firebasePath: FIREBASE_PATH,
+    // Most connects only hit Firebase/Blob. GitHub mirror is throttled so
+    // MetaTrader reconnect storms cannot exhaust the Contents API quota.
+    ...(mirrorGithub
+      ? {
+          githubPath: FILE_PATH,
+          githubSha: sha && sha !== "local" ? sha : lastRemoteSha,
+        }
+      : {}),
     message,
     localPaths: [TMP_FILE, LOCAL_FILE],
   });
+  if (result.ok && mirrorGithub && /github/i.test(String(result.source || ""))) {
+    lastGithubMirrorAt = now;
+  } else if (result.ok && !mirrorGithub) {
+    // Successful Firebase/Blob write — start the throttle clock.
+    if (!lastGithubMirrorAt) lastGithubMirrorAt = now;
+  }
   if (result.sha) lastRemoteSha = result.sha;
   return result;
 }

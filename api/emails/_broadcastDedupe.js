@@ -8,10 +8,9 @@ import { durableRead, durableWrite } from "../_durableJson.js";
 
 const BLOB_PATH =
   process.env.EMAIL_BROADCAST_BLOB_PATH || "apexea/email-broadcasts.json";
-const GITHUB_PATH =
-  process.env.EMAIL_BROADCAST_FILE_PATH || "data/email-broadcasts.json";
 const FIREBASE_PATH =
   process.env.EMAIL_BROADCAST_FIREBASE_PATH || "apexea/emailBroadcasts";
+/** Never write this high-churn log to GitHub — it burns the Contents API quota. */
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 let memoryLog = null;
@@ -87,9 +86,8 @@ async function readLog() {
   try {
     const durable = await durableRead({
       blobPath: BLOB_PATH,
-      githubPath: GITHUB_PATH,
       firebasePath: FIREBASE_PATH,
-      allowGithub: true,
+      // No githubPath — avoid Contents API rate-limit storms.
     });
     const raw =
       durable?.raw ??
@@ -109,11 +107,10 @@ async function writeLog(log, message = "chore: email broadcast dedupe log") {
   try {
     await durableWrite({
       blobPath: BLOB_PATH,
-      githubPath: GITHUB_PATH,
       firebasePath: FIREBASE_PATH,
+      // Intentionally omit githubPath so we never commit this log to main.
       raw,
       message,
-      allowGithub: true,
     });
   } catch {
     // Best-effort — memory still blocks repeats on this instance.
