@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ApexEA update — download the new app</title>
+    <meta
+      name="description"
+      content="Pairs / Save Symbol is fixed. Download the new ApexEA Android app v2.34."
+    />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #08080a;
+        --card: #14141c;
+        --text: #fff;
+        --muted: rgba(255, 255, 255, 0.58);
+        --pink: #ff2d7a;
+        --pink-soft: #ff7ab5;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Outfit, system-ui, sans-serif;
+        background:
+          radial-gradient(520px 240px at 12% -8%, rgba(255, 45, 122, 0.22), transparent 58%),
+          var(--bg);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      main {
+        width: min(440px, 100%);
+        background: color-mix(in srgb, var(--card) 94%, black);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 22px;
+        padding: 26px 20px 22px;
+        text-align: center;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+      }
+      .kicker {
+        margin: 0 0 8px;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--pink-soft);
+        font-weight: 700;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 1.4rem;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        line-height: 1.45;
+        font-size: 0.95rem;
+      }
+      .shot {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        display: block;
+        margin: 14px 0 16px;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+        padding: 14px 16px;
+        border: 0;
+        border-radius: 14px;
+        background: linear-gradient(180deg, var(--pink-soft) 0%, var(--pink) 100%);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.02rem;
+        text-decoration: none;
+      }
+      .btn.secondary {
+        background: transparent;
+        border: 1px solid rgba(255, 45, 122, 0.4);
+        color: var(--text);
+        font-weight: 600;
+      }
+      .link-box {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 0.86rem;
+        word-break: break-all;
+      }
+      .link-box a { color: var(--pink-soft); font-weight: 700; text-decoration: none; }
+      .version {
+        margin-top: 12px;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.42);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">ApexEA update</p>
+      <h1>Pairs / Save Symbol is fixed</h1>
+      <p>
+        You can add your own pairs again, set lot size, action, platform, and trades —
+        then save. Please install this new Android build.
+      </p>
+      <img
+        class="shot"
+        src="/email/pairs-fixed.png"
+        alt="Fixed Save Symbol screen on Interface 1"
+      />
+      <a class="btn" href="/apex-ea-v2.34.apk" download="apex-ea-v2.34.apk">
+        Download new app (v2.34)
+      </a>
+      <a class="btn secondary" href="/api/download-apk">
+        Alternate download link
+      </a>
+      <div class="link-box">
+        Share this page:<br />
+        <a href="https://www.apex-ea.com/app-update">https://www.apex-ea.com/app-update</a>
+      </div>
+      <p class="version">Version 2.34.0</p>
+    </main>
+  </body>
+</html>
