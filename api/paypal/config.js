@@ -6,6 +6,10 @@ import {
   sendJson,
 } from "./_lib.js";
 import {
+  GIVEAWAY_CURRENCY,
+  GIVEAWAY_DISPLAY_CURRENCY,
+  GIVEAWAY_DISPLAY_PRICE,
+  GIVEAWAY_PRICE,
   ROBOT_BOT_NAME,
   ROBOT_CURRENCY,
   ROBOT_NCP_CURRENCY,
@@ -38,6 +42,14 @@ export default async function handler(req, res) {
       displayCurrency: ROBOT_NCP_CURRENCY,
       botName: ROBOT_BOT_NAME,
       label: "ZETA SCALPER AI Mobile Robot",
+    },
+    giveaway: {
+      amount: GIVEAWAY_PRICE,
+      currency: GIVEAWAY_CURRENCY,
+      displayAmount: GIVEAWAY_DISPLAY_PRICE,
+      displayCurrency: GIVEAWAY_DISPLAY_CURRENCY,
+      botName: ROBOT_BOT_NAME,
+      label: "Giveaway — App access + ZETA SCALPER AI",
     },
     mode: String(process.env.PAYPAL_MODE || "live").toLowerCase() === "sandbox" ? "sandbox" : "live",
     ready: Boolean(PAYPAL_CLIENT_ID) && secretConfigured,

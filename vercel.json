@@ -217,6 +217,21 @@
       "permanent": false
     },
     {
+      "source": "/giveaway",
+      "destination": "/giveaway.html",
+      "permanent": false
+    },
+    {
+      "source": "/giveaway/",
+      "destination": "/giveaway.html",
+      "permanent": false
+    },
+    {
+      "source": "/promo",
+      "destination": "/giveaway.html",
+      "permanent": false
+    },
+    {
       "source": "/apex-ea-v2.18.apk",
       "destination": "/api/download-apk",
       "permanent": false
@@ -260,7 +275,7 @@
       "destination": "/api/download-apk"
     },
     {
-      "source": "/((?!api/|mt5-api/|get-app\\.html|copy-key\\.html|app-version\\.json|.*\\.apk$).*)",
+      "source": "/((?!api/|mt5-api/|get-app\\.html|giveaway\\.html|buy-zeta\\.html|copy-key\\.html|app-version\\.json|.*\\.apk$).*)",
       "destination": "/index.html"
     }
   ]

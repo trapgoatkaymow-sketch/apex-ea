@@ -13,6 +13,10 @@ export {
   ROBOT_BOT_ID,
   ROBOT_BOT_NAME,
   ROBOT_MENTOR_EMAIL,
+  GIVEAWAY_PRICE,
+  GIVEAWAY_CURRENCY,
+  GIVEAWAY_DISPLAY_PRICE,
+  GIVEAWAY_DISPLAY_CURRENCY,
 } from "./_robotPurchase.js";
 
 /** Public Client ID (safe for browser). Prefer env on Vercel. */
@@ -114,40 +118,67 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
   }
 
   const purposeRaw = String(purpose || "access").toLowerCase();
+  const isGiveaway =
+    purposeRaw === "giveaway" ||
+    purposeRaw === "promo" ||
+    purposeRaw.startsWith("giveaway:") ||
+    purposeRaw.startsWith("promo:");
   const isRobot =
-    purposeRaw === "robot" ||
-    purposeRaw === "license" ||
-    purposeRaw.startsWith("robot:") ||
-    purposeRaw.startsWith("license:");
-  const kind = isRobot
-    ? "robot"
-    : purposeRaw === "scanner" || purposeRaw.startsWith("scanner:")
-      ? "scanner"
-      : "access";
+    !isGiveaway &&
+    (purposeRaw === "robot" ||
+      purposeRaw === "license" ||
+      purposeRaw.startsWith("robot:") ||
+      purposeRaw.startsWith("license:"));
+  const kind = isGiveaway
+    ? "giveaway"
+    : isRobot
+      ? "robot"
+      : purposeRaw === "scanner" || purposeRaw.startsWith("scanner:")
+        ? "scanner"
+        : "access";
 
-  const { ROBOT_PRICE, ROBOT_CURRENCY } = await import("./_robotPurchase.js");
-  const amountValue = kind === "robot" ? ROBOT_PRICE : LIFETIME_PRICE;
-  const amountCurrency = kind === "robot" ? ROBOT_CURRENCY : LIFETIME_CURRENCY;
+  const {
+    ROBOT_PRICE,
+    ROBOT_CURRENCY,
+    GIVEAWAY_PRICE,
+    GIVEAWAY_CURRENCY,
+  } = await import("./_robotPurchase.js");
+  const amountValue =
+    kind === "giveaway"
+      ? GIVEAWAY_PRICE
+      : kind === "robot"
+        ? ROBOT_PRICE
+        : LIFETIME_PRICE;
+  const amountCurrency =
+    kind === "giveaway"
+      ? GIVEAWAY_CURRENCY
+      : kind === "robot"
+        ? ROBOT_CURRENCY
+        : LIFETIME_CURRENCY;
   const nameHint = String(clientName || "")
     .trim()
     .replace(/[:|]/g, " ")
     .slice(0, 40);
   const customId =
-    kind === "robot"
-      ? `robot:${buyer}${nameHint ? `|${nameHint}` : ""}`.slice(0, 127)
+    kind === "robot" || kind === "giveaway"
+      ? `${kind}:${buyer}${nameHint ? `|${nameHint}` : ""}`.slice(0, 127)
       : `${kind}:${buyer}`.slice(0, 127);
 
   const accessToken = await getPayPalAccessToken();
   const safeReturn =
     String(returnUrl || "").trim() ||
-    (kind === "robot"
-      ? "https://www.apex-ea.com/buy-zeta.html?paypal_return=1"
-      : "https://apex-ea.com/?paypal_return=1");
+    (kind === "giveaway"
+      ? "https://www.apex-ea.com/giveaway.html?paypal_return=1"
+      : kind === "robot"
+        ? "https://www.apex-ea.com/buy-zeta.html?paypal_return=1"
+        : "https://apex-ea.com/?paypal_return=1");
   const safeCancel =
     String(cancelUrl || "").trim() ||
-    (kind === "robot"
-      ? "https://www.apex-ea.com/buy-zeta.html?paypal_cancel=1"
-      : "https://apex-ea.com/?paypal_cancel=1");
+    (kind === "giveaway"
+      ? "https://www.apex-ea.com/giveaway.html?paypal_cancel=1"
+      : kind === "robot"
+        ? "https://www.apex-ea.com/buy-zeta.html?paypal_cancel=1"
+        : "https://apex-ea.com/?paypal_cancel=1");
 
   return paypalFetch("/v2/checkout/orders", {
     method: "POST",
@@ -161,11 +192,13 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
             value: amountValue,
           },
           description:
-            kind === "robot"
-              ? "ZETA SCALPER AI — Mobile Robot Lifetime License"
-              : kind === "scanner"
-                ? "ApexEA Premium Chart Scanner"
-                : "ApexEA Lifetime Access",
+            kind === "giveaway"
+              ? "ApexEA Giveaway — App Access + ZETA SCALPER AI License"
+              : kind === "robot"
+                ? "ZETA SCALPER AI — Mobile Robot Lifetime License"
+                : kind === "scanner"
+                  ? "ApexEA Premium Chart Scanner"
+                  : "ApexEA Lifetime Access",
           custom_id: customId,
         },
       ],
@@ -173,8 +206,10 @@ export async function createLifetimeOrder(email, { purpose = "access", returnUrl
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
         // BILLING surfaces guest card entry instead of forcing a PayPal login.
-        landing_page: kind === "robot" ? "BILLING" : "NO_PREFERENCE",
-        brand_name: kind === "robot" ? "ZETA SCALPER AI" : "ApexEA",
+        landing_page:
+          kind === "robot" || kind === "giveaway" ? "BILLING" : "NO_PREFERENCE",
+        brand_name:
+          kind === "robot" || kind === "giveaway" ? "ZETA SCALPER AI" : "ApexEA",
         return_url: safeReturn,
         cancel_url: safeCancel,
       },
@@ -238,6 +273,7 @@ export function extractCapturePurpose(capture) {
     "";
   const raw = String(custom || "").toLowerCase();
   if (raw.startsWith("scanner:")) return "scanner";
+  if (raw.startsWith("giveaway:") || raw.startsWith("promo:")) return "giveaway";
   if (raw.startsWith("robot:") || raw.startsWith("license:")) return "robot";
   return "access";
 }

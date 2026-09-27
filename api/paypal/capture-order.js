@@ -12,6 +12,7 @@ import {
 import {
   extractCaptureId,
   fulfillRobotPurchase,
+  isGiveawayPurchaseCapture,
   isRobotPurchaseCapture,
 } from "./_robotPurchase.js";
 import {
@@ -53,12 +54,17 @@ export default async function handler(req, res) {
 
     const purposeFromOrder = extractCapturePurpose(capture);
     const purposeHint = String(body.purpose || purposeFromOrder || "").toLowerCase();
+    const isGiveaway =
+      purposeHint === "giveaway" ||
+      purposeHint === "promo" ||
+      isGiveawayPurchaseCapture(capture, { purposeHint });
     const isRobot =
-      purposeHint === "robot" ||
-      purposeHint === "license" ||
-      isRobotPurchaseCapture(capture, { purposeHint });
+      !isGiveaway &&
+      (purposeHint === "robot" ||
+        purposeHint === "license" ||
+        isRobotPurchaseCapture(capture, { purposeHint }));
 
-    if (isRobot) {
+    if (isGiveaway || isRobot) {
       const email = extractCaptureEmail(capture) || fallbackEmail;
       const clientName = extractCaptureClientName(capture) || fallbackName;
       const fulfilled = await fulfillRobotPurchase({
@@ -66,13 +72,13 @@ export default async function handler(req, res) {
         clientName,
         captureId: extractCaptureId(capture),
         orderId,
-        source: "paypal-order",
+        source: isGiveaway ? "paypal-giveaway" : "paypal-order",
       });
       sendJson(res, 200, {
         ok: true,
         orderId,
         email: fulfilled.email,
-        purpose: "robot",
+        purpose: isGiveaway ? "giveaway" : "robot",
         accessPaid: true,
         licenseKey: fulfilled.key,
         license: fulfilled.license

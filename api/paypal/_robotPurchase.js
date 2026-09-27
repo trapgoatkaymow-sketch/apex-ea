@@ -45,6 +45,27 @@ export const ROBOT_NCP_LINK_IDS = String(
   .map((s) => s.trim().toUpperCase())
   .filter(Boolean);
 
+/**
+ * Giveaway checkout — $25 USD charge (display R350).
+ * Same fulfill as robot: unlock app access + mint ZETA license + email key.
+ */
+export const GIVEAWAY_PRICE = String(
+  process.env.GIVEAWAY_PURCHASE_PRICE || "25.00"
+).trim();
+export const GIVEAWAY_CURRENCY = String(
+  process.env.GIVEAWAY_PURCHASE_CURRENCY || "USD"
+)
+  .trim()
+  .toUpperCase();
+export const GIVEAWAY_DISPLAY_PRICE = String(
+  process.env.GIVEAWAY_DISPLAY_PRICE || "350"
+).trim();
+export const GIVEAWAY_DISPLAY_CURRENCY = String(
+  process.env.GIVEAWAY_DISPLAY_CURRENCY || "ZAR"
+)
+  .trim()
+  .toUpperCase();
+
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
@@ -82,6 +103,20 @@ export function amountsMatchRobot(value, currency) {
   return false;
 }
 
+export function amountsMatchGiveaway(value, currency) {
+  const c = String(currency || "").trim().toUpperCase();
+  if (!c) return false;
+  if (c === GIVEAWAY_CURRENCY && amountEquals(value, GIVEAWAY_PRICE)) return true;
+  // Soft match display ZAR if someone pays via a ZAR link later.
+  if (
+    c === GIVEAWAY_DISPLAY_CURRENCY &&
+    amountEquals(value, GIVEAWAY_DISPLAY_PRICE)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function extractCaptureId(captureOrResource) {
   return String(
     captureOrResource?.purchase_units?.[0]?.payments?.captures?.[0]?.id ||
@@ -112,14 +147,37 @@ export function isRobotPurchaseCapture(capture, { purposeHint = "" } = {}) {
     capture?.purchase_units?.[0]?.custom_id ||
     "";
   const raw = String(custom || purposeHint || "").toLowerCase();
+  if (raw.startsWith("giveaway:")) return false;
   if (raw.startsWith("robot:") || raw.startsWith("license:")) return true;
 
   const { value, currency } = extractCaptureAmount(capture);
+  if (amountsMatchGiveaway(value, currency)) return false;
   if (amountsMatchRobot(value, currency)) return true;
 
   // NCP soft descriptors / invoice sometimes embed the link id.
   const blob = JSON.stringify(capture || {}).toUpperCase();
   return ROBOT_NCP_LINK_IDS.some((id) => id && blob.includes(id));
+}
+
+/**
+ * Giveaway Orders custom_id OR $25 / R350 amount.
+ * Fulfillment is the same as robot (access + license key email).
+ */
+export function isGiveawayPurchaseCapture(capture, { purposeHint = "" } = {}) {
+  const custom =
+    capture?.purchase_units?.[0]?.payments?.captures?.[0]?.custom_id ||
+    capture?.purchase_units?.[0]?.custom_id ||
+    "";
+  const raw = String(custom || purposeHint || "").toLowerCase();
+  if (
+    raw === "giveaway" ||
+    raw.startsWith("giveaway:") ||
+    raw.startsWith("promo:")
+  ) {
+    return true;
+  }
+  const { value, currency } = extractCaptureAmount(capture);
+  return amountsMatchGiveaway(value, currency);
 }
 
 async function resolveMentor() {
