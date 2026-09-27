@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ApexEA Giveaway — App Access + Robot License</title>
+    <meta
+      name="description"
+      content="Giveaway special: pay R350, unlock ApexEA app access and get a ZETA SCALPER AI license key emailed automatically."
+    />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg0: #050505;
+        --bg1: #12100c;
+        --fire: #ff6a00;
+        --fire2: #ffb347;
+        --text: #f7f1e8;
+        --muted: #b8a99a;
+        --line: rgba(255, 179, 71, 0.28);
+        --ok: #3ddc97;
+        --err: #ff6b6b;
+        --field: rgba(255, 255, 255, 0.06);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "DM Sans", system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255, 106, 0, 0.28), transparent 55%),
+          radial-gradient(ellipse 70% 40% at 80% 100%, rgba(255, 179, 71, 0.12), transparent 50%),
+          linear-gradient(180deg, var(--bg1), var(--bg0));
+        display: grid;
+        place-items: center;
+        padding: 28px 16px;
+      }
+      main {
+        width: min(440px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px 22px 22px;
+        background: rgba(12, 10, 8, 0.82);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+      }
+      .brand {
+        font-family: Syne, sans-serif;
+        font-weight: 800;
+        font-size: 1.35rem;
+        letter-spacing: 0.02em;
+        margin: 0 0 6px;
+        background: linear-gradient(90deg, var(--fire2), var(--fire));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .sub {
+        margin: 0 0 22px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+      label {
+        display: block;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0 0 6px;
+      }
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: var(--field);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+        margin-bottom: 14px;
+        outline: none;
+      }
+      input:focus {
+        border-color: var(--fire);
+        box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.18);
+      }
+      .price {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin: 4px 0 14px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 106, 0, 0.1);
+        border: 1px solid var(--line);
+      }
+      .price strong {
+        font-family: Syne, sans-serif;
+        font-size: 1.35rem;
+      }
+      .hint {
+        margin: 0 0 14px;
+        font-size: 0.82rem;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .card-box {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        margin-bottom: 12px;
+      }
+      .card-box h2 {
+        margin: 0 0 10px;
+        font-family: Syne, sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .card-field {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        min-height: 48px;
+      }
+      .card-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .pay-btn {
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        color: #1a0f05;
+        background: linear-gradient(135deg, var(--fire2), var(--fire));
+        box-shadow: 0 10px 28px rgba(255, 106, 0, 0.35);
+      }
+      .pay-btn:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      #card-buttons {
+        min-height: 55px;
+        margin-bottom: 8px;
+      }
+      #paypal-buttons {
+        min-height: 0;
+      }
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 16px 0 12px;
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+      .msg {
+        margin-top: 14px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        min-height: 1.2em;
+      }
+      .msg.ok { color: var(--ok); }
+      .msg.err { color: var(--err); }
+      .keybox {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px dashed var(--line);
+        font-family: ui-monospace, monospace;
+        letter-spacing: 0.04em;
+        word-break: break-all;
+        display: none;
+      }
+      .foot {
+        margin-top: 18px;
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      a { color: var(--fire2); }
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 class="brand">ApexEA Giveaway</h1>
+      <p class="sub">
+        Special offer — pay once for <strong style="color:var(--text)">app access</strong>
+        plus a <strong style="color:var(--text)">ZETA SCALPER AI</strong> robot license.
+        Key is emailed automatically. Pay by card — no PayPal account required.
+      </p>
+
+      <form id="buy-form" onsubmit="return false;">
+        <label for="name">Your name</label>
+        <input id="name" name="name" autocomplete="name" required placeholder="Full name" />
+
+        <label for="email">Email (license is sent here)</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+          placeholder="you@email.com"
+        />
+
+        <div class="price">
+          <span>Giveaway · access + robot</span>
+          <strong id="price-label">R350</strong>
+        </div>
+
+        <p class="hint">
+          Tap <strong style="color:var(--text)">Debit or Credit Card</strong> below and enter your card.
+          You will not be sent to a PayPal login.
+        </p>
+
+        <!-- Inline card fields when Advanced Cards is enabled on the merchant -->
+        <div id="card-fields-box" class="card-box hidden">
+          <h2>Card details</h2>
+          <label>Card number</label>
+          <div id="card-number" class="card-field"></div>
+          <div class="card-row">
+            <div>
+              <label>Expiry</label>
+              <div id="card-expiry" class="card-field"></div>
+            </div>
+            <div>
+              <label>CVV</label>
+              <div id="card-cvv" class="card-field"></div>
+            </div>
+          </div>
+          <button id="pay-card-fields-btn" class="pay-btn" type="button">Pay with card</button>
+        </div>
+
+        <!-- PayPal Debit/Credit Card funding button (guest card form, not wallet login) -->
+        <div id="card-buttons" aria-label="Debit or credit card"></div>
+
+        <div class="divider" id="or-divider">or PayPal wallet</div>
+        <div id="paypal-buttons" aria-label="PayPal wallet (optional)"></div>
+      </form>
+
+      <p id="msg" class="msg" role="status"></p>
+      <div id="keybox" class="keybox" aria-live="polite"></div>
+
+      <p class="foot">
+        After payment, your email unlocks the app and you get a license key by email (check spam).
+        Open
+        <a href="https://www.apex-ea.com/">apex-ea.com</a>
+        or the
+        <a href="https://www.apex-ea.com/get-app.html">Android app</a>,
+        sign in with this same email, then activate the key on ZETA SCALPER AI.
+      </p>
+    </main>
+
+    <script>
+      const msg = document.getElementById("msg");
+      const keybox = document.getElementById("keybox");
+      const priceLabel = document.getElementById("price-label");
+      const nameInput = document.getElementById("name");
+      const emailInput = document.getElementById("email");
+      const cardFieldsBox = document.getElementById("card-fields-box");
+      const cardButtons = document.getElementById("card-buttons");
+      const paypalHost = document.getElementById("paypal-buttons");
+      const orDivider = document.getElementById("or-divider");
+      const payCardFieldsBtn = document.getElementById("pay-card-fields-btn");
+
+      function setMsg(text, kind) {
+        msg.textContent = text || "";
+        msg.className = "msg" + (kind ? " " + kind : "");
+      }
+
+      function showKey(key) {
+        if (!key) return;
+        keybox.style.display = "block";
+        keybox.textContent = key;
+      }
+
+      function hidePayUi() {
+        cardFieldsBox.classList.add("hidden");
+        cardButtons.classList.add("hidden");
+        paypalHost.classList.add("hidden");
+        orDivider.classList.add("hidden");
+      }
+
+      function readBuyer() {
+        const name = String(nameInput.value || "").trim();
+        const email = String(emailInput.value || "")
+          .trim()
+          .toLowerCase();
+        return { name, email };
+      }
+
+      async function api(path, body) {
+        const res = await fetch("/api/paypal" + path, {
+          method: body ? "POST" : "GET",
+          headers: {
+            Accept: "application/json",
+            ...(body ? { "Content-Type": "application/json" } : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Request failed");
+        return data;
+      }
+
+      function loadPaypalSdk(id) {
+        return new Promise((resolve, reject) => {
+          if (window.paypal?.Buttons || window.paypal?.CardFields) {
+            resolve(window.paypal);
+            return;
+          }
+          const existing = document.querySelector("script[data-zeta-paypal]");
+          if (existing) {
+            existing.addEventListener("load", () =>
+              window.paypal ? resolve(window.paypal) : reject(new Error("PayPal SDK missing"))
+            );
+            existing.addEventListener("error", () =>
+              reject(new Error("PayPal SDK failed to load"))
+            );
+            return;
+          }
+          const script = document.createElement("script");
+          script.src =
+            "https://www.paypal.com/sdk/js?client-id=" +
+            encodeURIComponent(id) +
+            "&currency=USD&intent=capture&components=buttons,card-fields&enable-funding=card&disable-funding=venmo,paylater&commit=true";
+          script.async = true;
+          script.dataset.zetaPaypal = "1";
+          script.onload = () =>
+            window.paypal ? resolve(window.paypal) : reject(new Error("PayPal SDK missing"));
+          script.onerror = () => reject(new Error("PayPal SDK failed to load"));
+          document.head.appendChild(script);
+        });
+      }
+
+      async function createGiveawayOrder() {
+        const { name, email } = readBuyer();
+        if (!name) throw new Error("Enter your name before paying");
+        if (!email.includes("@")) throw new Error("Enter a valid email before paying");
+        const order = await api("/create-order", {
+          email,
+          clientName: name,
+          purpose: "giveaway",
+        });
+        if (!order?.id) throw new Error("Could not start checkout");
+        return order.id;
+      }
+
+      async function captureGiveawayOrder(orderId) {
+        const { name, email } = readBuyer();
+        const result = await api("/capture-order", {
+          orderId,
+          email,
+          clientName: name,
+          purpose: "giveaway",
+        });
+        setMsg(
+          result.reused
+            ? "Already paid — your license key is below (also emailed). App access is unlocked for this email."
+            : "Paid! App access unlocked and license emailed to " +
+                (result.email || email) +
+                ".",
+          "ok"
+        );
+        showKey(result.licenseKey);
+        hidePayUi();
+        return result;
+      }
+
+      function sharedButtonHandlers(styleOverrides) {
+        return {
+          style: {
+            layout: "vertical",
+            color: "black",
+            shape: "rect",
+            label: "pay",
+            tagline: false,
+            height: 50,
+            ...(styleOverrides || {}),
+          },
+          createOrder: async () => {
+            setMsg("Starting card checkout…");
+            return createGiveawayOrder();
+          },
+          onApprove: async (data) => {
+            setMsg("Payment received — unlocking access and creating your license…");
+            try {
+              await captureGiveawayOrder(data.orderID);
+            } catch (error) {
+              setMsg(error.message || "Could not finish payment", "err");
+              throw error;
+            }
+          },
+          onCancel: () => setMsg("Payment cancelled — you can try again."),
+          onError: (err) => {
+            setMsg(
+              (err && err.message) || "Card payment failed — check details and try again",
+              "err"
+            );
+          },
+        };
+      }
+
+      async function setupCardFields(paypal) {
+        if (typeof paypal.CardFields !== "function") return false;
+        let fields;
+        try {
+          fields = paypal.CardFields({
+            style: {
+              input: {
+                "font-size": "16px",
+                "font-family": "DM Sans, system-ui, sans-serif",
+                color: "#111",
+              },
+              ".invalid": { color: "#ff6b6b" },
+            },
+            createOrder: async () => {
+              setMsg("Starting card payment…");
+              return createGiveawayOrder();
+            },
+            onApprove: async (data) => {
+              setMsg("Card charged — unlocking access and creating your license…");
+              await captureGiveawayOrder(data.orderID);
+            },
+            onError: (err) => {
+              setMsg(
+                (err && err.message) || "Card payment failed — try again",
+                "err"
+              );
+            },
+          });
+        } catch {
+          return false;
+        }
+
+        if (typeof fields.isEligible === "function" && !fields.isEligible()) {
+          return false;
+        }
+
+        try {
+          await Promise.all([
+            fields.NumberField().render("#card-number"),
+            fields.ExpiryField().render("#card-expiry"),
+            fields.CVVField().render("#card-cvv"),
+          ]);
+        } catch {
+          return false;
+        }
+
+        cardFieldsBox.classList.remove("hidden");
+        payCardFieldsBtn.onclick = async () => {
+          const { name, email } = readBuyer();
+          if (!name || !email.includes("@")) {
+            setMsg("Enter your name and email before paying", "err");
+            return;
+          }
+          payCardFieldsBtn.disabled = true;
+          setMsg("Processing card…");
+          try {
+            await fields.submit();
+          } catch (error) {
+            setMsg(error.message || "Could not charge card", "err");
+            payCardFieldsBtn.disabled = false;
+          }
+        };
+        return true;
+      }
+
+      async function setupButtons(paypal, hideCardFunding) {
+        let cardBtnOk = false;
+
+        // Debit/Credit Card funding = guest card form (NOT PayPal wallet redirect).
+        if (!hideCardFunding && paypal.FUNDING?.CARD) {
+          try {
+            const cardBtn = paypal.Buttons({
+              ...sharedButtonHandlers({ color: "black", label: "pay" }),
+              fundingSource: paypal.FUNDING.CARD,
+            });
+            if (typeof cardBtn.isEligible !== "function" || cardBtn.isEligible()) {
+              await cardBtn.render(cardButtons);
+              cardBtnOk = true;
+            }
+          } catch {
+            cardBtnOk = false;
+          }
+        }
+
+        if (paypal.FUNDING?.PAYPAL) {
+          try {
+            const walletBtn = paypal.Buttons({
+              ...sharedButtonHandlers({ color: "gold", label: "paypal" }),
+              fundingSource: paypal.FUNDING.PAYPAL,
+            });
+            if (typeof walletBtn.isEligible !== "function" || walletBtn.isEligible()) {
+              await walletBtn.render(paypalHost);
+            } else {
+              orDivider.classList.add("hidden");
+            }
+          } catch {
+            orDivider.classList.add("hidden");
+          }
+        } else {
+          orDivider.classList.add("hidden");
+        }
+
+        return cardBtnOk;
+      }
+
+      async function boot() {
+        try {
+          const cfg = await api("/config");
+          const clientId = cfg.clientId || "";
+          const giveaway = cfg.giveaway || {};
+          if (
+            giveaway.displayAmount &&
+            String(giveaway.displayCurrency || "").toUpperCase() === "ZAR"
+          ) {
+            priceLabel.textContent =
+              "R" + Number(giveaway.displayAmount).toLocaleString("en-ZA");
+          } else if (giveaway.amount) {
+            priceLabel.textContent = "$" + Number(giveaway.amount).toFixed(2);
+          }
+          if (!cfg.ready || !clientId) {
+            setMsg(
+              "Payments are not ready yet. Ask admin to set PAYPAL_CLIENT_SECRET on Vercel.",
+              "err"
+            );
+            return;
+          }
+
+          const paypal = await loadPaypalSdk(clientId);
+          const fieldsOk = await setupCardFields(paypal);
+          // If inline fields work, skip the separate Debit/Credit funding button to avoid confusion.
+          const cardBtnOk = await setupButtons(paypal, fieldsOk);
+
+          if (fieldsOk) {
+            setMsg("Enter card details above, then tap Pay with card.", "");
+          } else if (cardBtnOk) {
+            setMsg("Tap Debit or Credit Card, then enter your card details.", "");
+          } else {
+            setMsg(
+              "Card checkout is not available on this PayPal account yet. Use PayPal wallet, or enable Advanced Cards in PayPal Business settings.",
+              "err"
+            );
+          }
+        } catch (e) {
+          setMsg(e.message || "Could not load payment", "err");
+        }
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

@@ -13,6 +13,7 @@ import {
   extractCaptureAmount,
   extractCaptureId,
   fulfillRobotPurchase,
+  isGiveawayPurchaseCapture,
   isRobotPurchaseCapture,
 } from "./_robotPurchase.js";
 import {
@@ -165,15 +166,19 @@ export default async function handler(req, res) {
     }
 
     const purpose = extractCapturePurpose(capture);
-    const robot = isRobotPurchaseCapture(capture, { purposeHint: purpose });
+    const giveaway = isGiveawayPurchaseCapture(capture, { purposeHint: purpose });
+    const robot =
+      !giveaway && isRobotPurchaseCapture(capture, { purposeHint: purpose });
 
-    if (robot) {
+    if (giveaway || robot) {
       const email = await resolveEmailFromCapture(capture, resource);
       const clientName = extractCaptureClientName(capture);
       if (!email || !email.includes("@")) {
         sendJson(res, 200, {
           ok: false,
-          error: "robot-payment-missing-email",
+          error: giveaway
+            ? "giveaway-payment-missing-email"
+            : "robot-payment-missing-email",
           eventType,
           amount: extractCaptureAmount(capture),
         });
@@ -188,13 +193,14 @@ export default async function handler(req, res) {
             resource?.id ||
             ""
         ),
-        source: "paypal-webhook",
+        source: giveaway ? "paypal-giveaway-webhook" : "paypal-webhook",
       });
       sendJson(res, 200, {
         ok: true,
-        purpose: "robot",
+        purpose: giveaway ? "giveaway" : "robot",
         email: fulfilled.email,
         licenseKey: fulfilled.key,
+        accessPaid: true,
         reused: Boolean(fulfilled.reused),
         eventType,
       });

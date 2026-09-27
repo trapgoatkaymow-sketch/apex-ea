@@ -7,12 +7,25 @@ import {
   readJsonBody,
   sendJson,
 } from "./_lib.js";
-import { ROBOT_CURRENCY, ROBOT_PRICE } from "./_robotPurchase.js";
+import {
+  GIVEAWAY_CURRENCY,
+  GIVEAWAY_PRICE,
+  ROBOT_CURRENCY,
+  ROBOT_PRICE,
+} from "./_robotPurchase.js";
 
 export const config = { maxDuration: 30 };
 
 function normalizePurpose(raw) {
   const value = String(raw || "access").toLowerCase();
+  if (
+    value === "giveaway" ||
+    value === "promo" ||
+    value.startsWith("giveaway:") ||
+    value.startsWith("promo:")
+  ) {
+    return "giveaway";
+  }
   if (value === "robot" || value === "license" || value.startsWith("robot:")) {
     return "robot";
   }
@@ -41,15 +54,30 @@ export default async function handler(req, res) {
       cancelUrl: body.cancelUrl || body.cancel_url || "",
     });
     const approveUrl = extractApproveUrl(order);
+    const amount =
+      purpose === "giveaway"
+        ? GIVEAWAY_PRICE
+        : purpose === "robot"
+          ? ROBOT_PRICE
+          : LIFETIME_PRICE;
+    const currency =
+      purpose === "giveaway"
+        ? GIVEAWAY_CURRENCY
+        : purpose === "robot"
+          ? ROBOT_CURRENCY
+          : LIFETIME_CURRENCY;
     sendJson(res, 200, {
       id: order.id,
       status: order.status,
-      amount: purpose === "robot" ? ROBOT_PRICE : LIFETIME_PRICE,
-      currency: purpose === "robot" ? ROBOT_CURRENCY : LIFETIME_CURRENCY,
+      amount,
+      currency,
       approveUrl,
       links: order.links || [],
       purpose,
-      botName: purpose === "robot" ? "ZETA SCALPER AI" : null,
+      botName:
+        purpose === "robot" || purpose === "giveaway"
+          ? "ZETA SCALPER AI"
+          : null,
     });
   } catch (error) {
     sendJson(res, error.status || 500, {
