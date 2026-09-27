@@ -1,16 +1,50 @@
+import { useMemo, useState } from "react";
 import { useApp } from "./store.jsx";
 
 export default function PairsSheet() {
-  const { pairsOpen, setPairsOpen, catalog, appSymbols, removeSymbolEverywhere } = useApp();
+  const {
+    pairsOpen,
+    setPairsOpen,
+    catalog,
+    appSymbols,
+    addAppSymbol,
+    removeSymbolEverywhere,
+    normalizeSymbol,
+  } = useApp();
+  const [query, setQuery] = useState("");
+  const [custom, setCustom] = useState("");
+
+  const selected = useMemo(
+    () => catalog.filter((s) => appSymbols.has(s)),
+    [catalog, appSymbols]
+  );
+
+  const available = useMemo(() => {
+    const q = String(query || "")
+      .trim()
+      .toLowerCase();
+    return catalog.filter((s) => {
+      if (appSymbols.has(s)) return false;
+      if (!q) return true;
+      return String(s).toLowerCase().includes(q);
+    });
+  }, [catalog, appSymbols, query]);
+
   if (!pairsOpen) return null;
 
-  const selected = catalog.filter((s) => appSymbols.has(s));
-  const available = catalog.filter((s) => !appSymbols.has(s));
+  function handleAddCustom(event) {
+    event?.preventDefault?.();
+    const symbol = normalizeSymbol(custom);
+    if (!symbol) return;
+    addAppSymbol?.(symbol);
+    setCustom("");
+    setQuery("");
+  }
 
   return (
     <div className="pairs-sheet">
       <div className="pairs-backdrop" onClick={() => setPairsOpen(false)} />
-      <div className="pairs-panel" role="dialog" aria-modal="true">
+      <div className="pairs-panel" role="dialog" aria-modal="true" aria-label="Your pairs">
         <header className="pairs-header">
           <button
             className="pairs-back"
@@ -20,39 +54,110 @@ export default function PairsSheet() {
           >
             ←
           </button>
-          <h2>Pairs</h2>
-          <span className="pairs-count">{selected.length} on app</span>
+          <div className="pairs-header-copy">
+            <h2>Your pairs</h2>
+            <p>Add the markets you want on this phone</p>
+          </div>
+          <span className="pairs-count">{selected.length} active</span>
         </header>
+
+        <form className="pairs-add-row" onSubmit={handleAddCustom}>
+          <label className="pairs-field">
+            <span>Add a pair</span>
+            <input
+              type="text"
+              value={custom}
+              onChange={(e) => setCustom(e.target.value.toUpperCase())}
+              placeholder="e.g. XAUUSD or EURUSD"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="done"
+            />
+          </label>
+          <button
+            className="pairs-add-btn"
+            type="submit"
+            disabled={!String(custom || "").trim()}
+          >
+            Add
+          </button>
+        </form>
+
         <section className="pairs-section">
-          <h3>Selected Symbols</h3>
-          <p className="pairs-note">Synced from Manage EA — remove here or on the EA.</p>
-          <div className="symbol-list">
-            {selected.map((symbol) => (
-              <button
-                key={symbol}
-                type="button"
-                className="symbol-chip is-selected"
-                onClick={() => removeSymbolEverywhere(symbol)}
-              >
-                <span>{symbol}</span>
-                <span className="chip-x">×</span>
-              </button>
-            ))}
+          <div className="pairs-section-head">
+            <h3>On your app</h3>
+            <span>{selected.length}</span>
           </div>
+          <p className="pairs-note">
+            Tap a pair to remove it. These are your symbols — not locked by Manage EA.
+          </p>
           {selected.length === 0 ? (
-            <p className="pairs-empty">No symbols yet — choose them in Manage EA</p>
-          ) : null}
+            <div className="pairs-empty-card">
+              <strong>No pairs yet</strong>
+              <p>Add from the list below, or type a custom symbol above.</p>
+            </div>
+          ) : (
+            <div className="symbol-list">
+              {selected.map((symbol) => (
+                <button
+                  key={symbol}
+                  type="button"
+                  className="symbol-chip is-selected"
+                  onClick={() => removeSymbolEverywhere(symbol)}
+                  aria-label={`Remove ${symbol}`}
+                >
+                  <span>{symbol}</span>
+                  <span className="chip-x" aria-hidden="true">
+                    ×
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
+
         <section className="pairs-section">
-          <h3>Catalog</h3>
-          <p className="pairs-note">Add symbols from Manage EA to put them on the app.</p>
-          <div className="symbol-list">
-            {available.map((symbol) => (
-              <span key={symbol} className="symbol-chip is-available">
-                <span>{symbol}</span>
-              </span>
-            ))}
+          <div className="pairs-section-head">
+            <h3>Browse & add</h3>
+            <span>{available.length}</span>
           </div>
+          <label className="pairs-search">
+            <span className="sr-only">Search pairs</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search catalog…"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </label>
+          <p className="pairs-note">Tap any symbol to add it to your app.</p>
+          {available.length === 0 ? (
+            <p className="pairs-empty">
+              {query.trim()
+                ? `No catalog match for “${query.trim()}” — type it above to add.`
+                : "Every catalog pair is already on your app."}
+            </p>
+          ) : (
+            <div className="symbol-list is-catalog">
+              {available.map((symbol) => (
+                <button
+                  key={symbol}
+                  type="button"
+                  className="symbol-chip is-available"
+                  onClick={() => addAppSymbol?.(symbol)}
+                  aria-label={`Add ${symbol}`}
+                >
+                  <span>{symbol}</span>
+                  <span className="chip-plus" aria-hidden="true">
+                    +
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

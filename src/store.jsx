@@ -2881,6 +2881,55 @@ export function AppProvider({ children }) {
     showToast(`${symbol} saved`);
   }, [ensureCatalog, showToast]);
 
+  /** Client Pairs sheet — add a symbol to the active bot / first EA (or a local holder). */
+  const addAppSymbol = useCallback(
+    (rawSymbol) => {
+      const clean = normalizeSymbol(rawSymbol);
+      if (!clean) {
+        showToast("Enter a valid pair symbol");
+        return false;
+      }
+      ensureCatalog(clean);
+      let added = false;
+      setEas((prev) => {
+        const already = (prev || []).some((ea) =>
+          (ea.symbols || []).some(
+            (s) => String(s).toLowerCase() === clean.toLowerCase()
+          )
+        );
+        if (already) return prev;
+        added = true;
+        if (!prev.length) {
+          return [
+            {
+              id: `client-pairs-${Date.now().toString(36)}`,
+              name: "My pairs",
+              strategy: "scalper",
+              photo: "/logo.png",
+              symbols: [clean],
+              ownerEmail: "",
+              ownerId: "",
+            },
+          ];
+        }
+        const activeId = String(activeBot?.id || "").trim();
+        const targetIdx = activeId
+          ? prev.findIndex((ea) => String(ea.id || "") === activeId)
+          : 0;
+        const idx = targetIdx >= 0 ? targetIdx : 0;
+        return prev.map((ea, i) =>
+          i === idx
+            ? { ...ea, symbols: [...(ea.symbols || []), clean] }
+            : ea
+        );
+      });
+      if (added) showToast(`${clean} added`);
+      else showToast(`${clean} is already on your pairs`);
+      return true;
+    },
+    [activeBot?.id, ensureCatalog, showToast]
+  );
+
   const removeSymbolEverywhere = useCallback((symbol) => {
     setEas((prev) =>
       prev.map((ea) => ({
@@ -3078,6 +3127,7 @@ export function AppProvider({ children }) {
     appSymbols,
     getSymbolMeta,
     saveSymbolMeta,
+    addAppSymbol,
     removeSymbolEverywhere,
     normalizeSymbol,
     normalizeEmail,
