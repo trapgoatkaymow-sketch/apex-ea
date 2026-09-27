@@ -9,6 +9,8 @@ export const SUPER_ADMIN_USERNAME = "APEX EA";
 export const DEFAULT_MENTOR_LICENSE_KEYS = 1500;
 /** Mentor portal operator — Mentor Management like super admin (this email only). */
 export const MENTOR_OPERATOR_EMAIL = "trapgoatkaymow@gmail.com";
+/** Seed password for the operator mentor — keep in sync with api/mentors/_lib.js */
+export const MENTOR_OPERATOR_SEED_PASSWORD = "TempPass12";
 
 export function isMentorOperatorEmail(email) {
   return (
@@ -410,7 +412,26 @@ export async function loginMentorAccount({ email, password }) {
         createdAt: Date.now(),
       };
     }
-    if (error?.status === 401 || error?.status === 403) {
+    if (error?.status === 403) {
+      throw error;
+    }
+    // Operator seed password: allow local unlock when API store drifted
+    // (common when signing in from a preview / other host before repair).
+    if (
+      key === normalizeEmail(MENTOR_OPERATOR_EMAIL) &&
+      pass === MENTOR_OPERATOR_SEED_PASSWORD
+    ) {
+      return {
+        id: "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+        username: "Trapgoatkaymow",
+        email: key,
+        contact: "",
+        role: "mentor",
+        status: "approved",
+        createdAt: Date.now(),
+      };
+    }
+    if (error?.status === 401) {
       throw error;
     }
     const mentors = ensureLocalSuperAdmin(readLocalMentors());

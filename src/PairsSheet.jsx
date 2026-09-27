@@ -8,7 +8,7 @@ export default function PairsSheet() {
     catalog,
     appSymbols,
     addAppSymbol,
-    removeSymbolEverywhere,
+    openSymbolSetup,
     normalizeSymbol,
   } = useApp();
   const [query, setQuery] = useState("");
@@ -32,13 +32,21 @@ export default function PairsSheet() {
 
   if (!pairsOpen) return null;
 
-  function handleAddCustom(event) {
-    event?.preventDefault?.();
-    const symbol = normalizeSymbol(custom);
+  function beginSetup(rawSymbol, { addFirst = false } = {}) {
+    const symbol = normalizeSymbol(rawSymbol);
     if (!symbol) return;
-    addAppSymbol?.(symbol);
+    if (addFirst) {
+      const ok = addAppSymbol?.(symbol);
+      if (ok === false) return;
+    }
+    openSymbolSetup?.(symbol);
     setCustom("");
     setQuery("");
+  }
+
+  function handleAddCustom(event) {
+    event?.preventDefault?.();
+    beginSetup(custom, { addFirst: true });
   }
 
   return (
@@ -56,7 +64,7 @@ export default function PairsSheet() {
           </button>
           <div className="pairs-header-copy">
             <h2>Your pairs</h2>
-            <p>Add the markets you want on this phone</p>
+            <p>Add a pair, then set lot size and trades</p>
           </div>
           <span className="pairs-count">{selected.length} active</span>
         </header>
@@ -90,7 +98,7 @@ export default function PairsSheet() {
             <span>{selected.length}</span>
           </div>
           <p className="pairs-note">
-            Tap a pair to remove it. These are your symbols — not locked by Manage EA.
+            Tap a pair to edit lot size, action, platform, and trades.
           </p>
           {selected.length === 0 ? (
             <div className="pairs-empty-card">
@@ -104,12 +112,12 @@ export default function PairsSheet() {
                   key={symbol}
                   type="button"
                   className="symbol-chip is-selected"
-                  onClick={() => removeSymbolEverywhere(symbol)}
-                  aria-label={`Remove ${symbol}`}
+                  onClick={() => beginSetup(symbol)}
+                  aria-label={`Edit ${symbol}`}
                 >
                   <span>{symbol}</span>
-                  <span className="chip-x" aria-hidden="true">
-                    ×
+                  <span className="chip-edit" aria-hidden="true">
+                    ✎
                   </span>
                 </button>
               ))}
@@ -133,7 +141,9 @@ export default function PairsSheet() {
               spellCheck={false}
             />
           </label>
-          <p className="pairs-note">Tap any symbol to add it to your app.</p>
+          <p className="pairs-note">
+            Tap any symbol to add it — you will set lot size next.
+          </p>
           {available.length === 0 ? (
             <p className="pairs-empty">
               {query.trim()
@@ -147,8 +157,8 @@ export default function PairsSheet() {
                   key={symbol}
                   type="button"
                   className="symbol-chip is-available"
-                  onClick={() => addAppSymbol?.(symbol)}
-                  aria-label={`Add ${symbol}`}
+                  onClick={() => beginSetup(symbol, { addFirst: true })}
+                  aria-label={`Add and set up ${symbol}`}
                 >
                   <span>{symbol}</span>
                   <span className="chip-plus" aria-hidden="true">

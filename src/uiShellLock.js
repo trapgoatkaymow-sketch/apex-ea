@@ -31,10 +31,11 @@
  * Floor raised to 73 so older shells cannot stick on phones.
  * Gen 75 — Mentor Management for trapgoatkaymow@gmail.com (operator mentor).
  * Gen 76 — Interface 1 Pairs: clients add/remove their own pairs.
+ * Gen 77 — Interface 1 pair setup form + mentor login on other hosts.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 76;
+export const UI_SHELL_GENERATION = 77;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -44,7 +45,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 76;
+export const UI_SHELL_FLOOR = 77;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

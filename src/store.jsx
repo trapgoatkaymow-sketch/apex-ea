@@ -541,6 +541,8 @@ export function AppProvider({ children }) {
   const [v2Running, setV2Running] = useState(false);
   const [v2SymTab, setV2SymTab] = useState("allowed");
   const [editingSymbol, setEditingSymbol] = useState(null);
+  /** Interface 1 pair setup sheet (lot / action / platform / trades). */
+  const [symbolSetupOpen, setSymbolSetupOpen] = useState(false);
   const [editingEaId, setEditingEaId] = useState(null);
   const [mt5Session, setMt5SessionState] = useState(() => loadMt5Session());
   const [engineMode, setEngineMode] = useState("idle");
@@ -631,6 +633,21 @@ export function AppProvider({ children }) {
   }, [toast]);
 
   const showToast = useCallback((message) => setToast(message), []);
+
+  const openSymbolSetup = useCallback(
+    (rawSymbol) => {
+      const clean = normalizeSymbol(rawSymbol);
+      if (!clean) {
+        showToast("Enter a valid pair symbol");
+        return false;
+      }
+      setEditingSymbol(clean);
+      setSymbolSetupOpen(true);
+      setPairsOpen(false);
+      return true;
+    },
+    [showToast]
+  );
 
   useEffect(() => {
     applyAppTheme(appColor);
@@ -3128,6 +3145,9 @@ export function AppProvider({ children }) {
     getSymbolMeta,
     saveSymbolMeta,
     addAppSymbol,
+    openSymbolSetup,
+    symbolSetupOpen,
+    setSymbolSetupOpen,
     removeSymbolEverywhere,
     normalizeSymbol,
     normalizeEmail,

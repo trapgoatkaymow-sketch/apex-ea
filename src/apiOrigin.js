@@ -1,7 +1,19 @@
 /** Live production API host — secrets stay on Vercel. */
 export const PROD_API_ORIGIN = "https://www.apex-ea.com";
 
-/** Native Capacitor shell (or local Vite) is not same-origin with apex-ea.com. */
+/** True when the UI host is the live apex-ea.com site (www or apex). */
+export function isProductionHost(hostname = "") {
+  const host = String(hostname || "")
+    .trim()
+    .toLowerCase();
+  return host === "www.apex-ea.com" || host === "apex-ea.com";
+}
+
+/**
+ * Native / local / preview / mirror hosts are not the live product origin.
+ * Mentors signing in from “other sites” (Vercel previews, mirrors) must hit
+ * the production API so passwords match one durable store.
+ */
 export function needsAbsoluteApi() {
   if (typeof window === "undefined") return false;
   try {
@@ -16,7 +28,8 @@ export function needsAbsoluteApi() {
     // ignore
   }
   const host = String(window.location?.hostname || "");
-  return host === "localhost" || host === "127.0.0.1";
+  if (isProductionHost(host)) return false;
+  return true;
 }
 
 /** Prefix `/api/...` paths with production origin when the UI is not on apex-ea.com. */
