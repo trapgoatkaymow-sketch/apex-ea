@@ -1,7 +1,19 @@
 /** Live production API host — secrets stay on Vercel. */
 export const PROD_API_ORIGIN = "https://www.apex-ea.com";
 
-/** Native Capacitor shell (or local Vite) is not same-origin with apex-ea.com. */
+/** Canonical live host — apex-ea.com (no www) 308-redirects and can drop POSTs. */
+export function isCanonicalProductionHost(hostname = "") {
+  const host = String(hostname || "")
+    .trim()
+    .toLowerCase();
+  return host === "www.apex-ea.com";
+}
+
+/**
+ * Native / local / preview / apex-ea.com (no www) / mirrors are not safe for
+ * same-origin API POSTs. apex-ea.com 308→www drops mentor login bodies and
+ * shows “Invalid email or password”. Always hit www for those hosts.
+ */
 export function needsAbsoluteApi() {
   if (typeof window === "undefined") return false;
   try {
@@ -16,7 +28,8 @@ export function needsAbsoluteApi() {
     // ignore
   }
   const host = String(window.location?.hostname || "");
-  return host === "localhost" || host === "127.0.0.1";
+  if (isCanonicalProductionHost(host)) return false;
+  return true;
 }
 
 /** Prefix `/api/...` paths with production origin when the UI is not on apex-ea.com. */

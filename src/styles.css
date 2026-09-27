@@ -1468,7 +1468,8 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .symbol-chip .chip-x,
-.symbol-chip .chip-plus {
+.symbol-chip .chip-plus,
+.symbol-chip .chip-edit {
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -1480,9 +1481,29 @@ html:has(.phone[data-interface="v2"]) body {
   background: rgba(0, 0, 0, 0.22);
 }
 
-.symbol-chip .chip-plus {
+.symbol-chip .chip-plus,
+.symbol-chip .chip-edit {
   background: rgba(var(--pink-rgb), 0.22);
   color: #fff;
+}
+
+/* Interface 1 symbol-edit — reuse V2 Save Symbol card on Home stage */
+.view-symbol-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 16px 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
+}
+
+.phone[data-interface="zeta"] .view-symbol-edit .v2-screen-top {
+  margin-bottom: 4px;
+}
+
+.phone[data-interface="zeta"] .view-symbol-edit .v2-edit-form {
+  margin-top: 4px;
 }
 
 .pairs-empty {
