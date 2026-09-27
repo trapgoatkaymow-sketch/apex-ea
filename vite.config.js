@@ -38,10 +38,10 @@ function resolveBuildId(env) {
 function appVersionPlugin(buildId) {
   // Keep in sync with src/uiShellLock.js — Vite config cannot import ESM app code
   // reliably during config evaluation, so the number is duplicated here.
-  const shellGeneration = 75;
+  const shellGeneration = 76;
   const shellLabel = "product-frozen-stable";
   const uiLocked = true;
-  const minShellGeneration = 75;
+  const minShellGeneration = 76;
 
   const writeVersion = (outDir) => {
     try {

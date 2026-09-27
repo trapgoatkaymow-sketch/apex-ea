@@ -2889,16 +2889,17 @@ export function AppProvider({ children }) {
         showToast("Enter a valid pair symbol");
         return false;
       }
+      const already = (eas || []).some((ea) =>
+        (ea.symbols || []).some(
+          (s) => String(s).toLowerCase() === clean.toLowerCase()
+        )
+      );
+      if (already) {
+        showToast(`${clean} is already on your pairs`);
+        return false;
+      }
       ensureCatalog(clean);
-      let added = false;
       setEas((prev) => {
-        const already = (prev || []).some((ea) =>
-          (ea.symbols || []).some(
-            (s) => String(s).toLowerCase() === clean.toLowerCase()
-          )
-        );
-        if (already) return prev;
-        added = true;
         if (!prev.length) {
           return [
             {
@@ -2923,11 +2924,10 @@ export function AppProvider({ children }) {
             : ea
         );
       });
-      if (added) showToast(`${clean} added`);
-      else showToast(`${clean} is already on your pairs`);
+      showToast(`${clean} added`);
       return true;
     },
-    [activeBot?.id, ensureCatalog, showToast]
+    [activeBot?.id, eas, ensureCatalog, showToast]
   );
 
   const removeSymbolEverywhere = useCallback((symbol) => {
