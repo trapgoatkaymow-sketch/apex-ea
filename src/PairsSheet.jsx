@@ -36,7 +36,7 @@ export default function PairsSheet() {
     const symbol = normalizeSymbol(rawSymbol);
     if (!symbol) return;
     if (addFirst) {
-      const ok = addAppSymbol?.(symbol);
+      const ok = addAppSymbol?.(symbol, { quiet: true });
       if (ok === false) return;
     }
     openSymbolSetup?.(symbol);

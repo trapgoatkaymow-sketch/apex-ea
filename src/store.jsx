@@ -2900,10 +2900,11 @@ export function AppProvider({ children }) {
 
   /** Client Pairs sheet — add a symbol to the active bot / first EA (or a local holder). */
   const addAppSymbol = useCallback(
-    (rawSymbol) => {
+    (rawSymbol, options = {}) => {
+      const quiet = Boolean(options?.quiet);
       const clean = normalizeSymbol(rawSymbol);
       if (!clean) {
-        showToast("Enter a valid pair symbol");
+        if (!quiet) showToast("Enter a valid pair symbol");
         return false;
       }
       const already = (eas || []).some((ea) =>
@@ -2912,7 +2913,7 @@ export function AppProvider({ children }) {
         )
       );
       if (already) {
-        showToast(`${clean} is already on your pairs`);
+        if (!quiet) showToast(`${clean} is already on your pairs`);
         return false;
       }
       ensureCatalog(clean);
@@ -2941,7 +2942,7 @@ export function AppProvider({ children }) {
             : ea
         );
       });
-      showToast(`${clean} added`);
+      if (!quiet) showToast(`${clean} added`);
       return true;
     },
     [activeBot?.id, eas, ensureCatalog, showToast]
