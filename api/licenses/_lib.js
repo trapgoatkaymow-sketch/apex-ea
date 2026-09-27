@@ -19,6 +19,7 @@ const BRANCH =
   "store-licenses";
 const FILE_PATH = process.env.LICENSES_FILE_PATH || "data/licenses.json";
 const BLOB_PATH = process.env.LICENSES_BLOB_PATH || "apexea/licenses.json";
+const FIREBASE_PATH = process.env.LICENSES_FIREBASE_PATH || "apexea/licenses";
 const API = `https://api.github.com/repos/${REPO}`;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1152,6 +1153,7 @@ async function readStore(options = {}) {
   // Prefer Blob (shared across serverless) then GitHub, then env snapshot.
   const durable = await durableRead({
     blobPath: BLOB_PATH,
+    firebasePath: FIREBASE_PATH,
     githubPath: FILE_PATH,
     githubRepo: REPO,
     githubBranch: BRANCH,
@@ -1265,10 +1267,12 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
   const durable = await durableWrite({
     raw: payload,
     blobPath: BLOB_PATH,
+    firebasePath: FIREBASE_PATH,
     githubPath: FILE_PATH,
     githubRepo: REPO,
     githubBranch: BRANCH,
     githubSha: sha && sha !== "local" ? sha : null,
+    githubMode: "always",
     message,
     localPaths: [TMP_FILE, BUNDLED_FILE],
   });

@@ -10,6 +10,7 @@ const REPO =
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.SIGNUPS_FILE_PATH || "data/signups.json";
 const BLOB_PATH = process.env.SIGNUPS_BLOB_PATH || "apexea/signups.json";
+const FIREBASE_PATH = process.env.SIGNUPS_FIREBASE_PATH || "apexea/signups";
 const API = `https://api.github.com/repos/${REPO}`;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/signups.json");
@@ -202,6 +203,7 @@ async function readStore() {
   try {
     const durable = await durableRead({
       blobPath: BLOB_PATH,
+      firebasePath: FIREBASE_PATH,
       githubRepo: REPO,
       githubBranch: BRANCH,
       githubPath: FILE_PATH,
@@ -240,10 +242,12 @@ async function writeStore(signups, sha, message) {
     const result = await durableWrite({
       raw,
       blobPath: BLOB_PATH,
+      firebasePath: FIREBASE_PATH,
       githubRepo: REPO,
       githubBranch: BRANCH,
       githubPath: FILE_PATH,
       githubSha: sha && sha !== "local" ? sha : null,
+      githubMode: "fallback",
       message,
       localPaths: [TMP_FILE, LOCAL_FILE],
     });

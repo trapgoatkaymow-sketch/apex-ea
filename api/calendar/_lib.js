@@ -2,15 +2,18 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
 import { applyCorsHeaders } from "../_cors.js";
+import { durableRead, durableWrite } from "../_durableJson.js";
 
 const REPO =
   process.env.SIGNUPS_GITHUB_REPO || "trapgoatkaymow-sketch/apex-ea";
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH =
   process.env.ECONOMIC_CALENDAR_FILE_PATH || "data/economic-calendar.json";
-const API = `https://api.github.com/repos/${REPO}`;
+const BLOB_PATH =
+  process.env.ECONOMIC_CALENDAR_BLOB_PATH || "apexea/economic-calendar.json";
+const FIREBASE_PATH =
+  process.env.ECONOMIC_CALENDAR_FIREBASE_PATH || "apexea/economicCalendar";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/economic-calendar.json");
 const TMP_FILE = path.join("/tmp", "apexea-economic-calendar.json");
@@ -21,88 +24,6 @@ function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
-}
-
-function requireToken() {
-  const token =
-    process.env.SIGNUPS_GITHUB_TOKEN ||
-    process.env.GITHUB_DEPLOY_TOKEN ||
-    process.env.GITHUB_TOKEN ||
-    process.env.GH_TOKEN ||
-    FALLBACK_GITHUB_TOKEN ||
-    "";
-  if (!token) {
-    const err = new Error("Economic calendar store is not configured");
-    err.status = 500;
-    throw err;
-  }
-  return token;
-}
-
-function tokenCandidates() {
-  return [
-    ...new Set(
-      [
-        process.env.SIGNUPS_GITHUB_TOKEN,
-        process.env.GITHUB_TOKEN,
-        process.env.GH_TOKEN,
-        FALLBACK_GITHUB_TOKEN,
-      ].filter(Boolean)
-    ),
-  ];
-}
-
-async function ghFetch(url, { method = "GET", body, token, auth = true, cache } = {}) {
-  const headers = {
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
-  if (body) headers["Content-Type"] = "application/json";
-
-  const tokens = auth ? (token ? [token] : tokenCandidates()) : [null];
-  if (auth && tokens.length === 0) {
-    const err = new Error("Economic calendar store is not configured");
-    err.status = 500;
-    throw err;
-  }
-
-  let lastError = null;
-  for (let i = 0; i < tokens.length; i += 1) {
-    const active = tokens[i];
-    const requestHeaders = { ...headers };
-    if (auth && active) requestHeaders.Authorization = `Bearer ${active}`;
-
-    const response = await fetch(url, {
-      method,
-      headers: requestHeaders,
-      body: body ? JSON.stringify(body) : undefined,
-      ...(cache ? { cache } : {}),
-    });
-    const text = await response.text();
-    let data = null;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = text;
-    }
-    if (response.ok) return data;
-
-    const message =
-      (data && (data.message || data.error)) || `GitHub error ${response.status}`;
-    const err = new Error(message);
-    err.status = response.status;
-    err.data = data;
-    lastError = err;
-
-    const retryable =
-      auth &&
-      i < tokens.length - 1 &&
-      (response.status === 401 ||
-        response.status === 403 ||
-        /bad credentials/i.test(message));
-    if (!retryable) throw err;
-  }
-  throw lastError || new Error("GitHub request failed");
 }
 
 export function normalizeEventDate(value) {
@@ -322,14 +243,18 @@ function writeLocalStore(events) {
 
 async function readStore() {
   try {
-    const file = await ghFetch(
-      `${API}/contents/${FILE_PATH}?ref=${encodeURIComponent(BRANCH)}`,
-      { cache: "no-store" }
-    );
-    const raw = Buffer.from(String(file.content || "").replace(/\n/g, ""), "base64").toString(
-      "utf8"
-    );
-    const decoded = decodeEventsJson(raw, file.sha);
+    const durable = await durableRead({
+      blobPath: BLOB_PATH,
+      firebasePath: FIREBASE_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      localPaths: [TMP_FILE, LOCAL_FILE],
+    });
+    if (!durable.raw) {
+      return { sha: null, events: [], remote: false };
+    }
+    const decoded = decodeEventsJson(durable.raw, durable.sha);
     if (Array.isArray(memoryEvents) && memoryEvents.length) {
       const byId = new Map(decoded.events.map((e) => [e.id, e]));
       for (const local of memoryEvents) {
@@ -340,7 +265,11 @@ async function readStore() {
       }
       decoded.events = Array.from(byId.values());
     }
-    return decoded;
+    return {
+      ...decoded,
+      remote: durable.source !== "empty" && durable.source !== "local",
+      source: durable.source,
+    };
   } catch (error) {
     if (error.status === 404) {
       return { sha: null, events: [], remote: true };
@@ -354,25 +283,24 @@ async function writeStore(events, sha, message) {
     .map(publicEvent)
     .filter(Boolean)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.createdAt - b.createdAt);
-  const content = Buffer.from(
-    JSON.stringify({ events: normalized }, null, 2) + "\n",
-    "utf8"
-  ).toString("base64");
-  const body = { message, content, branch: BRANCH };
-  if (sha && sha !== "local") body.sha = sha;
-
+  const raw = JSON.stringify({ events: normalized }, null, 2) + "\n";
+  writeLocalStore(normalized);
   try {
-    const result = await ghFetch(`${API}/contents/${FILE_PATH}`, {
-      method: "PUT",
-      body,
+    const result = await durableWrite({
+      raw,
+      blobPath: BLOB_PATH,
+      firebasePath: FIREBASE_PATH,
+      githubRepo: REPO,
+      githubBranch: BRANCH,
+      githubPath: FILE_PATH,
+      githubSha: sha && sha !== "local" ? sha : null,
+      githubMode: "fallback",
+      message,
+      localPaths: [TMP_FILE, LOCAL_FILE],
     });
-    writeLocalStore(normalized);
-    return result;
-  } catch (error) {
-    writeLocalStore(normalized);
-    if (error.status === 401 || error.status === 403) {
-      return { local: true };
-    }
+    if (result?.ok) return result;
+    return { local: true, durable: false };
+  } catch {
     return { local: true };
   }
 }
@@ -561,6 +489,3 @@ export function sendJson(res, status, payload) {
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(payload));
 }
-
-// silence unused in some bundlers
-void requireToken;

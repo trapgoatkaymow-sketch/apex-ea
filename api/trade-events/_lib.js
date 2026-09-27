@@ -10,6 +10,8 @@ const REPO =
 const BRANCH = process.env.SIGNUPS_GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.TRADE_EVENTS_FILE_PATH || "data/trade-events.json";
 const BLOB_PATH = process.env.TRADE_EVENTS_BLOB_PATH || "apexea/trade-events.json";
+const FIREBASE_PATH =
+  process.env.TRADE_EVENTS_FIREBASE_PATH || "apexea/tradeEvents";
 const API = `https://api.github.com/repos/${REPO}`;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FILE = path.resolve(__dirname, "../../data/trade-events.json");
@@ -162,6 +164,7 @@ async function readStore() {
   try {
     const durable = await durableRead({
       blobPath: BLOB_PATH,
+      firebasePath: FIREBASE_PATH,
       githubRepo: REPO,
       githubBranch: BRANCH,
       githubPath: FILE_PATH,
@@ -187,10 +190,13 @@ async function writeStore(events, sha, message) {
     const result = await durableWrite({
       raw,
       blobPath: BLOB_PATH,
+      firebasePath: FIREBASE_PATH,
       githubRepo: REPO,
       githubBranch: BRANCH,
       githubPath: FILE_PATH,
       githubSha: sha && sha !== "local" ? sha : null,
+      githubMode: "throttled",
+      githubMinIntervalMs: 15 * 60 * 1000,
       message,
       localPaths: [TMP_FILE, LOCAL_FILE],
     });
