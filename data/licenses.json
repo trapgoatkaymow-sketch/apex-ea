@@ -229,7 +229,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "EURUSD",
+          "USDJPY",
+          "AUDUSD",
+          "NZDUSD",
+          "GBPUSD"
+        ]
       }
     },
     {
@@ -439,9 +447,7 @@
       "robotCompany": "Deriv.com Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790611127965,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790616674966,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -751,10 +757,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSDM"
-        ]
+        "symbols": []
       }
     },
     {
