@@ -67,6 +67,13 @@
       "robotCompany": "Deriv (SVG) LLC",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790567911299,
+      "clientSymbols": [
+        "XAUUSD",
+        "NAS100",
+        "US30",
+        "CRASH150INDEX"
+      ],
+      "clientSymbolsUpdatedAt": 1790611188631,
       "purchaseCaptureId": "1C5383994U601005C",
       "purchaseOrderId": "9NC22305X5638350X",
       "purchaseSource": "paypal-giveaway",
@@ -81,14 +88,7 @@
           "US30",
           "CRASH150INDEX"
         ]
-      },
-      "clientSymbols": [
-        "XAUUSD",
-        "NAS100",
-        "US30",
-        "CRASH150INDEX"
-      ],
-      "clientSymbolsUpdatedAt": 1790611188631
+      }
     },
     {
       "key": "APEX-UCF4-XCV8",
@@ -173,9 +173,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "NAS100"
-        ]
+        "symbols": []
       }
     },
     {
