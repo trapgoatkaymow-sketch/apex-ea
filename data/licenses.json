@@ -115,6 +115,8 @@
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790612983779,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "6YC84744GU330720F",
       "purchaseOrderId": "0SL080556M082060U",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -124,9 +126,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      },
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null
+      }
     },
     {
       "key": "APEX-T899-C4ZK",
@@ -500,7 +500,19 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "GBPUSD",
+          "USDJPY",
+          "US30",
+          "XAUUSD",
+          "USDCAD",
+          "NZDUSD",
+          "EURJPY",
+          "GBPJPY",
+          "AUDUSD",
+          "AUDCAD"
+        ]
       }
     },
     {
