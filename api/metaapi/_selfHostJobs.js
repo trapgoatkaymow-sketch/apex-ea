@@ -36,9 +36,11 @@ export function newSelfHostJobId() {
 
 export function publicSelfHostJob(job) {
   if (!job) return null;
+  const status = String(job.status || "");
+  const running = ["queued", "scheduled", "running"].includes(status);
   return {
     id: job.id,
-    status: job.status,
+    status,
     mentorEmail: job.mentorEmail || "",
     hostedByAdmin: job.hostedByAdmin || "",
     symbol: job.symbol,
@@ -47,7 +49,7 @@ export function publicSelfHostJob(job) {
     tradesCount: job.tradesCount,
     stopLoss: job.stopLoss ?? null,
     takeProfit: job.takeProfit ?? null,
-    targeted: Number(job.targeted || 0),
+    targeted: Number(job.targeted || (Array.isArray(job.targets) ? job.targets.length : 0) || 0),
     cursor: Number(job.cursor || 0),
     placed: Number(job.placed || 0),
     placedClients: Number(job.placedClients || 0),
@@ -58,7 +60,7 @@ export function publicSelfHostJob(job) {
     updatedAt: Number(job.updatedAt || 0),
     finishedAt: Number(job.finishedAt || 0) || null,
     error: job.error || "",
-    accepted: true,
+    accepted: running,
     background: true,
     results: Array.isArray(job.results) ? job.results : [],
   };
@@ -70,7 +72,12 @@ async function readJsonPath(path) {
   try {
     const hit = await firebaseGet(toFirebasePath(path));
     if (!hit || hit.missing || hit.raw == null) return null;
-    return JSON.parse(String(hit.raw));
+    let parsed = JSON.parse(String(hit.raw));
+    // Support older docs that were stored as { __raw: "<job>" } at the JSON layer.
+    if (parsed && typeof parsed === "object" && typeof parsed.__raw === "string") {
+      parsed = JSON.parse(parsed.__raw);
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -78,7 +85,8 @@ async function readJsonPath(path) {
 
 async function writeJsonPath(path, value) {
   if (!path) return { ok: false, reason: "empty-path" };
-  const raw = JSON.stringify(value);
+  // Wrap as __raw so email keys with "." never break RTDB child paths.
+  const raw = JSON.stringify({ __raw: JSON.stringify(value) });
   if (firebaseConfigured()) {
     const put = await firebasePut(toFirebasePath(path), raw);
     if (put?.ok) return put;
@@ -103,21 +111,52 @@ export async function saveSelfHostJob(job) {
   return next;
 }
 
-export async function getSelfHostJob(jobId) {
+export async function getSelfHostJob(jobId, { preferRemote = false } = {}) {
   const id = safeId(jobId);
   if (!id) return null;
-  if (memoryJobs.has(id)) return memoryJobs.get(id);
+  if (!preferRemote && memoryJobs.has(id)) return memoryJobs.get(id);
   const remote = await readJsonPath(jobPath(id));
   if (remote && remote.id) {
-    memoryJobs.set(id, remote);
-    return remote;
+    // Prefer the copy that still has the target roster if memory was a stub.
+    const mem = memoryJobs.get(id);
+    const remoteTargets = Array.isArray(remote.targets) ? remote.targets.length : 0;
+    const memTargets = Array.isArray(mem?.targets) ? mem.targets.length : 0;
+    const chosen =
+      mem && memTargets > remoteTargets && Number(mem.updatedAt || 0) >= Number(remote.updatedAt || 0)
+        ? mem
+        : remote;
+    memoryJobs.set(id, chosen);
+    return chosen;
   }
+  if (memoryJobs.has(id)) return memoryJobs.get(id);
   return null;
 }
 
 export async function updateSelfHostJob(jobId, patch = {}) {
-  const prev = (await getSelfHostJob(jobId)) || { id: safeId(jobId) };
-  return saveSelfHostJob({ ...prev, ...patch, id: prev.id || safeId(jobId) });
+  const id = safeId(jobId);
+  let prev = await getSelfHostJob(id);
+  if (!prev || (!Array.isArray(prev.targets) && Number(prev.targeted || 0) > 0)) {
+    prev = (await getSelfHostJob(id, { preferRemote: true })) || prev;
+  }
+  if (!prev) {
+    // Never create a stub job from a patch — that wipes the roster.
+    throw Object.assign(new Error("Self-host job not found for update"), {
+      status: 404,
+      code: "JOB_NOT_FOUND",
+    });
+  }
+  const next = { ...prev, ...patch, id: prev.id || id };
+  // Protect the target roster from accidental wipes.
+  if (!Array.isArray(next.targets) || next.targets.length === 0) {
+    if (Array.isArray(prev.targets) && prev.targets.length) {
+      next.targets = prev.targets;
+    }
+  }
+  if (!next.targeted && prev.targeted) next.targeted = prev.targeted;
+  if (!next.botMetaByClient && prev.botMetaByClient) {
+    next.botMetaByClient = prev.botMetaByClient;
+  }
+  return saveSelfHostJob(next);
 }
 
 async function readQueue() {
@@ -174,6 +213,7 @@ export async function kickSelfHostJobContinue({
   jobId,
   req = null,
   delayMs = 0,
+  force = true,
 } = {}) {
   const id = safeId(jobId);
   if (!id) return { ok: false, reason: "missing-job" };
@@ -182,6 +222,7 @@ export async function kickSelfHostJobContinue({
   const body = JSON.stringify({
     jobId: id,
     continue: true,
+    force: Boolean(force),
     delayMs: Math.max(0, Number(delayMs) || 0),
   });
   try {
