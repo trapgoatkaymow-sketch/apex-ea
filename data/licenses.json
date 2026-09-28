@@ -73,6 +73,12 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790567843374,
+      "clientSymbols": [
+        "XAUUSD",
+        "XAUUSDM",
+        "BTCUSDM"
+      ],
+      "clientSymbolsUpdatedAt": 1790612690637,
       "purchaseCaptureId": "2KP20210NE830913J",
       "purchaseOrderId": "9P660742TG179461R",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -82,13 +88,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      },
-      "clientSymbols": [
-        "XAUUSD",
-        "XAUUSDM",
-        "BTCUSDM"
-      ],
-      "clientSymbolsUpdatedAt": 1790612690637
+      }
     },
     {
       "key": "APEX-HXNF-8VGD",
@@ -978,7 +978,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1104,7 +1106,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "NAS100"
+        ]
       }
     },
     {
@@ -1515,7 +1521,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD"
+        ]
       }
     },
     {
