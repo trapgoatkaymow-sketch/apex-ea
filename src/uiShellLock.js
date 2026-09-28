@@ -41,10 +41,11 @@
  * Gen 84 — Top Mentors for mentors: hide bypassed; show paid only.
  * Gen 85 — Mentor Top Mentors cards: paid count only (no keys/clients).
  * Gen 86 — Top Mentors ranked by paid unlocks first.
+ * Gen 87 — Fix /api/mt5-accounts timeout: bulk all=1, no mentor fan-out.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 86;
+export const UI_SHELL_GENERATION = 87;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -54,7 +55,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 86;
+export const UI_SHELL_FLOOR = 87;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

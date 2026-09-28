@@ -10,12 +10,41 @@ import {
   upsertMt5Account,
 } from "./_lib.js";
 
-export const config = { maxDuration: 30 };
+export const config = { maxDuration: 60 };
 
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
+}
+
+/** Short in-instance cache so fan-out / polls do not re-hit GitHub every time. */
+const CACHE_TTL_MS = 20_000;
+let mentorsCache = { at: 0, rows: null };
+let licensesCache = { at: 0, rows: null };
+
+async function cachedMentors() {
+  if (
+    Array.isArray(mentorsCache.rows) &&
+    Date.now() - mentorsCache.at < CACHE_TTL_MS
+  ) {
+    return mentorsCache.rows;
+  }
+  const rows = await listMentors();
+  mentorsCache = { at: Date.now(), rows };
+  return rows;
+}
+
+async function cachedLicenses() {
+  if (
+    Array.isArray(licensesCache.rows) &&
+    Date.now() - licensesCache.at < CACHE_TTL_MS
+  ) {
+    return licensesCache.rows;
+  }
+  const rows = await listLicenses();
+  licensesCache = { at: Date.now(), rows };
+  return rows;
 }
 
 async function assertApprovedMentor(email) {
@@ -25,7 +54,7 @@ async function assertApprovedMentor(email) {
     err.status = 400;
     throw err;
   }
-  const mentors = await listMentors();
+  const mentors = await cachedMentors();
   const mentor = mentors.find((row) => normalizeEmail(row.email) === key);
   if (!mentor) {
     const err = new Error("Mentor not found");
@@ -55,27 +84,64 @@ function accountFromLicense(row, clientName = "") {
     connectedAt: Number(row.robotConnectedAt) || Date.now(),
     updatedAt: Number(row.updatedAt || row.robotConnectedAt) || Date.now(),
     clientName: clientName || String(row.clientName || row.mainText || "").trim(),
+    mentorEmail: normalizeEmail(row.mentorEmail),
     source: "license",
   };
 }
 
-async function listAccountsForMentor(mentorEmail) {
-  const mentor = await assertApprovedMentor(mentorEmail);
-  const licenses = await listLicenses();
-  const clientMeta = new Map();
+/** Soft-timeout registry read so a hung GitHub fallback cannot burn the whole invoke. */
+async function listRegistryAccountsFast() {
+  try {
+    return await Promise.race([
+      listMt5Accounts(),
+      new Promise((resolve) => setTimeout(() => resolve([]), 8_000)),
+    ]);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Build connected robot accounts for one mentor (or all approved mentors).
+ * Loads licenses/mentors/registry once — never N times per mentor fan-out.
+ */
+async function listAccountsScoped({ mentorEmail = "", all = false } = {}) {
+  const mentors = await cachedMentors();
+  const licenses = await cachedLicenses();
+  const registry = await listRegistryAccountsFast();
+
+  let mentorFilter = null;
+  if (!all) {
+    const mentor = await assertApprovedMentor(mentorEmail);
+    mentorFilter = new Set([normalizeEmail(mentor.email)]);
+  } else {
+    mentorFilter = new Set(
+      mentors
+        .filter((m) => {
+          const role = String(m.role || "").toLowerCase();
+          const status = String(m.status || "").toLowerCase();
+          if (role === "superadmin") return false;
+          return status === "approved";
+        })
+        .map((m) => normalizeEmail(m.email))
+        .filter(Boolean)
+    );
+  }
+
+  const clientMeta = new Map(); // clientEmail -> { mentorEmail, clientName }
   const byEmail = new Map();
 
   for (const row of licenses) {
-    if (normalizeEmail(row.mentorEmail) !== mentor.email) continue;
+    const mentor = normalizeEmail(row.mentorEmail);
+    if (!mentor || !mentorFilter.has(mentor)) continue;
     const clientEmail = normalizeEmail(row.clientEmail);
     if (!clientEmail) continue;
     if (!clientMeta.has(clientEmail)) {
       clientMeta.set(clientEmail, {
-        clientEmail,
+        mentorEmail: mentor,
         clientName: String(row.clientName || row.mainText || "").trim(),
       });
     }
-    // Durable source: robot session stamped onto the license at connect time.
     const fromLicense = accountFromLicense(
       row,
       clientMeta.get(clientEmail)?.clientName || ""
@@ -83,21 +149,25 @@ async function listAccountsForMentor(mentorEmail) {
     if (fromLicense) {
       const prev = byEmail.get(clientEmail);
       if (!prev || (fromLicense.updatedAt || 0) >= (prev.updatedAt || 0)) {
-        byEmail.set(clientEmail, fromLicense);
+        byEmail.set(clientEmail, {
+          ...fromLicense,
+          mentorEmail: mentor,
+        });
       }
     }
   }
 
-  // Ephemeral per-instance registry (best-effort merge).
-  const accounts = await listMt5Accounts();
-  for (const row of accounts) {
+  for (const row of registry) {
     const item = normalizeMt5Account(row);
     if (!item || !clientMeta.has(item.email)) continue;
+    const meta = clientMeta.get(item.email);
+    if (!mentorFilter.has(meta.mentorEmail)) continue;
     const prev = byEmail.get(item.email);
     if (!prev || (item.updatedAt || 0) >= (prev.updatedAt || 0)) {
       byEmail.set(item.email, {
         ...item,
-        clientName: clientMeta.get(item.email)?.clientName || "",
+        clientName: meta.clientName || "",
+        mentorEmail: meta.mentorEmail,
         source: "registry",
       });
     }
@@ -120,21 +190,30 @@ export default async function handler(req, res) {
       const url = new URL(req.url || "/", `http://${host}`);
       const mentorEmail = url.searchParams.get("mentorEmail") || "";
       const email = url.searchParams.get("email") || "";
+      const all =
+        url.searchParams.get("all") === "1" ||
+        url.searchParams.get("scope") === "all";
+
+      if (all) {
+        const accounts = await listAccountsScoped({ all: true });
+        sendJson(res, 200, { accounts, scoped: "all" });
+        return;
+      }
 
       if (mentorEmail) {
-        const accounts = await listAccountsForMentor(mentorEmail);
+        const accounts = await listAccountsScoped({ mentorEmail });
         sendJson(res, 200, { accounts });
         return;
       }
 
       if (email) {
         const key = normalizeEmail(email);
-        const accounts = (await listMt5Accounts()).filter(
+        const accounts = (await listRegistryAccountsFast()).filter(
           (row) => normalizeEmail(row.email) === key
         );
         // Also surface durable license-stamped sessions for this email.
         if (!accounts.length) {
-          const licenses = await listLicenses();
+          const licenses = await cachedLicenses();
           for (const row of licenses) {
             if (normalizeEmail(row.clientEmail) !== key) continue;
             const fromLicense = accountFromLicense(row);
@@ -145,7 +224,7 @@ export default async function handler(req, res) {
         return;
       }
 
-      sendJson(res, 400, { error: "mentorEmail or email query is required" });
+      sendJson(res, 400, { error: "mentorEmail, email, or all=1 is required" });
       return;
     }
 
@@ -160,6 +239,8 @@ export default async function handler(req, res) {
           // best-effort — registry row still returned
         }
       }
+      // Invalidate short caches so the next GET sees the new session.
+      licensesCache = { at: 0, rows: null };
       sendJson(res, 200, { account });
       return;
     }
@@ -175,6 +256,7 @@ export default async function handler(req, res) {
       } catch {
         // best-effort
       }
+      licensesCache = { at: 0, rows: null };
       sendJson(res, 200, result);
       return;
     }

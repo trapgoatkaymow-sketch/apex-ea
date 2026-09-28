@@ -54,6 +54,12 @@ export async function listMentorHostedAccounts(mentorEmail) {
   return Array.isArray(data?.accounts) ? data.accounts : [];
 }
 
+/** One request for every approved mentor's connected robots (super-admin). */
+export async function listAllHostedAccounts() {
+  const data = await apiFetch("?all=1");
+  return Array.isArray(data?.accounts) ? data.accounts : [];
+}
+
 function friendlySelfHostFetchError(error, status) {
   const raw = String(error?.message || error || "").trim();
   // iOS Safari / WebKit: oversized keepalive bodies and aborted fetches show as "Load failed".

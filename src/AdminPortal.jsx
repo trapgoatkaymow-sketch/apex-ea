@@ -47,6 +47,7 @@ import {
   cancelSelfHostTradeJob,
   executeMentorSelfHostTrade,
   getSelfHostTradeJob,
+  listAllHostedAccounts,
   listMentorHostedAccounts,
 } from "./mt5AccountsApi.js";
 import { STRATEGY_LABELS, useApp } from "./store.jsx";
@@ -964,23 +965,7 @@ export default function AdminPortal() {
     async function loadHosted() {
       setHostLoading(true);
       try {
-        const remoteLists = await Promise.all(
-          hostableMentorEmails.map(async (mentorEmail) => {
-            try {
-              const accounts = await listMentorHostedAccounts(mentorEmail);
-              return (accounts || []).map((row) => ({
-                ...row,
-                mentorEmail,
-              }));
-            } catch {
-              return [];
-            }
-          })
-        );
-        if (cancelled) return;
-
-        // Also surface robot sessions stamped on local license rows — durable
-        // across refreshes even when /api/mt5-accounts /tmp is empty on this hit.
+        // Prefer local license stamps immediately — never block UI on N× API fan-out.
         const fromLicenses = (Array.isArray(licenseKeys) ? licenseKeys : [])
           .filter((row) => {
             const mentor = normalizeAdminEmail(row.mentorEmail);
@@ -1004,17 +989,42 @@ export default function AdminPortal() {
           }))
           .filter((row) => row.email && row.accountId);
 
+        // Super-admin: ONE bulk call. Per-mentor fan-out was timing out Vercel
+        // (30s) and rate-limiting GitHub (429) with 200+ parallel invokes.
+        let remoteRows = [];
+        if (isSuper) {
+          try {
+            remoteRows = (await listAllHostedAccounts()) || [];
+          } catch {
+            remoteRows = [];
+          }
+        } else {
+          const mentorEmail = hostableMentorEmails[0];
+          if (mentorEmail) {
+            try {
+              remoteRows = (
+                (await listMentorHostedAccounts(mentorEmail)) || []
+              ).map((row) => ({ ...row, mentorEmail }));
+            } catch {
+              remoteRows = [];
+            }
+          }
+        }
+        if (cancelled) return;
+
         const byEmail = new Map();
-        for (const row of [...fromLicenses, ...remoteLists.flat()]) {
+        for (const row of [...fromLicenses, ...remoteRows]) {
           const email = String(row.email || "").trim().toLowerCase();
           if (!email) continue;
+          const mentor = normalizeAdminEmail(row.mentorEmail);
+          if (mentor && !mentorEmailSet.has(mentor) && isSuper) continue;
           const prev = byEmail.get(email);
           if (!prev || (row.updatedAt || 0) >= (prev.updatedAt || 0)) {
             byEmail.set(email, {
               ...row,
               email,
               mentorEmail:
-                normalizeAdminEmail(row.mentorEmail) ||
+                mentor ||
                 normalizeAdminEmail(prev?.mentorEmail) ||
                 "",
             });
@@ -1033,7 +1043,9 @@ export default function AdminPortal() {
       }
     }
     loadHosted();
-    const timer = setInterval(loadHosted, 10000);
+    // Slower poll — bulk endpoint + license stamps cover freshness without
+    // hammering /api/mt5-accounts into timeout / GitHub 429.
+    const timer = setInterval(loadHosted, isSuper ? 30_000 : 20_000);
     return () => {
       cancelled = true;
       clearInterval(timer);
