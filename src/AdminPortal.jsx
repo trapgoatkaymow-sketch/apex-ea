@@ -1420,6 +1420,7 @@ export default function AdminPortal() {
       "commission",
       "self-hosting",
       "signal-direction",
+      "top-mentors",
       ...(isOperator ? ["mentors"] : []),
     ]);
     if (!isSuper && (adminPage === "calendar" || !mentorPages.has(adminPage))) {
@@ -3119,6 +3120,7 @@ export default function AdminPortal() {
       ? [
           ["dashboard", "Dashboard"],
           ["mentors", "Mentors"],
+          ["top-mentors", "Top Mentors"],
           ["manage-ea", "Manage EAs"],
           ["licenses", "License Keys"],
           ["profile", "Profile"],
@@ -3129,6 +3131,7 @@ export default function AdminPortal() {
         ]
       : [
           ["dashboard", "Dashboard"],
+          ["top-mentors", "Top Mentors"],
           ["manage-ea", "Manage EAs"],
           ["licenses", "License Keys"],
           ["profile", "Profile"],
@@ -5536,13 +5539,25 @@ export default function AdminPortal() {
           <section className="admin-page is-active">
             <div className="admin-title-row">
               <h2 className="admin-h1">Mentor Management</h2>
-              <button
-                className="admin-btn admin-btn-outline admin-btn-sm"
-                type="button"
-                onClick={() => setBypassOpen((open) => !open)}
-              >
-                Bypass
-              </button>
+              <div className="admin-keys-title-actions">
+                <button
+                  className="admin-btn admin-btn-outline admin-btn-sm"
+                  type="button"
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    setAdminPage("top-mentors");
+                  }}
+                >
+                  Top Mentors
+                </button>
+                <button
+                  className="admin-btn admin-btn-outline admin-btn-sm"
+                  type="button"
+                  onClick={() => setBypassOpen((open) => !open)}
+                >
+                  Bypass
+                </button>
+              </div>
             </div>
             <p className="admin-sub">
               Mentor signups land in Pending here until you approve them.
@@ -5892,12 +5907,15 @@ export default function AdminPortal() {
           </section>
         )}
 
-        {isSuperAdmin && adminPage === "top-mentors" && (
+        {adminPage === "top-mentors" && (
           <section className="admin-page is-active">
             <h2 className="admin-h1">Top Mentors</h2>
             <p className="admin-sub">
               Approved mentors only — ranked by clients unlocked, keys used, and paid unlocks.
               Bypassed emails are excluded from counts.
+              {!isSuperAdmin
+                ? " Mentor names only — emails are hidden."
+                : ""}
             </p>
             <div className="admin-card">
               <div className="admin-card-head">
@@ -5926,21 +5944,23 @@ export default function AdminPortal() {
               ) : (
                 <div className="admin-top-list">
                   {topMentorRows.map((row, index) => {
-                    const initials = String(row.mentor.username || row.email || "?")
-                      .trim()
-                      .slice(0, 2)
-                      .toUpperCase();
+                    const displayName =
+                      String(row.mentor.username || "").trim() || "Mentor";
+                    const initials = displayName.slice(0, 2).toUpperCase();
                     const openKey = row.email || row.mentor.id || "";
-                    const emailsOpen = topMentorEmailsOpen === openKey;
+                    const emailsOpen = isSuperAdmin && topMentorEmailsOpen === openKey;
                     return (
-                      <div className="admin-top-card" key={row.mentor.id || row.email}>
+                      <div
+                        className="admin-top-card"
+                        key={row.mentor.id || row.email || displayName}
+                      >
                         <div className="admin-avatar-circle" aria-hidden="true">
                           {initials}
                         </div>
                         <div className="top-mentor-main">
                           <div className="top-mentor-title-row">
                             <strong>
-                              #{index + 1} · {row.mentor.username || "Mentor"}
+                              #{index + 1} · {displayName}
                             </strong>
                             <span
                               className={`admin-badge${
@@ -5954,7 +5974,9 @@ export default function AdminPortal() {
                               {row.status}
                             </span>
                           </div>
-                          <p className="admin-card-meta">{row.email}</p>
+                          {isSuperAdmin ? (
+                            <p className="admin-card-meta">{row.email}</p>
+                          ) : null}
                           <p className="admin-card-meta">
                             {row.clients} client{row.clients === 1 ? "" : "s"} ·{" "}
                             {row.used}/{row.keys} keys used · {row.sold} paid
@@ -5962,47 +5984,58 @@ export default function AdminPortal() {
                               ? ` · ${row.bypassedClients} bypassed excluded`
                               : ""}
                           </p>
-                          <div className="top-mentor-actions">
-                            <button
-                              type="button"
-                              className="admin-btn admin-btn-outline admin-btn-sm"
-                              onClick={() =>
-                                setTopMentorEmailsOpen((prev) =>
-                                  prev === openKey ? "" : openKey
-                                )
-                              }
-                            >
-                              {emailsOpen
-                                ? "Hide emails"
-                                : `View emails (${row.clientEmails.length})`}
-                            </button>
-                          </div>
-                          {emailsOpen ? (
-                            <div className="top-mentor-emails">
-                              {row.clientRows.length === 0 ? (
-                                <p className="admin-card-meta">
-                                  No client emails (bypassed excluded)
-                                </p>
-                              ) : (
-                                <ul className="top-mentor-email-list">
-                                  {row.clientRows.map((client) => (
-                                    <li key={client.email}>
-                                      <a href={`mailto:${client.email}`}>{client.email}</a>
-                                      {client.name ? (
-                                        <span className="admin-muted"> · {client.name}</span>
-                                      ) : null}
-                                      <span
-                                        className={`admin-badge top-mentor-email-badge${
-                                          client.used ? " is-approved" : " is-pending"
-                                        }`}
-                                      >
-                                        {client.used ? "used" : "unused"}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
+                          {isSuperAdmin ? (
+                            <>
+                              <div className="top-mentor-actions">
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn-outline admin-btn-sm"
+                                  onClick={() =>
+                                    setTopMentorEmailsOpen((prev) =>
+                                      prev === openKey ? "" : openKey
+                                    )
+                                  }
+                                >
+                                  {emailsOpen
+                                    ? "Hide emails"
+                                    : `View emails (${row.clientEmails.length})`}
+                                </button>
+                              </div>
+                              {emailsOpen ? (
+                                <div className="top-mentor-emails">
+                                  {row.clientRows.length === 0 ? (
+                                    <p className="admin-card-meta">
+                                      No client emails (bypassed excluded)
+                                    </p>
+                                  ) : (
+                                    <ul className="top-mentor-email-list">
+                                      {row.clientRows.map((client) => (
+                                        <li key={client.email}>
+                                          <a href={`mailto:${client.email}`}>
+                                            {client.email}
+                                          </a>
+                                          {client.name ? (
+                                            <span className="admin-muted">
+                                              {" "}
+                                              · {client.name}
+                                            </span>
+                                          ) : null}
+                                          <span
+                                            className={`admin-badge top-mentor-email-badge${
+                                              client.used
+                                                ? " is-approved"
+                                                : " is-pending"
+                                            }`}
+                                          >
+                                            {client.used ? "used" : "unused"}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ) : null}
+                            </>
                           ) : null}
                         </div>
                       </div>
