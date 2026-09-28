@@ -4554,13 +4554,18 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .admin-keys-calendar-backdrop {
-  z-index: 120;
+  z-index: 240;
+  place-items: center;
+  padding: 16px;
+  /* Portaled to document.body — keep above phone chrome + portal overflow. */
+  background: rgba(17, 24, 39, 0.55);
 }
 
 .admin-keys-calendar-modal {
   width: min(420px, calc(100vw - 28px));
   max-height: min(88vh, 640px);
   overflow: auto;
+  margin: 0;
 }
 
 .admin-keys-cal-nav {
@@ -5260,46 +5265,71 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .admin-portal[data-theme="dark"] .admin-keys-cal-month,
-.admin-portal[data-theme="dark"] .admin-keys-cal-summary p {
+.admin-portal[data-theme="dark"] .admin-keys-cal-summary p,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-month,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-summary p {
   color: var(--ap-text, #e8f6ff);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-weekdays span {
+.admin-portal[data-theme="dark"] .admin-keys-cal-weekdays span,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-weekdays span {
   color: var(--ap-muted, #8ca0c8);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-cell {
+.admin-portal[data-theme="dark"] .admin-keys-cal-cell,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-cell {
   border-color: var(--ap-line, rgba(0, 229, 255, 0.18));
   background: rgba(8, 18, 32, 0.72);
   color: var(--ap-text, #e8f6ff);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-count {
+.admin-portal[data-theme="dark"] .admin-keys-cal-count,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-count {
   color: var(--ap-muted, #8ca0c8);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-cell.has-keys {
+.admin-portal[data-theme="dark"] .admin-keys-cal-cell.has-keys,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-cell.has-keys {
   border-color: rgba(0, 229, 255, 0.45);
   background: rgba(0, 229, 255, 0.1);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-cell.has-keys .admin-keys-cal-count {
+.admin-portal[data-theme="dark"] .admin-keys-cal-cell.has-keys .admin-keys-cal-count,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-cell.has-keys .admin-keys-cal-count {
   color: var(--ap-cyan, #00e5ff);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-cell.is-today {
+.admin-portal[data-theme="dark"] .admin-keys-cal-cell.is-today,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-cell.is-today {
   box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.55);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-cell.is-selected {
+.admin-portal[data-theme="dark"] .admin-keys-cal-cell.is-selected,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-cell.is-selected {
   border-color: rgba(0, 229, 255, 0.75);
   background: linear-gradient(135deg, rgba(0, 229, 255, 0.28), rgba(166, 107, 255, 0.22));
   color: #fff;
   box-shadow: 0 0 14px rgba(0, 229, 255, 0.2);
 }
 
-.admin-portal[data-theme="dark"] .admin-keys-cal-cell.is-selected .admin-keys-cal-count {
+.admin-portal[data-theme="dark"] .admin-keys-cal-cell.is-selected .admin-keys-cal-count,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-cal-cell.is-selected .admin-keys-cal-count {
   color: #67e8f9;
+}
+
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-keys-calendar-modal {
+  background: rgba(10, 18, 32, 0.96);
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  color: var(--ap-text, #e8f6ff);
+}
+
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-card-title-row h3,
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-card-meta {
+  color: var(--ap-text, #e8f6ff);
+}
+
+.admin-keys-calendar-backdrop[data-theme="dark"] .admin-card-meta {
+  color: var(--ap-muted, #8ca0c8);
 }
 
 .admin-portal[data-theme="dark"] .admin-count-badge {
