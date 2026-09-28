@@ -54,18 +54,38 @@ export async function listMentorHostedAccounts(mentorEmail) {
   return Array.isArray(data?.accounts) ? data.accounts : [];
 }
 
+function friendlySelfHostFetchError(error, status) {
+  const raw = String(error?.message || error || "").trim();
+  // iOS Safari / WebKit: oversized keepalive bodies and aborted fetches show as "Load failed".
+  if (/^load failed$/i.test(raw) || /failed to fetch/i.test(raw) || /networkerror/i.test(raw)) {
+    return "Could not reach the trade server — try again";
+  }
+  if (status) return raw || `Self hosting trade failed (${status})`;
+  return raw || "Could not execute trade";
+}
+
 export async function executeMentorSelfHostTrade(payload = {}) {
-  const response = await fetch(apiUrl("/api/metaapi/mentor-trade"), {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-    cache: "no-store",
-    // Keep the accept request alive briefly if the tab backgrounds.
-    keepalive: true,
-  });
+  const body = JSON.stringify(payload);
+  // Browsers cap keepalive request bodies at ~64KiB. A 600-client roster is
+  // far larger, and iOS reports that failure as the useless "Load failed".
+  const useKeepalive = body.length < 56_000;
+  let response;
+  try {
+    response = await fetch(apiUrl("/api/metaapi/mentor-trade"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body,
+      cache: "no-store",
+      ...(useKeepalive ? { keepalive: true } : {}),
+    });
+  } catch (error) {
+    const err = new Error(friendlySelfHostFetchError(error));
+    err.cause = error;
+    throw err;
+  }
   const text = await response.text();
   let data = null;
   try {
@@ -75,9 +95,11 @@ export async function executeMentorSelfHostTrade(payload = {}) {
   }
   // 202 Accepted = durable background job (leaving the portal is safe).
   if (!response.ok && response.status !== 202) {
-    const message =
+    const message = friendlySelfHostFetchError(
       (data && (data.error || data.message)) ||
-      (typeof data === "string" ? data : `Self hosting trade failed (${response.status})`);
+        (typeof data === "string" ? data : ""),
+      response.status
+    );
     const err = new Error(message);
     err.status = response.status;
     err.data = data;
