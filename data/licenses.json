@@ -27,6 +27,8 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790612492615,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "9DH83432NG658661D",
       "purchaseOrderId": "9FS62420BL5516915",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -36,9 +38,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      },
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null
+      }
     },
     {
       "key": "APEX-T245-H6R4",
@@ -708,7 +708,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "US30M"
+          "US30M",
+          "BTCUSD",
+          "BTCUSDM",
+          "XAUUSD"
         ]
       }
     },
@@ -871,7 +874,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD"
+        ]
       }
     },
     {
@@ -2482,7 +2487,8 @@
         "symbols": [
           "EURUSD",
           "USDJPY",
-          "USDCAD"
+          "USDCAD",
+          "XAUUSD"
         ]
       }
     },
