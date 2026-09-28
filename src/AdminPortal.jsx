@@ -752,6 +752,11 @@ export default function AdminPortal() {
   }, [adminOpen, adminPage, refreshSignups, refreshLicenses]);
 
   useEffect(() => {
+    if (!adminOpen || adminPage !== "top-mentors") return;
+    void refreshLicenses?.();
+  }, [adminOpen, adminPage, refreshLicenses]);
+
+  useEffect(() => {
     if (!adminOpen || !adminSession?.email) return;
     if (isSuperAdminSession(adminSession)) return;
     if (adminPage !== "commission") return;
