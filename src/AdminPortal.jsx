@@ -1851,6 +1851,8 @@ export default function AdminPortal() {
     stopHostJobPoll();
     setHostJobId(id);
     setHostBusy(true);
+    let lastCursor = -1;
+    let stallTicks = 0;
 
     const tick = async () => {
       try {
@@ -1861,6 +1863,7 @@ export default function AdminPortal() {
         }
         const status = String(job.status || "");
         const runAt = Number(job.runAt || 0);
+        const cursor = Number(job.cursor || 0);
         if (status === "scheduled" || (runAt > Date.now() && status !== "done")) {
           setHostScheduled({
             runAt,
@@ -1876,9 +1879,29 @@ export default function AdminPortal() {
           setHostScheduled(null);
           setHostResult({
             ...job,
+            targeted: Number(job.targeted || meta.targeted || hostAccounts.length || 0),
             background: true,
             accepted: true,
           });
+          // If server chaining stalls, the open portal nudges the next hop.
+          if (cursor === lastCursor) {
+            stallTicks += 1;
+            if (stallTicks >= 3) {
+              stallTicks = 0;
+              try {
+                await executeMentorSelfHostTrade({
+                  continue: true,
+                  force: true,
+                  jobId: id,
+                });
+              } catch {
+                // next poll retries
+              }
+            }
+          } else {
+            stallTicks = 0;
+            lastCursor = cursor;
+          }
         }
         if (status === "done" || status === "failed" || status === "cancelled") {
           finishHostJobResult(job, meta);

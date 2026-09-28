@@ -34,12 +34,16 @@ import {
 /** Clients processed per serverless hop so large fan-outs outlive maxDuration. */
 const SELF_HOST_BATCH_SIZE = Math.max(
   3,
-  Math.min(20, Number(process.env.SELF_HOST_BATCH_SIZE) || 8)
+  Math.min(20, Number(process.env.SELF_HOST_BATCH_SIZE) || 10)
 );
-/** Leave headroom before maxDuration to persist + chain the next hop. */
+/** Leave headroom before maxDuration (120s) to persist + chain the next hop. */
 const SELF_HOST_HOP_BUDGET_MS = Math.max(
   20_000,
-  Math.min(100_000, Number(process.env.SELF_HOST_HOP_BUDGET_MS) || 50_000)
+  Math.min(105_000, Number(process.env.SELF_HOST_HOP_BUDGET_MS) || 90_000)
+);
+const SELF_HOST_HARD_CAP_MS = Math.max(
+  SELF_HOST_HOP_BUDGET_MS,
+  Math.min(115_000, Number(process.env.SELF_HOST_HARD_CAP_MS) || 105_000)
 );
 
 function normalizeEmail(email) {
@@ -618,8 +622,39 @@ export async function processSelfHostJobHop(
 
   // Release lease BEFORE chaining so the next hop is not blocked.
   await updateSelfHostJob(jobId, { leaseUntil: 0, leaseOwner: "" });
-  await kickSelfHostJobContinue({ jobId, req, delayMs: 0, force: true });
-  return { ok: true, status: "running", cursor, chained: true };
+  const kick = await kickSelfHostJobContinue({
+    jobId,
+    req,
+    delayMs: 0,
+    force: true,
+  });
+  // Backup kick — Vercel→Vercel fetch can flake; second try a moment later.
+  if (kick?.ok) {
+    void kickSelfHostJobContinue({
+      jobId,
+      req,
+      delayMs: 2_500,
+      force: true,
+    }).catch(() => {});
+  } else if (Date.now() - started < SELF_HOST_HARD_CAP_MS) {
+    // Chain HTTP failed — keep processing in this same invocation.
+    return processSelfHostJobHop(jobId, { req, force: true });
+  } else {
+    // Last resort: ask cron / portal poll to resume.
+    await kickSelfHostJobContinue({
+      jobId,
+      req,
+      delayMs: 0,
+      force: true,
+    });
+  }
+  return {
+    ok: true,
+    status: "running",
+    cursor,
+    chained: Boolean(kick?.ok),
+    kickStatus: kick?.status || kick?.reason || null,
+  };
 }
 
 export async function handleMentorTrade(req, res) {
