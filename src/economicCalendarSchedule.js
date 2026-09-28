@@ -329,17 +329,39 @@ export function findOfficialEvent({ id = "", date = "", title = "" } = {}) {
   );
 }
 
-export function getMentorSignalForEvent(official, mentorEvents = [], now = new Date()) {
-  const row = findMentorSignalEvent(official, mentorEvents, now);
+export function getMentorSignalForEvent(
+  official,
+  mentorEvents = [],
+  now = new Date(),
+  mentorEmail = ""
+) {
+  const row = findMentorSignalEvent(official, mentorEvents, now, mentorEmail);
   return String(row?.directions || "").trim();
 }
 
 /** Full mentor signal row for the official event (includes postedAt). */
-export function findMentorSignalEvent(official, mentorEvents = [], now = new Date()) {
+export function findMentorSignalEvent(
+  official,
+  mentorEvents = [],
+  now = new Date(),
+  mentorEmail = ""
+) {
   if (!official) return null;
   // Cleared the day after the event.
   if (isSignalDirectionExpired(official, now)) return null;
-  const list = Array.isArray(mentorEvents) ? mentorEvents : [];
+  const owner = String(mentorEmail || "")
+    .trim()
+    .toLowerCase();
+  const list = (Array.isArray(mentorEvents) ? mentorEvents : []).filter((row) => {
+    if (!owner) return true;
+    return (
+      String(row?.mentorEmail || "")
+        .trim()
+        .toLowerCase() === owner
+    );
+  });
+  // When a specific mentor is required, never fall back to another mentor's row.
+  if (owner && !list.length) return null;
   return (
     list.find(
       (row) =>
@@ -351,11 +373,16 @@ export function findMentorSignalEvent(official, mentorEvents = [], now = new Dat
   );
 }
 
-export function matchMentorDirection(official, mentorEvents = [], now = new Date()) {
+export function matchMentorDirection(
+  official,
+  mentorEvents = [],
+  now = new Date(),
+  mentorEmail = ""
+) {
   if (!official) return "";
   // Client day-of display: only on the event day.
   if (!isSignalDirectionVisibleToday(official, now)) return "";
-  return getMentorSignalForEvent(official, mentorEvents, now);
+  return getMentorSignalForEvent(official, mentorEvents, now, mentorEmail);
 }
 
 export function filterActiveMentorDirections(mentorEvents = [], now = new Date()) {

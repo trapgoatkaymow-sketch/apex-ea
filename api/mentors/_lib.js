@@ -207,6 +207,64 @@ export function hashPassword(password, salt) {
     .digest("hex");
 }
 
+/** Portal-only token so calendar signal writes require a real mentor login. */
+export function makeSignalWriteToken(mentor) {
+  const email = normalizeEmail(mentor?.email);
+  const secret =
+    String(mentor?.passwordHash || "").trim() ||
+    (email === SUPER_ADMIN_EMAIL
+      ? hashPassword(SUPER_ADMIN_PASSWORD, "signal-write-super")
+      : "");
+  if (!email.includes("@") || !secret) return "";
+  return crypto
+    .createHash("sha256")
+    .update(`signal-write-v1:${email}:${secret}`)
+    .digest("hex");
+}
+
+export async function assertSignalWriteAccess(email, token) {
+  const key = normalizeEmail(email);
+  const provided = String(token || "").trim();
+  if (!key.includes("@") || !provided) {
+    const err = new Error("Sign in again to save signal directions");
+    err.status = 401;
+    throw err;
+  }
+  if (key === SUPER_ADMIN_EMAIL) {
+    const expected = makeSignalWriteToken({
+      email: SUPER_ADMIN_EMAIL,
+      passwordHash: hashPassword(SUPER_ADMIN_PASSWORD, "signal-write-super"),
+    });
+    if (provided === expected) return { email: key, role: "superadmin" };
+  }
+  let mentors = [];
+  try {
+    const store = await readStore();
+    mentors = ensureSuperAdminRecord(store.mentors || []);
+  } catch {
+    mentors = ensureSuperAdminRecord(readLocalStore().mentors || []);
+  }
+  const mentor = findMentor(mentors, key);
+  if (!mentor) {
+    const err = new Error("Mentor account not found");
+    err.status = 403;
+    throw err;
+  }
+  const status = String(mentor.status || "").toLowerCase();
+  if (status !== "approved" && mentor.role !== "superadmin") {
+    const err = new Error("Only approved mentors can post signal directions");
+    err.status = 403;
+    throw err;
+  }
+  const expected = makeSignalWriteToken(mentor);
+  if (!expected || provided !== expected) {
+    const err = new Error("Sign in again to save signal directions");
+    err.status = 401;
+    throw err;
+  }
+  return mentor;
+}
+
 /** Stable short code mentors share so clients can self-claim a license key. */
 export function mentorInviteCode(mentor) {
   const id = String(mentor?.id || "")
@@ -1127,7 +1185,7 @@ export async function loginMentor({ email, password }) {
 
   // Always allow the configured super admin, even if the remote store is down.
   if (key === SUPER_ADMIN_EMAIL && pass === SUPER_ADMIN_PASSWORD) {
-    return {
+    const superRow = {
       id: "super-admin",
       username: SUPER_ADMIN_USERNAME,
       email: SUPER_ADMIN_EMAIL,
@@ -1135,6 +1193,17 @@ export async function loginMentor({ email, password }) {
       role: "superadmin",
       status: "approved",
       createdAt: Date.now(),
+      passwordHash: hashPassword(SUPER_ADMIN_PASSWORD, "signal-write-super"),
+    };
+    return {
+      id: superRow.id,
+      username: superRow.username,
+      email: superRow.email,
+      contact: "",
+      role: "superadmin",
+      status: "approved",
+      createdAt: superRow.createdAt,
+      signalWriteToken: makeSignalWriteToken(superRow),
     };
   }
 
@@ -1187,7 +1256,11 @@ export async function loginMentor({ email, password }) {
       if (error?.status === 403) throw error;
     }
 
-    return publicMentor(mentor);
+    const pub = publicMentor(mentor);
+    return {
+      ...pub,
+      signalWriteToken: makeSignalWriteToken(mentor),
+    };
   }
 
   // 1) Verify the stored hash first — custom passwords always win.

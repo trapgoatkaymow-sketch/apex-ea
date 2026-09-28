@@ -43,10 +43,11 @@
  * Gen 86 — Top Mentors ranked by paid unlocks first.
  * Gen 87 — Fix /api/mt5-accounts timeout: bulk all=1, no mentor fan-out.
  * Gen 88 — Portal blank-on-login (hooks after auth) + Generated keys Calendar modal.
+ * Gen 89 — Economic signals: clients see only their EA mentor; writes require login token.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 88;
+export const UI_SHELL_GENERATION = 89;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -56,7 +57,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 88;
+export const UI_SHELL_FLOOR = 89;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

@@ -41,24 +41,21 @@ function normalizeMentorEmail(value) {
 }
 
 /**
- * Collect every mentor email tied to this phone/account.
- * Filtering the calendar by a single (often missing) email was hiding
- * directions mentors already posted on the portal.
+ * Resolve the ONE mentor who owns the active EA / license on this phone.
+ * Never blend other mentors' signal directions into this client's calendar —
+ * that caused clients to see another mentor's "Sell XAUUSD" while their own
+ * mentor portal still showed a different message.
  */
-function collectMentorEmails({ activeBot, coverEmail, eas, licenseKeys }) {
-  const emails = [];
-  const seen = new Set();
-  const add = (value) => {
-    const email = normalizeMentorEmail(value);
-    if (!email.includes("@") || seen.has(email)) return;
-    seen.add(email);
-    emails.push(email);
-  };
-
+function resolveOwningMentorEmail({ activeBot, coverEmail, eas, licenseKeys }) {
   const account = normalizeMentorEmail(coverEmail);
   const botId = String(activeBot?.id || "").trim();
   const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
   const eaList = Array.isArray(eas) ? eas : [];
+
+  const pick = (value) => {
+    const email = normalizeMentorEmail(value);
+    return email.includes("@") ? email : "";
+  };
 
   const forBot = botId
     ? keys
@@ -74,43 +71,40 @@ function collectMentorEmails({ activeBot, coverEmail, eas, licenseKeys }) {
     : [];
 
   if (forBot.length) {
-    add(forBot.find((row) => row?.used)?.mentorEmail);
-    add(forBot[0]?.mentorEmail);
+    const used = forBot.find((row) => row?.used);
+    const fromUsed = pick(used?.mentorEmail || used?.ownerEmail);
+    if (fromUsed) return fromUsed;
+    const fromLatest = pick(forBot[0]?.mentorEmail || forBot[0]?.ownerEmail);
+    if (fromLatest) return fromLatest;
   }
 
   if (botId) {
     const ea = eaList.find((item) => String(item.id || "").trim() === botId);
-    add(ea?.ownerEmail || ea?.mentorEmail);
+    const fromEa = pick(ea?.ownerEmail || ea?.mentorEmail);
+    if (fromEa) return fromEa;
   }
 
   if (account) {
-    const used = keys
-      .filter((row) => row?.used && normalizeMentorEmail(row.clientEmail) === account)
+    const usedForClient = keys
+      .filter(
+        (row) =>
+          row?.used &&
+          normalizeMentorEmail(row.clientEmail) === account &&
+          (!botId ||
+            String(row.botId || "").trim() === botId ||
+            String(row.bot?.id || "").trim() === botId)
+      )
       .sort(
         (a, b) =>
           Number(b.usedAt || b.updatedAt || 0) - Number(a.usedAt || a.updatedAt || 0)
       );
-    add(used[0]?.mentorEmail);
-
-    const bound = keys
-      .filter((row) => normalizeMentorEmail(row.clientEmail) === account)
-      .sort(
-        (a, b) =>
-          Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0)
-      );
-    add(bound[0]?.mentorEmail);
+    const fromClient = pick(
+      usedForClient[0]?.mentorEmail || usedForClient[0]?.ownerEmail
+    );
+    if (fromClient) return fromClient;
   }
 
-  for (const ea of eaList) {
-    add(ea?.ownerEmail || ea?.mentorEmail);
-  }
-
-  // Last resort: any mentor stamped on a license on this device.
-  for (const row of keys) {
-    add(row?.mentorEmail);
-  }
-
-  return emails;
+  return "";
 }
 
 function clampLot(value) {
@@ -139,9 +133,13 @@ export default function EconomicCalendarButton({ variant = "zeta" }) {
   const [executing, setExecuting] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
 
-  const mentorEmails = useMemo(
-    () => collectMentorEmails({ activeBot, coverEmail, eas, licenseKeys }),
+  const owningMentorEmail = useMemo(
+    () => resolveOwningMentorEmail({ activeBot, coverEmail, eas, licenseKeys }),
     [activeBot, coverEmail, eas, licenseKeys]
+  );
+  const mentorEmails = useMemo(
+    () => (owningMentorEmail ? [owningMentorEmail] : []),
+    [owningMentorEmail]
   );
 
   // Tick often while the panel is open so the Execute window unlocks on time.
@@ -175,10 +173,10 @@ export default function EconomicCalendarButton({ variant = "zeta" }) {
   const today = todaySaDateKey(now);
   const nextEvent = useMemo(() => getNextOfficialEvent(now), [now]);
   const isToday = Boolean(nextEvent && nextEvent.date === today);
-  // Show mentor signal for the current/next event until the day after (then it clears).
+  // Show ONLY this EA owner's signal for the current/next event (day-after clear).
   const signalEvent = useMemo(
-    () => findMentorSignalEvent(nextEvent, mentorEvents, now),
-    [nextEvent, mentorEvents, now]
+    () => findMentorSignalEvent(nextEvent, mentorEvents, now, owningMentorEmail),
+    [nextEvent, mentorEvents, now, owningMentorEmail]
   );
   const signal = useMemo(
     () => String(signalEvent?.directions || "").trim(),

@@ -239,6 +239,8 @@ function writeAdminSession(mentor) {
       username: mentor.username,
       role,
       status: role === "superadmin" ? "approved" : mentor.status,
+      // Required to post/delete economic signal directions for this mentor only.
+      signalWriteToken: String(mentor.signalWriteToken || "").trim(),
     })
   );
 }
@@ -1174,12 +1176,24 @@ export default function AdminPortal() {
       setCalendarEditingId(official.id);
       setCalendarDate(official.date);
       setCalendarTitle(official.title);
-      setCalendarDirections(getMentorSignalForEvent(official, calendarEvents) || "");
+      setCalendarDirections(
+        getMentorSignalForEvent(
+          official,
+          calendarEvents,
+          new Date(),
+          adminSession.email
+        ) || ""
+      );
       return;
     }
 
     if (signalDirectionsTouchedRef.current) return;
-    const saved = getMentorSignalForEvent(official, calendarEvents);
+    const saved = getMentorSignalForEvent(
+      official,
+      calendarEvents,
+      new Date(),
+      adminSession.email
+    );
     if (saved && !String(calendarDirections || "").trim()) {
       setCalendarDirections(saved);
     }
@@ -2708,13 +2722,18 @@ export default function AdminPortal() {
     }
     setCalendarBusy(true);
     try {
+      if (!String(adminSession.signalWriteToken || "").trim()) {
+        showToast("Sign out and sign in again to save signal directions");
+        return;
+      }
       const saved = await saveEconomicEvent({
-        id: official.id,
+        id: `${normalizeAdminEmail(adminSession.email)}__${official.id}`,
         officialEventId: official.id,
         mentorEmail: adminSession.email,
         date: official.date,
         title: official.title,
         directions: calendarDirections,
+        signalWriteToken: adminSession.signalWriteToken,
       });
       setCalendarEvents((prev) => {
         const rest = filterActiveMentorDirections(prev).filter(
@@ -2734,9 +2753,17 @@ export default function AdminPortal() {
 
   async function onDeleteCalendarEvent(id) {
     if (!id) return;
+    if (!String(adminSession?.signalWriteToken || "").trim()) {
+      showToast("Sign out and sign in again to manage signal directions");
+      return;
+    }
     setCalendarBusy(true);
     try {
-      await removeEconomicEvent(id, adminSession?.email || "");
+      await removeEconomicEvent(
+        id,
+        adminSession?.email || "",
+        adminSession.signalWriteToken
+      );
       setCalendarEvents((prev) => prev.filter((row) => row.id !== id));
       if (calendarEditingId === id) resetCalendarForm();
       showToast("Event removed");
@@ -4807,11 +4834,18 @@ export default function AdminPortal() {
                             if (!official) return;
                             selectOfficialSignalEvent(
                               official,
-                              getMentorSignalForEvent(official, calendarEvents) ||
+                              getMentorSignalForEvent(
+                                official,
+                                calendarEvents,
+                                new Date(),
+                                adminSession.email
+                              ) ||
                                 activeDirections.find(
                                   (row) =>
-                                    row.id === official.id ||
-                                    row.officialEventId === official.id
+                                    normalizeAdminEmail(row.mentorEmail) ===
+                                      normalizeAdminEmail(adminSession.email) &&
+                                    (row.id === official.id ||
+                                      row.officialEventId === official.id)
                                 )?.directions ||
                                 ""
                             );

@@ -165,27 +165,33 @@ async function apiFetch(path = "", { method = "GET", body } = {}) {
 
 export async function fetchEconomicEvents(mentorEmail = "") {
   const key = normalizeEmail(mentorEmail);
+  // Always scope to one mentor — never pull the full cross-mentor feed.
+  if (!key.includes("@")) return [];
   const today = todayDateKey();
   const local = readLocalEvents()
-    .filter((e) => !key || e.mentorEmail === key)
+    .filter((e) => e.mentorEmail === key)
     .filter((e) => e.date >= today);
   try {
-    const query = key ? `?mentorEmail=${encodeURIComponent(key)}` : "";
-    const data = await apiFetch(query);
-    const remote = Array.isArray(data?.events) ? data.events : [];
+    const data = await apiFetch(`?mentorEmail=${encodeURIComponent(key)}`);
+    const remote = (Array.isArray(data?.events) ? data.events : []).filter(
+      (e) => normalizeEmail(e?.mentorEmail) === key
+    );
     const merged = mergeEvents(local, remote).filter((e) => e.date >= today);
-    writeLocalEvents(mergeEvents(readLocalEvents(), remote).filter((e) => e.date >= today));
-    return key ? merged.filter((e) => e.mentorEmail === key) : merged;
+    // Keep other mentors' cached rows, but only refresh this mentor's slice.
+    const others = readLocalEvents().filter(
+      (e) => e.mentorEmail !== key && e.date >= today
+    );
+    writeLocalEvents([...others, ...merged]);
+    return merged.filter((e) => e.mentorEmail === key);
   } catch {
     return local;
   }
 }
 
 /**
- * Load directions for one or more mentors linked to this device.
- * Fetches the shared calendar once, then keeps rows for any candidate mentor.
- * If no mentor emails are known yet, returns all upcoming rows so a posted
- * direction still appears instead of a false "nothing yet" empty state.
+ * Load directions for the mentor(s) that own this client's EA.
+ * Never returns other mentors' rows — a missing owner email means no signal,
+ * not "show whoever posted NFP first".
  */
 export async function fetchEconomicEventsForMentors(mentorEmails = []) {
   const keys = [
@@ -195,33 +201,64 @@ export async function fetchEconomicEventsForMentors(mentorEmails = []) {
         .filter((email) => email.includes("@"))
     ),
   ];
-  const all = await fetchEconomicEvents("");
-  if (!keys.length) return all;
-  const mine = all.filter((event) => keys.includes(event.mentorEmail));
-  // If linked mentors have no row yet, don't hide a direction that was saved
-  // under the official event id (legacy single-id store).
-  if (mine.length) return mine;
-  return all;
+  if (!keys.length) return [];
+  // Fetch per-mentor so local cache merge cannot smear in another mentor's row.
+  const lists = await Promise.all(keys.map((email) => fetchEconomicEvents(email)));
+  const map = new Map();
+  for (const list of lists) {
+    for (const event of list || []) {
+      if (!keys.includes(normalizeEmail(event?.mentorEmail))) continue;
+      const prev = map.get(event.id);
+      if (!prev || Number(event.updatedAt || 0) >= Number(prev.updatedAt || 0)) {
+        map.set(event.id, event);
+      }
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => String(a.date).localeCompare(String(b.date)) || a.createdAt - b.createdAt
+  );
 }
 
 export async function saveEconomicEvent(payload = {}) {
+  const mentorEmail = normalizeEmail(payload.mentorEmail);
+  const officialEventId = String(
+    payload.officialEventId || payload.id || ""
+  ).trim();
+  const scopedId =
+    mentorEmail && officialEventId
+      ? `${mentorEmail}__${officialEventId}`
+      : payload.id || `local-${Date.now()}`;
   const event = publicEvent({
     ...payload,
-    id: payload.id || `local-${Date.now()}`,
+    id: scopedId,
+    officialEventId: officialEventId || scopedId,
+    mentorEmail,
     updatedAt: Date.now(),
   });
   if (!event) throw new Error("Enter a valid event date and mentor email");
+  const signalWriteToken = String(payload.signalWriteToken || "").trim();
+  if (!signalWriteToken) {
+    throw new Error("Sign in again to save signal directions");
+  }
 
   try {
     const data = await apiFetch("", {
       method: "POST",
-      body: { action: "upsert", ...event },
+      body: {
+        action: "upsert",
+        ...event,
+        signalWriteToken,
+      },
     });
     const saved = publicEvent(data?.event || event);
     writeLocalEvents(mergeEvents(readLocalEvents(), [saved]));
     return saved;
   } catch (error) {
-    if (error.status && error.status < 500 && error.status !== 401 && error.status !== 403) {
+    // Auth / validation failures must not silently succeed via local cache.
+    if (error.status === 401 || error.status === 403 || error.status === 400) {
+      throw error;
+    }
+    if (error.status && error.status < 500) {
       throw error;
     }
     writeLocalEvents(mergeEvents(readLocalEvents(), [event]));
@@ -229,16 +266,32 @@ export async function saveEconomicEvent(payload = {}) {
   }
 }
 
-export async function removeEconomicEvent(id, mentorEmail = "") {
+export async function removeEconomicEvent(
+  id,
+  mentorEmail = "",
+  signalWriteToken = ""
+) {
   const key = String(id || "").trim();
   if (!key) throw new Error("Event id is required");
+  const token = String(signalWriteToken || "").trim();
+  if (!token) {
+    throw new Error("Sign in again to save signal directions");
+  }
   try {
     await apiFetch("", {
       method: "POST",
-      body: { action: "delete", id: key, mentorEmail },
+      body: {
+        action: "delete",
+        id: key,
+        mentorEmail,
+        signalWriteToken: token,
+      },
     });
   } catch (error) {
-    if (error.status && error.status < 500 && error.status !== 401 && error.status !== 403) {
+    if (error.status === 401 || error.status === 403 || error.status === 400) {
+      throw error;
+    }
+    if (error.status && error.status < 500) {
       throw error;
     }
   }
