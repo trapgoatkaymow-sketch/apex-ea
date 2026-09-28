@@ -2063,7 +2063,7 @@ export default function AdminPortal() {
               takeProfit,
               delaySec: delay,
               comment: "admin~APEXEA",
-              clients: mentorClients,
+              clients: (mentorClients || []).slice(0, 40),
               hostedByAdmin: adminEmail,
             });
             return { mentorEmail, ok: true, result };
