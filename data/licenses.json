@@ -19,7 +19,7 @@
       "usedAt": 1789995463194,
       "deviceId": "78172115-2fac-43dd-91bc-4602c4ae42bf",
       "boundAt": 1790203951669,
-      "updatedAt": 1790612373950,
+      "updatedAt": 1790612374177,
       "scanReset": null,
       "robotAccountId": "4e920237-a3a8-41b0-9842-aab9c8890a55",
       "robotLogin": "4028081",
@@ -36,6 +36,46 @@
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
+      "key": "APEX-DQKX-MQJ9",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "ayanda15742@gmail.com",
+      "clientName": "Ayanda",
+      "mainText": "Ayanda",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790608257430,
+      "usedAt": 1790608431046,
+      "deviceId": "4b6afed8-aa51-4a30-b849-60643118d2b9",
+      "boundAt": 1790608431046,
+      "updatedAt": 1790612370517,
+      "scanReset": null,
+      "robotAccountId": "8b76156b-b1a0-4bc0-b8b8-752a7d827597",
+      "robotLogin": "4118310",
+      "robotServer": "RazorMarkets-Live",
+      "robotCompany": "Razor Markets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790610670935,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": "37D34612598996054",
+      "purchaseOrderId": "95R56303W8582510J",
+      "purchaseSource": "paypal-giveaway",
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
       }
@@ -1039,46 +1079,6 @@
       }
     },
     {
-      "key": "APEX-DQKX-MQJ9",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "ayanda15742@gmail.com",
-      "clientName": "Ayanda",
-      "mainText": "Ayanda",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790608257430,
-      "usedAt": 1790608431046,
-      "deviceId": "4b6afed8-aa51-4a30-b849-60643118d2b9",
-      "boundAt": 1790608431046,
-      "updatedAt": 1790611948744,
-      "scanReset": null,
-      "robotAccountId": "8b76156b-b1a0-4bc0-b8b8-752a7d827597",
-      "robotLogin": "4118310",
-      "robotServer": "RazorMarkets-Live",
-      "robotCompany": "Razor Markets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790610670935,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": "37D34612598996054",
-      "purchaseOrderId": "95R56303W8582510J",
-      "purchaseSource": "paypal-giveaway",
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
       "key": "APEX-2ZUE-VECV",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1514,12 +1514,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "USDJPY",
-          "XAUUSD",
-          "US30",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2197,7 +2192,8 @@
         "symbols": [
           "EURUSD",
           "USDJPY",
-          "USDCAD"
+          "USDCAD",
+          "XAUUSD"
         ]
       }
     },
