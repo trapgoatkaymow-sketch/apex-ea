@@ -73,6 +73,13 @@
       "robotCompany": "Jarocel (Pty) Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790604421378,
+      "clientSymbols": [
+        "PAXGGOLD",
+        "GOLD",
+        "XAUUSD",
+        "AUDNZD"
+      ],
+      "clientSymbolsUpdatedAt": 1790613776016,
       "purchaseCaptureId": "3TU307760W670533L",
       "purchaseOrderId": "4DU1997028369592D",
       "purchaseSource": "paypal-giveaway",
@@ -87,14 +94,7 @@
           "XAUUSD",
           "AUDNZD"
         ]
-      },
-      "clientSymbols": [
-        "PAXGGOLD",
-        "GOLD",
-        "XAUUSD",
-        "AUDNZD"
-      ],
-      "clientSymbolsUpdatedAt": 1790613776016
+      }
     },
     {
       "key": "APEX-PCE4-FXYN",
@@ -441,7 +441,7 @@
       "usedAt": 1789981254374,
       "deviceId": "1fcbf248-d2b6-4e18-92ff-e78607791546",
       "boundAt": 1789981254374,
-      "updatedAt": 1790613706270,
+      "updatedAt": 1790613721669,
       "scanReset": null,
       "robotAccountId": "590cc5e4-01dc-4a24-b441-80d435709693",
       "robotLogin": "161731150",
@@ -459,7 +459,7 @@
         "AUDUSDMIC",
         "GBPAUD.MIC"
       ],
-      "clientSymbolsUpdatedAt": 1790613706270,
+      "clientSymbolsUpdatedAt": 1790613721669,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -468,7 +468,16 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "EURUSDMIC",
+          "XAUUSDMIC",
+          "GBPCHF.MIC",
+          "AUDUSD",
+          "AUDUSDMIC",
+          "GBPAUD.MIC"
+        ]
       }
     },
     {
