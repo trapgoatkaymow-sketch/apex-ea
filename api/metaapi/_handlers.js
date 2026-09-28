@@ -494,9 +494,12 @@ async function placeOneSelfHostTrade({
  * Process one hop of a durable self-host job. Chains another hop when needed
  * so portal close / MetaTrader switch cannot abort the fan-out.
  */
-export async function processSelfHostJobHop(jobId, { req = null } = {}) {
+export async function processSelfHostJobHop(
+  jobId,
+  { req = null, force = false } = {}
+) {
   const started = Date.now();
-  let job = await getSelfHostJob(jobId);
+  let job = await getSelfHostJob(jobId, { preferRemote: true });
   if (!job) return { ok: false, reason: "job-not-found" };
   if (job.status === "cancelled") {
     await dequeueSelfHostJobId(jobId);
@@ -507,19 +510,20 @@ export async function processSelfHostJobHop(jobId, { req = null } = {}) {
     return { ok: true, status: job.status };
   }
 
-  // Soft lease so cron + continue hop cannot place the same client twice.
+  // Soft lease so overlapping cron ticks cannot double-place.
+  // Continue hops pass force=true after the previous hop released its lease.
   const leaseUntil = Number(job.leaseUntil || 0);
-  if (leaseUntil > Date.now() + 2_000) {
+  if (!force && leaseUntil > Date.now() + 2_000) {
     return { ok: true, status: "leased" };
   }
   const leaseOwner = `hop_${started}_${Math.random().toString(36).slice(2, 8)}`;
-  job = await updateSelfHostJob(jobId, {
-    leaseUntil: Date.now() + SELF_HOST_HOP_BUDGET_MS + 15_000,
-    leaseOwner,
-  });
-  // Re-read after claim — another hop may have won.
-  if (job.leaseOwner && job.leaseOwner !== leaseOwner && Number(job.leaseUntil || 0) > Date.now()) {
-    return { ok: true, status: "leased" };
+  try {
+    job = await updateSelfHostJob(jobId, {
+      leaseUntil: Date.now() + SELF_HOST_HOP_BUDGET_MS + 20_000,
+      leaseOwner,
+    });
+  } catch (error) {
+    return { ok: false, reason: error?.message || "lease-update-failed" };
   }
 
   const runAt = Number(job.runAt || 0);
@@ -528,14 +532,26 @@ export async function processSelfHostJobHop(jobId, { req = null } = {}) {
     const waitMs = Math.min(SELF_HOST_HOP_BUDGET_MS, runAt - Date.now());
     if (waitMs > 250) await sleep(waitMs);
     if (Date.now() < runAt) {
-      // Still early — chain a wakeup hop (covers 5–10 minute delays).
-      await kickSelfHostJobContinue({ jobId, req, delayMs: 0 });
+      await updateSelfHostJob(jobId, { leaseUntil: 0, leaseOwner: "" });
+      await kickSelfHostJobContinue({ jobId, req, delayMs: 0, force: true });
       return { ok: true, status: "scheduled", chained: true };
     }
   }
 
   job = await updateSelfHostJob(jobId, { status: "running" });
   const targets = Array.isArray(job.targets) ? job.targets : [];
+  const expected = Number(job.targeted || targets.length || 0);
+  // Guard: never finish as "done/failed" if the roster failed to load.
+  if (!targets.length && expected > 0) {
+    await updateSelfHostJob(jobId, {
+      leaseUntil: 0,
+      leaseOwner: "",
+      error: "Target roster missing — retrying",
+    });
+    await kickSelfHostJobContinue({ jobId, req, delayMs: 1500, force: true });
+    return { ok: false, reason: "targets-missing", chained: true };
+  }
+
   let cursor = Math.max(0, Number(job.cursor || 0));
   let results = Array.isArray(job.results) ? [...job.results] : [];
   let placed = Number(job.placed || 0);
@@ -578,7 +594,7 @@ export async function processSelfHostJobHop(jobId, { req = null } = {}) {
     });
   }
 
-  if (cursor >= targets.length) {
+  if (targets.length && cursor >= targets.length) {
     const placedClients = results.filter((r) => r.ok).length;
     const failed = results.filter((r) => !r.ok).length;
     const offline = results.filter((r) => !r.ok && r.offline).length;
@@ -591,6 +607,8 @@ export async function processSelfHostJobHop(jobId, { req = null } = {}) {
       failed,
       offline,
       results,
+      leaseUntil: 0,
+      leaseOwner: "",
       finishedAt: Date.now(),
       error: placed > 0 ? "" : firstError || "No trades were placed",
     });
@@ -598,7 +616,9 @@ export async function processSelfHostJobHop(jobId, { req = null } = {}) {
     return { ok: true, status: placed > 0 ? "done" : "failed", placed };
   }
 
-  await kickSelfHostJobContinue({ jobId, req, delayMs: 0 });
+  // Release lease BEFORE chaining so the next hop is not blocked.
+  await updateSelfHostJob(jobId, { leaseUntil: 0, leaseOwner: "" });
+  await kickSelfHostJobContinue({ jobId, req, delayMs: 0, force: true });
   return { ok: true, status: "running", cursor, chained: true };
 }
 
@@ -680,8 +700,9 @@ export async function handleMentorTrade(req, res) {
     if (body.continue && body.jobId) {
       const delayMs = Math.max(0, Math.min(55_000, Number(body.delayMs) || 0));
       if (delayMs > 0) await sleep(delayMs);
+      const force = body.force !== false;
       waitUntil(
-        processSelfHostJobHop(String(body.jobId), { req }).catch((err) => {
+        processSelfHostJobHop(String(body.jobId), { req, force }).catch((err) => {
           console.error(
             "self-host continue hop failed",
             err instanceof Error ? err.message : String(err)

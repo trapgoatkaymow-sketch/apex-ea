@@ -52,16 +52,18 @@ export default async function handler(req, res) {
     const runAt = Number(job.runAt || 0);
     const updatedAt = Number(job.updatedAt || job.createdAt || 0);
     const due = runAt <= now;
-    const stale = now - updatedAt > 70_000;
+    const stale = now - updatedAt > 45_000;
+    const leaseUntil = Number(job.leaseUntil || 0);
+    const leaseExpired = leaseUntil <= now;
     if (!due && job.status === "scheduled") {
       skipped.push({ jobId, reason: "not-due" });
       continue;
     }
-    if (!stale && job.status === "running") {
+    if (!stale && !leaseExpired && job.status === "running") {
       skipped.push({ jobId, reason: "fresh-running" });
       continue;
     }
-    const hop = await kickSelfHostJobContinue({ jobId, req });
+    const hop = await kickSelfHostJobContinue({ jobId, req, force: true });
     kicked.push({ jobId, ok: hop.ok, status: hop.status || null });
   }
 

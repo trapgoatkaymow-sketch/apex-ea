@@ -1990,8 +1990,21 @@ export default function AdminPortal() {
         finishHostJobResult(result, meta);
         return result;
       } catch (error) {
-        showToast(error.message || "Could not execute trade");
-        setHostResult(error.data || { error: error.message });
+        const message = error.message || "Could not execute trade";
+        showToast(message);
+        setHostResult({
+          ...(error.data || {}),
+          error: message,
+          status: "failed",
+          symbol,
+          side,
+          volume: lot,
+          tradesCount,
+          targeted: Number(error.data?.targeted || clients?.length || hostAccounts.length || 0),
+          placed: Number(error.data?.placed || 0),
+          failed: Number(error.data?.failed || 0),
+          offline: Number(error.data?.offline || 0),
+        });
         setHostScheduled(null);
         setHostBusy(false);
         throw error;
@@ -4961,9 +4974,12 @@ export default function AdminPortal() {
             {hostResult ? (
               <div className="admin-card self-host-result-card">
                 <p className="self-host-result-eyebrow">
-                  {hostResult.status === "running" || hostResult.accepted
+                  {["queued", "scheduled", "running"].includes(String(hostResult.status || "")) ||
+                  (hostResult.accepted && hostResult.status !== "done" && hostResult.status !== "failed")
                     ? "EXECUTING IN BACKGROUND"
-                    : "TRADE EXECUTED"}
+                    : hostResult.status === "failed" || hostResult.error
+                      ? "TRADE FAILED"
+                      : "TRADE EXECUTED"}
                 </p>
                 <p className="self-host-result-headline">
                   {hostResult.side || hostSide} {hostResult.symbol || hostSymbol}
@@ -4971,10 +4987,25 @@ export default function AdminPortal() {
                 <p className="self-host-result-lot">
                   {Number(hostResult.volume || hostVolume || 0).toFixed(2)} LOT
                 </p>
+                {hostResult.error ? (
+                  <p className="admin-card-meta" style={{ color: "var(--err, #ff6b6b)" }}>
+                    {hostResult.error}
+                  </p>
+                ) : null}
                 <div className="self-host-result-stats">
                   <p>
-                    <strong>{Number(hostResult.targeted || hostResult.connected || 0)}</strong>{" "}
+                    <strong>
+                      {Number(
+                        hostResult.targeted ||
+                          hostResult.connected ||
+                          hostAccounts.length ||
+                          0
+                      )}
+                    </strong>{" "}
                     clients targeted
+                    {Number(hostResult.cursor || 0) > 0
+                      ? ` · ${Number(hostResult.cursor || 0)} processed`
+                      : ""}
                   </p>
                   <p>
                     <strong>{Number(hostResult.placed || 0)}</strong> trades executed
