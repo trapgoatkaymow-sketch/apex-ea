@@ -1966,7 +1966,8 @@ export default function AdminPortal() {
           takeProfit,
           delaySec: delay,
           comment: "mentor~APEXEA",
-          clients,
+          // Server resolves the full connected roster; tip it with a compact sample.
+          clients: (clients || []).slice(0, 40),
         });
         const jobId = String(result?.jobId || "").trim();
         const meta = {
@@ -2267,15 +2268,12 @@ export default function AdminPortal() {
       1,
       Math.min(20, Math.floor(Number(hostTradesCount) || 1))
     );
+    // Compact roster only — full client objects (~200KB for 600+) make iOS
+    // fetch fail with "Load failed". Server also resolves from licenses/registry.
     const clients = hostAccounts.map((row) => ({
       email: row.email,
       accountId: row.accountId,
       login: row.login,
-      server: row.server,
-      company: row.company,
-      platform: row.platform,
-      connectedAt: row.connectedAt,
-      updatedAt: row.updatedAt,
       mentorEmail: normalizeAdminEmail(row.mentorEmail),
     }));
     const delaySec = Math.max(0, Number(hostDelaySec) || 0);
