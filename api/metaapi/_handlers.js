@@ -622,31 +622,27 @@ export async function processSelfHostJobHop(
 
   // Release lease BEFORE chaining so the next hop is not blocked.
   await updateSelfHostJob(jobId, { leaseUntil: 0, leaseOwner: "" });
-  const kick = await kickSelfHostJobContinue({
+  let kick = await kickSelfHostJobContinue({
     jobId,
     req,
     delayMs: 0,
     force: true,
   });
-  // Backup kick — Vercel→Vercel fetch can flake; second try a moment later.
-  if (kick?.ok) {
-    void kickSelfHostJobContinue({
-      jobId,
-      req,
-      delayMs: 2_500,
-      force: true,
-    }).catch(() => {});
-  } else if (Date.now() - started < SELF_HOST_HARD_CAP_MS) {
+  if (!kick?.ok && Date.now() - started < SELF_HOST_HARD_CAP_MS) {
     // Chain HTTP failed — keep processing in this same invocation.
     return processSelfHostJobHop(jobId, { req, force: true });
-  } else {
-    // Last resort: ask cron / portal poll to resume.
-    await kickSelfHostJobContinue({
-      jobId,
-      req,
-      delayMs: 0,
-      force: true,
-    });
+  }
+  // Await a second kick so waitUntil does not freeze the function before
+  // the backup request is accepted (fire-and-forget gets killed).
+  if (kick?.ok) {
+    await sleep(2_000);
+    kick =
+      (await kickSelfHostJobContinue({
+        jobId,
+        req,
+        delayMs: 0,
+        force: true,
+      })) || kick;
   }
   return {
     ok: true,
