@@ -514,10 +514,12 @@ export async function processSelfHostJobHop(
     return { ok: true, status: job.status };
   }
 
-  // Soft lease so overlapping cron ticks cannot double-place.
-  // Continue hops pass force=true after the previous hop released its lease.
+  // Soft lease so overlapping cron/portal kicks cannot double-place.
+  // `force` may steal only when the lease is missing/expired — never while
+  // another hop still holds a live lease (that was resetting cursor to 0).
   const leaseUntil = Number(job.leaseUntil || 0);
-  if (!force && leaseUntil > Date.now() + 2_000) {
+  const leaseLive = leaseUntil > Date.now() + 1_500;
+  if (leaseLive) {
     return { ok: true, status: "leased" };
   }
   const leaseOwner = `hop_${started}_${Math.random().toString(36).slice(2, 8)}`;

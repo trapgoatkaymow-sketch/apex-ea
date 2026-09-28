@@ -156,6 +156,25 @@ export async function updateSelfHostJob(jobId, patch = {}) {
   if (!next.botMetaByClient && prev.botMetaByClient) {
     next.botMetaByClient = prev.botMetaByClient;
   }
+  // Monotonic progress — a stale hop must never rewind cursor/results.
+  const prevCursor = Number(prev.cursor || 0);
+  const nextCursor = Number(next.cursor || 0);
+  if (nextCursor < prevCursor && !patch.finishedAt) {
+    next.cursor = prevCursor;
+    next.placed = Math.max(Number(prev.placed || 0), Number(next.placed || 0));
+    next.placedClients = Math.max(
+      Number(prev.placedClients || 0),
+      Number(next.placedClients || 0)
+    );
+    next.failed = Math.max(Number(prev.failed || 0), Number(next.failed || 0));
+    next.offline = Math.max(Number(prev.offline || 0), Number(next.offline || 0));
+    if (
+      Array.isArray(prev.results) &&
+      (!Array.isArray(next.results) || next.results.length < prev.results.length)
+    ) {
+      next.results = prev.results;
+    }
+  }
   return saveSelfHostJob(next);
 }
 
