@@ -5917,10 +5917,9 @@ export default function AdminPortal() {
             <h2 className="admin-h1">Top Mentors</h2>
             <p className="admin-sub">
               Approved mentors only — ranked by clients unlocked, keys used, and paid unlocks.
-              Bypassed emails are excluded from counts.
-              {!isSuperAdmin
-                ? " Mentor names only — emails are hidden."
-                : ""}
+              {isSuperAdmin
+                ? " Bypassed emails are excluded from counts."
+                : " Mentor names only — emails and bypassed counts are hidden."}
             </p>
             <div className="admin-card">
               <div className="admin-card-head">
@@ -5985,7 +5984,7 @@ export default function AdminPortal() {
                           <p className="admin-card-meta">
                             {row.clients} client{row.clients === 1 ? "" : "s"} ·{" "}
                             {row.used}/{row.keys} keys used · {row.sold} paid
-                            {row.bypassedClients
+                            {isSuperAdmin && row.bypassedClients
                               ? ` · ${row.bypassedClients} bypassed excluded`
                               : ""}
                           </p>
