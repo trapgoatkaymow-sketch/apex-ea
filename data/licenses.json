@@ -27,6 +27,8 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790612435967,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "522044397S7714234",
       "purchaseOrderId": "80S229597R562960S",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -36,9 +38,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      },
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null
+      }
     },
     {
       "key": "APEX-BF2D-BU7S",
@@ -1081,7 +1081,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100"
+        ]
       }
     },
     {
@@ -2282,7 +2285,8 @@
         "symbols": [
           "EURUSD",
           "USDJPY",
-          "USDCAD"
+          "USDCAD",
+          "XAUUSD"
         ]
       }
     },
