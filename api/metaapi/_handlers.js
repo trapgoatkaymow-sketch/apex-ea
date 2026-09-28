@@ -562,28 +562,39 @@ export async function processSelfHostJobHop(
   let results = Array.isArray(job.results) ? [...job.results] : [];
   let placed = Number(job.placed || 0);
   const botMetaByClient = job.botMetaByClient || {};
+  const concurrency = Math.max(
+    1,
+    Math.min(6, Number(process.env.SELF_HOST_CONCURRENCY) || 4)
+  );
 
   while (cursor < targets.length) {
     if (Date.now() - started > SELF_HOST_HOP_BUDGET_MS) break;
     const batchEnd = Math.min(targets.length, cursor + SELF_HOST_BATCH_SIZE);
-    for (; cursor < batchEnd; cursor += 1) {
+    const slice = targets.slice(cursor, batchEnd);
+    // Place a few clients in parallel — serial fan-out was too slow for 600+.
+    for (let i = 0; i < slice.length; i += concurrency) {
       if (Date.now() - started > SELF_HOST_HOP_BUDGET_MS) break;
-      const target = targets[cursor];
-      if (!target?.accountId) {
-        results.push({
-          ok: false,
-          email: target?.email || "",
-          error: "Missing accountId",
-        });
-        continue;
+      const group = slice.slice(i, i + concurrency);
+      const settled = await Promise.all(
+        group.map(async (target) => {
+          if (!target?.accountId) {
+            return {
+              row: {
+                ok: false,
+                email: target?.email || "",
+                error: "Missing accountId",
+              },
+              placedHere: 0,
+            };
+          }
+          return placeOneSelfHostTrade({ target, job, botMetaByClient });
+        })
+      );
+      for (const item of settled) {
+        results.push(item.row);
+        placed += Number(item.placedHere || 0);
       }
-      const { row, placedHere } = await placeOneSelfHostTrade({
-        target,
-        job,
-        botMetaByClient,
-      });
-      results.push(row);
-      placed += placedHere;
+      cursor += group.length;
     }
     const placedClients = results.filter((r) => r.ok).length;
     const failed = results.filter((r) => !r.ok).length;
