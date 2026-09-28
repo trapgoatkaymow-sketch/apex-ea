@@ -20,7 +20,7 @@ const memoryQueue = new Set();
 function safeId(id) {
   return String(id || "")
     .trim()
-    .replace(/[.#$\[\]]/g, "_")
+    .replace(/[.#$[\]]/g, "_")
     .slice(0, 80);
 }
 
