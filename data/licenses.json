@@ -107,11 +107,6 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790596223740,
-      "clientSymbols": [
-        "XAGUSD",
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790611020382,
       "purchaseCaptureId": "96M736157N0080433",
       "purchaseOrderId": "4B022747EV4922222",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -124,7 +119,12 @@
           "XAGUSD",
           "XAUUSD"
         ]
-      }
+      },
+      "clientSymbols": [
+        "XAGUSD",
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790611020382
     },
     {
       "key": "APEX-U4Q6-X7XW",
@@ -153,8 +153,6 @@
       "robotCompany": "FBS Markets Inc.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790607238839,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "62S83019J4479293D",
       "purchaseOrderId": "9PP176206X814033U",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -164,7 +162,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      }
+      },
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null
     },
     {
       "key": "APEX-2MGU-YRNZ",
@@ -233,8 +233,6 @@
       "robotCompany": "Deriv (SVG) LLC",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790569990534,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "26X18521CF005674F",
       "purchaseOrderId": "88C92979ND948382P",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -244,7 +242,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      }
+      },
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null
     },
     {
       "key": "APEX-FTHD-GYK2",
@@ -273,12 +273,6 @@
       "robotCompany": "Weltrade Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790591235868,
-      "clientSymbols": [
-        "EURUSD",
-        "USDJPY",
-        "USDCAD"
-      ],
-      "clientSymbolsUpdatedAt": 1790611015337,
       "purchaseCaptureId": "4UG054951Y056194E",
       "purchaseOrderId": "1SE59585UX617444N",
       "purchaseSource": "paypal-giveaway",
@@ -292,7 +286,13 @@
           "USDJPY",
           "USDCAD"
         ]
-      }
+      },
+      "clientSymbols": [
+        "EURUSD",
+        "USDJPY",
+        "USDCAD"
+      ],
+      "clientSymbolsUpdatedAt": 1790611015337
     },
     {
       "key": "APEX-M8QJ-26XZ",
@@ -361,8 +361,6 @@
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790610236558,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "2YT837351C480962Y",
       "purchaseOrderId": "5D7505032G3441132",
       "purchaseSource": "paypal-giveaway",
@@ -372,7 +370,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      }
+      },
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null
     },
     {
       "key": "APEX-G5J7-MT2T",
