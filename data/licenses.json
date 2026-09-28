@@ -1,6 +1,46 @@
 {
   "licenses": [
     {
+      "key": "APEX-JDKG-FE5M",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "phindilekefouemabanya@gmail.com",
+      "clientName": "Phindile Kefoue Mabanya",
+      "mainText": "Phindile Kefoue Mabanya",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790558860572,
+      "usedAt": 1790559022576,
+      "deviceId": "fc963aa1-c73a-4fa9-b383-6daadd543ca5",
+      "boundAt": 1790559022576,
+      "updatedAt": 1790639564703,
+      "scanReset": null,
+      "robotAccountId": "ee9746c6-9143-407d-b471-86089902abce",
+      "robotLogin": "4118034",
+      "robotServer": "RazorMarkets-Live",
+      "robotCompany": "Razor Markets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790639542849,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": "8VR52974MY296845U",
+      "purchaseOrderId": "4KR48944K44335436",
+      "purchaseSource": "paypal-giveaway",
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
       "key": "APEX-N4SA-7QS2",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -44,46 +84,6 @@
           "BTCUSD",
           "XAUUSD"
         ]
-      }
-    },
-    {
-      "key": "APEX-JDKG-FE5M",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "phindilekefouemabanya@gmail.com",
-      "clientName": "Phindile Kefoue Mabanya",
-      "mainText": "Phindile Kefoue Mabanya",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790558860572,
-      "usedAt": 1790559022576,
-      "deviceId": "fc963aa1-c73a-4fa9-b383-6daadd543ca5",
-      "boundAt": 1790559022576,
-      "updatedAt": 1790639545140,
-      "scanReset": null,
-      "robotAccountId": "ee9746c6-9143-407d-b471-86089902abce",
-      "robotLogin": "4118034",
-      "robotServer": "RazorMarkets-Live",
-      "robotCompany": "Razor Markets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790639542849,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": "8VR52974MY296845U",
-      "purchaseOrderId": "4KR48944K44335436",
-      "purchaseSource": "paypal-giveaway",
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": []
       }
     },
     {
@@ -4686,7 +4686,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "XAUUSD.B"
+        ]
       }
     },
     {
