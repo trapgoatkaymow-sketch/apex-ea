@@ -495,6 +495,62 @@ async function placeOneSelfHostTrade({
 }
 
 /**
+ * Resolve connected MT5 targets for a stub job. Done inside the hop so the
+ * portal POST can return 202 immediately (iOS aborts slow mentor-trade calls).
+ */
+async function ensureSelfHostJobTargets(job) {
+  if (!job?.id) return job;
+  const existing = Array.isArray(job.targets) ? job.targets : [];
+  if (existing.length && !job.resolveTargets) return job;
+
+  const mentorEmail = normalizeEmail(job.mentorEmail);
+  if (!mentorEmail) {
+    return updateSelfHostJob(job.id, {
+      status: "failed",
+      resolveTargets: false,
+      error: "mentorEmail is required",
+      finishedAt: Date.now(),
+      leaseUntil: 0,
+      leaseOwner: "",
+    });
+  }
+
+  const licenses = await listLicenses();
+  const mentor = {
+    email: mentorEmail,
+    username: job.mentorUsername || "",
+  };
+  try {
+    const { targets, botMetaByClient } = await resolveMentorTradeTargets({
+      mentor,
+      body: {
+        clients: Array.isArray(job.clientTips) ? job.clientTips : [],
+      },
+      licenses,
+    });
+    return updateSelfHostJob(job.id, {
+      targets,
+      botMetaByClient,
+      targeted: targets.length,
+      resolveTargets: false,
+      clientTips: [],
+      error: "",
+    });
+  } catch (error) {
+    return updateSelfHostJob(job.id, {
+      status: "failed",
+      resolveTargets: false,
+      targeted: 0,
+      targets: [],
+      error: error?.message || "No connected robot clients",
+      finishedAt: Date.now(),
+      leaseUntil: 0,
+      leaseOwner: "",
+    });
+  }
+}
+
+/**
  * Process one hop of a durable self-host job. Chains another hop when needed
  * so portal close / MetaTrader switch cannot abort the fan-out.
  */
@@ -544,11 +600,20 @@ export async function processSelfHostJobHop(
     }
   }
 
+  // Lazy roster resolve — portal never waits on 600+ license lookups.
+  if (job.resolveTargets || !Array.isArray(job.targets) || !job.targets.length) {
+    job = await ensureSelfHostJobTargets(job);
+    if (!job || job.status === "failed") {
+      await dequeueSelfHostJobId(jobId);
+      return { ok: false, reason: "resolve-failed", status: "failed" };
+    }
+  }
+
   job = await updateSelfHostJob(jobId, { status: "running" });
   const targets = Array.isArray(job.targets) ? job.targets : [];
   const expected = Number(job.targeted || targets.length || 0);
   // Guard: never finish as "done/failed" if the roster failed to load.
-  if (!targets.length && expected > 0) {
+  if (!targets.length && (expected > 0 || job.resolveTargets)) {
     await updateSelfHostJob(jobId, {
       leaseUntil: 0,
       leaseOwner: "",
@@ -556,6 +621,17 @@ export async function processSelfHostJobHop(
     });
     await kickSelfHostJobContinue({ jobId, req, delayMs: 1500, force: true });
     return { ok: false, reason: "targets-missing", chained: true };
+  }
+  if (!targets.length) {
+    await updateSelfHostJob(jobId, {
+      status: "failed",
+      leaseUntil: 0,
+      leaseOwner: "",
+      finishedAt: Date.now(),
+      error: "No connected robot clients yet",
+    });
+    await dequeueSelfHostJobId(jobId);
+    return { ok: false, reason: "no-targets", status: "failed" };
   }
 
   let cursor = Math.max(0, Number(job.cursor || 0));
@@ -794,13 +870,9 @@ export async function handleMentorTrade(req, res) {
       throw err;
     }
 
-    const licenses = await listLicenses();
-    const { targets, botMetaByClient } = await resolveMentorTradeTargets({
-      mentor,
-      body,
-      licenses,
-    });
-
+    // Do NOT resolve the 600+ client roster here. iPhone/WebKit aborts the
+    // POST with "Load failed" when licenses/registry work runs before 202.
+    // The hop resolves targets, then places trades.
     const lot = Number.isFinite(volume) && volume > 0 ? volume : 0.01;
     const hostedByAdmin = normalizeEmail(body.hostedByAdmin || body.adminEmail);
     const comment = String(
@@ -808,6 +880,23 @@ export async function handleMentorTrade(req, res) {
     )
       .replace(/apexea/gi, "APEXEA")
       .slice(0, 31);
+    const expectedClients = Math.max(
+      0,
+      Math.floor(
+        Number(body.expectedClients ?? body.targeted ?? body.connected ?? 0) || 0
+      )
+    );
+    const rawClients = Array.isArray(body.clients)
+      ? body.clients
+      : Array.isArray(body.accounts)
+        ? body.accounts
+        : [];
+    // Optional tiny tip only — never require the full portal roster.
+    const clientTips = rawClients.slice(0, 8).map((row) => ({
+      email: row?.email,
+      accountId: row?.accountId,
+      login: row?.login,
+    }));
 
     const jobId = newSelfHostJobId();
     const runAt = Date.now() + delaySec * 1000;
@@ -825,9 +914,11 @@ export async function handleMentorTrade(req, res) {
       takeProfit,
       takeProfits,
       comment,
-      targets,
-      botMetaByClient,
-      targeted: targets.length,
+      targets: [],
+      botMetaByClient: {},
+      clientTips,
+      resolveTargets: true,
+      targeted: expectedClients,
       cursor: 0,
       placed: 0,
       placedClients: 0,
@@ -875,8 +966,8 @@ export async function handleMentorTrade(req, res) {
       tradesCount,
       stopLoss,
       takeProfit,
-      targeted: targets.length,
-      connected: targets.length,
+      targeted: expectedClients,
+      connected: expectedClients,
       placed: 0,
       placedClients: 0,
       failed: 0,

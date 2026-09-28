@@ -1966,8 +1966,9 @@ export default function AdminPortal() {
           takeProfit,
           delaySec: delay,
           comment: "mentor~APEXEA",
-          // Server resolves the full connected roster; tip it with a compact sample.
-          clients: (clients || []).slice(0, 40),
+          // Never POST the roster — iOS "Load failed" on large/slow mentor-trade.
+          // Server resolves connected clients in the background hop.
+          expectedClients: Number(clients?.length || hostAccounts.length || 0),
         });
         const jobId = String(result?.jobId || "").trim();
         const meta = {
@@ -2035,7 +2036,8 @@ export default function AdminPortal() {
       }
     }
 
-    // Super admin: enqueue a background job per mentor (server keeps going).
+    // Super admin: one tiny POST per mentor (emails only — no client roster).
+    // Sequential to avoid iOS killing a burst of parallel fetches as "Load failed".
     const byMentor = new Map();
     for (const row of clients || []) {
       const mentorEmail = normalizeAdminEmail(row.mentorEmail);
@@ -2050,39 +2052,38 @@ export default function AdminPortal() {
 
     setHostBusy(true);
     try {
-      const settled = await Promise.all(
-        [...byMentor.entries()].map(async ([mentorEmail, mentorClients]) => {
-          try {
-            const result = await executeMentorSelfHostTrade({
-              mentorEmail,
-              symbol,
-              side,
-              volume: lot,
-              tradesCount,
-              stopLoss,
-              takeProfit,
-              delaySec: delay,
-              comment: "admin~APEXEA",
-              clients: (mentorClients || []).slice(0, 40),
-              hostedByAdmin: adminEmail,
-            });
-            return { mentorEmail, ok: true, result };
-          } catch (error) {
-            return {
-              mentorEmail,
-              ok: false,
-              result: {
-                error: error.message || "Could not execute trade",
-                results: error.data?.results || [],
-                placed: 0,
-                targeted: mentorClients.length,
-                failed: mentorClients.length,
-                offline: 0,
-              },
-            };
-          }
-        })
-      );
+      const settled = [];
+      for (const [mentorEmail, mentorClients] of byMentor.entries()) {
+        try {
+          const result = await executeMentorSelfHostTrade({
+            mentorEmail,
+            symbol,
+            side,
+            volume: lot,
+            tradesCount,
+            stopLoss,
+            takeProfit,
+            delaySec: delay,
+            comment: "admin~APEXEA",
+            expectedClients: mentorClients.length,
+            hostedByAdmin: adminEmail,
+          });
+          settled.push({ mentorEmail, ok: true, result });
+        } catch (error) {
+          settled.push({
+            mentorEmail,
+            ok: false,
+            result: {
+              error: error.message || "Could not execute trade",
+              results: error.data?.results || [],
+              placed: 0,
+              targeted: mentorClients.length,
+              failed: mentorClients.length,
+              offline: 0,
+            },
+          });
+        }
+      }
 
       const jobIds = settled
         .map((row) => String(row.result?.jobId || "").trim())
@@ -2268,12 +2269,9 @@ export default function AdminPortal() {
       1,
       Math.min(20, Math.floor(Number(hostTradesCount) || 1))
     );
-    // Compact roster only — full client objects (~200KB for 600+) make iOS
-    // fetch fail with "Load failed". Server also resolves from licenses/registry.
+    // Mentors list only for super-admin fan-out grouping — never the full
+    // account roster (that was the iOS "Load failed" POST body).
     const clients = hostAccounts.map((row) => ({
-      email: row.email,
-      accountId: row.accountId,
-      login: row.login,
       mentorEmail: normalizeAdminEmail(row.mentorEmail),
     }));
     const delaySec = Math.max(0, Number(hostDelaySec) || 0);

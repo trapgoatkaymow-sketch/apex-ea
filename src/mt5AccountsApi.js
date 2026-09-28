@@ -65,9 +65,14 @@ function friendlySelfHostFetchError(error, status) {
 }
 
 export async function executeMentorSelfHostTrade(payload = {}) {
-  const body = JSON.stringify(payload);
-  // Browsers cap keepalive request bodies at ~64KiB. A 600-client roster is
-  // far larger, and iOS reports that failure as the useless "Load failed".
+  // Strip any accidental client roster — phone must never POST 600 accounts.
+  const {
+    clients: _clients,
+    accounts: _accounts,
+    ...safePayload
+  } = payload || {};
+  const body = JSON.stringify(safePayload);
+  // Keepalive helps when switching to MetaTrader, but WebKit caps body ~64KiB.
   const useKeepalive = body.length < 56_000;
   let response;
   try {
