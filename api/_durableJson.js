@@ -611,6 +611,21 @@ function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
       robotCompany: newer.robotCompany || older.robotCompany || "",
       robotPlatform: newer.robotPlatform || older.robotPlatform || "",
       robotConnectedAt: newer.robotConnectedAt || older.robotConnectedAt || null,
+      // Prefer the freshest client "Your pairs" allow-list for Self Hosting.
+      clientSymbols: (() => {
+        const newerAt = Number(newer.clientSymbolsUpdatedAt || 0) || 0;
+        const olderAt = Number(older.clientSymbolsUpdatedAt || 0) || 0;
+        if (newerAt || olderAt) {
+          return newerAt >= olderAt
+            ? newer.clientSymbols || older.clientSymbols || []
+            : older.clientSymbols || newer.clientSymbols || [];
+        }
+        return newer.clientSymbols || older.clientSymbols || [];
+      })(),
+      clientSymbolsUpdatedAt: Math.max(
+        Number(newer.clientSymbolsUpdatedAt || 0) || 0,
+        Number(older.clientSymbolsUpdatedAt || 0) || 0
+      ) || null,
       updatedAt: Math.max(stamp(newer), stamp(older)),
       bot: newer.bot || older.bot || null,
     });
