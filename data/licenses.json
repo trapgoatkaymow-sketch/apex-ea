@@ -19,20 +19,20 @@
       "usedAt": 1790342992173,
       "deviceId": "0d2a5950-177f-405f-9b28-f0104ae075b0",
       "boundAt": 1790342992173,
-      "updatedAt": 1790624827138,
+      "updatedAt": 1790624827369,
       "scanReset": null,
-      "robotAccountId": "2t45ebge-pzqk-tqik-99m6-sqhs1z00vvx9",
-      "robotLogin": "1200484949",
-      "robotServer": "JustMarkets-Demo3",
-      "robotCompany": "Just Global Markets Ltd.",
+      "robotAccountId": "cd6cac9d-b19f-4a6b-8d98-99c0b0f832ff",
+      "robotLogin": "108503799",
+      "robotServer": "XMGlobal-MT5 5",
+      "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1789722636733,
+      "robotConnectedAt": 1790582721608,
       "clientSymbols": [
         "GBPUSD",
         "XAUUSD",
         "BTCUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790624788071,
+      "clientSymbolsUpdatedAt": 1790624827369,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -41,7 +41,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "XAUUSD",
+          "BTCUSD"
+        ]
       }
     },
     {
@@ -4455,9 +4459,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
