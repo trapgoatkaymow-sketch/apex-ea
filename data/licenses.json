@@ -19,7 +19,7 @@
       "usedAt": 1790539911632,
       "deviceId": "6d4ddf2b-f3a7-44c8-8ad1-71dc0f2e854d",
       "boundAt": 1790539911632,
-      "updatedAt": 1790615890486,
+      "updatedAt": 1790615893736,
       "scanReset": null,
       "robotAccountId": "87655ed4-ac87-4080-b9ed-b9c5c79b82fe",
       "robotLogin": "134690622",
@@ -35,7 +35,7 @@
         "BTCUSDM",
         "XAUUSD247M"
       ],
-      "clientSymbolsUpdatedAt": 1790615890486,
+      "clientSymbolsUpdatedAt": 1790615893736,
       "purchaseCaptureId": "4SM74459X2267424B",
       "purchaseOrderId": "0NT817967C311115M",
       "purchaseSource": "paypal-giveaway",
@@ -44,14 +44,49 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAU",
-          "BTCUSD",
-          "XAUUSD",
-          "NAS100",
-          "BTCUSDM",
-          "XAUUSD247M"
-        ]
+        "symbols": []
+      }
+    },
+    {
+      "key": "APEX-EW3J-KXGE",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "lmsibi718@gmail.com",
+      "clientName": "Iron blaq",
+      "mainText": "Iron blaq",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "invite_migrate_bypass",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789672464238,
+      "usedAt": 1789979966603,
+      "deviceId": "018e8d6e-11c0-4ff2-b6ea-1bb2ea711ce2",
+      "boundAt": 1789979966603,
+      "updatedAt": 1790615888029,
+      "scanReset": null,
+      "robotAccountId": "294ef6a5-36f3-4215-abed-305afd3ea93c",
+      "robotLogin": "4039437",
+      "robotServer": "RazorMarkets-Live",
+      "robotCompany": "Razor Markets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1789980265815,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790615888029,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": []
       }
     },
     {
@@ -5648,48 +5683,6 @@
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
-      "key": "APEX-EW3J-KXGE",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "lmsibi718@gmail.com",
-      "clientName": "Iron blaq",
-      "mainText": "Iron blaq",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "invite_migrate_bypass",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789672464238,
-      "usedAt": 1789979966603,
-      "deviceId": "018e8d6e-11c0-4ff2-b6ea-1bb2ea711ce2",
-      "boundAt": 1789979966603,
-      "updatedAt": 1790613273888,
-      "scanReset": null,
-      "robotAccountId": "294ef6a5-36f3-4215-abed-305afd3ea93c",
-      "robotLogin": "4039437",
-      "robotServer": "RazorMarkets-Live",
-      "robotCompany": "Razor Markets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1789980265815,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790613273888,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
       }
