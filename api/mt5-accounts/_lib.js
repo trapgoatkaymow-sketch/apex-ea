@@ -110,8 +110,10 @@ async function readStore() {
   const remote = await durableRead({
     blobPath: BLOB_PATH,
     firebasePath: FIREBASE_PATH,
-    // Read GitHub only as cold fallback — primary memory is Firebase/Blob.
-    githubPath: FILE_PATH,
+    // Skip GitHub on hot GET path — Contents API 429s were cascading into
+    // Vercel 30s timeouts on /api/mt5-accounts. Firebase/Blob are enough;
+    // GitHub mirror still runs on throttled writes.
+    githubPath: "",
     snapshotEnv: "MT5_ACCOUNTS_SNAPSHOT_B64",
     localPaths: [TMP_FILE, LOCAL_FILE],
   });
