@@ -27,6 +27,10 @@
       "robotCompany": "Exness (KE) Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790604874883,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790612475616,
       "purchaseCaptureId": "7PK54798EN190870W",
       "purchaseOrderId": "9UE58282TE8229432",
       "purchaseSource": "paypal-giveaway",
@@ -36,11 +40,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      },
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790612475616
+      }
     },
     {
       "key": "APEX-BF2D-BU7S",
@@ -643,7 +643,8 @@
         "symbols": [
           "US30M",
           "BTCUSD",
-          "BTCUSDM"
+          "BTCUSDM",
+          "XAUUSD"
         ]
       }
     },
@@ -1013,10 +1014,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
