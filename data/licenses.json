@@ -272,7 +272,9 @@
           "US100CASH",
           "BTCUSD",
           "XAUUSD",
-          "NAS100"
+          "NAS100",
+          "USCASH",
+          "NASDAQ"
         ]
       }
     },
@@ -577,6 +579,7 @@
         "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSD",
           "EURUSD",
           "GBPUSD",
           "USDJPY",
@@ -3437,13 +3440,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "NZDUSD",
-          "US30",
-          "USDJPY",
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
