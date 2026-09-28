@@ -398,6 +398,21 @@ async function resolveMentorTradeTargets({ mentor, body, licenses }) {
   return { targets, botMetaByClient };
 }
 
+/** MT5 comment from the client's EA name — never "mentor" / "admin". */
+function buildSelfHostEaComment(botName) {
+  const brand = "~APEXEA";
+  const nameRoom = Math.max(1, 31 - brand.length);
+  let raw = String(botName || "")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9._~\-]/g, "")
+    .replace(/~apexea$/i, "");
+  // Strip legacy self-host prefixes if a bad comment leaked into botName.
+  raw = raw.replace(/^(mentor|admin)[~_\-]*/i, "");
+  if (!raw || /^(mentor|admin)$/i.test(raw)) raw = "bot";
+  return `${raw.slice(0, nameRoom)}${brand}`.slice(0, 31);
+}
+
 async function placeOneSelfHostTrade({
   target,
   job,
@@ -411,11 +426,12 @@ async function placeOneSelfHostTrade({
     stopLoss,
     takeProfit,
     takeProfits = [],
-    comment,
     mentorEmail,
     mentorUsername = "",
     hostedByAdmin = "",
   } = job;
+  const meta = botMetaByClient?.[normalizeEmail(target.email)] || {};
+  const tradeComment = buildSelfHostEaComment(meta.botName || "bot");
   try {
     const fill = await mt5PlaceMarketTrade({
       accountId: target.accountId,
@@ -425,7 +441,7 @@ async function placeOneSelfHostTrade({
       stopLoss,
       takeProfit,
       takeProfits: takeProfits.length ? takeProfits : undefined,
-      comment,
+      comment: tradeComment,
       count: tradesCount,
     });
     const placedHere = Number(fill.count || tradesCount || 1);
@@ -440,9 +456,9 @@ async function placeOneSelfHostTrade({
       trades: placedHere,
       tickets: fill.tickets || [],
       result: fill.order || fill.result || null,
+      comment: tradeComment,
     };
     try {
-      const meta = botMetaByClient?.[normalizeEmail(target.email)] || {};
       await enqueueTradeEvent({
         clientEmail: target.email,
         mentorEmail,
@@ -453,7 +469,7 @@ async function placeOneSelfHostTrade({
         volume: fill.volume || lot,
         stopLoss,
         takeProfit,
-        comment,
+        comment: tradeComment,
         source: hostedByAdmin ? "admin-self-hosting" : "self-hosting",
         hostedByAdmin: hostedByAdmin || undefined,
         at: Date.now(),
@@ -875,10 +891,10 @@ export async function handleMentorTrade(req, res) {
     // The hop resolves targets, then places trades.
     const lot = Number.isFinite(volume) && volume > 0 ? volume : 0.01;
     const hostedByAdmin = normalizeEmail(body.hostedByAdmin || body.adminEmail);
-    const comment = String(
-      body.comment || (hostedByAdmin ? "admin~APEXEA" : "mentor~APEXEA")
-    )
+    // Job-level comment is only a fallback; each fill uses the client's EA name.
+    const comment = String(body.comment || "bot~APEXEA")
       .replace(/apexea/gi, "APEXEA")
+      .replace(/^(mentor|admin)~/i, "bot~")
       .slice(0, 31);
     const expectedClients = Math.max(
       0,

@@ -2007,7 +2007,8 @@ export default function AdminPortal() {
           stopLoss,
           takeProfit,
           delaySec: delay,
-          comment: "mentor~APEXEA",
+          // Server stamps each fill with that client's EA name (not "mentor").
+          comment: "bot~APEXEA",
           // Never POST the roster — iOS "Load failed" on large/slow mentor-trade.
           // Server resolves connected clients in the background hop.
           expectedClients: Number(clients?.length || hostAccounts.length || 0),
@@ -2106,7 +2107,8 @@ export default function AdminPortal() {
             stopLoss,
             takeProfit,
             delaySec: delay,
-            comment: "admin~APEXEA",
+            // Server stamps each fill with that client's EA name (not "admin").
+            comment: "bot~APEXEA",
             expectedClients: mentorClients.length,
             hostedByAdmin: adminEmail,
           });

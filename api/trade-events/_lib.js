@@ -99,7 +99,7 @@ export function normalizeTradeEvent(row = {}) {
     volume: Number.isFinite(volume) && volume > 0 ? volume : 0.01,
     stopLoss: Number.isFinite(stopLoss) && stopLoss > 0 ? stopLoss : null,
     takeProfit: Number.isFinite(takeProfit) && takeProfit > 0 ? takeProfit : null,
-    comment: String(row.comment || "mentor~APEXEA").trim().slice(0, 31),
+    comment: String(row.comment || "bot~APEXEA").trim().slice(0, 31),
     source: String(row.source || "self-hosting").trim() || "self-hosting",
     at,
     acked: Boolean(row.acked),
