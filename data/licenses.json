@@ -99,7 +99,7 @@
       "usedAt": 1790612043529,
       "deviceId": "9d1a9075-c313-4ce3-a2b2-7804387724c6",
       "boundAt": 1790612043529,
-      "updatedAt": 1790612504851,
+      "updatedAt": 1790612504852,
       "scanReset": null,
       "robotAccountId": "bb521e7c-64f4-4df2-93fe-4c1e67d33c70",
       "robotLogin": "169927",
@@ -110,7 +110,7 @@
       "clientSymbols": [
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790612504851,
+      "clientSymbolsUpdatedAt": 1790612504852,
       "purchaseCaptureId": "0TU59906TW132954G",
       "purchaseOrderId": "7DR08530C97117326",
       "purchaseSource": "paypal-giveaway",
@@ -233,6 +233,8 @@
       "robotCompany": "",
       "robotPlatform": "",
       "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": 1790612496490,
       "purchaseCaptureId": "7ED65302DG698940B",
       "purchaseOrderId": "3AX69597SK180910Y",
       "purchaseSource": "paypal-giveaway",
@@ -242,9 +244,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      },
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790612496490
+      }
     },
     {
       "key": "APEX-FU7S-UVEY",
@@ -1215,7 +1215,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
