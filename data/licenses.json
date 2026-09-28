@@ -193,6 +193,8 @@
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790594144400,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "44R63523VF223005N",
       "purchaseOrderId": "3NP577176E959403K",
       "purchaseSource": "paypal-giveaway",
@@ -202,9 +204,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      },
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null
+      }
     },
     {
       "key": "APEX-FCRG-WAJX",
@@ -233,8 +233,10 @@
       "robotCompany": "Deriv (SVG) LLC",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790569990534,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790611012708,
       "purchaseCaptureId": "26X18521CF005674F",
       "purchaseOrderId": "88C92979ND948382P",
       "purchaseSource": "paypal-giveaway-webhook",
