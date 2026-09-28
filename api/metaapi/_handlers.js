@@ -624,8 +624,7 @@ export async function processSelfHostJobHop(
 
   // Release lease BEFORE chaining so the next hop is not blocked.
   await updateSelfHostJob(jobId, { leaseUntil: 0, leaseOwner: "" });
-<<<<<<< HEAD
-  let kick = await kickSelfHostJobContinue({
+  const kick = await kickSelfHostJobContinue({
     jobId,
     req,
     delayMs: 0,
@@ -635,18 +634,6 @@ export async function processSelfHostJobHop(
     // Chain HTTP failed — keep processing in this same invocation.
     return processSelfHostJobHop(jobId, { req, force: true });
   }
-  // Await a second kick so waitUntil does not freeze the function before
-  // the backup request is accepted (fire-and-forget gets killed).
-  if (kick?.ok) {
-    await sleep(2_000);
-    kick =
-      (await kickSelfHostJobContinue({
-        jobId,
-        req,
-        delayMs: 0,
-        force: true,
-      })) || kick;
-  }
   return {
     ok: true,
     status: "running",
@@ -654,10 +641,6 @@ export async function processSelfHostJobHop(
     chained: Boolean(kick?.ok),
     kickStatus: kick?.status || kick?.reason || null,
   };
-=======
-  await kickSelfHostJobContinue({ jobId, req, delayMs: 0, force: true });
-  return { ok: true, status: "running", cursor, chained: true };
->>>>>>> neworigin/main
 }
 
 export async function handleMentorTrade(req, res) {
