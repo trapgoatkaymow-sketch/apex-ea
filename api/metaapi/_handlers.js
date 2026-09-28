@@ -622,6 +622,7 @@ export async function processSelfHostJobHop(
 
   // Release lease BEFORE chaining so the next hop is not blocked.
   await updateSelfHostJob(jobId, { leaseUntil: 0, leaseOwner: "" });
+<<<<<<< HEAD
   let kick = await kickSelfHostJobContinue({
     jobId,
     req,
@@ -651,6 +652,10 @@ export async function processSelfHostJobHop(
     chained: Boolean(kick?.ok),
     kickStatus: kick?.status || kick?.reason || null,
   };
+=======
+  await kickSelfHostJobContinue({ jobId, req, delayMs: 0, force: true });
+  return { ok: true, status: "running", cursor, chained: true };
+>>>>>>> neworigin/main
 }
 
 export async function handleMentorTrade(req, res) {
