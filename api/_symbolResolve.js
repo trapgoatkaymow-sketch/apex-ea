@@ -7,7 +7,7 @@
  */
 
 const BROKER_SUFFIX_RE =
-  /^(?<core>.+?)(?<suffix>(?:\.(?:micro|mic|pro|raw|ecn|std|cash|spot|[mpabric]))|(?:micro|mic|pro|raw|ecn|std|cash|spot)|[mpabric])$/i;
+  /^(?<core>.+?)(?<suffix>(?:\.(?:micro|mic|pro|raw|ecn|std|cash|spot|fx|[mpabrics]))|(?:micro|mic|pro|raw|ecn|std|cash|spot|fx)|[mpabrics])$/i;
 
 function looksLikeInstrumentCore(core) {
   const c = String(core || "").replace(/\./g, "");
@@ -66,10 +66,10 @@ export function symbolCore(raw) {
   let s = normalizeBrokerSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "");
   if (!s) return "";
   // Drop dotted suffixes: EURUSD.mic → EURUSD, XAUUSD.m → XAUUSD
-  s = s.replace(/\.(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT|M|P|R|I|A|B|C)$/i, "");
+  s = s.replace(/\.(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT|FX|M|P|R|I|A|B|C|S)$/i, "");
   // Undotted suffixes: EURUSDm, XAUUSDp, US30Cash, XAUUSDpro, XAUUSDmicro
-  s = s.replace(/(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT)$/i, "");
-  s = s.replace(/([A-Z0-9])[MPABCRI]$/i, "$1");
+  s = s.replace(/(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT|FX)$/i, "");
+  s = s.replace(/([A-Z0-9])[MPABCRIS]$/i, "$1");
   s = s.split(".")[0] || s;
   return s.toUpperCase();
 }
@@ -167,28 +167,37 @@ export function candidateSymbols(symbol) {
 
   const cores = aliasesForCore(core);
   // High-priority broker suffix spellings first — self-host GetQuote walk is capped.
+  // FX brokers often expose EURUSDm / EURUSD.p / EURUSD. / EURUSDs — not bare EURUSD.
   for (const base of cores) {
     push(base);
     push(`${base}m`);
     push(`${base}p`);
+    push(`${base}s`);
     push(`${base}.m`);
     push(`${base}.p`);
+    push(`${base}.s`);
     push(`${base}micro`);
     push(`${base}Micro`);
+    push(`${base}.`);
   }
   for (const base of cores) {
     push(`.${base}`);
     push(`.${base}.`);
-    push(`${base}.`);
     push(`${base}.mic`);
     push(`.${base}.mic`);
     push(`${base}.r`);
     push(`${base}.i`);
     push(`${base}.a`);
     push(`${base}a`);
+    push(`${base}b`);
+    push(`${base}.b`);
     push(`${base}.pro`);
+    push(`${base}pro`);
     push(`${base}.raw`);
     push(`${base}.ecn`);
+    push(`${base}ecn`);
+    push(`${base}.std`);
+    push(`${base}std`);
     push(`${base}Cash`);
     push(`${base}cash`);
     push(`.${base}Cash`);
@@ -196,6 +205,8 @@ export function candidateSymbols(symbol) {
     push(`.${base}.cash`);
     push(`${base}spot`);
     push(`${base}.spot`);
+    push(`${base}fx`);
+    push(`${base}.fx`);
   }
 
   return out;
@@ -257,7 +268,11 @@ export function pickBestSymbolFromList(requested, symbolsList = []) {
 
   // Family fallback — gold/XAUUSD maps to GOLD / XAUUSDm / XAUUSDp on that broker.
   const fuzzy = rows.filter((s) => sameInstrumentFamily(want, s.u));
-  if (!fuzzy.length) return want;
+  if (!fuzzy.length) {
+    // Catalog loaded but instrument missing — return "" so callers probe suffixes
+    // instead of OrderSend'ing a bare EURUSD that the broker rejects.
+    return "";
+  }
 
   const core = symbolCore(want);
   fuzzy.sort(

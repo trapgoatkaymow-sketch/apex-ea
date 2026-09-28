@@ -703,7 +703,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
       if (okCount) {
         showToast(`Executed ${okCount}/${nextFills.length} trades`);
       } else {
-        showToast(lastError || nextFills[0]?.error || "No trades filled");
+        const failHint =
+          lastError || nextFills[0]?.error || "No trades filled";
+        showToast(
+          /symbol not found/i.test(failHint)
+            ? `${failHint} — check the chart symbol matches your MT5 Market Watch`
+            : failHint
+        );
       }
       await sleep(TRADE_SETTLE_MS);
       setEngineMode("idle");

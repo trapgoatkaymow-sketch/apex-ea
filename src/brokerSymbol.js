@@ -4,7 +4,7 @@
  */
 
 const BROKER_SUFFIX_RE =
-  /^(?<core>.+?)(?<suffix>(?:\.(?:mic|pro|raw|ecn|std|cash|spot|[mpabric]))|(?:mic|pro|raw|ecn|std|cash|spot)|[mpabric])$/i;
+  /^(?<core>.+?)(?<suffix>(?:\.(?:micro|mic|pro|raw|ecn|std|cash|spot|fx|[mpabrics]))|(?:micro|mic|pro|raw|ecn|std|cash|spot|fx)|[mpabrics])$/i;
 
 function looksLikeInstrumentCore(core) {
   const c = String(core || "").replace(/\./g, "");

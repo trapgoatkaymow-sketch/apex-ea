@@ -35,10 +35,11 @@
  * Gen 78 — Interface 1 full-page Save Symbol; fix apex-ea.com POST redirect login.
  * Gen 79 — App update email + Android APK v2.34 download link.
  * Gen 80 — Self-host EXECUTE TRADE: instant 202, no roster POST (iOS Load failed).
+ * Gen 81 — Chart Execute: Subscribe + broker suffix resolve (EURUSD Symbol not found).
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 80;
+export const UI_SHELL_GENERATION = 81;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -48,7 +49,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 80;
+export const UI_SHELL_FLOOR = 81;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

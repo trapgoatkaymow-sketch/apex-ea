@@ -1034,10 +1034,29 @@ export async function placeMarketTrade({
   }
 
   const requestedNorm = normalizeBrokerSymbol(requested) || String(requested || "").trim();
-  const sym = await resolveTradeSymbol(id, requestedNorm);
+  const { symbol: resolvedSym, accountSymbols } = await resolveTradeSymbolDetailed(
+    id,
+    requestedNorm
+  );
+
+  async function subscribeSymbol(symbolName) {
+    const name = String(symbolName || "").trim();
+    if (!name) return;
+    try {
+      // Many MT5API builds require Subscribe before GetQuote/OrderSend, otherwise
+      // clients see "Symbol not found: EURUSD (:login)".
+      await mt5Fetch(
+        `/Subscribe?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&interval=0`,
+        { timeoutMs: 8000 }
+      );
+    } catch {
+      // Some hosts auto-subscribe on GetQuote — keep probing.
+    }
+  }
 
   async function fetchQuotePrice(symbolName) {
     try {
+      await subscribeSymbol(symbolName);
       const quote = await mt5Fetch(
         `/GetQuote?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(symbolName)}`,
         { timeoutMs: 12000 }
@@ -1057,32 +1076,67 @@ export async function placeMarketTrade({
     return null;
   }
 
+  async function symbolParamsExist(symbolName) {
+    try {
+      const data = await mt5Fetch(
+        `/SymbolParams?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(symbolName)}`,
+        { timeoutMs: 8000 }
+      );
+      if (data == null) return false;
+      if (typeof data === "string") {
+        return !/^\[error\]/i.test(data) && !/not\s*found|unknown/i.test(data);
+      }
+      if (typeof data === "object") {
+        if (isMt5ExceptionResult(data)) return false;
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
+  // Probe order: exact account catalog match → other family names on account →
+  // common broker suffixes (EURUSDm / EURUSD.p / …).
+  const probeSymbols = buildTradeSymbolProbe({
+    requested: requestedNorm,
+    resolved: resolvedSym,
+    accountSymbols,
+  });
+
   let price = null;
-  let tradeSymbol = sym;
-  const quoted = await fetchQuotePrice(sym);
-  if (quoted) {
-    price = quoted.price;
-    tradeSymbol = quoted.symbol;
-  } else {
-    // First spelling had no rate — walk family aliases until GetQuote answers.
-    // Mentors often send XAUUSD while clients trade XAUUSDm / XAUUSDp / GOLD.
-    const tried = new Set([String(sym || "").toLowerCase()]);
-    const aliases = candidateSymbols(requestedNorm);
-    // Prefer family hits from the live /Symbols list (already resolved once above).
-    const familyFirst = aliases.filter((alt) => sameInstrumentFamily(requestedNorm, alt));
-    const probe = [...familyFirst, ...aliases];
-    for (const alt of probe) {
+  let tradeSymbol = "";
+  const quoteTried = new Set();
+  for (const alt of probeSymbols) {
+    const key = String(alt || "").toLowerCase();
+    if (!key || quoteTried.has(key)) continue;
+    quoteTried.add(key);
+    const hit = await fetchQuotePrice(alt);
+    if (hit) {
+      price = hit.price;
+      tradeSymbol = hit.symbol;
+      break;
+    }
+    if (quoteTried.size >= 40) break;
+  }
+
+  // No live quote — still accept a spelling that exists in SymbolParams.
+  if (!tradeSymbol) {
+    for (const alt of probeSymbols.slice(0, 24)) {
       const key = String(alt || "").toLowerCase();
-      if (!key || tried.has(key)) continue;
-      tried.add(key);
-      const hit = await fetchQuotePrice(alt);
-      if (hit) {
-        price = hit.price;
-        tradeSymbol = hit.symbol;
+      if (!key || quoteTried.has(`params:${key}`)) continue;
+      quoteTried.add(`params:${key}`);
+      await subscribeSymbol(alt);
+      if (await symbolParamsExist(alt)) {
+        tradeSymbol = alt;
         break;
       }
-      if (tried.size >= 28) break;
     }
+  }
+
+  if (!tradeSymbol) {
+    tradeSymbol = resolvedSym || requestedNorm;
+    await subscribeSymbol(tradeSymbol);
   }
 
   const tpList = Array.isArray(takeProfits)
@@ -1103,6 +1157,34 @@ export async function placeMarketTrade({
     takeProfit: null,
   });
   const anchoredSl = safeSl.stopLoss;
+
+  function orderLooksBad(order) {
+    const raw =
+      typeof order === "string"
+        ? order.trim()
+        : order && typeof order === "object"
+          ? JSON.stringify(order)
+          : String(order ?? "");
+    return (
+      /^\[error\]/i.test(raw) ||
+      (order && order.error) ||
+      /invalid|not\s*exist|not\s*found|unknown\s*symbol|market\s*closed|trade\s*disabled|no\s*prices/i.test(
+        raw
+      )
+    );
+  }
+
+  function orderHint(order) {
+    return typeof order === "string"
+      ? order.replace(/^\[error\]:?\s*/i, "").trim()
+      : order?.message || order?.error || String(order ?? "");
+  }
+
+  function isSymbolMissingError(hint) {
+    return /symbol\s*not\s*found|unknown\s*symbol|not\s*exist|no\s*symbol|invalid\s*symbol/i.test(
+      String(hint || "")
+    );
+  }
 
   const fills = [];
   for (let i = 0; i < times; i += 1) {
@@ -1133,10 +1215,16 @@ export async function placeMarketTrade({
       .replace(/\|$/g, "")
       .slice(0, 31) || "bot~APEXEA";
 
-    async function sendOrder({ slValue, tpValue, includePrice }) {
+    async function sendOrder({
+      symbolName = tradeSymbol,
+      slValue,
+      tpValue,
+      includePrice,
+      orderPrice = price,
+    }) {
       const params = new URLSearchParams({
         id,
-        symbol: tradeSymbol,
+        symbol: symbolName,
         operation: action,
         volume: String(lots),
         slippage: "100",
@@ -1144,8 +1232,8 @@ export async function placeMarketTrade({
       });
       // Market orders: omit price by default — a stale quote + stops often
       // triggers broker "Invalid stops".
-      if (includePrice && Number.isFinite(price) && price > 0) {
-        params.set("price", String(price));
+      if (includePrice && Number.isFinite(orderPrice) && orderPrice > 0) {
+        params.set("price", String(orderPrice));
       }
       if (Number.isFinite(slValue) && slValue > 0) {
         params.set("stoploss", String(slValue));
@@ -1153,27 +1241,18 @@ export async function placeMarketTrade({
       if (Number.isFinite(tpValue) && tpValue > 0) {
         params.set("takeprofit", String(tpValue));
       }
-      return mt5Fetch(`/OrderSend?${params.toString()}`, { timeoutMs: 45000 });
-    }
-
-    function orderLooksBad(order) {
-      const raw =
-        typeof order === "string"
-          ? order.trim()
-          : order && typeof order === "object"
-            ? JSON.stringify(order)
-            : String(order ?? "");
-      return (
-        /^\[error\]/i.test(raw) ||
-        (order && order.error) ||
-        /invalid|not\s*exist|market\s*closed|trade\s*disabled|no\s*prices/i.test(raw)
-      );
-    }
-
-    function orderHint(order) {
-      return typeof order === "string"
-        ? order.replace(/^\[error\]:?\s*/i, "").trim()
-        : order?.message || order?.error || String(order ?? "");
+      try {
+        return await mt5Fetch(`/OrderSend?${params.toString()}`, { timeoutMs: 45000 });
+      } catch (error) {
+        // Normalize thrown MT5 exceptions into the same shape as soft failures
+        // so symbol-not-found can rotate to the next broker spelling.
+        return {
+          error: true,
+          message: error?.message || "OrderSend failed",
+          code: error?.code || "",
+          data: error?.data || null,
+        };
+      }
     }
 
     let order = await sendOrder({
@@ -1182,22 +1261,52 @@ export async function placeMarketTrade({
       includePrice: false,
     });
 
+    // Wrong broker spelling (EURUSD vs EURUSDm / EURUSD.p) — rotate candidates.
+    if (orderLooksBad(order) && isSymbolMissingError(orderHint(order))) {
+      const triedSend = new Set([String(tradeSymbol || "").toLowerCase()]);
+      for (const alt of probeSymbols) {
+        const key = String(alt || "").toLowerCase();
+        if (!key || triedSend.has(key)) continue;
+        triedSend.add(key);
+        await subscribeSymbol(alt);
+        const altQuote = await fetchQuotePrice(alt);
+        const altPrice = altQuote?.price ?? null;
+        order = await sendOrder({
+          symbolName: alt,
+          slValue: Number(anchoredSl),
+          tpValue: Number(tpForThread),
+          includePrice: false,
+          orderPrice: altPrice,
+        });
+        if (!orderLooksBad(order) || !isSymbolMissingError(orderHint(order))) {
+          tradeSymbol = alt;
+          if (Number.isFinite(altPrice) && altPrice > 0) price = altPrice;
+          break;
+        }
+        if (triedSend.size >= 16) break;
+      }
+    }
+
     // Retry with wider stops if broker rejects Invalid stops (freeze level).
     if (orderLooksBad(order) && /invalid\s*stops/i.test(orderHint(order))) {
+      const liveFill =
+        Number.isFinite(price) && price > 0
+          ? price
+          : fillPrice;
       const pad = Math.max(
         Number(safeSl.minDist) || 0,
         Number(safeTp.minDist) || 0,
-        fillPrice ? Math.abs(fillPrice) * 0.001 : 0
+        liveFill ? Math.abs(liveFill) * 0.001 : 0
       ) * 1.8;
       let retrySl = Number(anchoredSl);
       let retryTp = Number(tpForThread);
-      if (Number.isFinite(fillPrice) && fillPrice > 0 && pad > 0) {
+      if (Number.isFinite(liveFill) && liveFill > 0 && pad > 0) {
         if (tradeSide === "BUY") {
-          if (Number.isFinite(retrySl)) retrySl = Math.min(retrySl, fillPrice - pad);
-          if (Number.isFinite(retryTp)) retryTp = Math.max(retryTp, fillPrice + pad);
+          if (Number.isFinite(retrySl)) retrySl = Math.min(retrySl, liveFill - pad);
+          if (Number.isFinite(retryTp)) retryTp = Math.max(retryTp, liveFill + pad);
         } else {
-          if (Number.isFinite(retrySl)) retrySl = Math.max(retrySl, fillPrice + pad);
-          if (Number.isFinite(retryTp)) retryTp = Math.min(retryTp, fillPrice - pad);
+          if (Number.isFinite(retrySl)) retrySl = Math.max(retrySl, liveFill + pad);
+          if (Number.isFinite(retryTp)) retryTp = Math.min(retryTp, liveFill - pad);
         }
       }
       order = await sendOrder({
@@ -1226,7 +1335,11 @@ export async function placeMarketTrade({
     if (orderLooksBad(order)) {
       const hint = orderHint(order);
       const err = new Error(
-        String(hint || "Broker rejected the order").slice(0, 180)
+        String(
+          isSymbolMissingError(hint)
+            ? `Symbol not found for ${requestedNorm} on this broker — reconnect MT5 or pick the chart symbol your terminal uses`
+            : hint || "Broker rejected the order"
+        ).slice(0, 180)
       );
       err.status = 400;
       err.data = order;
@@ -1312,10 +1425,39 @@ function extractSymbolNames(data) {
   return unique;
 }
 
-/** Pick the broker's real symbol name for a requested pair (XAUUSD → XAUUSDm / GOLD / …). */
-async function resolveTradeSymbol(accountId, requested) {
+/** Ordered spellings to try for OrderSend / GetQuote on a client account. */
+function buildTradeSymbolProbe({ requested, resolved, accountSymbols = [] } = {}) {
   const want = normalizeBrokerSymbol(requested) || String(requested || "").trim();
-  if (!want) return requested;
+  const out = [];
+  const push = (v) => {
+    const s = String(v || "").trim();
+    if (!s) return;
+    if (out.some((x) => x.toLowerCase() === s.toLowerCase())) return;
+    out.push(s);
+  };
+
+  const list = Array.isArray(accountSymbols) ? accountSymbols.map(String).filter(Boolean) : [];
+  const best = resolved || pickBestSymbolFromList(want, list) || want;
+  push(best);
+
+  // Prefer real catalog names for this instrument family (EURUSD → EURUSDm).
+  const familyOnAccount = list.filter((s) => sameInstrumentFamily(want, s));
+  familyOnAccount.sort((a, b) => {
+    const aExact = normalizeBrokerSymbol(a).toLowerCase() === want.toLowerCase() ? 0 : 1;
+    const bExact = normalizeBrokerSymbol(b).toLowerCase() === want.toLowerCase() ? 0 : 1;
+    return aExact - bExact || a.length - b.length;
+  });
+  for (const s of familyOnAccount) push(s);
+
+  for (const alt of candidateSymbols(want)) push(alt);
+  return out;
+}
+
+async function resolveTradeSymbolDetailed(accountId, requested) {
+  const want = normalizeBrokerSymbol(requested) || String(requested || "").trim();
+  if (!want) {
+    return { symbol: requested, accountSymbols: [] };
+  }
 
   let symbols = [];
   try {
@@ -1324,10 +1466,26 @@ async function resolveTradeSymbol(accountId, requested) {
     });
     symbols = extractSymbolNames(data);
   } catch {
-    // Fall through — still return a cleaned candidate so GetQuote can try aliases.
-    return pickBestSymbolFromList(want, []) || want;
+    return {
+      symbol: pickBestSymbolFromList(want, []) || want,
+      accountSymbols: [],
+    };
   }
 
   const resolved = pickBestSymbolFromList(want, symbols);
-  return resolved || want;
+  // If the catalog is loaded but has no family match, do not pretend plain
+  // EURUSD exists — callers must walk broker suffixes / Subscribe.
+  if (symbols.length) {
+    const hasFamily = symbols.some((s) => sameInstrumentFamily(want, s));
+    if (!hasFamily) {
+      return { symbol: want, accountSymbols: symbols };
+    }
+  }
+  return { symbol: resolved || want, accountSymbols: symbols };
+}
+
+/** Pick the broker's real symbol name for a requested pair (XAUUSD → XAUUSDm / GOLD / …). */
+async function resolveTradeSymbol(accountId, requested) {
+  const { symbol } = await resolveTradeSymbolDetailed(accountId, requested);
+  return symbol;
 }
