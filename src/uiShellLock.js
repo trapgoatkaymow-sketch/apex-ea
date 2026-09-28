@@ -36,10 +36,11 @@
  * Gen 79 — App update email + Android APK v2.34 download link.
  * Gen 80 — Self-host EXECUTE TRADE: instant 202, no roster POST (iOS Load failed).
  * Gen 81 — Chart Execute: Subscribe + broker suffix resolve (EURUSD Symbol not found).
+ * Gen 82 — Mentor portal Generated keys calendar (keys per day).
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 81;
+export const UI_SHELL_GENERATION = 82;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -49,7 +50,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 81;
+export const UI_SHELL_FLOOR = 82;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
