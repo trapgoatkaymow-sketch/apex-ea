@@ -10,6 +10,7 @@ import {
   GIVEAWAY_DISPLAY_CURRENCY,
   GIVEAWAY_DISPLAY_PRICE,
   GIVEAWAY_PRICE,
+  resolveGiveawayWindow,
   ROBOT_BOT_NAME,
   ROBOT_CURRENCY,
   ROBOT_NCP_CURRENCY,
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
   }
 
   const secretConfigured = Boolean(process.env.PAYPAL_CLIENT_SECRET);
+  const giveawayWindow = await resolveGiveawayWindow();
   sendJson(res, 200, {
     clientId: PAYPAL_CLIENT_ID,
     amount: LIFETIME_PRICE,
@@ -50,6 +52,8 @@ export default async function handler(req, res) {
       displayCurrency: GIVEAWAY_DISPLAY_CURRENCY,
       botName: ROBOT_BOT_NAME,
       label: "Giveaway — App access + ZETA SCALPER AI",
+      window: giveawayWindow,
+      shareUrl: "https://www.apex-ea.com/giveaway.html",
     },
     mode: String(process.env.PAYPAL_MODE || "live").toLowerCase() === "sandbox" ? "sandbox" : "live",
     ready: Boolean(PAYPAL_CLIENT_ID) && secretConfigured,

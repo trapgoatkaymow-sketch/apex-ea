@@ -66,6 +66,242 @@ export const GIVEAWAY_DISPLAY_CURRENCY = String(
   .trim()
   .toUpperCase();
 
+/**
+ * Giveaway offer window (default 5 days = original 24h + 4-day extension).
+ * - If GIVEAWAY_STARTS_AT is set on Vercel, that ISO time is the start.
+ * - Otherwise the first live request latches "now" into durable storage.
+ * - Latched `durationMs` in storage wins when present (so extensions stick).
+ */
+export const GIVEAWAY_STARTS_AT_ENV = String(
+  process.env.GIVEAWAY_STARTS_AT || ""
+).trim();
+/** Default hours when storage has no durationMs — 24h + 4 days. */
+export const GIVEAWAY_DURATION_MS = Math.max(
+  60_000,
+  (Number(process.env.GIVEAWAY_DURATION_HOURS) || 120) * 60 * 60 * 1000
+);
+
+const GIVEAWAY_WINDOW_BLOB = "apexea/giveaway-window.json";
+const GIVEAWAY_WINDOW_GITHUB = "data/giveaway-window.json";
+const GIVEAWAY_WINDOW_FIREBASE = "apexea/giveawayWindow";
+
+/** @type {{ startsAt: string, durationMs?: number } | null} */
+let memoryGiveawayWindow = null;
+
+function windowFromStart(startMs, nowMs = Date.now(), durationMs = GIVEAWAY_DURATION_MS) {
+  const dur = Math.max(60_000, Number(durationMs) || GIVEAWAY_DURATION_MS);
+  const endMs = startMs + dur;
+  const remainingMs = Math.max(0, endMs - nowMs);
+  const notStarted = nowMs < startMs;
+  const expired = nowMs >= endMs;
+  return {
+    startsAt: new Date(startMs).toISOString(),
+    endsAt: new Date(endMs).toISOString(),
+    durationMs: dur,
+    remainingMs,
+    active: !notStarted && !expired,
+    expired,
+    notStarted,
+    serverNow: new Date(nowMs).toISOString(),
+  };
+}
+
+function durationFromLatched(row) {
+  const n = Number(row?.durationMs);
+  return Number.isFinite(n) && n >= 60_000 ? n : GIVEAWAY_DURATION_MS;
+}
+
+/** Sync helper when start is already known (tests / env). */
+export function getGiveawayWindow(nowMs = Date.now()) {
+  const envStart = Date.parse(GIVEAWAY_STARTS_AT_ENV);
+  const startMs = Number.isFinite(envStart)
+    ? envStart
+    : memoryGiveawayWindow?.startsAt
+      ? Date.parse(memoryGiveawayWindow.startsAt)
+      : nowMs;
+  return windowFromStart(
+    Number.isFinite(startMs) ? startMs : nowMs,
+    nowMs,
+    durationFromLatched(memoryGiveawayWindow)
+  );
+}
+
+async function readLatchedWindow() {
+  if (memoryGiveawayWindow?.startsAt) {
+    const ms = Date.parse(memoryGiveawayWindow.startsAt);
+    if (Number.isFinite(ms)) {
+      return { startMs: ms, durationMs: durationFromLatched(memoryGiveawayWindow) };
+    }
+  }
+  try {
+    const { durableRead } = await import("../_durableJson.js");
+    const doc = await durableRead({
+      blobPath: GIVEAWAY_WINDOW_BLOB,
+      firebasePath: GIVEAWAY_WINDOW_FIREBASE,
+      githubPath: GIVEAWAY_WINDOW_GITHUB,
+      localPaths: ["data/giveaway-window.json"],
+    });
+    let parsed = null;
+    if (doc?.raw) {
+      try {
+        parsed = JSON.parse(doc.raw || "{}");
+      } catch {
+        parsed = null;
+      }
+    }
+    const startsAt = String(parsed?.startsAt || "").trim();
+    const ms = Date.parse(startsAt);
+    if (Number.isFinite(ms)) {
+      const durationMs = durationFromLatched(parsed);
+      memoryGiveawayWindow = {
+        startsAt: new Date(ms).toISOString(),
+        durationMs,
+      };
+      return { startMs: ms, durationMs };
+    }
+  } catch {
+    // fall through — latch a new start
+  }
+  return null;
+}
+
+async function latchStart(nowMs, durationMs = GIVEAWAY_DURATION_MS) {
+  const startsAt = new Date(nowMs).toISOString();
+  const dur = Math.max(60_000, Number(durationMs) || GIVEAWAY_DURATION_MS);
+  memoryGiveawayWindow = { startsAt, durationMs: dur };
+  const payload = JSON.stringify(
+    {
+      startsAt,
+      durationMs: dur,
+      latchedAt: startsAt,
+    },
+    null,
+    2
+  );
+  try {
+    const { durableWrite } = await import("../_durableJson.js");
+    await durableWrite({
+      raw: payload,
+      blobPath: GIVEAWAY_WINDOW_BLOB,
+      firebasePath: GIVEAWAY_WINDOW_FIREBASE,
+      githubPath: GIVEAWAY_WINDOW_GITHUB,
+      localPaths: ["data/giveaway-window.json"],
+      githubMode: "fallback",
+      message: `giveaway window start ${startsAt}`,
+    });
+  } catch {
+    // memory latch still works for this instance
+  }
+  return { startMs: nowMs, durationMs: dur };
+}
+
+/**
+ * Persist an extension (e.g. +4 days) onto the latched window without
+ * resetting the original start time.
+ */
+export async function extendGiveawayWindowByDays(days = 4, nowMs = Date.now()) {
+  const addMs = Math.max(0, Number(days) || 0) * 24 * 60 * 60 * 1000;
+  const latched = await readLatchedWindow();
+  const startMs = latched?.startMs || nowMs;
+  const prevDur = latched?.durationMs || GIVEAWAY_DURATION_MS;
+  const nextDur = Math.max(prevDur + addMs, GIVEAWAY_DURATION_MS);
+  const startsAt = new Date(startMs).toISOString();
+  memoryGiveawayWindow = { startsAt, durationMs: nextDur };
+  const payload = JSON.stringify(
+    {
+      startsAt,
+      durationMs: nextDur,
+      latchedAt: startsAt,
+      extendedAt: new Date(nowMs).toISOString(),
+      extendedByDays: Number(days) || 0,
+    },
+    null,
+    2
+  );
+  try {
+    const { durableWrite } = await import("../_durableJson.js");
+    await durableWrite({
+      raw: payload,
+      blobPath: GIVEAWAY_WINDOW_BLOB,
+      firebasePath: GIVEAWAY_WINDOW_FIREBASE,
+      githubPath: GIVEAWAY_WINDOW_GITHUB,
+      localPaths: ["data/giveaway-window.json"],
+      githubMode: "fallback",
+      message: `chore: extend giveaway window by ${days} days`,
+    });
+  } catch {
+    // memory still holds the extension for this instance
+  }
+  return windowFromStart(startMs, nowMs, nextDur);
+}
+
+/**
+ * Resolve the shared giveaway window (latches start on first live hit if unset).
+ */
+export async function resolveGiveawayWindow(nowMs = Date.now()) {
+  const envStart = Date.parse(GIVEAWAY_STARTS_AT_ENV);
+  if (Number.isFinite(envStart)) {
+    return windowFromStart(envStart, nowMs, GIVEAWAY_DURATION_MS);
+  }
+  let latched = await readLatchedWindow();
+  if (!latched || !Number.isFinite(latched.startMs)) {
+    latched = await latchStart(nowMs);
+  }
+  // If storage still has the original 24h duration, bump to the extended default
+  // so redeploying this build lengthens the live offer without a new start.
+  const durationMs = Math.max(latched.durationMs || 0, GIVEAWAY_DURATION_MS);
+  if (durationMs > (latched.durationMs || 0)) {
+    const startsAt = new Date(latched.startMs).toISOString();
+    memoryGiveawayWindow = { startsAt, durationMs };
+    // Best-effort persist so Firebase/Blob stop serving the short window.
+    try {
+      const { durableWrite } = await import("../_durableJson.js");
+      await durableWrite({
+        raw: JSON.stringify(
+          {
+            startsAt,
+            durationMs,
+            latchedAt: startsAt,
+            extendedAt: new Date(nowMs).toISOString(),
+            extendedByDays: 4,
+          },
+          null,
+          2
+        ),
+        blobPath: GIVEAWAY_WINDOW_BLOB,
+        firebasePath: GIVEAWAY_WINDOW_FIREBASE,
+        githubPath: GIVEAWAY_WINDOW_GITHUB,
+        localPaths: ["data/giveaway-window.json"],
+        githubMode: "fallback",
+        message: "chore: extend giveaway window by 4 days",
+      });
+    } catch {
+      // memory bump still applies for this instance
+    }
+  }
+  return windowFromStart(latched.startMs, nowMs, durationMs);
+}
+
+/** Throws 403/410 when the giveaway link is outside its offer window. */
+export async function assertGiveawayActive(nowMs = Date.now()) {
+  const window = await resolveGiveawayWindow(nowMs);
+  if (window.notStarted) {
+    const err = new Error("This giveaway has not started yet");
+    err.status = 403;
+    err.data = { giveaway: window };
+    throw err;
+  }
+  if (window.expired) {
+    const err = new Error(
+      "This giveaway has ended — the link no longer works"
+    );
+    err.status = 410;
+    err.data = { giveaway: window };
+    throw err;
+  }
+  return window;
+}
+
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
