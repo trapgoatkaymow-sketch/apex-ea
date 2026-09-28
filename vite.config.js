@@ -179,7 +179,12 @@ function metaApiDevPlugin() {
           if (req.method === 'POST' && url.pathname === '/api/metaapi/trade') {
             return handleTrade(req, res)
           }
-          if (req.method === 'POST' && url.pathname === '/api/metaapi/mentor-trade') {
+          if (
+            (req.method === 'POST' ||
+              req.method === 'GET' ||
+              req.method === 'DELETE') &&
+            url.pathname === '/api/metaapi/mentor-trade'
+          ) {
             return handleMentorTrade(req, res)
           }
           if (req.method === 'POST' && url.pathname === '/api/metaapi/disconnect') {

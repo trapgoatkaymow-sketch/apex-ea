@@ -63,6 +63,69 @@ export async function executeMentorSelfHostTrade(payload = {}) {
     },
     body: JSON.stringify(payload),
     cache: "no-store",
+    // Keep the accept request alive briefly if the tab backgrounds.
+    keepalive: true,
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  // 202 Accepted = durable background job (leaving the portal is safe).
+  if (!response.ok && response.status !== 202) {
+    const message =
+      (data && (data.error || data.message)) ||
+      (typeof data === "string" ? data : `Self hosting trade failed (${response.status})`);
+    const err = new Error(message);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+export async function getSelfHostTradeJob(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return null;
+  const response = await fetch(
+    apiUrl(`/api/metaapi/mentor-trade?jobId=${encodeURIComponent(id)}`),
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    }
+  );
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!response.ok) {
+    const message =
+      (data && (data.error || data.message)) ||
+      `Self host job lookup failed (${response.status})`;
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function cancelSelfHostTradeJob(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return null;
+  const response = await fetch(apiUrl("/api/metaapi/mentor-trade"), {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ jobId: id }),
+    cache: "no-store",
   });
   const text = await response.text();
   let data = null;
@@ -74,10 +137,9 @@ export async function executeMentorSelfHostTrade(payload = {}) {
   if (!response.ok) {
     const message =
       (data && (data.error || data.message)) ||
-      (typeof data === "string" ? data : `Self hosting trade failed (${response.status})`);
+      `Could not cancel self-host job (${response.status})`;
     const err = new Error(message);
     err.status = response.status;
-    err.data = data;
     throw err;
   }
   return data;

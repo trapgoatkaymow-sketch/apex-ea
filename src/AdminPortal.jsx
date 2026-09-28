@@ -44,7 +44,9 @@ import {
   listUpcomingOfficialEvents,
 } from "./economicCalendarSchedule.js";
 import {
+  cancelSelfHostTradeJob,
   executeMentorSelfHostTrade,
+  getSelfHostTradeJob,
   listMentorHostedAccounts,
 } from "./mt5AccountsApi.js";
 import { STRATEGY_LABELS, useApp } from "./store.jsx";
@@ -54,6 +56,34 @@ import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 const ADMIN_SESSION_KEY = "apexea-admin-session";
 const PORTAL_THEME_KEY = "apexea-portal-theme";
 const SELF_HOST_RECENT_KEY = "apexea-self-host-recent-v1";
+const SELF_HOST_ACTIVE_JOB_KEY = "apexea-self-host-active-job-v1";
+
+function loadActiveSelfHostJob(mentorKey) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SELF_HOST_ACTIVE_JOB_KEY) || "{}");
+    const row = raw?.[String(mentorKey || "").trim().toLowerCase()];
+    if (!row?.jobId) return null;
+    return row;
+  } catch {
+    return null;
+  }
+}
+
+function saveActiveSelfHostJob(mentorKey, job) {
+  try {
+    const key = String(mentorKey || "").trim().toLowerCase();
+    if (!key) return;
+    const raw = JSON.parse(localStorage.getItem(SELF_HOST_ACTIVE_JOB_KEY) || "{}");
+    if (!job?.jobId) {
+      delete raw[key];
+    } else {
+      raw[key] = job;
+    }
+    localStorage.setItem(SELF_HOST_ACTIVE_JOB_KEY, JSON.stringify(raw));
+  } catch {
+    // ignore quota / private mode
+  }
+}
 
 /** Small spinner + label for portal action buttons. */
 function AdminBusyLabel({ busy, children, busyText }) {
@@ -295,7 +325,8 @@ export default function AdminPortal() {
   const [hostDelaySec, setHostDelaySec] = useState(0);
   const [hostScheduled, setHostScheduled] = useState(null);
   const [hostScheduleTick, setHostScheduleTick] = useState(0);
-  const hostScheduleTimerRef = useRef(null);
+  const [hostJobId, setHostJobId] = useState("");
+  const hostPollTimerRef = useRef(null);
   const [hostResult, setHostResult] = useState(null);
   const [hostDetailsOpen, setHostDetailsOpen] = useState(false);
   const [hostRecent, setHostRecent] = useState([]);
@@ -871,6 +902,21 @@ export default function AdminPortal() {
       ? `admin:${normalizeAdminEmail(adminSession.email)}:all`
       : hostableMentorEmails[0];
     setHostRecent(loadSelfHostRecent(recentKey));
+    // Resume progress UI if a background job is still running after leave/return.
+    const active = loadActiveSelfHostJob(recentKey);
+    if (active?.jobId && !hostJobId) {
+      pollHostJob(active.jobId, {
+        symbol: active.symbol,
+        side: active.side,
+        volume: active.volume,
+        tradesCount: active.tradesCount,
+        stopLoss: active.stopLoss,
+        takeProfit: active.takeProfit,
+        mentorKey: recentKey,
+        mentors: active.mentors || 0,
+        hostedByAdmin: Boolean(active.mentors),
+      });
+    }
     const mentorEmailSet = new Set(hostableMentorEmails);
     let cancelled = false;
 
@@ -954,16 +1000,16 @@ export default function AdminPortal() {
   }, [adminOpen, adminSession, adminPage, showToast, licenseKeys, mentors]);
 
   useEffect(() => {
-    if (!hostScheduled?.runAt) return undefined;
+    if (!hostScheduled?.runAt && !hostJobId) return undefined;
     const timer = setInterval(() => setHostScheduleTick(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [hostScheduled?.runAt]);
+  }, [hostScheduled?.runAt, hostJobId]);
 
   useEffect(() => {
     return () => {
-      if (hostScheduleTimerRef.current) {
-        clearTimeout(hostScheduleTimerRef.current);
-        hostScheduleTimerRef.current = null;
+      if (hostPollTimerRef.current) {
+        clearTimeout(hostPollTimerRef.current);
+        hostPollTimerRef.current = null;
       }
     };
   }, []);
@@ -1731,13 +1777,135 @@ export default function AdminPortal() {
     }
   }
 
-  function cancelHostSchedule() {
-    if (hostScheduleTimerRef.current) {
-      clearTimeout(hostScheduleTimerRef.current);
-      hostScheduleTimerRef.current = null;
+  function selfHostRecentKey() {
+    const email = normalizeAdminEmail(adminSession?.email);
+    if (isSuperAdminSession(adminSession)) return `admin:${email}:all`;
+    return email;
+  }
+
+  function stopHostJobPoll() {
+    if (hostPollTimerRef.current) {
+      clearTimeout(hostPollTimerRef.current);
+      hostPollTimerRef.current = null;
+    }
+  }
+
+  function finishHostJobResult(result, {
+    symbol,
+    side,
+    volume,
+    tradesCount,
+    stopLoss,
+    takeProfit,
+    mentorKey,
+    mentorsHit = 0,
+    mentors = 0,
+    hostedByAdmin = false,
+  }) {
+    setHostResult(result);
+    setHostScheduled(null);
+    setHostJobId("");
+    setHostBusy(false);
+    saveActiveSelfHostJob(mentorKey, null);
+    const placed = Number(result?.placed || 0);
+    const entry = {
+      id: `${Date.now()}-${symbol}-${side}`,
+      at: Date.now(),
+      symbol: result.symbol || symbol,
+      side: result.side || side,
+      volume: result.volume || volume,
+      tradesCount,
+      stopLoss,
+      takeProfit,
+      targeted: Number(result.targeted || result.connected || 0),
+      placed,
+      offline: Number(result.offline || result.failed || 0),
+      mentors,
+      mentorsHit,
+      hostedByAdmin: Boolean(hostedByAdmin),
+      mentorEmail: mentorKey,
+    };
+    setHostRecent(saveSelfHostRecent(mentorKey, entry));
+    if (result?.status === "cancelled") {
+      showToast("Trade cancelled");
+      return;
+    }
+    if (placed > 0) {
+      showToast(
+        mentorsHit > 0
+          ? `Opened ${placed} trade${placed === 1 ? "" : "s"} across ${mentorsHit} mentor${mentorsHit === 1 ? "" : "s"}`
+          : `Opened ${placed} trade${placed === 1 ? "" : "s"} on connected clients`
+      );
+    } else {
+      showToast(
+        result?.error ||
+          result?.results?.find((r) => !r.ok)?.error ||
+          "No trades were placed"
+      );
+    }
+  }
+
+  function pollHostJob(jobId, meta = {}) {
+    const id = String(jobId || "").trim();
+    if (!id) return;
+    stopHostJobPoll();
+    setHostJobId(id);
+    setHostBusy(true);
+
+    const tick = async () => {
+      try {
+        const job = await getSelfHostTradeJob(id);
+        if (!job) {
+          hostPollTimerRef.current = setTimeout(tick, 2000);
+          return;
+        }
+        const status = String(job.status || "");
+        const runAt = Number(job.runAt || 0);
+        if (status === "scheduled" || (runAt > Date.now() && status !== "done")) {
+          setHostScheduled({
+            runAt,
+            delaySec: Math.max(0, Math.ceil((runAt - Date.now()) / 1000)),
+            symbol: job.symbol || meta.symbol,
+            side: job.side || meta.side,
+            volume: job.volume || meta.volume,
+            tradesCount: job.tradesCount || meta.tradesCount,
+            jobId: id,
+            background: true,
+          });
+        } else if (status === "running" || status === "queued") {
+          setHostScheduled(null);
+          setHostResult({
+            ...job,
+            background: true,
+            accepted: true,
+          });
+        }
+        if (status === "done" || status === "failed" || status === "cancelled") {
+          finishHostJobResult(job, meta);
+          return;
+        }
+        hostPollTimerRef.current = setTimeout(tick, 2000);
+      } catch {
+        hostPollTimerRef.current = setTimeout(tick, 3000);
+      }
+    };
+    void tick();
+  }
+
+  async function cancelHostSchedule() {
+    const jobId = String(hostJobId || hostScheduled?.jobId || "").trim();
+    stopHostJobPoll();
+    if (jobId) {
+      try {
+        await cancelSelfHostTradeJob(jobId);
+      } catch {
+        // still clear local UI
+      }
     }
     setHostScheduled(null);
+    setHostJobId("");
     setHostBusy(false);
+    saveActiveSelfHostJob(selfHostRecentKey(), null);
     showToast("Scheduled trade cancelled");
   }
 
@@ -1750,10 +1918,12 @@ export default function AdminPortal() {
       stopLoss,
       takeProfit,
       clients,
+      delaySec = 0,
     } = payload;
     const isSuper = isSuperAdminSession(adminSession);
     const lot = Number.isFinite(volume) && volume > 0 ? volume : 0.01;
     const adminEmail = normalizeAdminEmail(adminSession?.email);
+    const delay = Math.max(0, Math.min(600, Math.floor(Number(delaySec) || 0)));
 
     if (!isSuper) {
       const targetMentorEmail = adminEmail;
@@ -1771,51 +1941,64 @@ export default function AdminPortal() {
           tradesCount,
           stopLoss,
           takeProfit,
+          delaySec: delay,
           comment: "mentor~APEXEA",
           clients,
         });
-        setHostResult(result);
-        setHostScheduled(null);
-        const entry = {
-          id: `${Date.now()}-${symbol}-${side}`,
-          at: Date.now(),
-          symbol: result.symbol || symbol,
-          side: result.side || side,
-          volume: result.volume || lot,
+        const jobId = String(result?.jobId || "").trim();
+        const meta = {
+          symbol,
+          side,
+          volume: lot,
           tradesCount,
           stopLoss,
           takeProfit,
-          targeted: Number(result.targeted || result.connected || 0),
-          placed: Number(result.placed || 0),
-          offline: Number(result.offline || result.failed || 0),
-          mentorEmail: targetMentorEmail,
+          mentorKey: targetMentorEmail,
         };
-        setHostRecent(saveSelfHostRecent(targetMentorEmail, entry));
-        const placed = Number(result?.placed || 0);
-        if (placed > 0) {
-          showToast(
-            `Opened ${placed} trade${placed === 1 ? "" : "s"} on connected clients`
-          );
-        } else {
-          const detail =
-            result?.error ||
-            result?.results?.find((r) => !r.ok)?.error ||
-            "No trades were placed";
-          showToast(detail);
+        if (jobId && (result.accepted || result.background)) {
+          saveActiveSelfHostJob(targetMentorEmail, {
+            jobId,
+            ...meta,
+            runAt: Number(result.runAt || Date.now()),
+          });
+          if (delay > 0 || Number(result.runAt || 0) > Date.now()) {
+            setHostScheduled({
+              runAt: Number(result.runAt || Date.now() + delay * 1000),
+              delaySec: delay,
+              symbol,
+              side,
+              volume: lot,
+              tradesCount,
+              jobId,
+              background: true,
+            });
+            showToast(
+              result.message ||
+                `Trade scheduled — keeps running if you leave`
+            );
+          } else {
+            setHostResult(result);
+            showToast(
+              result.message ||
+                "Executing in background — safe to open MetaTrader"
+            );
+          }
+          pollHostJob(jobId, meta);
+          return result;
         }
+        // Legacy sync response fallback
+        finishHostJobResult(result, meta);
         return result;
       } catch (error) {
         showToast(error.message || "Could not execute trade");
         setHostResult(error.data || { error: error.message });
         setHostScheduled(null);
-        throw error;
-      } finally {
         setHostBusy(false);
-        hostScheduleTimerRef.current = null;
+        throw error;
       }
     }
 
-    // Super admin: host for every mentor that has connected clients.
+    // Super admin: enqueue a background job per mentor (server keeps going).
     const byMentor = new Map();
     for (const row of clients || []) {
       const mentorEmail = normalizeAdminEmail(row.mentorEmail);
@@ -1841,6 +2024,7 @@ export default function AdminPortal() {
               tradesCount,
               stopLoss,
               takeProfit,
+              delaySec: delay,
               comment: "admin~APEXEA",
               clients: mentorClients,
               hostedByAdmin: adminEmail,
@@ -1863,87 +2047,175 @@ export default function AdminPortal() {
         })
       );
 
-      const mergedResults = [];
-      let placed = 0;
-      let targeted = 0;
-      let failed = 0;
-      let offline = 0;
-      let mentorsHit = 0;
-      for (const row of settled) {
-        const result = row.result || {};
-        targeted += Number(result.targeted || result.connected || 0);
-        placed += Number(result.placed || 0);
-        failed += Number(result.failed || 0);
-        offline += Number(result.offline || 0);
-        if (Number(result.placed || 0) > 0) mentorsHit += 1;
-        for (const item of Array.isArray(result.results) ? result.results : []) {
-          mergedResults.push({ ...item, mentorEmail: row.mentorEmail });
-        }
-        if (!row.ok && !(Array.isArray(result.results) && result.results.length)) {
-          mergedResults.push({
-            ok: false,
-            email: row.mentorEmail,
-            error: result.error || "Mentor trade failed",
-            mentorEmail: row.mentorEmail,
+      const jobIds = settled
+        .map((row) => String(row.result?.jobId || "").trim())
+        .filter(Boolean);
+      const targeted = settled.reduce(
+        (sum, row) => sum + Number(row.result?.targeted || row.result?.connected || 0),
+        0
+      );
+      const primaryJobId = jobIds[0] || "";
+      const runAt = Math.max(
+        ...settled.map((row) => Number(row.result?.runAt || 0)),
+        Date.now() + delay * 1000
+      );
+      const mentorKey = `admin:${adminEmail}:all`;
+      const accepted = settled.some((row) => row.result?.accepted || row.result?.jobId);
+
+      if (accepted && primaryJobId) {
+        saveActiveSelfHostJob(mentorKey, {
+          jobId: primaryJobId,
+          jobIds,
+          symbol,
+          side,
+          volume: lot,
+          tradesCount,
+          stopLoss,
+          takeProfit,
+          runAt,
+          mentors: byMentor.size,
+        });
+        if (delay > 0) {
+          setHostScheduled({
+            runAt,
+            delaySec: delay,
+            symbol,
+            side,
+            volume: lot,
+            tradesCount,
+            jobId: primaryJobId,
+            background: true,
           });
         }
+        setHostResult({
+          ok: true,
+          accepted: true,
+          background: true,
+          symbol,
+          side,
+          volume: lot,
+          tradesCount,
+          targeted,
+          connected: targeted,
+          placed: 0,
+          mentors: byMentor.size,
+          jobIds,
+          jobId: primaryJobId,
+        });
+        showToast(
+          delay > 0
+            ? `Scheduled for ${byMentor.size} mentor${byMentor.size === 1 ? "" : "s"} — safe to leave`
+            : `Executing for ${byMentor.size} mentor${byMentor.size === 1 ? "" : "s"} in background — safe to leave`
+        );
+
+        // Poll all mentor jobs until every one finishes.
+        stopHostJobPoll();
+        setHostJobId(primaryJobId);
+        const tick = async () => {
+          try {
+            const jobs = await Promise.all(
+              jobIds.map(async (id) => {
+                try {
+                  return await getSelfHostTradeJob(id);
+                } catch {
+                  return null;
+                }
+              })
+            );
+            const live = jobs.filter(Boolean);
+            if (!live.length) {
+              hostPollTimerRef.current = setTimeout(tick, 2500);
+              return;
+            }
+            const allDone = live.every((j) =>
+              ["done", "failed", "cancelled"].includes(String(j.status || ""))
+            );
+            let placed = 0;
+            let failed = 0;
+            let offline = 0;
+            let mentorsHit = 0;
+            const mergedResults = [];
+            for (const job of live) {
+              placed += Number(job.placed || 0);
+              failed += Number(job.failed || 0);
+              offline += Number(job.offline || 0);
+              if (Number(job.placed || 0) > 0) mentorsHit += 1;
+              for (const item of Array.isArray(job.results) ? job.results : []) {
+                mergedResults.push({ ...item, mentorEmail: job.mentorEmail });
+              }
+            }
+            setHostResult({
+              ok: placed > 0,
+              background: true,
+              symbol,
+              side,
+              volume: lot,
+              tradesCount,
+              targeted,
+              connected: targeted,
+              placed,
+              failed,
+              offline,
+              mentors: byMentor.size,
+              mentorsHit,
+              hostedByAdmin: adminEmail,
+              results: mergedResults,
+              jobIds,
+              status: allDone ? (placed > 0 ? "done" : "failed") : "running",
+            });
+            if (!allDone) {
+              hostPollTimerRef.current = setTimeout(tick, 2000);
+              return;
+            }
+            finishHostJobResult(
+              {
+                ok: placed > 0,
+                symbol,
+                side,
+                volume: lot,
+                tradesCount,
+                targeted,
+                connected: targeted,
+                placed,
+                failed,
+                offline,
+                mentors: byMentor.size,
+                mentorsHit,
+                hostedByAdmin: adminEmail,
+                results: mergedResults,
+                error: placed > 0 ? "" : "No trades were placed",
+                status: placed > 0 ? "done" : "failed",
+              },
+              {
+                symbol,
+                side,
+                volume: lot,
+                tradesCount,
+                stopLoss,
+                takeProfit,
+                mentorKey,
+                mentorsHit,
+                mentors: byMentor.size,
+                hostedByAdmin: true,
+              }
+            );
+          } catch {
+            hostPollTimerRef.current = setTimeout(tick, 3000);
+          }
+        };
+        void tick();
+        return { accepted: true, jobIds };
       }
 
-      const result = {
-        ok: placed > 0,
-        symbol,
-        side,
-        volume: lot,
-        tradesCount,
-        stopLoss,
-        takeProfit,
-        targeted,
-        connected: targeted,
-        placed,
-        failed,
-        offline,
-        mentors: byMentor.size,
-        mentorsHit,
-        hostedByAdmin: adminEmail,
-        results: mergedResults,
-        error: placed > 0 ? "" : settled.find((r) => r.result?.error)?.result?.error || "No trades were placed",
-      };
-      setHostResult(result);
-      setHostScheduled(null);
-      const entry = {
-        id: `${Date.now()}-${symbol}-${side}`,
-        at: Date.now(),
-        symbol,
-        side,
-        volume: lot,
-        tradesCount,
-        stopLoss,
-        takeProfit,
-        targeted,
-        placed,
-        offline,
-        mentors: byMentor.size,
-        hostedByAdmin: true,
-      };
-      setHostRecent(
-        saveSelfHostRecent(`admin:${adminEmail}:all`, entry)
-      );
-      if (placed > 0) {
-        showToast(
-          `Opened ${placed} trade${placed === 1 ? "" : "s"} across ${mentorsHit} mentor${mentorsHit === 1 ? "" : "s"}`
-        );
-      } else {
-        showToast(result.error || "No trades were placed");
-      }
-      return result;
+      showToast("No trades were accepted");
+      setHostBusy(false);
+      return null;
     } catch (error) {
       showToast(error.message || "Could not execute trade");
       setHostResult(error.data || { error: error.message });
       setHostScheduled(null);
-      throw error;
-    } finally {
       setHostBusy(false);
-      hostScheduleTimerRef.current = null;
+      throw error;
     }
   }
 
@@ -1970,7 +2242,11 @@ export default function AdminPortal() {
       updatedAt: row.updatedAt,
       mentorEmail: normalizeAdminEmail(row.mentorEmail),
     }));
-    const payload = {
+    const delaySec = Math.max(0, Number(hostDelaySec) || 0);
+    setHostConfirmOpen(false);
+    setHostDelaySec(0);
+    // Server owns the timer + fan-out — leaving the portal cannot stop it.
+    void runHostTrade({
       symbol,
       side: hostSide,
       volume,
@@ -1978,35 +2254,8 @@ export default function AdminPortal() {
       stopLoss,
       takeProfit,
       clients,
-    };
-    const delaySec = Math.max(0, Number(hostDelaySec) || 0);
-    setHostConfirmOpen(false);
-    setHostDelaySec(0);
-
-    if (delaySec <= 0) {
-      void runHostTrade(payload);
-      return;
-    }
-
-    const runAt = Date.now() + delaySec * 1000;
-    const label =
-      delaySec >= 60
-        ? `${Math.round(delaySec / 60)} minute${Math.round(delaySec / 60) === 1 ? "" : "s"}`
-        : `${delaySec}s`;
-    setHostScheduled({
-      runAt,
       delaySec,
-      symbol,
-      side: hostSide,
-      volume,
-      tradesCount,
     });
-    setHostBusy(true);
-    showToast(`Trade scheduled — executes in ${label}`);
-    if (hostScheduleTimerRef.current) clearTimeout(hostScheduleTimerRef.current);
-    hostScheduleTimerRef.current = setTimeout(() => {
-      void runHostTrade(payload);
-    }, delaySec * 1000);
   }
 
   function onPhotoChange(event) {
@@ -4667,11 +4916,22 @@ export default function AdminPortal() {
                 >
                   <AdminBusyLabel
                     busy={hostBusy}
-                    busyText={hostScheduled ? "SCHEDULED…" : "WORKING…"}
+                    busyText={
+                      hostScheduled
+                        ? "SCHEDULED…"
+                        : hostJobId
+                          ? "RUNNING IN BACKGROUND…"
+                          : "WORKING…"
+                    }
                   >
                     EXECUTE TRADE
                   </AdminBusyLabel>
                 </button>
+                {hostBusy || hostScheduled || hostJobId ? (
+                  <p className="self-host-status-value" style={{ marginTop: 10, opacity: 0.85 }}>
+                    Keeps executing if you leave or open MetaTrader.
+                  </p>
+                ) : null}
                 {hostScheduled ? (
                   <div className="self-host-scheduled">
                     <p>
@@ -4684,6 +4944,7 @@ export default function AdminPortal() {
                         )
                       )}
                       s
+                      {hostScheduled.background ? " · server-side" : ""}
                     </p>
                     <button
                       type="button"
@@ -4699,7 +4960,11 @@ export default function AdminPortal() {
 
             {hostResult ? (
               <div className="admin-card self-host-result-card">
-                <p className="self-host-result-eyebrow">TRADE EXECUTED</p>
+                <p className="self-host-result-eyebrow">
+                  {hostResult.status === "running" || hostResult.accepted
+                    ? "EXECUTING IN BACKGROUND"
+                    : "TRADE EXECUTED"}
+                </p>
                 <p className="self-host-result-headline">
                   {hostResult.side || hostSide} {hostResult.symbol || hostSymbol}
                 </p>

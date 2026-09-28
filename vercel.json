@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/self-host-jobs",
+      "schedule": "* * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/app-version.json",
