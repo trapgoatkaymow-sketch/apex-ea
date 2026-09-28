@@ -40,10 +40,11 @@
  * Gen 83 — Mentor portal Top Mentors (names only; emails super-admin only).
  * Gen 84 — Top Mentors for mentors: hide bypassed; show paid only.
  * Gen 85 — Mentor Top Mentors cards: paid count only (no keys/clients).
+ * Gen 86 — Top Mentors ranked by paid unlocks first.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 85;
+export const UI_SHELL_GENERATION = 86;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -53,7 +54,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 85;
+export const UI_SHELL_FLOOR = 86;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

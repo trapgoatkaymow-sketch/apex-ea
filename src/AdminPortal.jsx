@@ -3073,11 +3073,12 @@ export default function AdminPortal() {
           clientRows: clientEmails.map((c) => clientMeta.get(c)).filter(Boolean),
         };
       });
+    // Rank by paid unlocks first — mentor leaderboard shows paid only.
     rows.sort(
       (a, b) =>
+        b.sold - a.sold ||
         b.clients - a.clients ||
         b.used - a.used ||
-        b.sold - a.sold ||
         b.keys - a.keys ||
         String(a.mentor.username || a.email).localeCompare(
           String(b.mentor.username || b.email)
@@ -5919,7 +5920,7 @@ export default function AdminPortal() {
             <h2 className="admin-h1">Top Mentors</h2>
             <p className="admin-sub">
               {isSuperAdmin
-                ? "Approved mentors only — ranked by clients unlocked, keys used, and paid unlocks. Bypassed emails are excluded from counts."
+                ? "Approved mentors only — ranked by paid unlocks (then clients / keys). Bypassed emails are excluded from counts."
                 : "Approved mentors only — ranked by paid unlocks. Names only; emails and other counts are hidden."}
             </p>
             <div className="admin-card">
