@@ -5918,10 +5918,9 @@ export default function AdminPortal() {
           <section className="admin-page is-active">
             <h2 className="admin-h1">Top Mentors</h2>
             <p className="admin-sub">
-              Approved mentors only — ranked by clients unlocked, keys used, and paid unlocks.
               {isSuperAdmin
-                ? " Bypassed emails are excluded from counts."
-                : " Mentor names only — emails and bypassed counts are hidden."}
+                ? "Approved mentors only — ranked by clients unlocked, keys used, and paid unlocks. Bypassed emails are excluded from counts."
+                : "Approved mentors only — ranked by paid unlocks. Names only; emails and other counts are hidden."}
             </p>
             <div className="admin-card">
               <div className="admin-card-head">
@@ -5984,11 +5983,19 @@ export default function AdminPortal() {
                             <p className="admin-card-meta">{row.email}</p>
                           ) : null}
                           <p className="admin-card-meta">
-                            {row.clients} client{row.clients === 1 ? "" : "s"} ·{" "}
-                            {row.used}/{row.keys} keys used · {row.sold} paid
-                            {isSuperAdmin && row.bypassedClients
-                              ? ` · ${row.bypassedClients} bypassed excluded`
-                              : ""}
+                            {isSuperAdmin ? (
+                              <>
+                                {row.clients} client{row.clients === 1 ? "" : "s"} ·{" "}
+                                {row.used}/{row.keys} keys used · {row.sold} paid
+                                {row.bypassedClients
+                                  ? ` · ${row.bypassedClients} bypassed excluded`
+                                  : ""}
+                              </>
+                            ) : (
+                              <>
+                                {row.sold} paid
+                              </>
+                            )}
                           </p>
                           {isSuperAdmin ? (
                             <>
