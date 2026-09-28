@@ -43,6 +43,7 @@ import {
   isRememberedDeletedLicenseKey,
   filterOutDeletedLicenses,
   resetClientScansRemote,
+  syncClientEaSymbolsRemote,
 } from "./licensesApi.js";
 import { getOrCreateDeviceId } from "./deviceId.js";
 import {
@@ -2901,6 +2902,43 @@ export function AppProvider({ children }) {
     showToast(`${symbol} saved`);
   }, [ensureCatalog, showToast]);
 
+  /** Push this EA's "Your pairs" allow-list so Self Hosting can enforce it. */
+  const syncClientEaSymbols = useCallback(
+    async (nextEas = eas) => {
+      const email = normalizeEmail(coverEmail);
+      if (!email.includes("@")) return false;
+      const activeId = String(activeBot?.id || "").trim();
+      const ea =
+        (activeId &&
+          (nextEas || []).find((row) => String(row.id || "") === activeId)) ||
+        (nextEas || [])[0] ||
+        null;
+      const symbols = Array.isArray(ea?.symbols) ? ea.symbols : [];
+      const licenseKey = String(
+        bots.find((b) => b.active && String(b.id || "") === String(ea?.id || ""))
+          ?.licenseKey ||
+          licenseKeys.find(
+            (row) =>
+              row?.used &&
+              normalizeEmail(row.clientEmail) === email &&
+              (!ea?.id ||
+                String(row.botId || row.bot?.id || "") === String(ea.id || ""))
+          )?.key ||
+          ""
+      ).trim();
+      try {
+        await syncClientEaSymbolsRemote(email, symbols, {
+          botId: ea?.id || activeId || "",
+          licenseKey,
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [activeBot?.id, bots, coverEmail, eas, licenseKeys]
+  );
+
   /** Client Pairs sheet — add a symbol to the active bot / first EA (or a local holder). */
   const addAppSymbol = useCallback(
     (rawSymbol, options = {}) => {
@@ -2920,9 +2958,10 @@ export function AppProvider({ children }) {
         return false;
       }
       ensureCatalog(clean);
+      let nextEas = eas;
       setEas((prev) => {
         if (!prev.length) {
-          return [
+          nextEas = [
             {
               id: `client-pairs-${Date.now().toString(36)}`,
               name: "My pairs",
@@ -2933,38 +2972,53 @@ export function AppProvider({ children }) {
               ownerId: "",
             },
           ];
+          return nextEas;
         }
         const activeId = String(activeBot?.id || "").trim();
         const targetIdx = activeId
           ? prev.findIndex((ea) => String(ea.id || "") === activeId)
           : 0;
         const idx = targetIdx >= 0 ? targetIdx : 0;
-        return prev.map((ea, i) =>
+        nextEas = prev.map((ea, i) =>
           i === idx
             ? { ...ea, symbols: [...(ea.symbols || []), clean] }
             : ea
         );
+        return nextEas;
       });
+      void syncClientEaSymbols(nextEas);
       if (!quiet) showToast(`${clean} added`);
       return true;
     },
-    [activeBot?.id, eas, ensureCatalog, showToast]
+    [activeBot?.id, eas, ensureCatalog, showToast, syncClientEaSymbols]
   );
 
   const removeSymbolEverywhere = useCallback((symbol) => {
-    setEas((prev) =>
-      prev.map((ea) => ({
+    let nextEas = eas;
+    setEas((prev) => {
+      nextEas = prev.map((ea) => ({
         ...ea,
         symbols: ea.symbols.filter((s) => s !== symbol),
-      }))
-    );
+      }));
+      return nextEas;
+    });
     setSymbolMeta((prev) => {
       const next = { ...prev };
       delete next[symbol];
       return next;
     });
+    void syncClientEaSymbols(nextEas);
     showToast(`${symbol} removed`);
-  }, [showToast]);
+  }, [eas, showToast, syncClientEaSymbols]);
+
+  // Keep server allow-list warm when the active EA / pairs set changes.
+  useEffect(() => {
+    if (!hasActiveBot || !normalizeEmail(coverEmail).includes("@")) return undefined;
+    const timer = setTimeout(() => {
+      void syncClientEaSymbols(eas);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [activeBot?.id, coverEmail, eas, hasActiveBot, syncClientEaSymbols]);
 
   const toggleInterface = useCallback(() => {
     setActiveInterface((prev) => (prev === "zeta" ? "v2" : "zeta"));

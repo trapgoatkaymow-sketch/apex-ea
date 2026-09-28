@@ -16,6 +16,7 @@ import {
   mirrorLicensesToDurableStores,
   readJsonBody,
   sendJson,
+  setLicenseClientSymbols,
 } from "./_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
@@ -94,6 +95,23 @@ export default async function handler(req, res) {
       }
       if (action === "bulk" || Array.isArray(body?.clients)) {
         const result = await createLicensesBulk(body);
+        sendJson(res, 200, result);
+        return;
+      }
+      if (
+        action === "client-symbols" ||
+        action === "clientsymbols" ||
+        action === "allowed-symbols" ||
+        action === "ea-symbols"
+      ) {
+        const result = await setLicenseClientSymbols(
+          body.email || body.clientEmail,
+          body.symbols || body.allowedSymbols || [],
+          {
+            botId: body.botId || "",
+            licenseKey: body.key || body.licenseKey || "",
+          }
+        );
         sendJson(res, 200, result);
         return;
       }
@@ -190,6 +208,23 @@ export default async function handler(req, res) {
           deleted: true,
           durable: license?.durable !== false,
         });
+        return;
+      }
+      if (
+        action === "client-symbols" ||
+        action === "clientsymbols" ||
+        action === "allowed-symbols" ||
+        action === "ea-symbols"
+      ) {
+        const result = await setLicenseClientSymbols(
+          body.email || body.clientEmail,
+          body.symbols || body.allowedSymbols || [],
+          {
+            botId: body.botId || "",
+            licenseKey: body.key || body.licenseKey || "",
+          }
+        );
+        sendJson(res, 200, result);
         return;
       }
       const shouldDeactivate =

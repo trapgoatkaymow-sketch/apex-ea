@@ -8,7 +8,11 @@ import {
 } from "../mt5-accounts/_lib.js";
 import { enqueueTradeEvent } from "../trade-events/_lib.js";
 import { endOptions } from "../_cors.js";
-import { normalizeBrokerSymbol } from "../_symbolResolve.js";
+import {
+  normalizeBrokerSymbol,
+  sameInstrumentFamily,
+  symbolCore,
+} from "../_symbolResolve.js";
 import {
   closeAllPositions as mt5CloseAllPositions,
   connectAccount as mt5ConnectAccount,
@@ -294,6 +298,30 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
 }
 
+function normalizeAllowedSymbols(list) {
+  return [
+    ...new Set(
+      (Array.isArray(list) ? list : [])
+        .map((s) => normalizeBrokerSymbol(s) || String(s || "").trim().toUpperCase())
+        .filter(Boolean)
+    ),
+  ];
+}
+
+/** True when the mentor's self-host symbol is on this client's EA allow-list. */
+function isSymbolAllowedOnClientEa(requested, allowedList) {
+  const want = normalizeBrokerSymbol(requested);
+  if (!want) return false;
+  const allowed = normalizeAllowedSymbols(allowedList);
+  if (!allowed.length) return false;
+  const wantCore = symbolCore(want);
+  return allowed.some((entry) => {
+    if (!entry) return false;
+    if (sameInstrumentFamily(want, entry)) return true;
+    return symbolCore(entry) === wantCore;
+  });
+}
+
 async function resolveMentorTradeTargets({ mentor, body, licenses }) {
   const clientEmails = new Set(
     licenses
@@ -313,14 +341,32 @@ async function resolveMentorTradeTargets({ mentor, body, licenses }) {
     const clientEmail = normalizeEmail(row.clientEmail);
     if (!clientEmail) continue;
     const prev = botMetaByClient[clientEmail];
-    const stamp = Number(row.usedAt || row.updatedAt || row.createdAt || 0);
-    if (prev && prev.stamp >= stamp) continue;
+    const stamp = Number(
+      row.clientSymbolsUpdatedAt ||
+        row.usedAt ||
+        row.updatedAt ||
+        row.createdAt ||
+        0
+    );
+    // Prefer the newest used key; once we have clientSymbols, do not let an
+    // older empty template wipe a fresher allow-list.
+    const clientSymbols = normalizeAllowedSymbols(row.clientSymbols);
+    const botSymbols = normalizeAllowedSymbols(row.bot?.symbols);
+    const symbols = clientSymbols.length ? clientSymbols : botSymbols;
+    if (prev) {
+      const prevHasClient = Number(prev.clientSymbolsUpdatedAt || 0) > 0;
+      const nextHasClient = Number(row.clientSymbolsUpdatedAt || 0) > 0;
+      if (prevHasClient && !nextHasClient) continue;
+      if (prev.stamp >= stamp && !(nextHasClient && !prevHasClient)) continue;
+    }
     botMetaByClient[clientEmail] = {
       stamp,
+      clientSymbolsUpdatedAt: Number(row.clientSymbolsUpdatedAt || 0) || 0,
       botName:
         String(row.botName || row.bot?.name || row.clientName || "").trim() ||
         "Bot",
       mentorName: String(row.mentorName || mentor.username || "").trim(),
+      symbols,
     };
   }
 
@@ -432,6 +478,24 @@ async function placeOneSelfHostTrade({
   } = job;
   const meta = botMetaByClient?.[normalizeEmail(target.email)] || {};
   const tradeComment = buildSelfHostEaComment(meta.botName || "bot");
+  const allowedSymbols = normalizeAllowedSymbols(meta.symbols);
+  if (!isSymbolAllowedOnClientEa(symbol, allowedSymbols)) {
+    const want = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
+    return {
+      row: {
+        ok: false,
+        skipped: true,
+        email: target.email,
+        login: target.login,
+        accountId: target.accountId,
+        symbol: want,
+        error: allowedSymbols.length
+          ? `Symbol not allowed on EA (${want}). Allowed: ${allowedSymbols.join(", ")}`
+          : `Symbol not allowed on EA (${want}) — client has no pairs on this EA`,
+      },
+      placedHere: 0,
+    };
+  }
   try {
     const fill = await mt5PlaceMarketTrade({
       accountId: target.accountId,

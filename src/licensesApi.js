@@ -272,6 +272,14 @@ export function normalizeLicense(row) {
     robotCompany: String(row?.robotCompany || "").trim(),
     robotPlatform: String(row?.robotPlatform || "").trim().toUpperCase() || "",
     robotConnectedAt: row?.robotConnectedAt ? Number(row.robotConnectedAt) : null,
+    clientSymbols: Array.isArray(row?.clientSymbols)
+      ? row.clientSymbols
+          .map((s) => String(s || "").trim().toUpperCase())
+          .filter(Boolean)
+      : [],
+    clientSymbolsUpdatedAt: row?.clientSymbolsUpdatedAt
+      ? Number(row.clientSymbolsUpdatedAt)
+      : null,
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
@@ -571,6 +579,40 @@ export async function markLicenseUsedRemote(
     },
   });
   return normalizeLicense(data?.license);
+}
+
+/** Sync this phone's EA "Your pairs" allow-list for mentor Self Hosting. */
+export async function syncClientEaSymbolsRemote(
+  email,
+  symbols = [],
+  { botId = "", licenseKey = "" } = {}
+) {
+  const key = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!key.includes("@")) {
+    throw new Error("Sign in / activate with an email first");
+  }
+  const clean = [
+    ...new Set(
+      (Array.isArray(symbols) ? symbols : [])
+        .map((s) => String(s || "").trim().toUpperCase())
+        .filter(Boolean)
+    ),
+  ];
+  const data = await apiFetch("", {
+    method: "POST",
+    body: {
+      action: "client-symbols",
+      email: key,
+      symbols: clean,
+      ...(botId ? { botId: String(botId).trim() } : {}),
+      ...(licenseKey
+        ? { key: normalizeLicenseKey(licenseKey) }
+        : {}),
+    },
+  });
+  return data;
 }
 
 /** Stamp commissionEligible after pay-after-activate (idempotent). */

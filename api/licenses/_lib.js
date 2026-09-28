@@ -905,6 +905,15 @@ function normalizeLicense(row) {
     robotCompany: String(row?.robotCompany || "").trim(),
     robotPlatform: String(row?.robotPlatform || "").trim().toUpperCase() || "",
     robotConnectedAt: row?.robotConnectedAt ? Number(row.robotConnectedAt) : null,
+    // Client "Your pairs" allow-list for Self Hosting (preferred over mentor template).
+    clientSymbols: Array.isArray(row?.clientSymbols)
+      ? row.clientSymbols
+          .map((s) => String(s || "").trim().toUpperCase())
+          .filter(Boolean)
+      : [],
+    clientSymbolsUpdatedAt: row?.clientSymbolsUpdatedAt
+      ? Number(row.clientSymbolsUpdatedAt)
+      : null,
     // PayPal robot-purchase stamps (idempotent auto-fulfill).
     purchaseCaptureId: String(row?.purchaseCaptureId || "").trim() || null,
     purchaseOrderId: String(row?.purchaseOrderId || "").trim() || null,
@@ -2582,6 +2591,69 @@ export function sendJson(res, status, payload) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(payload));
+}
+
+/**
+ * Persist the client's allowed EA pairs onto their used license rows so mentor
+ * Self Hosting can refuse symbols that are not on that EA ("Your pairs").
+ */
+export async function setLicenseClientSymbols(
+  email,
+  symbols = [],
+  { botId = "", licenseKey = "" } = {}
+) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    const err = new Error("email is required");
+    err.status = 400;
+    throw err;
+  }
+  const cleanSymbols = [
+    ...new Set(
+      (Array.isArray(symbols) ? symbols : [])
+        .map((s) => String(s || "").trim().toUpperCase())
+        .filter(Boolean)
+    ),
+  ];
+  const wantBot = String(botId || "").trim();
+  const wantKey = normalizeLicenseKey(licenseKey);
+  const now = Date.now();
+  let updated = 0;
+  await mutateStore((licenses) => {
+    for (let i = 0; i < licenses.length; i += 1) {
+      const row = licenses[i];
+      if (normalizeEmail(row?.clientEmail) !== key) continue;
+      if (!row?.used) continue;
+      if (wantKey && normalizeLicenseKey(row.key) !== wantKey) continue;
+      const rowBot = String(row.botId || row.bot?.id || "").trim();
+      if (wantBot && rowBot && rowBot !== wantBot) continue;
+      const prevBot =
+        row.bot && typeof row.bot === "object"
+          ? row.bot
+          : {
+              id: rowBot,
+              name: row.botName || "Bot",
+              photo: "/logo.png",
+              strategy: "scalper",
+              symbols: [],
+            };
+      licenses[i] = {
+        ...row,
+        bot: {
+          ...prevBot,
+          id: prevBot.id || rowBot,
+          name: prevBot.name || row.botName || "Bot",
+          symbols: cleanSymbols,
+        },
+        clientSymbols: cleanSymbols,
+        clientSymbolsUpdatedAt: now,
+        updatedAt: now,
+      };
+      updated += 1;
+    }
+    return licenses;
+  }, `chore: client EA symbols ${key} (${cleanSymbols.length})`);
+  return { ok: true, email: key, updated, symbols: cleanSymbols };
 }
 
 /**
