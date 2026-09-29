@@ -1,6 +1,47 @@
 {
   "licenses": [
     {
+      "key": "APEX-35AX-9Z2W",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "khanyamokoena384@gmail.com",
+      "clientName": "Khanya Mokoena",
+      "mainText": "Khanya Mokoena",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790614712868,
+      "usedAt": 1790615931199,
+      "deviceId": "ba0d5a76-cd9e-4951-a19c-d8552dd8d4ef",
+      "boundAt": 1790615931199,
+      "updatedAt": 1790673464416,
+      "scanReset": null,
+      "robotAccountId": "e875b35f-fdc5-45b2-bc54-7479116cfb41",
+      "robotLogin": "1200516119",
+      "robotServer": "JustMarkets-Demo3",
+      "robotCompany": "Just Global Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790656993563,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": "8LM93493505142008",
+      "purchaseOrderId": "3WK7925296964670Y",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
       "key": "APEX-JYGA-7U7P",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -109,7 +150,7 @@
       "usedAt": 1790532825773,
       "deviceId": "839af806-7dad-403e-9874-827962351736",
       "boundAt": 1790532825773,
-      "updatedAt": 1790673440858,
+      "updatedAt": 1790673451391,
       "scanReset": null,
       "robotAccountId": "ebac2496-7e6f-4643-aef3-784e8ce38935",
       "robotLogin": "477097936",
@@ -123,7 +164,7 @@
         "XAUUSDM",
         "GBPUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790673440858,
+      "clientSymbolsUpdatedAt": 1790673451391,
       "purchaseCaptureId": "9VA3018025047563G",
       "purchaseOrderId": "2M8399228H668241F",
       "purchaseSource": "paypal-giveaway",
@@ -374,47 +415,6 @@
       }
     },
     {
-      "key": "APEX-35AX-9Z2W",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "khanyamokoena384@gmail.com",
-      "clientName": "Khanya Mokoena",
-      "mainText": "Khanya Mokoena",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790614712868,
-      "usedAt": 1790615931199,
-      "deviceId": "ba0d5a76-cd9e-4951-a19c-d8552dd8d4ef",
-      "boundAt": 1790615931199,
-      "updatedAt": 1790673419516,
-      "scanReset": null,
-      "robotAccountId": "e875b35f-fdc5-45b2-bc54-7479116cfb41",
-      "robotLogin": "1200516119",
-      "robotServer": "JustMarkets-Demo3",
-      "robotCompany": "Just Global Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790656993563,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": "8LM93493505142008",
-      "purchaseOrderId": "3WK7925296964670Y",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
       "key": "APEX-J9TX-YX27",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -456,8 +456,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "GOLD"
+          "XAUUSD"
         ]
       }
     },
@@ -607,7 +606,8 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "EURUSD"
         ]
       }
     },
@@ -23554,11 +23554,12 @@
         "photo": "/api/licenses/photo?botId=venom-scalper-v1-0-mujtiwsh&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
           "US30",
           "NASDAQ",
           "EURUSD",
-          "GBPUSD"
+          "GBPUSD",
+          "XAUUSD.M",
+          "XAUUSD"
         ]
       },
       "emailSentAt": null
