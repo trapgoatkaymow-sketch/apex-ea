@@ -72,14 +72,14 @@
       "usedAt": 1790616971367,
       "deviceId": "b5b3a162-746e-401e-b098-ee262f2c886c",
       "boundAt": 1790616971367,
-      "updatedAt": 1790704245218,
+      "updatedAt": 1790704247645,
       "scanReset": null,
-      "robotAccountId": "1d4a249f-5f19-4388-9725-84a77fef2283",
+      "robotAccountId": "0a674de9-9e2e-4fab-9531-03d650065d5f",
       "robotLogin": "99432865",
       "robotServer": "Exness-MT5Real9",
       "robotCompany": "Exness (KE) Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790585644566,
+      "robotConnectedAt": 1790704246604,
       "clientSymbols": [
         "XAUUSDM",
         "US30M",
@@ -125,14 +125,14 @@
       "usedAt": 1790563057816,
       "deviceId": "b5b3a162-746e-401e-b098-ee262f2c886c",
       "boundAt": 1790563057816,
-      "updatedAt": 1790704245218,
+      "updatedAt": 1790704247645,
       "scanReset": null,
-      "robotAccountId": "15fbd980-f62f-4358-9051-fbaf7a53cce2",
+      "robotAccountId": "0a674de9-9e2e-4fab-9531-03d650065d5f",
       "robotLogin": "99432865",
       "robotServer": "Exness-MT5Real9",
       "robotCompany": "Exness (KE) Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790655737621,
+      "robotConnectedAt": 1790704246604,
       "clientSymbols": [
         "GOLD",
         "XAUUSD",
@@ -2136,12 +2136,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "NAS100",
-          "XAUUSD",
-          "US30",
-          "XAUUSF"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2568,9 +2563,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "US30C",
           "XAUUSD",
-          "XAUUSDM",
           "NAS100"
         ]
       }
@@ -30773,7 +30766,17 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "EURUSD",
+          "NZDUSD",
+          "GBPUSDM",
+          "USDJPY",
+          "USDJPYM",
+          "XAUUSD",
+          ".USTECH.",
+          "USDCAD"
+        ]
       }
     },
     {
