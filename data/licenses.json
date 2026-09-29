@@ -358,8 +358,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30.",
-          "EURUSD"
+          ".US30."
         ]
       }
     },
@@ -453,11 +452,12 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NZDUSD",
-          "US30",
-          "USDJPY",
           "XAUUSD",
-          "GOLD"
+          "NAS100",
+          "GOLD",
+          "USDJPY",
+          "NZDUSD",
+          "US30"
         ]
       }
     },
@@ -505,13 +505,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "XAUUSD",
-          "GBPUSD",
-          "GBPUSDM",
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1159,9 +1153,7 @@
           "XAUDUSD247C",
           "XAUUSD247C",
           "XAUUSD",
-          "GBPAUD",
-          "USDZAR",
-          "AUDCAD"
+          "GBPAUD"
         ]
       }
     },
@@ -2347,11 +2339,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "XAUUSD",
-          "GBPUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3389,7 +3377,8 @@
         "strategy": "scalper",
         "symbols": [
           "US30M",
-          "XAUUSD"
+          "XAUUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -4283,7 +4272,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD"
+        ]
       }
     },
     {
@@ -11654,7 +11645,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       },
       "emailSentAt": null
     },
