@@ -19,7 +19,7 @@
       "usedAt": 1790668838967,
       "deviceId": "18c7fa7d-c86c-412a-899b-c8486b06920c",
       "boundAt": 1790668838967,
-      "updatedAt": 1790671259047,
+      "updatedAt": 1790671278849,
       "scanReset": null,
       "robotAccountId": "9903151e-4d73-4b3f-9813-1bf44e71856c",
       "robotLogin": "81751259",
@@ -33,7 +33,7 @@
         ".US30.",
         "EURUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790671259047,
+      "clientSymbolsUpdatedAt": 1790671278849,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -134,8 +134,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "USDJPY"
+          "USDJPY",
+          "EURUSD",
+          "XAUUSD"
         ]
       }
     },
@@ -203,7 +204,8 @@
           "US30M",
           "EURUSDM",
           "USDJPY",
-          "USTEC"
+          "USTEC",
+          "USTECM"
         ]
       }
     },
@@ -344,10 +346,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GBPUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -433,8 +432,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "GOLD"
+          "XAUUSD"
         ]
       }
     },
@@ -2612,7 +2610,8 @@
           "US30",
           ".US30.",
           "GOLD",
-          "GOLDMICRO"
+          "GOLDMICRO",
+          "XAUUSDM"
         ]
       }
     },
@@ -22466,7 +22465,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "US30",
+          "GBPUSD",
+          "USDJPY",
+          "T100.IFXM"
+        ]
       },
       "emailSentAt": null
     },
