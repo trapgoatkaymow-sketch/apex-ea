@@ -19,7 +19,7 @@
       "usedAt": 1790502659940,
       "deviceId": "366edb41-d5f9-40d5-95f2-f8b8b5371b2a",
       "boundAt": 1790502659940,
-      "updatedAt": 1790671781918,
+      "updatedAt": 1790671782685,
       "scanReset": null,
       "robotAccountId": "7bf47382-f575-458f-87f6-11c6ab172fd0",
       "robotLogin": "420579445",
@@ -73,7 +73,7 @@
       "usedAt": 1790501904802,
       "deviceId": "366edb41-d5f9-40d5-95f2-f8b8b5371b2a",
       "boundAt": 1790501904802,
-      "updatedAt": 1790671781918,
+      "updatedAt": 1790671782685,
       "scanReset": null,
       "robotAccountId": "7bf47382-f575-458f-87f6-11c6ab172fd0",
       "robotLogin": "420579445",
@@ -928,9 +928,7 @@
           "XAUDUSD247C",
           "XAUUSD247C",
           "XAUUSD",
-          "GBPAUD",
-          "USDZAR",
-          "AUDCAD"
+          "GBPAUD"
         ]
       }
     },
@@ -1728,9 +1726,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "EURUSD",
-          "XAUUSD"
+          "XAUUSD",
+          "USDJPY"
         ]
       }
     },
@@ -1893,9 +1890,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5604,7 +5599,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAGUSD",
+          "NAS100",
+          "US30",
+          "DJ30",
+          "XAUUSD",
+          "DE30"
+        ]
       }
     },
     {
@@ -11650,7 +11652,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       },
       "emailSentAt": null
     },
