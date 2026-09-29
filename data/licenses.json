@@ -134,8 +134,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
           ".US30."
         ]
       }
@@ -578,9 +576,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1160,7 +1156,8 @@
           "XAUUSD",
           "NAS100",
           "US30",
-          "XAUUSDM"
+          "XAUUSDM",
+          "US30M"
         ]
       }
     },
@@ -1798,7 +1795,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "GBPUSD"
+        ]
       }
     },
     {
@@ -2386,9 +2387,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3279,10 +3278,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30.",
-          "GOLD",
-          "GOLDMICRO",
-          "XAUUSDM"
+          ".US30."
         ]
       }
     },
@@ -3371,9 +3367,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "BTCUSD",
+          "USTECC",
+          "US30C",
           "XAUUSD",
-          "NAS100"
+          "XAUUSDM"
         ]
       }
     },
@@ -3753,7 +3750,7 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
-      "emailSentAt": 1790672690730,
+      "emailSentAt": 1790672793883,
       "bot": {
         "id": "matlala-charts-mujqzuzn",
         "name": "MATLALA CHARTS",
@@ -3861,9 +3858,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3907,7 +3902,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
       }
     },
     {
@@ -4791,9 +4789,7 @@
           "XAUDUSD247C",
           "XAUUSD247C",
           "XAUUSD",
-          "GBPAUD",
-          "USDZAR",
-          "AUDCAD"
+          "GBPAUD"
         ]
       }
     },
@@ -4841,7 +4837,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH."
+          "USTECH.",
+          ".USTECH."
         ]
       }
     },
@@ -5737,10 +5734,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GBPUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6951,7 +6945,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -13239,7 +13236,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       },
       "emailSentAt": null
     },
@@ -20473,7 +20472,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAU",
+          "BTCUSD",
+          "XAUUSD",
+          "NAS100",
+          "BTCUSDM",
+          "XAUUSD247M",
+          "US30"
+        ]
       },
       "emailSentAt": null
     },
