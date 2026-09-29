@@ -64,7 +64,7 @@
       "usedAt": 1790697016170,
       "deviceId": "51caf15c-2e80-4b73-a53b-1c8aea8c3616",
       "boundAt": 1790697016170,
-      "updatedAt": 1790707894374,
+      "updatedAt": 1790707899621,
       "scanReset": null,
       "robotAccountId": "5c8b1c81-f760-4666-ae79-a4ed792f59dc",
       "robotLogin": "55053945",
@@ -80,7 +80,7 @@
         "USDZAR",
         "AUDCAD"
       ],
-      "clientSymbolsUpdatedAt": 1790707894374,
+      "clientSymbolsUpdatedAt": 1790707899621,
       "purchaseCaptureId": "0TB17401CS3337806",
       "purchaseOrderId": "6X0868472E165713M",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -142,6 +142,51 @@
       }
     },
     {
+      "key": "APEX-V2B7-WUS4",
+      "botId": "alpha-prime-ai-v2-mucqrgdm",
+      "botName": "ALPHA PRIME AI V2",
+      "clientEmail": "moropaneleago012@gmail.com",
+      "clientName": "Ggg",
+      "mainText": "Ggg",
+      "mentorEmail": "moropaneleago012@gmail.com",
+      "mentorId": "f369d358-b175-40e1-a55f-5ad982c1bab4",
+      "mentorName": "Nas Mafia",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "invite_migrate_bypass",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790669609273,
+      "usedAt": 1790669725998,
+      "deviceId": "83797d36-cec9-46f3-b7dc-33f78f42b2a0",
+      "boundAt": 1790669725998,
+      "updatedAt": 1790707892846,
+      "scanReset": null,
+      "robotAccountId": "3fc793dd-9323-4812-a4ab-b4301cd429a7",
+      "robotLogin": "250007547",
+      "robotServer": "ATFXGM25-LIVE",
+      "robotCompany": "AT Global Markets INTL LTD",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790670590404,
+      "clientSymbols": [
+        "XAUUSD.S"
+      ],
+      "clientSymbolsUpdatedAt": 1790707892846,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790669678972,
+      "bot": {
+        "id": "alpha-prime-ai-v2-mucqrgdm",
+        "name": "ALPHA PRIME AI V2",
+        "photo": "/api/licenses/photo?botId=alpha-prime-ai-v2-mucqrgdm&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD.S"
+        ]
+      }
+    },
+    {
       "key": "APEX-3UVB-J8YY",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -181,7 +226,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -224,51 +271,8 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
-      "key": "APEX-V2B7-WUS4",
-      "botId": "alpha-prime-ai-v2-mucqrgdm",
-      "botName": "ALPHA PRIME AI V2",
-      "clientEmail": "moropaneleago012@gmail.com",
-      "clientName": "Ggg",
-      "mainText": "Ggg",
-      "mentorEmail": "moropaneleago012@gmail.com",
-      "mentorId": "f369d358-b175-40e1-a55f-5ad982c1bab4",
-      "mentorName": "Nas Mafia",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "invite_migrate_bypass",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790669609273,
-      "usedAt": 1790669725998,
-      "deviceId": "83797d36-cec9-46f3-b7dc-33f78f42b2a0",
-      "boundAt": 1790669725998,
-      "updatedAt": 1790707883834,
-      "scanReset": null,
-      "robotAccountId": "3fc793dd-9323-4812-a4ab-b4301cd429a7",
-      "robotLogin": "250007547",
-      "robotServer": "ATFXGM25-LIVE",
-      "robotCompany": "AT Global Markets INTL LTD",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790670590404,
-      "clientSymbols": [
-        "XAUUSD.S"
-      ],
-      "clientSymbolsUpdatedAt": 1790707862486,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790669678972,
-      "bot": {
-        "id": "alpha-prime-ai-v2-mucqrgdm",
-        "name": "ALPHA PRIME AI V2",
-        "photo": "/api/licenses/photo?botId=alpha-prime-ai-v2-mucqrgdm&v=full",
-        "strategy": "scalper",
         "symbols": [
-          "XAUUSD.S"
+          "XAUUSD"
         ]
       }
     },
@@ -673,11 +677,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -723,12 +723,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "NAS100",
-          "XAUUSD",
-          "US30",
-          "XAUUSF"
-        ]
+        "symbols": []
       }
     },
     {
@@ -879,9 +874,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1015,7 +1008,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USDJPY"
+          "EURUSD",
+          "USDJPY",
+          "GBPUSD"
         ]
       }
     },
@@ -3791,7 +3786,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSDM",
+          "EURUSDM",
+          "BTCUSDM"
         ]
       }
     },
