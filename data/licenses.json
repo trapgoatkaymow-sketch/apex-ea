@@ -32,7 +32,7 @@
         "US30",
         "GOLD"
       ],
-      "clientSymbolsUpdatedAt": 1790647800017,
+      "clientSymbolsUpdatedAt": 1790648499189,
       "purchaseCaptureId": "4FY26293VA1050048",
       "purchaseOrderId": "7UD04739345225916",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -63,7 +63,7 @@
       "usedAt": 1790598838136,
       "deviceId": "f48428fe-c552-4a87-8e26-f82b48c2b22d",
       "boundAt": 1790619487664,
-      "updatedAt": 1790648496451,
+      "updatedAt": 1790648498682,
       "scanReset": null,
       "robotAccountId": "c9dd82a7-46a3-42b0-8e24-f3e940cbc058",
       "robotLogin": "4106898",
@@ -77,7 +77,7 @@
         "EURUSD",
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790648496451,
+      "clientSymbolsUpdatedAt": 1790648498682,
       "purchaseCaptureId": "2G754614NH681333Y",
       "purchaseOrderId": "0AU79299ML078853H",
       "purchaseSource": "paypal-giveaway",
@@ -274,19 +274,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "XAUUSD",
-          "BTCAUDM",
-          "BTCUSD",
-          "BTCUSDM",
-          "USOILM",
-          "USOIL",
-          "NZDUSD",
-          "USDJPY",
-          "GBPJPY",
-          "ETHUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -330,7 +318,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD",
+          "DYNAMIC50"
+        ]
       }
     },
     {
@@ -6243,12 +6235,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "BTCUSD",
-          "BTCUSDM",
-          "XAUUSD",
-          "XAUUSDM"
-        ]
+        "symbols": []
       }
     },
     {
