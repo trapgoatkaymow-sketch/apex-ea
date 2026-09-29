@@ -64,7 +64,7 @@
       "usedAt": 1790641294757,
       "deviceId": "f27c782c-904e-49c9-af06-d937bab8cd25",
       "boundAt": 1790641294757,
-      "updatedAt": 1790707576483,
+      "updatedAt": 1790707585724,
       "scanReset": null,
       "robotAccountId": "fff0cd4d-2a87-478b-8e26-af21e608201f",
       "robotLogin": "514752226",
@@ -876,10 +876,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1605,8 +1602,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD247",
-          "NAS100",
-          "USA100"
+          "NAS100"
         ]
       }
     },
@@ -2866,7 +2862,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100",
+          "US30",
+          "CRASH150INDEX",
+          "WALLSTREET30"
+        ]
       }
     },
     {
@@ -4136,7 +4138,8 @@
         "symbols": [
           "XAUUSD",
           ".US30.",
-          "GOLD"
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
@@ -4486,9 +4489,7 @@
           "USCASH",
           "NASDAQ",
           "USTECH",
-          "XAAUSD",
-          "BOOM",
-          "STEP"
+          "XAAUSD"
         ]
       }
     },
