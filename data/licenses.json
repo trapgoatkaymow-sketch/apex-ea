@@ -1,6 +1,51 @@
 {
   "licenses": [
     {
+      "key": "APEX-K3HJ-YKDK",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "jfp.uwc@gmail.com",
+      "clientName": "Jodeeh Pannewitz",
+      "mainText": "Jodeeh Pannewitz",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790582645710,
+      "usedAt": 1790582768682,
+      "deviceId": "97d5fdb1-9de4-431c-9f04-1535a3fece0d",
+      "boundAt": 1790582768682,
+      "updatedAt": 1790692628775,
+      "scanReset": null,
+      "robotAccountId": "e516b3a0-d36e-46df-914f-8d598b978af4",
+      "robotLogin": "719667",
+      "robotServer": "RCGMarkets-Real",
+      "robotCompany": "RCG Markets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790692582772,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790692604939,
+      "purchaseCaptureId": "39J357820G440400K",
+      "purchaseOrderId": "2U5842763N4108210",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-FTHD-GYK2",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -129,51 +174,6 @@
           "NAS100",
           "NASDAQ",
           "DJ39"
-        ]
-      }
-    },
-    {
-      "key": "APEX-K3HJ-YKDK",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "jfp.uwc@gmail.com",
-      "clientName": "Jodeeh Pannewitz",
-      "mainText": "Jodeeh Pannewitz",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790582645710,
-      "usedAt": 1790582768682,
-      "deviceId": "97d5fdb1-9de4-431c-9f04-1535a3fece0d",
-      "boundAt": 1790582768682,
-      "updatedAt": 1790692604939,
-      "scanReset": null,
-      "robotAccountId": "10ec90a4-91fb-4098-9a21-ace0227ea890",
-      "robotLogin": "430673558",
-      "robotServer": "XMGlobal-MT5 18",
-      "robotCompany": "XM Global Limited",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790692466208,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790692604939,
-      "purchaseCaptureId": "39J357820G440400K",
-      "purchaseOrderId": "2U5842763N4108210",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
         ]
       }
     },
@@ -2083,7 +2083,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "NAS100",
+          "XAUUSD.M",
+          "USDJPY",
+          "USDJPY.M"
+        ]
       }
     },
     {
