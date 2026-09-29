@@ -115,14 +115,14 @@
       "usedAt": 1790444151767,
       "deviceId": "565d524a-edc2-4753-8613-90ea3c171313",
       "boundAt": 1790636218554,
-      "updatedAt": 1790661364095,
+      "updatedAt": 1790661364818,
       "scanReset": null,
-      "robotAccountId": "24efde04-a154-42f8-aea4-a228e3b9d658",
-      "robotLogin": "55035897",
-      "robotServer": "HFMarketsKE-Live2",
-      "robotCompany": "HFM Investments Ltd",
+      "robotAccountId": "4cc76dde-ebaf-4fd0-96ca-2ca29d33138a",
+      "robotLogin": "476859831",
+      "robotServer": "Exness-MT5Trial9",
+      "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790661314616,
+      "robotConnectedAt": 1790659733046,
       "clientSymbols": [
         "XAUUSD",
         "NASDAQ",
@@ -131,7 +131,7 @@
         "US30",
         "USA30"
       ],
-      "clientSymbolsUpdatedAt": 1790661334580,
+      "clientSymbolsUpdatedAt": 1790661364818,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -142,7 +142,12 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "NASDAQ",
+          "USA100.",
+          "USA100",
+          "US30",
+          "USA30"
         ]
       }
     },
@@ -265,6 +270,7 @@
       "purchaseCaptureId": "26X18521CF005674F",
       "purchaseOrderId": "88C92979ND948382P",
       "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": null,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -274,8 +280,7 @@
           "XAUUSD",
           "BTCUSD"
         ]
-      },
-      "emailSentAt": null
+      }
     },
     {
       "key": "APEX-J9TX-YX27",
@@ -555,7 +560,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "BTCUSD",
+          "BTCUSDM",
+          "XAUUS",
+          "XAUUSD",
+          "XAUUSDM",
+          "GBPUSD"
+        ]
       }
     },
     {
