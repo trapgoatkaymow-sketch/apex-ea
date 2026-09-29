@@ -1308,39 +1308,32 @@ export async function loginMentor({ email, password }) {
       });
     }
 
-    // Known durable seed password — repair drifted hashes (preview vs live).
+    // Known durable seed password — repair ONLY when the stored hash is already
+    // the seed (or credentials are unreadable). Never overwrite a custom
+    // password just because someone typed TempPass12.
     const seedPass = DURABLE_MENTOR_PASSWORDS[key];
     if (seedPass && pass === seedPass) {
-      const salt = createSalt();
-      const passwordHash = hashPassword(pass, salt);
-      const passwordUpdatedAt = Date.now();
-      try {
-        await mutateStore((listIn) => {
-          const list = ensureSuperAdminRecord(listIn);
-          const idx = findMentorIndex(list, key);
-          if (idx < 0) return list;
-          list[idx] = {
-            ...list[idx],
-            salt,
-            passwordHash,
-            passwordUpdatedAt,
-            status: "approved",
-          };
-          return list;
-        }, `chore: repair durable seed password for ${key}`);
-      } catch {
-        // Allow seed login even if durable write is rate-limited.
+      const salt = String(mentor.salt || "");
+      const storedHash = String(mentor.passwordHash || "");
+      const alreadySeed =
+        Boolean(salt) &&
+        Boolean(storedHash) &&
+        hashPassword(seedPass, salt) === storedHash;
+      if (alreadySeed) {
+        return finishApprovedLogin({ ...mentor, status: "approved" });
       }
-      return finishApprovedLogin({
-        ...mentor,
-        salt,
-        passwordHash,
-        passwordUpdatedAt,
-        status: "approved",
-      });
     }
 
     const err = new Error("Invalid email or password");
+    err.status = 401;
+    throw err;
+  }
+
+  // Mentor row exists but credentials were wiped — point them at reset.
+  if (mentor && (!mentor.passwordHash || !mentor.salt)) {
+    const err = new Error(
+      "Password not set on this account — tap Forgot password to create one"
+    );
     err.status = 401;
     throw err;
   }
@@ -1969,11 +1962,10 @@ export async function requestMentorPasswordReset(email) {
   const mentor = findMentor(ensureSuperAdminRecord(store.mentors || []), key);
   const role = String(mentor?.role || "").toLowerCase();
   const status = String(mentor?.status || "").toLowerCase();
+  // Allow reset even when passwordHash was wiped by a store merge — that is
+  // exactly when mentors need email recovery most.
   const eligible =
-    mentor &&
-    (role === "superadmin" || status === "approved") &&
-    mentor.passwordHash &&
-    mentor.salt;
+    mentor && (role === "superadmin" || status === "approved");
 
   if (!eligible) {
     return passwordResetGenericResult();
@@ -2114,10 +2106,13 @@ export async function completeMentorPasswordReset({ token, password } = {}) {
       throw err;
     }
     const salt = createSalt();
+    const passwordUpdatedAt = Date.now();
     list[idx] = {
       ...list[idx],
       salt,
       passwordHash: hashPassword(pass, salt),
+      // Critical: stamp so Firebase/Blob win over a stale GitHub TempPass12 hash.
+      passwordUpdatedAt,
       passwordResetTokenHash: "",
       passwordResetExpiresAt: null,
       passwordResetRequestedAt:

@@ -80,7 +80,18 @@ export default function AdminAuth({ onAuthenticated, showToast }) {
       onAuthenticated?.(mentor);
       showToast?.(`Welcome, ${mentor.username}`);
     } catch (error) {
-      showToast?.(error.message || "Sign in failed");
+      const msg = String(error?.message || "Sign in failed");
+      if (/invalid email or password/i.test(msg)) {
+        setForgotEmail(String(email || "").trim());
+        showToast?.(
+          "Invalid email or password — tap Forgot password if you changed it recently"
+        );
+      } else {
+        showToast?.(msg);
+        if (/password not set/i.test(msg)) {
+          setForgotEmail(String(email || "").trim());
+        }
+      }
     } finally {
       setBusy(false);
     }

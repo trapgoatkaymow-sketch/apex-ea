@@ -9,6 +9,32 @@ export function isCanonicalProductionHost(hostname = "") {
   return host === "www.apex-ea.com";
 }
 
+/** apex-ea.com without www — Vercel 308 can strip mentor login POST bodies. */
+export function isBareApexHost(hostname = "") {
+  const host = String(hostname || "")
+    .trim()
+    .toLowerCase();
+  return host === "apex-ea.com";
+}
+
+/**
+ * Force the SPA onto www so mentor login POSTs never hit the bare-domain 308.
+ * Returns true when a redirect was started.
+ */
+export function redirectBareApexHostToWww() {
+  if (typeof window === "undefined") return false;
+  try {
+    if (!isBareApexHost(window.location?.hostname)) return false;
+    const next = new URL(window.location.href);
+    next.hostname = "www.apex-ea.com";
+    next.protocol = "https:";
+    window.location.replace(next.toString());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Native / local / preview / apex-ea.com (no www) / mirrors are not safe for
  * same-origin API POSTs. apex-ea.com 308→www drops mentor login bodies and

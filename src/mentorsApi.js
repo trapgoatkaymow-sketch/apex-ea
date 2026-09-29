@@ -1,4 +1,4 @@
-import { apiUrl } from "./apiOrigin.js";
+import { apiUrl, PROD_API_ORIGIN, redirectBareApexHostToWww } from "./apiOrigin.js";
 
 const API_PATH = "/api/mentors";
 const LOCAL_KEY = "apexea-mentors-v1";
@@ -20,23 +20,52 @@ export function isMentorOperatorEmail(email) {
   );
 }
 
-async function apiFetch(path = "", { method = "GET", body } = {}) {
-  const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
-    method,
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
-  const text = await response.text();
-  let data = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
+function looksLikeRedirectPayload(data, status) {
+  if (status === 301 || status === 302 || status === 307 || status === 308) {
+    return true;
   }
+  return Boolean(data && typeof data === "object" && data.redirect && data.status);
+}
+
+async function apiFetch(path = "", { method = "GET", body } = {}) {
+  // Never authenticate on apex-ea.com (no www) — 308 drops POST bodies.
+  redirectBareApexHostToWww();
+
+  const payload = body ? JSON.stringify(body) : undefined;
+  const headers = {
+    Accept: "application/json",
+    ...(body ? { "Content-Type": "application/json" } : {}),
+  };
+
+  async function once(url) {
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: payload,
+      cache: "no-store",
+      redirect: "follow",
+    });
+    const text = await response.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+    return { response, data };
+  }
+
+  const primary = `${apiUrl(API_PATH)}${path}`;
+  let { response, data } = await once(primary);
+
+  // Bare-domain or CDN quirks: retry once straight at www with the same body.
+  if (looksLikeRedirectPayload(data, response.status) || response.status === 308) {
+    const fallback = `${PROD_API_ORIGIN}${API_PATH}${path}`;
+    if (fallback !== primary) {
+      ({ response, data } = await once(fallback));
+    }
+  }
+
   if (!response.ok) {
     const message =
       (data && (data.error || data.message)) ||

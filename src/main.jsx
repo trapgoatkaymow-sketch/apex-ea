@@ -1,10 +1,14 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
+import { redirectBareApexHostToWww } from "./apiOrigin.js";
 import { runBootGuard, startShellWatch } from "./bootGuard.js";
 import { warmBotPhotoCache } from "./botPhotoCache.js";
 import { AppProvider, isNativeApp } from "./store.jsx";
 import "./styles.css";
+
+// Bare apex-ea.com 308-redirects can drop mentor login POST bodies.
+const redirectingToWww = redirectBareApexHostToWww();
 
 // Signal to the inline HTML watchdog that the app module executed.
 try {
@@ -67,6 +71,8 @@ function installSwipeLock() {
 }
 
 async function boot() {
+  if (redirectingToWww) return;
+
   // Paint the React shell immediately. Upgrade checks run after first paint so
   // /admin and the client app are not stuck on a black screen waiting on network.
   warmBotPhotoCache().catch(() => {});

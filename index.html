@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="apexea-shell-generation" content="90" />
+    <meta name="apexea-shell-generation" content="92" />
     <meta name="apexea-ui-locked" content="1" />
     <title>apex-ea</title>
     <link rel="icon" href="/favicon.png" type="image/png" />
@@ -59,12 +59,24 @@
       /* Kill stale service workers BEFORE the app module loads.
          A stuck SW can intercept /assets/*.js and leave the portal on Loading forever. */
       (function () {
-        var GEN = 90;
-        var FLOOR = 90;
+        var GEN = 92;
+        var FLOOR = 92;
         var KEY = "apexea-shell-gen-v1";
         var LOCK_KEY = "apexea-ui-lock-floor-v1";
         var RECOVERY = "apexea-shell-recovery-v1";
         var BOOT_RETRY = "apexea-boot-retry-v1";
+
+        /* Bare apex-ea.com 308→www can drop mentor login POST bodies and show
+           “Invalid email or password”. Force www before any app code runs. */
+        try {
+          if (String(location.hostname || "").toLowerCase() === "apex-ea.com") {
+            var www = new URL(location.href);
+            www.hostname = "www.apex-ea.com";
+            www.protocol = "https:";
+            location.replace(www.toString());
+            return;
+          }
+        } catch (e) {}
 
         function nukeCaches() {
           try {
