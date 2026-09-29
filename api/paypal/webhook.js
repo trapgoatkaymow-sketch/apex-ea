@@ -10,11 +10,9 @@ import {
   verifyPayPalWebhookSignature,
 } from "./_lib.js";
 import {
-  assertGiveawayActive,
   extractCaptureAmount,
   extractCaptureId,
   fulfillRobotPurchase,
-  resolveGiveawayWindow,
   isGiveawayPurchaseCapture,
   isRobotPurchaseCapture,
 } from "./_robotPurchase.js";
@@ -25,7 +23,7 @@ import {
   upsertSignup,
 } from "../signups/_lib.js";
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 async function readRawBody(req) {
   if (typeof req.body === "string") return req.body;
@@ -173,20 +171,8 @@ export default async function handler(req, res) {
       !giveaway && isRobotPurchaseCapture(capture, { purposeHint: purpose });
 
     if (giveaway || robot) {
-      if (giveaway) {
-        try {
-          await assertGiveawayActive();
-        } catch (error) {
-          sendJson(res, 200, {
-            ok: false,
-            error: "giveaway-expired",
-            message: error.message,
-            giveaway: await resolveGiveawayWindow(),
-            eventType,
-          });
-          return;
-        }
-      }
+      // Buyer already paid — never block fulfill on the display countdown.
+      // (assertGiveawayActive used to 410 paid captures when the timer ended.)
       const email = await resolveEmailFromCapture(capture, resource);
       const clientName = extractCaptureClientName(capture);
       if (!email || !email.includes("@")) {
@@ -200,19 +186,42 @@ export default async function handler(req, res) {
         });
         return;
       }
-      const fulfilled = await fulfillRobotPurchase({
-        email,
-        clientName,
-        captureId: extractCaptureId(capture) || String(resource?.id || ""),
-        // Never fall back to resource.id — on CAPTURE events that is the
-        // capture id, which would break orderId idempotency with capture-order.
-        orderId: String(
-          resource?.supplementary_data?.related_ids?.order_id ||
-            capture?.supplementary_data?.related_ids?.order_id ||
-            ""
-        ),
-        source: giveaway ? "paypal-giveaway-webhook" : "paypal-webhook",
-      });
+      let fulfilled = null;
+      let fulfillError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          fulfilled = await fulfillRobotPurchase({
+            email,
+            clientName,
+            captureId: extractCaptureId(capture) || String(resource?.id || ""),
+            // Never fall back to resource.id — on CAPTURE events that is the
+            // capture id, which would break orderId idempotency with capture-order.
+            orderId: String(
+              resource?.supplementary_data?.related_ids?.order_id ||
+                capture?.supplementary_data?.related_ids?.order_id ||
+                ""
+            ),
+            source: giveaway ? "paypal-giveaway-webhook" : "paypal-webhook",
+          });
+          fulfillError = null;
+          break;
+        } catch (error) {
+          fulfillError = error;
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+            continue;
+          }
+        }
+      }
+      if (!fulfilled) {
+        // Tell PayPal to retry the webhook — money was taken, key must mint.
+        sendJson(res, 500, {
+          ok: false,
+          error: fulfillError?.message || "fulfill-failed",
+          eventType,
+        });
+        return;
+      }
       sendJson(res, 200, {
         ok: true,
         purpose: giveaway ? "giveaway" : "robot",
@@ -220,6 +229,11 @@ export default async function handler(req, res) {
         licenseKey: fulfilled.key,
         accessPaid: true,
         reused: Boolean(fulfilled.reused),
+        emailSent: Boolean(
+          fulfilled.emailSent ||
+            fulfilled.emailResult?.ok ||
+            Number(fulfilled.license?.emailSentAt)
+        ),
         eventType,
       });
       return;

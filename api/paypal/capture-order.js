@@ -23,7 +23,7 @@ import {
   upsertSignup,
 } from "../signups/_lib.js";
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -66,8 +66,7 @@ export default async function handler(req, res) {
         isRobotPurchaseCapture(capture, { purposeHint }));
 
     if (isGiveaway || isRobot) {
-      // Giveaway must still be inside the 24h window at capture time.
-      if (isGiveaway) await assertGiveawayActive();
+      // Buyer already paid — never abort fulfill on the display countdown.
       const email = extractCaptureEmail(capture) || fallbackEmail;
       const clientName = extractCaptureClientName(capture) || fallbackName;
       const captureId = extractCaptureId(capture);
@@ -100,6 +99,32 @@ export default async function handler(req, res) {
         }
       }
       if (!fulfilled) throw fulfillError || new Error("Could not fulfill purchase");
+      // If the key was minted but Brevo failed, one more dedicated email pass
+      // before we tell the buyer they're done (they already paid).
+      let emailSent = Boolean(
+        fulfilled.emailSent ||
+          fulfilled.emailResult?.ok ||
+          Number(fulfilled.license?.emailSentAt)
+      );
+      if (!emailSent && fulfilled.key) {
+        try {
+          const again = await fulfillRobotPurchase({
+            email: fulfilled.email,
+            clientName,
+            captureId,
+            orderId,
+            source: isGiveaway ? "paypal-giveaway" : "paypal-order",
+          });
+          fulfilled = again || fulfilled;
+          emailSent = Boolean(
+            again?.emailSent ||
+              again?.emailResult?.ok ||
+              Number(again?.license?.emailSentAt)
+          );
+        } catch {
+          // keep original fulfill — key still returned below
+        }
+      }
       sendJson(res, 200, {
         ok: true,
         orderId,
@@ -115,9 +140,7 @@ export default async function handler(req, res) {
             }
           : null,
         reused: Boolean(fulfilled.reused),
-        emailSent: Boolean(
-          fulfilled.emailResult?.ok || Number(fulfilled.license?.emailSentAt)
-        ),
+        emailSent,
         captureStatus: capture.status,
       });
       return;

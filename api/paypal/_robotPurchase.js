@@ -571,9 +571,9 @@ function findPurchaseLicense(licenses, { buyer, captureKey, orderKey } = {}) {
   return null;
 }
 
-async function ensurePurchaseEmail(license) {
+async function ensurePurchaseEmail(license, { force = false } = {}) {
   if (!license?.key) return { ok: false, error: "License key missing" };
-  if (Number(license.emailSentAt)) {
+  if (!force && Number(license.emailSentAt)) {
     return {
       ok: true,
       skipped: true,
@@ -581,11 +581,20 @@ async function ensurePurchaseEmail(license) {
       emailSentAt: Number(license.emailSentAt),
     };
   }
-  try {
-    return await sendLicenseKeyEmailOnce(license, { force: false });
-  } catch (error) {
-    return { ok: false, error: error?.message || "Email send failed" };
+  let last = null;
+  // Paid buyers must get the key — retry Brevo / store glitches hard.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      last = await sendLicenseKeyEmailOnce(license, {
+        force: force || attempt > 0,
+      });
+      if (last?.ok || Number(last?.emailSentAt)) return last;
+    } catch (error) {
+      last = { ok: false, error: error?.message || "Email send failed" };
+    }
+    await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
   }
+  return last || { ok: false, error: "Email send failed" };
 }
 
 /**
@@ -626,16 +635,23 @@ export async function fulfillRobotPurchase({
       orderKey,
     });
     if (existing?.key) {
-      const emailResult = await ensurePurchaseEmail(existing);
+      let emailResult = await ensurePurchaseEmail(existing);
+      if (!(emailResult?.ok || Number(emailResult?.emailSentAt) || Number(existing.emailSentAt))) {
+        emailResult = await ensurePurchaseEmail(existing, { force: true });
+      }
+      const license = Number(emailResult?.emailSentAt)
+        ? { ...existing, emailSentAt: emailResult.emailSentAt }
+        : existing;
       return {
         ok: true,
         reused: true,
         email: buyer,
-        license: Number(emailResult?.emailSentAt)
-          ? { ...existing, emailSentAt: emailResult.emailSentAt }
-          : existing,
+        license,
         key: existing.key,
         emailResult,
+        emailSent: Boolean(
+          emailResult?.ok || Number(license?.emailSentAt)
+        ),
       };
     }
   } catch {
@@ -747,11 +763,15 @@ export async function fulfillRobotPurchase({
   }
 
   let emailResult = license?._email || null;
-  if (!Number(license?.emailSentAt)) {
+  if (!Number(license?.emailSentAt) && !(emailResult?.ok || Number(emailResult?.emailSentAt))) {
     emailResult = await ensurePurchaseEmail(license);
-    if (emailResult?.emailSentAt) {
-      license = { ...license, emailSentAt: emailResult.emailSentAt };
-    }
+  }
+  // createLicense may have returned a soft email failure — force more passes.
+  if (!Number(license?.emailSentAt) && !(emailResult?.ok || Number(emailResult?.emailSentAt))) {
+    emailResult = await ensurePurchaseEmail(license, { force: true });
+  }
+  if (emailResult?.emailSentAt) {
+    license = { ...license, emailSentAt: emailResult.emailSentAt };
   }
 
   return {
@@ -761,5 +781,6 @@ export async function fulfillRobotPurchase({
     license,
     key: license?.key || key,
     emailResult,
+    emailSent: Boolean(emailResult?.ok || Number(license?.emailSentAt)),
   };
 }

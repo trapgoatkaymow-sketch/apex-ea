@@ -217,12 +217,16 @@ async function clearLicenseEmailSent(rawKey) {
 
 /**
  * Claim the right to send this key's email (optimistic emailSentAt stamp).
- * Returns true only for the caller that won the claim — stops duplicate Brevo sends.
+ * Returns:
+ *   { ok: true, claimed: true }  — this caller should send
+ *   { ok: true, claimed: false } — another sender already stamped (skip)
+ *   { ok: false, error }         — store write failed (must NOT skip send)
  */
 async function claimLicenseEmailSend(rawKey) {
   const key = normalizeLicenseKey(rawKey);
-  if (!key) return false;
+  if (!key) return { ok: false, claimed: false, error: "License key missing" };
   let claimed = false;
+  let already = false;
   try {
     await mutateStore((licenses) => {
       const idx = licenses.findIndex(
@@ -231,6 +235,7 @@ async function claimLicenseEmailSend(rawKey) {
       if (idx < 0) return licenses;
       const prev = licenses[idx];
       if (prev.emailSentAt) {
+        already = true;
         claimed = false;
         return licenses;
       }
@@ -242,10 +247,15 @@ async function claimLicenseEmailSend(rawKey) {
       };
       return licenses;
     }, `license email claim: ${key}`);
-  } catch {
-    claimed = false;
+  } catch (error) {
+    return {
+      ok: false,
+      claimed: false,
+      error: error?.message || "License email claim failed",
+    };
   }
-  return claimed;
+  if (already) return { ok: true, claimed: false, reason: "already-sent" };
+  return { ok: true, claimed: Boolean(claimed) };
 }
 
 /** Send license key email at most once (persists emailSentAt on success). */
@@ -263,26 +273,71 @@ export async function sendLicenseKeyEmailOnce(license, { force = false } = {}) {
     };
   }
   if (!force && licenseEmailInflight.has(key)) {
-    return { ok: true, skipped: true, reason: "already-sent" };
+    // Another in-process send is running — wait briefly then re-check stamp.
+    for (let i = 0; i < 8; i += 1) {
+      await new Promise((r) => setTimeout(r, 250));
+      if (!licenseEmailInflight.has(key)) break;
+    }
+    try {
+      const fresh = await findLicense(key);
+      if (Number(fresh?.emailSentAt)) {
+        return {
+          ok: true,
+          skipped: true,
+          reason: "already-sent",
+          emailSentAt: Number(fresh.emailSentAt),
+        };
+      }
+    } catch {
+      // fall through and try to send
+    }
   }
   licenseEmailInflight.add(key);
+  let didClaim = false;
   try {
     if (!force) {
-      const claimed = await claimLicenseEmailSend(key);
-      if (!claimed) {
-        return { ok: true, skipped: true, reason: "already-sent" };
+      const claim = await claimLicenseEmailSend(key);
+      if (claim.ok && !claim.claimed) {
+        return {
+          ok: true,
+          skipped: true,
+          reason: "already-sent",
+          emailSentAt: Date.now(),
+        };
       }
+      // Store claim failed (503/conflict) — still send Brevo; stamp after success.
+      didClaim = Boolean(claim.ok && claim.claimed);
     }
     const { sendLicenseKeyEmail } = await import("../_brevo.js");
-    const email = await sendLicenseKeyEmail(license);
+    let email = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      email = await sendLicenseKeyEmail(license);
+      if (email?.ok) break;
+      // Don't burn retries on hard config / bad-address errors.
+      const hard =
+        email?.skipped ||
+        /not configured|not valid|missing recipient/i.test(
+          String(email?.error || "")
+        );
+      if (hard) break;
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
     if (email?.ok) {
-      return { ...email, emailSentAt: Date.now() };
+      const stamp = Date.now();
+      if (!didClaim || force) {
+        try {
+          await markLicenseEmailSent(key, stamp);
+        } catch {
+          // Brevo already delivered — non-fatal if stamp write races.
+        }
+      }
+      return { ...email, emailSentAt: stamp };
     }
     // Allow a later retry if Brevo failed / not configured.
-    if (!force) {
+    if (didClaim && !force) {
       await clearLicenseEmailSent(key);
     }
-    return email;
+    return email || { ok: false, error: "Email send failed" };
   } finally {
     licenseEmailInflight.delete(key);
   }
