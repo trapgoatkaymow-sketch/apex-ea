@@ -66,14 +66,14 @@
       "usedAt": 1789981805081,
       "deviceId": "d52be294-07e3-4e1f-ba32-b91358e33ffb",
       "boundAt": 1789981805081,
-      "updatedAt": 1790667800180,
+      "updatedAt": 1790667802140,
       "scanReset": null,
-      "robotAccountId": "b9a40d20-34f5-4647-b18b-55e89b595376",
+      "robotAccountId": "9dee3dcc-c3c1-4d9e-99dc-f0dbfabe2f5b",
       "robotLogin": "81707254",
       "robotServer": "Exness-MT5Trial10",
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790577716492,
+      "robotConnectedAt": 1790667800126,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": null,
@@ -107,14 +107,14 @@
       "usedAt": 1789981776787,
       "deviceId": "d52be294-07e3-4e1f-ba32-b91358e33ffb",
       "boundAt": 1789981776787,
-      "updatedAt": 1790667800180,
+      "updatedAt": 1790667802140,
       "scanReset": null,
-      "robotAccountId": "b9a40d20-34f5-4647-b18b-55e89b595376",
+      "robotAccountId": "9dee3dcc-c3c1-4d9e-99dc-f0dbfabe2f5b",
       "robotLogin": "81707254",
       "robotServer": "Exness-MT5Trial10",
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790577716492,
+      "robotConnectedAt": 1790667800126,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": null,
@@ -603,8 +603,7 @@
         "strategy": "scalper",
         "symbols": [
           "US30M",
-          "XAUUSD",
-          "BTCUSD"
+          "XAUUSD"
         ]
       }
     },
@@ -8305,9 +8304,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -10219,7 +10216,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "BTCUSD",
+          "NAS100",
+          "USDJPY"
+        ]
       },
       "emailSentAt": null
     },
