@@ -19,14 +19,14 @@
       "usedAt": 1790598838136,
       "deviceId": "f48428fe-c552-4a87-8e26-f82b48c2b22d",
       "boundAt": 1790619487664,
-      "updatedAt": 1790648970896,
+      "updatedAt": 1790648972849,
       "scanReset": null,
-      "robotAccountId": "c9dd82a7-46a3-42b0-8e24-f3e940cbc058",
+      "robotAccountId": "51d055fc-3173-4eee-88dc-2fe2e6f96491",
       "robotLogin": "4106898",
       "robotServer": "Razormarkets-live",
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790620955486,
+      "robotConnectedAt": 1790648972141,
       "clientSymbols": [
         "USDJPY",
         "WTI",
@@ -401,7 +401,19 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD",
+          "BTCAUDM",
+          "BTCUSD",
+          "BTCUSDM",
+          "USOILM",
+          "USOIL",
+          "NZDUSD",
+          "USDJPY",
+          "GBPJPY",
+          "ETHUSD"
+        ]
       }
     },
     {
@@ -711,7 +723,8 @@
         "symbols": [
           "XAUUSD",
           "XAUUSDM",
-          "BTCUSDM"
+          "BTCUSDM",
+          "US30"
         ]
       }
     },
@@ -1005,7 +1018,8 @@
         "strategy": "scalper",
         "symbols": [
           "US30",
-          "EURUSD"
+          "EURUSD",
+          "EURJPY"
         ]
       }
     },
@@ -2185,8 +2199,7 @@
           "XAUUSD",
           "US30",
           "NAS100",
-          "GOLD",
-          "XAUUUSD"
+          "GOLD"
         ]
       }
     },
@@ -4120,8 +4133,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30.",
-          "GOLD"
+          ".US30."
         ]
       }
     },
@@ -5428,10 +5440,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5641,7 +5650,6 @@
         "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
           "EURUSD",
           "GBPUSD",
           "USDJPY",
@@ -7231,7 +7239,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD"
+        ]
       }
     },
     {
