@@ -534,13 +534,7 @@
       "robotCompany": "HFM South Africa",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790600152566,
-      "clientSymbols": [
-        "EURUSD",
-        "USA30",
-        "XAUUSDC",
-        "USA100",
-        "XAUUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790664017214,
       "purchaseCaptureId": "4WW41642RB596924B",
       "purchaseOrderId": "6F78496781130894L",
@@ -604,8 +598,7 @@
           "XAUUSD",
           "EURUSD",
           "US30",
-          "XAUUSD.M",
-          "US100"
+          "XAUUSD.M"
         ]
       }
     },
@@ -1156,7 +1149,13 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "NASDAQ",
+          "USA100.",
+          "USA100",
+          "US30",
+          "USA30",
+          "EURUSD"
         ]
       }
     },
@@ -1499,10 +1498,7 @@
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790661742354,
-      "clientSymbols": [
-        "AUDUSD",
-        "US100.STD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790663597671,
       "purchaseCaptureId": "24T37785FY217861M",
       "purchaseOrderId": "46115445H9375602D",
@@ -1701,8 +1697,7 @@
         "symbols": [
           "BTCUSD",
           "XAUUSD",
-          "NAS100",
-          "XAUUSDM"
+          "NAS100"
         ]
       }
     },
@@ -1802,12 +1797,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "GOLD",
-          "USDJPY",
           "NZDUSD",
-          "US30"
+          "US30",
+          "USDJPY",
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -2356,14 +2350,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "GBPUSD",
-          "AUDUSD",
-          "GBPJPY",
-          "USDJPY",
-          "USDJPY.M"
-        ]
+        "symbols": []
       }
     },
     {
