@@ -72,7 +72,7 @@
         "XAUUSD",
         "US30"
       ],
-      "clientSymbolsUpdatedAt": 1790705178246,
+      "clientSymbolsUpdatedAt": 1790705452818,
       "purchaseCaptureId": "26H61241FX423674E",
       "purchaseOrderId": "4ES901761L025683S",
       "purchaseSource": "paypal-giveaway",
@@ -949,7 +949,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSDM"
+          "XAUUSD",
+          "XAUUSD.M"
         ]
       }
     },
@@ -1416,7 +1417,8 @@
           "USDJPY",
           "XAUUSD",
           "US30",
-          "GOLD"
+          "GOLD",
+          "GBPUSD"
         ]
       }
     },
@@ -3658,7 +3660,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD",
+          "DYNAMIC50"
+        ]
       }
     },
     {
@@ -12519,8 +12525,10 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
+          "US30",
           ".US30.",
           "GOLD",
+          "GOLDMICRO",
           "XAUUSDM"
         ]
       }
@@ -14096,7 +14104,8 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "EURUSD"
         ]
       }
     },
