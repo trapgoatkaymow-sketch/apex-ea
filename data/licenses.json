@@ -19,7 +19,7 @@
       "usedAt": 1790529576544,
       "deviceId": "b7c30c7d-4a48-4c1a-80f4-23544b99b3a5",
       "boundAt": 1790529576544,
-      "updatedAt": 1790682816170,
+      "updatedAt": 1790682820507,
       "scanReset": null,
       "robotAccountId": "8b38c46b-903b-424a-a68b-71afac4b3673",
       "robotLogin": "362210911",
@@ -34,7 +34,7 @@
         "GOL",
         "SILVER"
       ],
-      "clientSymbolsUpdatedAt": 1790682352397,
+      "clientSymbolsUpdatedAt": 1790682820507,
       "purchaseCaptureId": "4FY26293VA1050048",
       "purchaseOrderId": "7UD04739345225916",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -47,7 +47,9 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "GOLD"
+          "GOLD",
+          "GOL",
+          "SILVER"
         ]
       }
     },
@@ -135,6 +137,54 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": []
+      }
+    },
+    {
+      "key": "APEX-26HK-Q353",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "maphorilebogang@gmail.com",
+      "clientName": "Lebogang Maphori",
+      "mainText": "Lebogang Maphori",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790583346011,
+      "usedAt": 1790583492178,
+      "deviceId": "31417ae8-4632-44d1-b8a0-5fe4c0724f20",
+      "boundAt": 1790583492178,
+      "updatedAt": 1790682809694,
+      "scanReset": null,
+      "robotAccountId": "1f342289-0870-416b-8377-388340a68c4c",
+      "robotLogin": "345238290",
+      "robotServer": "XMGlobal-MT5 10",
+      "robotCompany": "XM Global Limited",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790682629379,
+      "clientSymbols": [
+        "US30",
+        "XAUUSD",
+        "US30CASH"
+      ],
+      "clientSymbolsUpdatedAt": 1790682809694,
+      "purchaseCaptureId": "2DW7363470554741D",
+      "purchaseOrderId": "0J6247995V549130S",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "US30",
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -266,7 +316,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD247",
-          "NAS100"
+          "NAS100",
+          "USA100"
         ]
       }
     },
@@ -356,53 +407,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
-      "key": "APEX-26HK-Q353",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "maphorilebogang@gmail.com",
-      "clientName": "Lebogang Maphori",
-      "mainText": "Lebogang Maphori",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790583346011,
-      "usedAt": 1790583492178,
-      "deviceId": "31417ae8-4632-44d1-b8a0-5fe4c0724f20",
-      "boundAt": 1790583492178,
-      "updatedAt": 1790682787632,
-      "scanReset": null,
-      "robotAccountId": "1f342289-0870-416b-8377-388340a68c4c",
-      "robotLogin": "345238290",
-      "robotServer": "XMGlobal-MT5 10",
-      "robotCompany": "XM Global Limited",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790682629379,
-      "clientSymbols": [
-        "US30",
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790682787632,
-      "purchaseCaptureId": "2DW7363470554741D",
-      "purchaseOrderId": "0J6247995V549130S",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
         "symbols": [
-          "US30",
-          "XAUUSD"
+          "XAUUSD",
+          "EURUSD",
+          "NAS100"
         ]
       }
     },
@@ -769,10 +777,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1897,7 +1902,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "VOL80"
+          "VOL80",
+          "EURUSD"
         ]
       }
     },
@@ -4038,7 +4044,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NAS100"
+          "NAS100",
+          "GOLD"
         ]
       }
     },
@@ -4788,7 +4795,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD",
+          "DYNAMIC100"
+        ]
       }
     },
     {
@@ -7131,7 +7141,16 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "GOLDMICRO",
+          "GOLDMIC",
+          "US100",
+          "USDJPYMICRO",
+          "GBPUSDMICRO",
+          "AUDCADMICRO"
+        ]
       }
     },
     {
