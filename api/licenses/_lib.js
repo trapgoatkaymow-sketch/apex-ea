@@ -69,6 +69,128 @@ export async function markLicenseEmailSent(rawKey, at = Date.now()) {
   return updated;
 }
 
+/** Stamp many keys emailed in one durable write (bulk resend). */
+export async function markLicenseEmailsSentBulk(rawKeys = [], at = Date.now()) {
+  const keys = new Set(
+    (Array.isArray(rawKeys) ? rawKeys : [])
+      .map((k) => normalizeLicenseKey(k))
+      .filter(Boolean)
+  );
+  if (!keys.size) return { updated: 0 };
+  const stamp = Number(at) || Date.now();
+  let updated = 0;
+  try {
+    await mutateStore((licenses) => {
+      for (let i = 0; i < licenses.length; i += 1) {
+        const key = normalizeLicenseKey(licenses[i]?.key);
+        if (!key || !keys.has(key)) continue;
+        if (Number(licenses[i].emailSentAt)) continue;
+        licenses[i] = {
+          ...licenses[i],
+          emailSentAt: stamp,
+          updatedAt: stamp,
+        };
+        updated += 1;
+      }
+      return licenses;
+    }, `license emails sent bulk: ${keys.size}`);
+  } catch {
+    // best-effort
+  }
+  return { updated };
+}
+
+/**
+ * Email license keys to PayPal / special buyers who never got emailSentAt.
+ * Dedupes captureId + buyer+bot so duplicate webhook rows only email once.
+ */
+export async function resendPurchaseLicenseEmails({
+  limit = 80,
+  concurrency = 6,
+  onlyMissing = true,
+  sourcesPrefix = "paypal",
+} = {}) {
+  const licenses = await listLicenses({ preferFresh: true });
+  const prefix = String(sourcesPrefix || "paypal").toLowerCase();
+  const paid = (Array.isArray(licenses) ? licenses : []).filter((row) => {
+    const src = String(row?.purchaseSource || "").toLowerCase();
+    if (!src.startsWith(prefix)) return false;
+    if (!String(row?.clientEmail || "").includes("@")) return false;
+    if (!String(row?.key || "").trim()) return false;
+    if (onlyMissing && Number(row?.emailSentAt)) return false;
+    return true;
+  });
+
+  // Oldest key wins per capture, then per buyer+bot.
+  const byCapture = new Map();
+  const noCapture = [];
+  for (const row of paid) {
+    const cap = String(row.purchaseCaptureId || "").trim();
+    if (!cap) {
+      noCapture.push(row);
+      continue;
+    }
+    const prev = byCapture.get(cap);
+    if (!prev || (Number(row.createdAt) || 0) < (Number(prev.createdAt) || 0)) {
+      byCapture.set(cap, row);
+    }
+  }
+  const primaries = [...byCapture.values(), ...noCapture];
+  const byBuyer = new Map();
+  for (const row of primaries) {
+    const k = `${normalizeEmail(row.clientEmail)}|${String(row.botId || "").trim()}`;
+    const prev = byBuyer.get(k);
+    if (!prev || (Number(row.createdAt) || 0) < (Number(prev.createdAt) || 0)) {
+      byBuyer.set(k, row);
+    }
+  }
+  const targets = [...byBuyer.values()]
+    .sort((a, b) => (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0))
+    .slice(0, Math.max(1, Math.min(200, Number(limit) || 80)));
+
+  if (!targets.length) {
+    return {
+      ok: true,
+      targeted: 0,
+      sentCount: 0,
+      failedCount: 0,
+      results: [],
+      remaining: 0,
+    };
+  }
+
+  const { sendLicenseKeyEmails } = await import("../_brevo.js");
+  const batch = await sendLicenseKeyEmails(targets, {
+    concurrency: Math.max(1, Math.min(10, Number(concurrency) || 6)),
+  });
+  const sentKeys = (batch.results || [])
+    .filter((r) => r?.ok)
+    .map((r) => r.key)
+    .filter(Boolean);
+  if (sentKeys.length) {
+    await markLicenseEmailsSentBulk(sentKeys);
+  }
+
+  // How many still need email after this batch (approx from pre-filter − sent).
+  const remaining = Math.max(0, byBuyer.size - sentKeys.length);
+
+  return {
+    ok: true,
+    targeted: targets.length,
+    sentCount: batch.sentCount || sentKeys.length,
+    failedCount: batch.failedCount || 0,
+    skippedCount: batch.skippedCount || 0,
+    remaining,
+    results: (batch.results || []).map((r) => ({
+      email: r.email,
+      key: r.key,
+      ok: Boolean(r.ok),
+      error: r.error || null,
+      messageId: r.messageId || null,
+    })),
+  };
+}
+
 /** Clear emailSentAt so a failed send can retry. */
 async function clearLicenseEmailSent(rawKey) {
   const key = normalizeLicenseKey(rawKey);

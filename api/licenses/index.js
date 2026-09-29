@@ -15,12 +15,13 @@ import {
   markLicenseUsed,
   mirrorLicensesToDurableStores,
   readJsonBody,
+  resendPurchaseLicenseEmails,
   sendJson,
   setLicenseClientSymbols,
 } from "./_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
-export const config = { maxDuration: 120 };
+export const config = { maxDuration: 300 };
 
 function normalizeEmail(value) {
   return String(value || "")
@@ -144,6 +145,34 @@ export default async function handler(req, res) {
           email,
           license,
         });
+        return;
+      }
+      if (
+        action === "resend-purchase-emails" ||
+        action === "resendpurchaseemails" ||
+        action === "resend-special-emails"
+      ) {
+        const admin = normalizeEmail(body.adminEmail || body.email || "");
+        const storeToken = String(process.env.LICENSES_STORE_TOKEN || "").trim();
+        const provided = String(body.token || body.secret || "").trim();
+        const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+        const authed =
+          (admin &&
+            (admin === superAdmin || admin === "trapgoatkaymow@gmail.com")) ||
+          (storeToken && provided && provided === storeToken);
+        if (!authed) {
+          sendJson(res, 403, {
+            error: "Only super admin can bulk-resend purchase license emails",
+          });
+          return;
+        }
+        const result = await resendPurchaseLicenseEmails({
+          limit: body.limit,
+          concurrency: body.concurrency,
+          onlyMissing: body.onlyMissing !== false,
+          sourcesPrefix: body.sourcesPrefix || "paypal",
+        });
+        sendJson(res, 200, result);
         return;
       }
       if (
