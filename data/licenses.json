@@ -21,12 +21,12 @@
       "boundAt": 1790723915643,
       "updatedAt": 1790724181268,
       "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
+      "robotAccountId": "064b51b7-720f-47f5-8ebb-20e29cf85bb9",
+      "robotLogin": "296388644",
+      "robotServer": "Exness-MT5Real27",
+      "robotCompany": "Exness Technologies Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790724151522,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790724181268,
       "purchaseCaptureId": "7KN64177MB473773K",
@@ -561,9 +561,7 @@
           "NAS100",
           "US100",
           "NASDAQ100INDEX",
-          "NASDAQ100",
-          "US30",
-          "US30.STD"
+          "NASDAQ100"
         ]
       }
     },
@@ -607,7 +605,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD"
+        ]
       }
     },
     {
