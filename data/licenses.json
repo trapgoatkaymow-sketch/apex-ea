@@ -19,7 +19,7 @@
       "usedAt": 1790625068885,
       "deviceId": "22f15baf-be45-4090-bdb6-044562cd2ab0",
       "boundAt": 1790625068885,
-      "updatedAt": 1790685106743,
+      "updatedAt": 1790685107446,
       "scanReset": null,
       "robotAccountId": "44acd8a5-51a1-4059-bd77-b18da7d703db",
       "robotLogin": "334693451",
@@ -32,7 +32,7 @@
         "GOLD",
         "USDJPY"
       ],
-      "clientSymbolsUpdatedAt": 1790685106743,
+      "clientSymbolsUpdatedAt": 1790685107446,
       "purchaseCaptureId": "6U208103185440743",
       "purchaseOrderId": "5U8240116W937882D",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -515,8 +515,7 @@
           "USDJPY",
           "USDJPYM",
           "XAUUSD",
-          ".USTECH.",
-          "USDCAD"
+          ".USTECH."
         ]
       }
     },
@@ -648,7 +647,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD"
+          "EURUSD",
+          "USDJPY"
         ]
       }
     },
@@ -747,7 +747,6 @@
         "symbols": [
           "XAUUSD",
           "EURUSD",
-          "NAS100",
           "USDJPY"
         ]
       }
@@ -845,7 +844,9 @@
         "strategy": "scalper",
         "symbols": [
           "US30",
-          "XAUUSD"
+          "XAUUSD",
+          "US30CASH",
+          "GOLD"
         ]
       }
     },
@@ -1147,7 +1148,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAGUSD",
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1231,7 +1235,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1587,7 +1593,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100"
+          "NAS100",
+          "XAUUSDM5"
         ]
       }
     },
