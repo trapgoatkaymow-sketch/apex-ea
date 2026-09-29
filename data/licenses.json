@@ -117,8 +117,18 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790685513922,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
+      "clientSymbols": [
+        "XAUUSDM",
+        "US30M",
+        "BTCUSDM",
+        "BTCUSD",
+        "US30",
+        "XAUUSD",
+        "VOL80",
+        "BOOM200",
+        "EURUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790691705890,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -150,7 +160,7 @@
       "usedAt": 1790527666015,
       "deviceId": "45602774-1989-4cf8-9031-4740eb48af05",
       "boundAt": 1790542522624,
-      "updatedAt": 1790691719394,
+      "updatedAt": 1790691722368,
       "scanReset": null,
       "robotAccountId": "256a54f1-2933-4ccf-be03-3f085631cf92",
       "robotLogin": "987850913",
@@ -167,7 +177,7 @@
         "XAUUSD.MIC",
         "GOLDVSUSDOLLAR"
       ],
-      "clientSymbolsUpdatedAt": 1790691701537,
+      "clientSymbolsUpdatedAt": 1790691722368,
       "purchaseCaptureId": "63J562168S248470V",
       "purchaseOrderId": "7PB24779NY2662151",
       "purchaseSource": "paypal-giveaway",
@@ -229,6 +239,53 @@
       }
     },
     {
+      "key": "APEX-M58J-6EED",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "inamimapele@icloud.com",
+      "clientName": "Inami Mapele",
+      "mainText": "Inami Mapele",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790551624644,
+      "usedAt": 1790551855381,
+      "deviceId": "867f9c08-1904-4b55-81de-2801d9b04265",
+      "boundAt": 1790551855381,
+      "updatedAt": 1790691713021,
+      "scanReset": null,
+      "robotAccountId": "4a90b1a0-410e-42e6-a77c-1d2b11a76b80",
+      "robotLogin": "1500006861",
+      "robotServer": "JustMarkets-Live7",
+      "robotCompany": "JustMarkets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790683313236,
+      "clientSymbols": [
+        "XAUUSD",
+        "XAUUSD.M"
+      ],
+      "clientSymbolsUpdatedAt": 1790691713021,
+      "purchaseCaptureId": "84F02787YH383613K",
+      "purchaseOrderId": "6D943867HY3768810",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
+      }
+    },
+    {
       "key": "APEX-TP6E-UXXH",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -267,53 +324,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-M58J-6EED",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "inamimapele@icloud.com",
-      "clientName": "Inami Mapele",
-      "mainText": "Inami Mapele",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790551624644,
-      "usedAt": 1790551855381,
-      "deviceId": "867f9c08-1904-4b55-81de-2801d9b04265",
-      "boundAt": 1790551855381,
-      "updatedAt": 1790691697274,
-      "scanReset": null,
-      "robotAccountId": "4a90b1a0-410e-42e6-a77c-1d2b11a76b80",
-      "robotLogin": "1500006861",
-      "robotServer": "JustMarkets-Live7",
-      "robotCompany": "JustMarkets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790683313236,
-      "clientSymbols": [
-        "XAUUSD",
-        "XAUUSD.M"
-      ],
-      "clientSymbolsUpdatedAt": 1790691697274,
-      "purchaseCaptureId": "84F02787YH383613K",
-      "purchaseOrderId": "6D943867HY3768810",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSD.M"
-        ]
       }
     },
     {
