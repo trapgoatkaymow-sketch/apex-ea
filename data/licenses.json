@@ -19,7 +19,7 @@
       "usedAt": 1790723960596,
       "deviceId": "0d1763ef-e4e6-485e-ac62-2cfe85d807dd",
       "boundAt": 1790723960596,
-      "updatedAt": 1790724011647,
+      "updatedAt": 1790724032352,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -28,7 +28,7 @@
       "robotPlatform": "",
       "robotConnectedAt": null,
       "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790724011647,
+      "clientSymbolsUpdatedAt": 1790724032352,
       "purchaseCaptureId": "9H594122V5192223P",
       "purchaseOrderId": "9HR72487W3508562G",
       "purchaseSource": "paypal-giveaway",
@@ -264,9 +264,7 @@
           "NAS100",
           "US100",
           "NASDAQ100INDEX",
-          "NASDAQ100",
-          "US30",
-          "US30.STD"
+          "NASDAQ100"
         ]
       }
     },
@@ -1784,9 +1782,7 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSD",
-          "GOLD",
-          "XAUUSDM"
+          "XAUUSD"
         ]
       }
     },
@@ -1879,13 +1875,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSD.M",
-          "USDJPY",
-          "USDJPY.M",
-          "BTCUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2702,13 +2692,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "AUDUSD",
-          "BRENTCASH",
-          "OILCASH"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3067,7 +3051,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "VOL80"
+        ]
       }
     },
     {
@@ -17311,7 +17298,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "GBPUSD"
+        ]
       }
     },
     {
