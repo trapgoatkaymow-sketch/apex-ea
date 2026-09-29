@@ -220,6 +220,51 @@
       }
     },
     {
+      "key": "APEX-499K-7BYW",
+      "botId": "inferno-sniper-ultra-x-v14-00-ai-mujnrdt0",
+      "botName": "INFERNO SNIPER ULTRA X V14.00 AI",
+      "clientEmail": "marimashane@gmail.com",
+      "clientName": "Shaine",
+      "mainText": "Shaine",
+      "mentorEmail": "marimashane@gmail.com",
+      "mentorId": "d08ec8c5-c8d3-4ceb-bcdf-d49bbfddb367",
+      "mentorName": "SHAINE HOUSTON",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "not_paid",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790504186464,
+      "usedAt": 1790504886243,
+      "deviceId": "c1db76b0-3361-4dd8-8cc9-4038ddad41f9",
+      "boundAt": 1790504886243,
+      "updatedAt": 1790670077165,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790670077165,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "inferno-sniper-ultra-x-v14-00-ai-mujnrdt0",
+        "name": "INFERNO SNIPER ULTRA X V14.00 AI",
+        "photo": "/api/licenses/photo?botId=inferno-sniper-ultra-x-v14-00-ai-mujnrdt0&v=1790577331657",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-KZJ8-D7BZ",
       "botId": "zar-charts-v6--mujqkxbp",
       "botName": "ZAR CHARTS V6+",
@@ -453,7 +498,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD247"
+          "XAUUSD247",
+          "NAS100"
         ]
       }
     },
@@ -496,51 +542,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-499K-7BYW",
-      "botId": "inferno-sniper-ultra-x-v14-00-ai-mujnrdt0",
-      "botName": "INFERNO SNIPER ULTRA X V14.00 AI",
-      "clientEmail": "marimashane@gmail.com",
-      "clientName": "Shaine",
-      "mainText": "Shaine",
-      "mentorEmail": "marimashane@gmail.com",
-      "mentorId": "d08ec8c5-c8d3-4ceb-bcdf-d49bbfddb367",
-      "mentorName": "SHAINE HOUSTON",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "not_paid",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790504186464,
-      "usedAt": 1790504886243,
-      "deviceId": "c1db76b0-3361-4dd8-8cc9-4038ddad41f9",
-      "boundAt": 1790504886243,
-      "updatedAt": 1790670005152,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790670005152,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "inferno-sniper-ultra-x-v14-00-ai-mujnrdt0",
-        "name": "INFERNO SNIPER ULTRA X V14.00 AI",
-        "photo": "/api/licenses/photo?botId=inferno-sniper-ultra-x-v14-00-ai-mujnrdt0&v=1790577331657",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
       }
     },
     {
@@ -717,7 +718,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -806,7 +810,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -854,12 +861,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "GOLD",
-          "USDJPY",
           "NZDUSD",
-          "US30"
+          "US30",
+          "USDJPY",
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -1002,7 +1008,9 @@
         "strategy": "scalper",
         "symbols": [
           "US30M",
-          "XAUUSD"
+          "XAUUSD",
+          "BTCUSD",
+          "BTCUSDM"
         ]
       }
     },
@@ -1668,8 +1676,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "USDJPY",
+          "EURUSD",
           "XAUUSD",
-          "USDJPY"
+          "XUAUSD"
         ]
       }
     },
@@ -1713,9 +1723,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2366,7 +2374,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
       }
     },
     {
@@ -2413,7 +2424,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH."
+          "USTECH.",
+          ".USTECH."
         ]
       }
     },
@@ -3839,14 +3851,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAGUSD",
-          "NAS100",
-          "US30",
-          "DJ30",
-          "XAUUSD",
-          "DE30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3897,7 +3902,10 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "GOLD",
+          "GOLDMICRO",
+          "XAUUSDM"
         ]
       }
     },
@@ -10731,7 +10739,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       },
       "emailSentAt": null
     },
