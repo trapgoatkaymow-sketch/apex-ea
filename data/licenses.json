@@ -30,7 +30,7 @@
       "clientSymbols": [
         "ETHUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790702643045,
+      "clientSymbolsUpdatedAt": 1790702660697,
       "purchaseCaptureId": "8SK166745U032701K",
       "purchaseOrderId": "2Y222365CH611624M",
       "purchaseSource": "paypal-giveaway",
@@ -557,7 +557,8 @@
         "symbols": [
           "NAS100",
           "XAUUSD",
-          "US30"
+          "US30",
+          "XAUUSF"
         ]
       }
     },
@@ -593,7 +594,7 @@
         "GOLD",
         "US30"
       ],
-      "clientSymbolsUpdatedAt": 1790702616175,
+      "clientSymbolsUpdatedAt": 1790702619015,
       "purchaseCaptureId": "1E036292R25054234",
       "purchaseOrderId": "6A415632WT266682R",
       "purchaseSource": "paypal-giveaway",
@@ -1813,7 +1814,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD"
+        ]
       }
     },
     {
@@ -2452,7 +2455,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAGUSD",
+          "NAS100",
+          "US30",
+          "DJ30",
+          "XAUUSD",
+          "DE30"
+        ]
       }
     },
     {
@@ -6488,8 +6498,7 @@
         "strategy": "scalper",
         "symbols": [
           "GBPUSD",
-          "XAUUSD",
-          "US30"
+          "XAUUSD"
         ]
       }
     },
@@ -7460,11 +7469,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSDM",
-          "EURUSDM",
-          "BTCUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -8279,6 +8284,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "GBPUSD",
+          "GOLD",
           "XAUUSDM"
         ]
       }
