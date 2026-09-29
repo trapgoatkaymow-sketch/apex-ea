@@ -1,6 +1,50 @@
 {
   "licenses": [
     {
+      "key": "APEX-NF2N-VBA3",
+      "botId": "poverty-scalper-ai-mumgs06i",
+      "botName": "POVERTY SCALPER  AI",
+      "clientEmail": "terryyasser7@gmail.com",
+      "clientName": "Terry",
+      "mainText": "Terry",
+      "mentorEmail": "terryreliefsegodi@gmail.com",
+      "mentorId": "52a1a196-8209-4855-b1da-3aa350f81b81",
+      "mentorName": "terryreliefsegodi@gmail.com",
+      "used": false,
+      "commissionEligible": false,
+      "commissionReason": "",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790686560328,
+      "usedAt": null,
+      "deviceId": null,
+      "boundAt": null,
+      "updatedAt": 1790686725181,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "poverty-scalper-ai-mumgs06i",
+        "name": "POVERTY SCALPER  AI",
+        "photo": "/api/licenses/photo?botId=poverty-scalper-ai-mumgs06i&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "US30",
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-CBRM-27W6",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -39,50 +83,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-NF2N-VBA3",
-      "botId": "poverty-scalper-ai-mumgs06i",
-      "botName": "POVERTY SCALPER  AI",
-      "clientEmail": "terryyasser7@gmail.com",
-      "clientName": "Terry",
-      "mainText": "Terry",
-      "mentorEmail": "terryreliefsegodi@gmail.com",
-      "mentorId": "52a1a196-8209-4855-b1da-3aa350f81b81",
-      "mentorName": "terryreliefsegodi@gmail.com",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790686560328,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790686712449,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790686712449,
-      "bot": {
-        "id": "poverty-scalper-ai-mumgs06i",
-        "name": "POVERTY SCALPER  AI",
-        "photo": "/api/licenses/photo?botId=poverty-scalper-ai-mumgs06i&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "XAUUSD"
-        ]
       }
     },
     {
@@ -481,7 +481,11 @@
       "robotCompany": "Jarocel (Pty) Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790674914404,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "XAUUSD",
+        "VOL80",
+        "EURUSD"
+      ],
       "clientSymbolsUpdatedAt": 1790686683649,
       "purchaseCaptureId": "93U07525R1791262K",
       "purchaseOrderId": "0X4769313F4522629",
@@ -886,7 +890,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100",
+          "US30",
+          "CRASH150INDEX"
+        ]
       }
     },
     {
@@ -12279,7 +12288,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "GOLD"
+        ]
       }
     },
     {
