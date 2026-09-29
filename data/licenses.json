@@ -1567,8 +1567,7 @@
           "XAUUSD",
           "NAS100",
           "US30",
-          "CRASH150INDEX",
-          "WALLSTREET30"
+          "CRASH150INDEX"
         ]
       }
     },
@@ -1871,8 +1870,7 @@
           "AUDUSD",
           "AUDCAD",
           "USDCAD",
-          "AUDJPY",
-          "USDCHF"
+          "AUDJPY"
         ]
       }
     },
@@ -4374,11 +4372,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "NAS100",
-          "XAUUSD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6396,7 +6390,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSDM",
+          "EURUSDM",
+          "BTCUSDM"
+        ]
       }
     },
     {
