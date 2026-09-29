@@ -46,6 +46,55 @@
       }
     },
     {
+      "key": "APEX-TRV2-SA4A",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "benyengwa1@gmail.com",
+      "clientName": "Benjamin Yengwa",
+      "mainText": "Benjamin Yengwa",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790584630677,
+      "usedAt": 1790589363403,
+      "deviceId": "2009f7b3-11f3-4c31-a876-89bfc93eb83d",
+      "boundAt": 1790589363403,
+      "updatedAt": 1790706584712,
+      "scanReset": null,
+      "robotAccountId": "760cbe78-229c-4518-be1d-cde82e8e9b73",
+      "robotLogin": "482018270",
+      "robotServer": "Exness-MT5Real10",
+      "robotCompany": "Exness Technologies Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790702033089,
+      "clientSymbols": [
+        "USDJPY",
+        "ETHUSD",
+        "ETHUSDM"
+      ],
+      "clientSymbolsUpdatedAt": 1790706584712,
+      "purchaseCaptureId": "8SK166745U032701K",
+      "purchaseOrderId": "2Y222365CH611624M",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790695899221,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "USDJPY",
+          "ETHUSD",
+          "ETHUSDM"
+        ]
+      }
+    },
+    {
       "key": "APEX-5CXT-TK8Z",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -125,55 +174,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-TRV2-SA4A",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "benyengwa1@gmail.com",
-      "clientName": "Benjamin Yengwa",
-      "mainText": "Benjamin Yengwa",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790584630677,
-      "usedAt": 1790589363403,
-      "deviceId": "2009f7b3-11f3-4c31-a876-89bfc93eb83d",
-      "boundAt": 1790589363403,
-      "updatedAt": 1790706579303,
-      "scanReset": null,
-      "robotAccountId": "760cbe78-229c-4518-be1d-cde82e8e9b73",
-      "robotLogin": "482018270",
-      "robotServer": "Exness-MT5Real10",
-      "robotCompany": "Exness Technologies Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790702033089,
-      "clientSymbols": [
-        "USDJPY",
-        "ETHUSD",
-        "ETHUSDM"
-      ],
-      "clientSymbolsUpdatedAt": 1790706579303,
-      "purchaseCaptureId": "8SK166745U032701K",
-      "purchaseOrderId": "2Y222365CH611624M",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790695899221,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "USDJPY",
-          "ETHUSD",
-          "ETHUSDM"
-        ]
       }
     },
     {
@@ -352,6 +352,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "EURUSD",
           "XAUUSD"
         ]
       }
@@ -4773,7 +4774,9 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "XAUUSD"
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
         ]
       }
     },
