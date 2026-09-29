@@ -87,6 +87,53 @@
       }
     },
     {
+      "key": "APEX-THUT-J4KV",
+      "botId": "zar-charts-v2-5-mujmg4nk",
+      "botName": "ZAR CHARTS V2.5",
+      "clientEmail": "tebeilalesego7@gmail.com",
+      "clientName": "Tebeila",
+      "mainText": "Tebeila",
+      "mentorEmail": "trapgoatlsg@gmail.com",
+      "mentorId": "06c94394-069f-4ab5-a806-69f2d681066f",
+      "mentorName": "Trapgoatlsg",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "not_paid",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790508630642,
+      "usedAt": 1790508697258,
+      "deviceId": "c0b7631f-0f31-483b-bd99-0de0ac25db21",
+      "boundAt": 1790508697258,
+      "updatedAt": 1790694412902,
+      "scanReset": null,
+      "robotAccountId": "d9dc420f-8e63-4fce-be60-f650381fcff7",
+      "robotLogin": "4108107",
+      "robotServer": "RazorMarkets-Live",
+      "robotCompany": "Razor Markets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790694411752,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zar-charts-v2-5-mujmg4nk",
+        "name": "ZAR CHARTS V2.5",
+        "photo": "/api/licenses/photo?botId=zar-charts-v2-5-mujmg4nk&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "US100",
+          "USTECH",
+          "EURUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-YXXX-EA9J",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1297,7 +1344,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NAS100"
+          "NAS100",
+          "GOLD",
+          "US30"
         ]
       }
     },
@@ -1467,7 +1516,7 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "BTCUSD"
+          "DYNAMIC100"
         ]
       }
     },
@@ -1877,8 +1926,7 @@
           "USDJPY",
           "XAUUSD",
           "US30",
-          "GOLD",
-          "GBPUSD"
+          "GOLD"
         ]
       }
     },
@@ -2504,9 +2552,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSDM",
-          "US30",
-          "US30M"
+          "BTCUSD",
+          "BTCUSDM",
+          "XAUUSD",
+          "XAUUSDM"
         ]
       }
     },
@@ -5618,7 +5667,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "XAUUSD",
+          "EURUSD",
+          "US30",
+          "XAUUSD.M",
+          "US100"
+        ]
       }
     },
     {
@@ -5753,7 +5809,6 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
           "USDJPY"
         ]
       }
@@ -21260,53 +21315,6 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY"
-        ]
-      }
-    },
-    {
-      "key": "APEX-THUT-J4KV",
-      "botId": "zar-charts-v2-5-mujmg4nk",
-      "botName": "ZAR CHARTS V2.5",
-      "clientEmail": "tebeilalesego7@gmail.com",
-      "clientName": "Tebeila",
-      "mainText": "Tebeila",
-      "mentorEmail": "trapgoatlsg@gmail.com",
-      "mentorId": "06c94394-069f-4ab5-a806-69f2d681066f",
-      "mentorName": "Trapgoatlsg",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "not_paid",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790508630642,
-      "usedAt": 1790508697258,
-      "deviceId": "c0b7631f-0f31-483b-bd99-0de0ac25db21",
-      "boundAt": 1790508697258,
-      "updatedAt": 1790669885537,
-      "scanReset": null,
-      "robotAccountId": "ef472da2-21cb-4f65-9b1c-cec9b6c78c14",
-      "robotLogin": "4108107",
-      "robotServer": "RazorMarkets-Live",
-      "robotCompany": "Razor Markets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790501906512,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zar-charts-v2-5-mujmg4nk",
-        "name": "ZAR CHARTS V2.5",
-        "photo": "/api/licenses/photo?botId=zar-charts-v2-5-mujmg4nk&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "US100",
-          "USTECH",
-          "EURUSD"
         ]
       }
     },
