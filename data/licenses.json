@@ -232,7 +232,7 @@
       "usedAt": 1790578643784,
       "deviceId": "134dccce-b0b8-4354-ad46-3b14b17fa3bb",
       "boundAt": 1790578643784,
-      "updatedAt": 1790676183557,
+      "updatedAt": 1790676183796,
       "scanReset": null,
       "robotAccountId": "e338c788-dd76-45a7-aaa1-ef7ec79dd8d4",
       "robotLogin": "430608351",
@@ -257,7 +257,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD"
+          "GOLD",
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
         ]
       }
     },
@@ -280,7 +283,7 @@
       "usedAt": 1790580419161,
       "deviceId": "134dccce-b0b8-4354-ad46-3b14b17fa3bb",
       "boundAt": 1790580419161,
-      "updatedAt": 1790676183557,
+      "updatedAt": 1790676183796,
       "scanReset": null,
       "robotAccountId": "e338c788-dd76-45a7-aaa1-ef7ec79dd8d4",
       "robotLogin": "430608351",
@@ -346,7 +349,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "BTCUSD",
+          "NAS100",
+          "USDJPY"
+        ]
       }
     },
     {
@@ -389,7 +398,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -444,6 +455,47 @@
       }
     },
     {
+      "key": "APEX-N4RY-628Q",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "abdullah01abdulla@gmail.com",
+      "clientName": "Abdullah",
+      "mainText": "Abdullah",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789545816322,
+      "usedAt": 1789977613091,
+      "deviceId": "fd542d8a-fdfc-4f47-b344-826a988e0baa",
+      "boundAt": 1789977613091,
+      "updatedAt": 1790676155502,
+      "scanReset": null,
+      "robotAccountId": "5d27c349-81b6-49dc-ac38-a5e37afe2859",
+      "robotLogin": "592052974",
+      "robotServer": "FxPro-MT5 Demo",
+      "robotCompany": "FxPro Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790583470727,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
       "key": "APEX-5MT6-WW84",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -470,47 +522,6 @@
       "robotCompany": "Jarocel (Pty) Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790576245491,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
-      "key": "APEX-N4RY-628Q",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "abdullah01abdulla@gmail.com",
-      "clientName": "Abdullah",
-      "mainText": "Abdullah",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789545816322,
-      "usedAt": 1789977613091,
-      "deviceId": "fd542d8a-fdfc-4f47-b344-826a988e0baa",
-      "boundAt": 1789977613091,
-      "updatedAt": 1790676145423,
-      "scanReset": null,
-      "robotAccountId": "5d27c349-81b6-49dc-ac38-a5e37afe2859",
-      "robotLogin": "592052974",
-      "robotServer": "FxPro-MT5 Demo",
-      "robotCompany": "FxPro Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790583470727,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": null,
