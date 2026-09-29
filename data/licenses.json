@@ -126,7 +126,7 @@
         "GOLD",
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790684029976,
+      "clientSymbolsUpdatedAt": 1790684050194,
       "purchaseCaptureId": "3DR51862MJ587425E",
       "purchaseOrderId": "6BM825507G750993H",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -315,7 +315,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -401,6 +404,55 @@
       }
     },
     {
+      "key": "APEX-VXA5-9H5M",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "killeroptel@gmail.com",
+      "clientName": "Tshimologo Motsoasele",
+      "mainText": "Tshimologo Motsoasele",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790537877900,
+      "usedAt": 1790538226528,
+      "deviceId": "f7595645-14b5-49b0-aaa6-5a60fc472501",
+      "boundAt": 1790538226528,
+      "updatedAt": 1790684042014,
+      "scanReset": null,
+      "robotAccountId": "ae756434-b7f2-489b-8e84-55f6fbc9a224",
+      "robotLogin": "224000315",
+      "robotServer": "Exness-MT5Real30",
+      "robotCompany": "Exness Technologies Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790666277443,
+      "clientSymbols": [
+        "XAUUSD",
+        "EURUSD",
+        "NAS100"
+      ],
+      "clientSymbolsUpdatedAt": 1790684042014,
+      "purchaseCaptureId": "9BU41956SG017692X",
+      "purchaseOrderId": "31P21862BL266730M",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "NAS100"
+        ]
+      }
+    },
+    {
       "key": "APEX-J9TX-YX27",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -442,7 +494,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -488,10 +541,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "EURUSD",
           "XAUUSD",
-          "XUAUSD"
+          "EURUSD"
         ]
       }
     },
@@ -1181,55 +1232,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-VXA5-9H5M",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "killeroptel@gmail.com",
-      "clientName": "Tshimologo Motsoasele",
-      "mainText": "Tshimologo Motsoasele",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790537877900,
-      "usedAt": 1790538226528,
-      "deviceId": "f7595645-14b5-49b0-aaa6-5a60fc472501",
-      "boundAt": 1790538226528,
-      "updatedAt": 1790683813300,
-      "scanReset": null,
-      "robotAccountId": "ae756434-b7f2-489b-8e84-55f6fbc9a224",
-      "robotLogin": "224000315",
-      "robotServer": "Exness-MT5Real30",
-      "robotCompany": "Exness Technologies Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790666277443,
-      "clientSymbols": [
-        "XAUUSD",
-        "EURUSD",
-        "NAS100"
-      ],
-      "clientSymbolsUpdatedAt": 1790683813300,
-      "purchaseCaptureId": "9BU41956SG017692X",
-      "purchaseOrderId": "31P21862BL266730M",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "NAS100"
-        ]
       }
     },
     {
@@ -2215,7 +2217,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD"
+        ]
       }
     },
     {
