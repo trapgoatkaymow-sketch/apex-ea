@@ -126,7 +126,8 @@ async function claimLicenseEmailSend(rawKey) {
   return claimed;
 }
 
-async function sendLicenseKeyEmailOnce(license, { force = false } = {}) {
+/** Send license key email at most once (persists emailSentAt on success). */
+export async function sendLicenseKeyEmailOnce(license, { force = false } = {}) {
   const key = normalizeLicenseKey(license?.key);
   if (!key) {
     return { ok: false, error: "License key missing" };
@@ -918,6 +919,8 @@ function normalizeLicense(row) {
     purchaseCaptureId: String(row?.purchaseCaptureId || "").trim() || null,
     purchaseOrderId: String(row?.purchaseOrderId || "").trim() || null,
     purchaseSource: String(row?.purchaseSource || "").trim() || null,
+    // Must survive normalize/merge or Brevo send-once + payment retries never stick.
+    emailSentAt: row?.emailSentAt ? Number(row.emailSentAt) || null : null,
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
@@ -1020,6 +1023,13 @@ function mergeLicenseLists(...lists) {
       robotCompany: keepRobot("robotCompany") || "",
       robotPlatform: keepRobot("robotPlatform") || "",
       robotConnectedAt: keepRobot("robotConnectedAt"),
+      // Keep whichever side already emailed — never drop a successful stamp.
+      emailSentAt:
+        Number(item.emailSentAt) || Number(prev.emailSentAt) || null,
+      purchaseCaptureId:
+        item.purchaseCaptureId || prev.purchaseCaptureId || null,
+      purchaseOrderId: item.purchaseOrderId || prev.purchaseOrderId || null,
+      purchaseSource: item.purchaseSource || prev.purchaseSource || null,
       updatedAt: Math.max(
         prev.updatedAt || 0,
         item.updatedAt || 0,
@@ -1476,6 +1486,16 @@ export async function createLicense(payload = {}) {
     }
   }
 
+  const purchaseCaptureId =
+    String(payload.purchaseCaptureId || "").trim() || null;
+  const purchaseOrderId = String(payload.purchaseOrderId || "").trim() || null;
+  const purchaseSource = String(payload.purchaseSource || "").trim() || null;
+  // Paid PayPal fulfillments must never fail on mentor key quota.
+  const skipQuota =
+    Boolean(payload.skipQuota) ||
+    Boolean(purchaseCaptureId) ||
+    Boolean(purchaseSource);
+
   let result = null;
   let createdNew = false;
   const write = await mutateStore((licenses, api) => {
@@ -1484,8 +1504,63 @@ export async function createLicense(payload = {}) {
       err.status = 410;
       throw err;
     }
+
+    // Idempotent PayPal fulfill: same capture must not mint a second key
+    // (capture-order + webhook race).
+    if (purchaseCaptureId) {
+      const byCapture = licenses.find(
+        (row) =>
+          String(row?.purchaseCaptureId || "").trim() === purchaseCaptureId
+      );
+      if (byCapture?.key) {
+        createdNew = false;
+        const idx = licenses.findIndex((row) => row.key === byCapture.key);
+        result = {
+          ...byCapture,
+          clientEmail: byCapture.clientEmail || clientEmail,
+          clientName: byCapture.clientName || clientName,
+          purchaseCaptureId,
+          purchaseOrderId:
+            String(byCapture.purchaseOrderId || "").trim() ||
+            purchaseOrderId,
+          purchaseSource:
+            String(byCapture.purchaseSource || "").trim() || purchaseSource,
+          emailSentAt: byCapture.emailSentAt || null,
+          updatedAt: Date.now(),
+        };
+        if (idx >= 0) licenses[idx] = result;
+        return licenses;
+      }
+    }
+    // Same buyer + bot + PayPal order (capture id not visible yet on one side).
+    if (purchaseOrderId) {
+      const byOrder = licenses.find(
+        (row) =>
+          normalizeEmail(row?.clientEmail) === clientEmail &&
+          String(row?.botId || "").trim() === botId &&
+          String(row?.purchaseOrderId || "").trim() === purchaseOrderId
+      );
+      if (byOrder?.key) {
+        createdNew = false;
+        const idx = licenses.findIndex((row) => row.key === byOrder.key);
+        result = {
+          ...byOrder,
+          purchaseCaptureId:
+            String(byOrder.purchaseCaptureId || "").trim() ||
+            purchaseCaptureId,
+          purchaseOrderId,
+          purchaseSource:
+            String(byOrder.purchaseSource || "").trim() || purchaseSource,
+          emailSentAt: byOrder.emailSentAt || null,
+          updatedAt: Date.now(),
+        };
+        if (idx >= 0) licenses[idx] = result;
+        return licenses;
+      }
+    }
+
     const existing = licenses.find((row) => row.key === key);
-    if (!existing && ownerEmailForQuota && keyAllowance != null) {
+    if (!existing && ownerEmailForQuota && keyAllowance != null && !skipQuota) {
       const used = licenses.filter(
         (row) => normalizeEmail(row.mentorEmail) === ownerEmailForQuota
       ).length;
@@ -1523,6 +1598,10 @@ export async function createLicense(payload = {}) {
         expiresAt:
           existing.expiresAt != null ? existing.expiresAt : durationPayload.expiresAt,
         emailSentAt: existing.emailSentAt || null,
+        purchaseCaptureId:
+          existing.purchaseCaptureId || purchaseCaptureId || null,
+        purchaseOrderId: existing.purchaseOrderId || purchaseOrderId || null,
+        purchaseSource: existing.purchaseSource || purchaseSource || null,
         updatedAt: replacePhoto
           ? Date.now()
           : Number(existing.updatedAt || existing.usedAt || existing.createdAt) ||
@@ -1561,9 +1640,9 @@ export async function createLicense(payload = {}) {
       boundAt: null,
       emailSentAt: null,
       updatedAt: Date.now(),
-      purchaseCaptureId: String(payload.purchaseCaptureId || "").trim() || null,
-      purchaseOrderId: String(payload.purchaseOrderId || "").trim() || null,
-      purchaseSource: String(payload.purchaseSource || "").trim() || null,
+      purchaseCaptureId,
+      purchaseOrderId,
+      purchaseSource,
       bot,
     };
     return [result, ...licenses];
@@ -1587,6 +1666,8 @@ export async function createLicense(payload = {}) {
     String(payload.sendEmail || "").toLowerCase() === "false";
   // Email every newly created key once. Retries of the same key within a few
   // minutes can retry a failed send; emailSentAt blocks duplicate Brevo sends.
+  // Paid purchases always retry until stamped — buyers must get their key.
+  const isPaidPurchase = Boolean(purchaseCaptureId || purchaseSource);
   if (!skipEmail) {
     const alreadySent = Number(result?.emailSentAt);
     const keyAgeMs = Date.now() - (Number(result?.createdAt) || Date.now());
@@ -1597,7 +1678,7 @@ export async function createLicense(payload = {}) {
         reason: "already-sent",
         emailSentAt: alreadySent,
       };
-    } else if (createdNew || keyAgeMs < 3 * 60 * 1000) {
+    } else if (createdNew || isPaidPurchase || keyAgeMs < 3 * 60 * 1000) {
       try {
         email = await sendLicenseKeyEmailOnce(result, { force: false });
         if (email?.emailSentAt && result) {

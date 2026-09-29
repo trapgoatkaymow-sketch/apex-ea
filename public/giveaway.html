@@ -530,12 +530,34 @@
 
       async function captureGiveawayOrder(orderId) {
         const { name, email } = readBuyer();
-        const result = await api("/capture-order", {
-          orderId,
-          email,
-          clientName: name,
-          purpose: "giveaway",
-        });
+        let result = null;
+        let lastError = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            if (attempt > 0) {
+              setMsg("Payment received — finishing your license…");
+              await new Promise((r) => setTimeout(r, 700 * attempt));
+            }
+            result = await api("/capture-order", {
+              orderId,
+              email,
+              clientName: name,
+              purpose: "giveaway",
+            });
+            lastError = null;
+            break;
+          } catch (error) {
+            lastError = error;
+            const msg = String(error?.message || "");
+            const retryable =
+              /save|durable|503|409|timeout|try again|could not|finish/i.test(
+                msg
+              );
+            if (attempt < 2 && retryable) continue;
+            throw error;
+          }
+        }
+        if (!result) throw lastError || new Error("Could not finish payment");
         setMsg(
           result.reused
             ? "Already paid — your license key is below (also emailed). App access is unlocked for this email."

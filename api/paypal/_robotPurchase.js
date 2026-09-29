@@ -2,7 +2,12 @@
  * Auto-fulfill ZETA SCALPER AI robot purchases from PayPal.
  * Same PayPal account as app-access; distinguished by purpose/amount.
  */
-import { createLicense, listLicenses, normalizeLicenseKey } from "../licenses/_lib.js";
+import {
+  createLicense,
+  listLicenses,
+  normalizeLicenseKey,
+  sendLicenseKeyEmailOnce,
+} from "../licenses/_lib.js";
 import { setSignupAccessPaid, upsertSignup } from "../signups/_lib.js";
 import { listMentors, SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
@@ -435,9 +440,54 @@ async function resolveMentor() {
   return { mentorEmail: email, mentorId, mentorName };
 }
 
+function findPurchaseLicense(licenses, { buyer, captureKey, orderKey } = {}) {
+  const rows = Array.isArray(licenses) ? licenses : [];
+  if (captureKey) {
+    const byCapture = rows
+      .filter(
+        (row) => String(row?.purchaseCaptureId || "").trim() === captureKey
+      )
+      .sort(
+        (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+      );
+    if (byCapture[0]?.key) return byCapture[0];
+  }
+  if (orderKey && buyer) {
+    const byOrder = rows
+      .filter(
+        (row) =>
+          normalizeEmail(row?.clientEmail) === buyer &&
+          String(row?.botId || "").trim() === ROBOT_BOT_ID &&
+          String(row?.purchaseOrderId || "").trim() === orderKey
+      )
+      .sort(
+        (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+      );
+    if (byOrder[0]?.key) return byOrder[0];
+  }
+  return null;
+}
+
+async function ensurePurchaseEmail(license) {
+  if (!license?.key) return { ok: false, error: "License key missing" };
+  if (Number(license.emailSentAt)) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "already-sent",
+      emailSentAt: Number(license.emailSentAt),
+    };
+  }
+  try {
+    return await sendLicenseKeyEmailOnce(license, { force: false });
+  } catch (error) {
+    return { ok: false, error: error?.message || "Email send failed" };
+  }
+}
+
 /**
  * After PayPal confirms robot money: unlock app access + mint key + email via Brevo.
- * Idempotent on captureId / existing unused key for same email+bot.
+ * Idempotent on captureId / orderId; retries Brevo when emailSentAt is missing.
  */
 export async function fulfillRobotPurchase({
   email,
@@ -460,35 +510,34 @@ export async function fulfillRobotPurchase({
   const captureKey = String(captureId || "").trim();
   const orderKey = String(orderId || "").trim();
 
-  // Idempotent: same PayPal capture must not mint a second key.
-  if (captureKey) {
-    try {
-      const licenses = await listLicenses({ preferFresh: true });
-      const existing = (licenses || []).find(
-        (row) =>
-          String(row?.purchaseCaptureId || "").trim() === captureKey ||
-          (normalizeEmail(row?.clientEmail) === buyer &&
-            String(row?.botId || "").trim() === ROBOT_BOT_ID &&
-            String(row?.purchaseOrderId || "").trim() === orderKey &&
-            orderKey)
-      );
-      if (existing?.key) {
-        return {
-          ok: true,
-          reused: true,
-          email: buyer,
-          license: existing,
-          key: existing.key,
-        };
-      }
-    } catch {
-      // continue to create
-    }
-  }
-
+  // Unlock access first so a later license/email glitch does not strand a payer.
   await upsertSignup(buyer, { status: "pending" });
-  // Robot purchase also unlocks app access (same PayPal / one-time lifetime).
   await setSignupAccessPaid(buyer, true);
+
+  // Idempotent: same PayPal capture / order must not mint a second key.
+  try {
+    const licenses = await listLicenses({ preferFresh: true });
+    const existing = findPurchaseLicense(licenses, {
+      buyer,
+      captureKey,
+      orderKey,
+    });
+    if (existing?.key) {
+      const emailResult = await ensurePurchaseEmail(existing);
+      return {
+        ok: true,
+        reused: true,
+        email: buyer,
+        license: Number(emailResult?.emailSentAt)
+          ? { ...existing, emailSentAt: emailResult.emailSentAt }
+          : existing,
+        key: existing.key,
+        emailResult,
+      };
+    }
+  } catch {
+    // continue to create
+  }
 
   const mentor = await resolveMentor();
   let existingKeys = new Set();
@@ -502,36 +551,112 @@ export async function fulfillRobotPurchase({
   }
 
   const key = randomLicenseKey(existingKeys);
-  const license = await createLicense({
-    key,
-    botId: ROBOT_BOT_ID,
-    botName: ROBOT_BOT_NAME,
-    clientEmail: buyer,
-    clientName: name,
-    mainText: name,
-    mentorEmail: mentor.mentorEmail,
-    mentorId: mentor.mentorId,
-    mentorName: mentor.mentorName,
-    duration: "lifetime",
-    sendEmail: true,
-    purchaseCaptureId: captureKey || null,
-    purchaseOrderId: orderKey || null,
-    purchaseSource: source,
-    bot: {
-      id: ROBOT_BOT_ID,
-      name: ROBOT_BOT_NAME,
-      photo: `/api/licenses/photo?botId=${encodeURIComponent(ROBOT_BOT_ID)}`,
-      strategy: "scalper",
-      symbols: [],
-    },
-  });
+  let license;
+  let createError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      license = await createLicense({
+        key: attempt === 0 ? key : randomLicenseKey(existingKeys),
+        botId: ROBOT_BOT_ID,
+        botName: ROBOT_BOT_NAME,
+        clientEmail: buyer,
+        clientName: name,
+        mainText: name,
+        mentorEmail: mentor.mentorEmail,
+        mentorId: mentor.mentorId,
+        mentorName: mentor.mentorName,
+        duration: "lifetime",
+        sendEmail: true,
+        skipQuota: true,
+        purchaseCaptureId: captureKey || null,
+        purchaseOrderId: orderKey || null,
+        purchaseSource: source,
+        bot: {
+          id: ROBOT_BOT_ID,
+          name: ROBOT_BOT_NAME,
+          photo: `/api/licenses/photo?botId=${encodeURIComponent(ROBOT_BOT_ID)}`,
+          strategy: "scalper",
+          symbols: [],
+        },
+      });
+      createError = null;
+      break;
+    } catch (error) {
+      createError = error;
+      // Durable 503 / conflict — brief wait then retry (buyer already paid).
+      if (error?.status === 503 || error?.status === 409) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
+  if (!license) {
+    // Last chance: another concurrent fulfill may have written the key.
+    try {
+      const licenses = await listLicenses({ preferFresh: true });
+      const raced = findPurchaseLicense(licenses, {
+        buyer,
+        captureKey,
+        orderKey,
+      });
+      if (raced?.key) {
+        const emailResult = await ensurePurchaseEmail(raced);
+        return {
+          ok: true,
+          reused: true,
+          email: buyer,
+          license: raced,
+          key: raced.key,
+          emailResult,
+        };
+      }
+    } catch {
+      // fall through
+    }
+    throw createError || new Error("Could not create license after payment");
+  }
+
+  // Capture + webhook race: prefer the oldest key for this capture.
+  if (captureKey && license?._createdNew) {
+    try {
+      await new Promise((r) => setTimeout(r, 250));
+      const licenses = await listLicenses({ preferFresh: true });
+      const primary = findPurchaseLicense(licenses, {
+        buyer,
+        captureKey,
+        orderKey,
+      });
+      if (primary?.key && primary.key !== license.key) {
+        const emailResult = await ensurePurchaseEmail(primary);
+        return {
+          ok: true,
+          reused: true,
+          email: buyer,
+          license: primary,
+          key: primary.key,
+          emailResult,
+        };
+      }
+    } catch {
+      // keep newly created license
+    }
+  }
+
+  let emailResult = license?._email || null;
+  if (!Number(license?.emailSentAt)) {
+    emailResult = await ensurePurchaseEmail(license);
+    if (emailResult?.emailSentAt) {
+      license = { ...license, emailSentAt: emailResult.emailSentAt };
+    }
+  }
 
   return {
     ok: true,
-    reused: false,
+    reused: Boolean(license?._createdNew === false),
     email: buyer,
     license,
     key: license?.key || key,
-    emailResult: license?._email || null,
+    emailResult,
   };
 }

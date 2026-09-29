@@ -70,13 +70,36 @@ export default async function handler(req, res) {
       if (isGiveaway) await assertGiveawayActive();
       const email = extractCaptureEmail(capture) || fallbackEmail;
       const clientName = extractCaptureClientName(capture) || fallbackName;
-      const fulfilled = await fulfillRobotPurchase({
-        email,
-        clientName,
-        captureId: extractCaptureId(capture),
-        orderId,
-        source: isGiveaway ? "paypal-giveaway" : "paypal-order",
-      });
+      const captureId = extractCaptureId(capture);
+      let fulfilled = null;
+      let fulfillError = null;
+      // Buyer already paid — retry durable/email glitches before failing.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          fulfilled = await fulfillRobotPurchase({
+            email,
+            clientName,
+            captureId,
+            orderId,
+            source: isGiveaway ? "paypal-giveaway" : "paypal-order",
+          });
+          fulfillError = null;
+          break;
+        } catch (error) {
+          fulfillError = error;
+          if (
+            attempt < 2 &&
+            (error?.status === 503 ||
+              error?.status === 409 ||
+              error?.status === 500)
+          ) {
+            await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+            continue;
+          }
+          throw error;
+        }
+      }
+      if (!fulfilled) throw fulfillError || new Error("Could not fulfill purchase");
       sendJson(res, 200, {
         ok: true,
         orderId,
@@ -92,6 +115,9 @@ export default async function handler(req, res) {
             }
           : null,
         reused: Boolean(fulfilled.reused),
+        emailSent: Boolean(
+          fulfilled.emailResult?.ok || Number(fulfilled.license?.emailSentAt)
+        ),
         captureStatus: capture.status,
       });
       return;

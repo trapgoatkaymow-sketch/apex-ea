@@ -204,9 +204,11 @@ export default async function handler(req, res) {
         email,
         clientName,
         captureId: extractCaptureId(capture) || String(resource?.id || ""),
+        // Never fall back to resource.id — on CAPTURE events that is the
+        // capture id, which would break orderId idempotency with capture-order.
         orderId: String(
           resource?.supplementary_data?.related_ids?.order_id ||
-            resource?.id ||
+            capture?.supplementary_data?.related_ids?.order_id ||
             ""
         ),
         source: giveaway ? "paypal-giveaway-webhook" : "paypal-webhook",

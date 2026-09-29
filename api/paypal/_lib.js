@@ -235,11 +235,29 @@ export async function captureLifetimeOrder(orderId) {
     throw err;
   }
   const accessToken = await getPayPalAccessToken();
-  return paypalFetch(`/v2/checkout/orders/${encodeURIComponent(id)}/capture`, {
-    method: "POST",
-    accessToken,
-    body: {},
-  });
+  try {
+    return await paypalFetch(
+      `/v2/checkout/orders/${encodeURIComponent(id)}/capture`,
+      {
+        method: "POST",
+        accessToken,
+        body: {},
+      }
+    );
+  } catch (error) {
+    // Browser retry / double onApprove / webhook race: order already captured.
+    // Fetch the completed order so we can still mint + email the license.
+    const blob = JSON.stringify(error?.data || error?.message || "");
+    const already =
+      String(error?.data?.name || "").toUpperCase() ===
+        "ORDER_ALREADY_CAPTURED" ||
+      blob.includes("ORDER_ALREADY_CAPTURED");
+    if (!already) throw error;
+    return paypalFetch(`/v2/checkout/orders/${encodeURIComponent(id)}`, {
+      method: "GET",
+      accessToken,
+    });
+  }
 }
 
 export function extractCaptureEmail(capture) {
