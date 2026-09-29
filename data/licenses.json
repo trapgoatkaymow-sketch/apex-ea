@@ -70,7 +70,7 @@
       "usedAt": 1790506705087,
       "deviceId": "a494174e-fb2b-4f78-bebe-56ad8cad7580",
       "boundAt": 1790552651976,
-      "updatedAt": 1790718828309,
+      "updatedAt": 1790718828579,
       "scanReset": null,
       "robotAccountId": "fcb30a09-a2d0-4b41-8e98-0633552bd87c",
       "robotLogin": "436649004",
@@ -406,8 +406,7 @@
         "strategy": "scalper",
         "symbols": [
           "GBPUSD",
-          "EURUSD",
-          "AUDUSD"
+          "EURUSD"
         ]
       }
     },
@@ -1715,13 +1714,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "USDCAD",
-          "USDCADM",
-          "USDZARM",
-          "EURAUD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2936,9 +2929,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3286,7 +3277,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -16555,7 +16548,20 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD",
+          "BTCAUDM",
+          "BTCUSD",
+          "BTCUSDM",
+          "USOILM",
+          "USOIL",
+          "NZDUSD",
+          "USDJPY",
+          "GBPJPY",
+          "ETHUSD",
+          "EURJPY"
+        ]
       }
     },
     {
@@ -16602,7 +16608,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSDM",
+          "EURUSDM",
+          "BTCUSDM"
+        ]
       }
     },
     {
