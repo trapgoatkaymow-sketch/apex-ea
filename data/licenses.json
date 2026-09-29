@@ -19,14 +19,14 @@
       "usedAt": 1790571805478,
       "deviceId": "6446fcdf-0e05-47a7-a9dd-5e0ad8e7c191",
       "boundAt": 1790571982852,
-      "updatedAt": 1790682297438,
+      "updatedAt": 1790682310315,
       "scanReset": null,
-      "robotAccountId": "62806e12-f05c-4204-84ca-27286940977b",
+      "robotAccountId": "f24529c7-39bd-412e-8e4a-1a5939619d74",
       "robotLogin": "55023928",
       "robotServer": "HFMarketsSA-Live2",
       "robotCompany": "HFM South Africa",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790612298735,
+      "robotConnectedAt": 1790682309850,
       "clientSymbols": [
         "GBPUSD",
         "XAUUSD",
@@ -44,8 +44,7 @@
         "strategy": "scalper",
         "symbols": [
           "GBPUSD",
-          "XAUUSD",
-          "US30"
+          "XAUUSD"
         ]
       }
     },
@@ -3747,7 +3746,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "BTCUSD",
+          "BTCUSD.M",
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
       }
     },
     {
@@ -16015,7 +16019,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
