@@ -137,6 +137,7 @@ function publicLocal(mentor) {
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "")
     .slice(0, 8);
+  const deactivatedAt = Number(mentor.deactivatedAt) || null;
   return {
     id: mentor.id,
     username: mentor.username,
@@ -152,6 +153,10 @@ function publicLocal(mentor) {
     licenseKeysUpdatedAt: Number(mentor.licenseKeysUpdatedAt) || null,
     inviteCode: String(mentor.inviteCode || inviteFromId || "").trim().toUpperCase(),
     appColor: normalizeLocalAppColor(mentor.appColor),
+    deactivatedAt,
+    deactivatedReason: deactivatedAt
+      ? String(mentor.deactivatedReason || "").trim()
+      : "",
   };
 }
 
@@ -312,6 +317,29 @@ function mergeMentorLists(localList = [], remoteList = []) {
         }
         return Math.max(incomingAt, previousAt) || 0;
       })(),
+      deactivatedAt: (() => {
+        const status = preferMentorStatus(item.status, prev?.status);
+        if (status === "approved" || status === "pending") return null;
+        const a = Number(item.deactivatedAt) || 0;
+        const b = Number(prev?.deactivatedAt) || 0;
+        return Math.max(a, b) || null;
+      })(),
+      deactivatedReason: (() => {
+        const status = preferMentorStatus(item.status, prev?.status);
+        if (status === "approved" || status === "pending") return "";
+        const aAt = Number(item.deactivatedAt) || 0;
+        const bAt = Number(prev?.deactivatedAt) || 0;
+        if (aAt >= bAt) {
+          return (
+            String(item.deactivatedReason || "").trim() ||
+            String(prev?.deactivatedReason || "").trim()
+          );
+        }
+        return (
+          String(prev?.deactivatedReason || "").trim() ||
+          String(item.deactivatedReason || "").trim()
+        );
+      })(),
     });
   }
   return Array.from(map.values()).sort(
@@ -345,6 +373,8 @@ function cacheMentorLocally(mentor) {
     appColorUpdatedAt: Number(
       mentor.appColorUpdatedAt || mentors[idx]?.appColorUpdatedAt || 0
     ) || 0,
+    deactivatedAt: Number(mentor.deactivatedAt) || null,
+    deactivatedReason: String(mentor.deactivatedReason || "").trim(),
   };
   if (idx >= 0) mentors[idx] = { ...mentors[idx], ...next };
   else mentors.unshift(next);
@@ -565,7 +595,14 @@ export async function updateMentorStatus(email, status) {
     if (key === normalizeEmail(SUPER_ADMIN_EMAIL)) {
       throw new Error("Cannot change super admin status");
     }
-    mentors[idx] = { ...mentors[idx], status };
+    const nextStatus = String(status || "").toLowerCase();
+    mentors[idx] = {
+      ...mentors[idx],
+      status: nextStatus,
+      ...(nextStatus === "approved"
+        ? { deactivatedAt: null, deactivatedReason: "" }
+        : {}),
+    };
     writeLocalMentors(mentors);
     return publicLocal(mentors[idx]);
   }

@@ -283,6 +283,7 @@ export function publicMentor(mentor) {
   const role = mentor.role || "mentor";
   const appColor = normalizeAppColor(mentor.appColor);
   const appColorUpdatedAt = Number(mentor.appColorUpdatedAt) || null;
+  const deactivatedAt = Number(mentor.deactivatedAt) || null;
   return {
     id: mentor.id,
     username: mentor.username,
@@ -300,6 +301,11 @@ export function publicMentor(mentor) {
     appColor,
     // Clients need the stamp so newer portal colors win over stale local cache.
     appColorUpdatedAt: appColor ? appColorUpdatedAt || Date.now() : appColorUpdatedAt,
+    // Activity auto-deactivation stamps — super admin Mentors list needs these.
+    deactivatedAt,
+    deactivatedReason: deactivatedAt
+      ? String(mentor.deactivatedReason || "").trim()
+      : "",
   };
 }
 
