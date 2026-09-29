@@ -19,7 +19,7 @@
       "usedAt": 1790609523424,
       "deviceId": "3f22d0a3-ecd7-478e-9f2c-bcb6b0958fb1",
       "boundAt": 1790616548303,
-      "updatedAt": 1790707408037,
+      "updatedAt": 1790707409615,
       "scanReset": null,
       "robotAccountId": "ae8a1926-d8eb-4fbf-ba12-798c82d8ef2d",
       "robotLogin": "113385368",
@@ -105,14 +105,14 @@
       "usedAt": 1790530897212,
       "deviceId": "68b17583-52a6-4a50-a8e5-ef9bad098140",
       "boundAt": 1790530897212,
-      "updatedAt": 1790707401400,
+      "updatedAt": 1790707404120,
       "scanReset": null,
-      "robotAccountId": "e115af5c-a01d-4421-847c-7ddb179aeb42",
-      "robotLogin": "8089845",
-      "robotServer": "VaultMarkets-Live",
-      "robotCompany": "VaultMarkets (Pty) Ltd",
+      "robotAccountId": "f7255623-a948-4c3b-9a9e-70b6fb54ffd4",
+      "robotLogin": "335477495",
+      "robotServer": "XMGlobal-MT5 9",
+      "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790707400416,
+      "robotConnectedAt": 1790606241439,
       "clientSymbols": [
         "XAUUSD",
         "EURUSD"
@@ -1733,7 +1733,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USDJPY",
+          "ETHUSD",
+          "ETHUSDM"
+        ]
       }
     },
     {
@@ -3854,7 +3858,8 @@
         "symbols": [
           "XAUUSD",
           ".US30.",
-          "GOLD"
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
@@ -4204,9 +4209,7 @@
           "USCASH",
           "NASDAQ",
           "USTECH",
-          "XAAUSD",
-          "BOOM",
-          "STEP"
+          "XAAUSD"
         ]
       }
     },
@@ -11369,7 +11372,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "BTCUSD"
+        ]
       }
     },
     {
