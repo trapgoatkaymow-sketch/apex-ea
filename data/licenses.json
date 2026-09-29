@@ -19,7 +19,7 @@
       "usedAt": 1790525661400,
       "deviceId": "9b528d78-19a7-489a-8ed2-08b5f9aac4fa",
       "boundAt": 1790525661400,
-      "updatedAt": 1790675433917,
+      "updatedAt": 1790675437889,
       "scanReset": null,
       "robotAccountId": "d86df0ea-257b-4e43-9e6d-afa2503ede23",
       "robotLogin": "202295253",
@@ -31,7 +31,7 @@
         "XAUUSD",
         "BTCUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790674853110,
+      "clientSymbolsUpdatedAt": 1790675437889,
       "purchaseCaptureId": "26X18521CF005674F",
       "purchaseOrderId": "88C92979ND948382P",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -954,11 +954,12 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NZDUSD",
-          "US30",
-          "USDJPY",
           "XAUUSD",
-          "GOLD"
+          "NAS100",
+          "GOLD",
+          "USDJPY",
+          "NZDUSD",
+          "US30"
         ]
       }
     },
@@ -1583,8 +1584,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          ".US30.",
-          "GOLD"
+          "US30",
+          ".US30."
         ]
       }
     },
