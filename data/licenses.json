@@ -19,7 +19,7 @@
       "usedAt": 1790542867868,
       "deviceId": "b58f6b1d-7aef-4022-8586-64c982093577",
       "boundAt": 1790542867868,
-      "updatedAt": 1790655944092,
+      "updatedAt": 1790655946131,
       "scanReset": null,
       "robotAccountId": "5d5c6b57-fedc-4170-8b44-728a71fb3c54",
       "robotLogin": "4118296",
@@ -28,7 +28,7 @@
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790655299454,
       "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790655944092,
+      "clientSymbolsUpdatedAt": 1790655946131,
       "purchaseCaptureId": "23S772325E042962V",
       "purchaseOrderId": "6XE438554R260452V",
       "purchaseSource": "paypal-giveaway",
@@ -408,7 +408,17 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAAUSD",
+          "XAUUSD.MIC",
+          ".USTECH.MIC",
+          "US30",
+          "US30.MIC",
+          ".US30.MIC",
+          ".UUSTECH.MIC",
+          "AUDUSD.M"
+        ]
       }
     },
     {
@@ -6988,11 +6998,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "EURUSD",
-          "EURJPY"
-        ]
+        "symbols": []
       }
     },
     {
@@ -14235,7 +14241,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -14534,12 +14542,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "USDJPY",
-          "USDCAD",
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
