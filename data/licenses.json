@@ -1,6 +1,48 @@
 {
   "licenses": [
     {
+      "key": "APEX-T245-H6R4",
+      "botId": "vector-x-pro-ea-mul8lgik",
+      "botName": "VECTOR X PRO EA",
+      "clientEmail": "direkopano5@gmail.com",
+      "clientName": "Kopano",
+      "mainText": "Kopano",
+      "mentorEmail": "direkopano5@gmail.com",
+      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
+      "mentorName": "kopanofx",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790599464144,
+      "usedAt": 1790599888590,
+      "deviceId": "e30cbbf0-7f9e-4a6f-91c2-3e019e8715de",
+      "boundAt": 1790599888590,
+      "updatedAt": 1790660979687,
+      "scanReset": null,
+      "robotAccountId": "1d660fcf-6d38-43eb-84e5-99f7eb2d6af1",
+      "robotLogin": "592067533",
+      "robotServer": "FxPro-MT5 Demo",
+      "robotCompany": "FxPro Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790616041979,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "bot": {
+        "id": "vector-x-pro-ea-mul8lgik",
+        "name": "VECTOR X PRO EA",
+        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-WSUR-9GX5",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -756,7 +798,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSDM",
+          "EURUSDM",
+          "BTCUSDM"
+        ]
       }
     },
     {
@@ -890,7 +936,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "GBPUSD",
+          "XAUUSD",
+          "USDJPY",
+          "AUDUSD",
+          "BTCUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -973,7 +1027,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD.B"
+        ]
       }
     },
     {
@@ -1237,7 +1294,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUAUD"
+          "XAUAUD",
+          "AUDCAD"
         ]
       }
     },
@@ -1597,7 +1655,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -20764,48 +20824,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-T245-H6R4",
-      "botId": "vector-x-pro-ea-mul8lgik",
-      "botName": "VECTOR X PRO EA",
-      "clientEmail": "direkopano5@gmail.com",
-      "clientName": "Kopano",
-      "mainText": "Kopano",
-      "mentorEmail": "direkopano5@gmail.com",
-      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
-      "mentorName": "kopanofx",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790599464144,
-      "usedAt": 1790599888590,
-      "deviceId": "e30cbbf0-7f9e-4a6f-91c2-3e019e8715de",
-      "boundAt": 1790599888590,
-      "updatedAt": 1790616885675,
-      "scanReset": null,
-      "robotAccountId": "1d660fcf-6d38-43eb-84e5-99f7eb2d6af1",
-      "robotLogin": "592067533",
-      "robotServer": "FxPro-MT5 Demo",
-      "robotCompany": "FxPro Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790616041979,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "bot": {
-        "id": "vector-x-pro-ea-mul8lgik",
-        "name": "VECTOR X PRO EA",
-        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
       }
     },
     {
