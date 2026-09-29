@@ -28,11 +28,52 @@
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790710129682,
       "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790710123539,
+      "clientSymbolsUpdatedAt": 1790710129125,
       "purchaseCaptureId": "2HV65998LE177931K",
       "purchaseOrderId": "9474222776610370X",
       "purchaseSource": "paypal-giveaway",
       "emailSentAt": 1790695181953,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
+      "key": "APEX-8ER6-RFSK",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "terrythutloa@gmail.com",
+      "clientName": "Tebogo",
+      "mainText": "Tebogo",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790709966901,
+      "usedAt": 1790710129942,
+      "deviceId": "5993ef92-bdfe-4367-8c95-28972f1a0d14",
+      "boundAt": 1790710129942,
+      "updatedAt": 1790710129942,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": "48J12882LF739624G",
+      "purchaseOrderId": "2DP41137SN0101939",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790710003098,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -855,7 +896,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "BTCUSD",
+          "BTCUSD.M",
+          "US30",
+          "XAUUSD",
+          "NAS100",
+          "XAUUSD.M"
+        ]
       }
     },
     {
@@ -904,8 +952,7 @@
         "symbols": [
           "GBPUSD",
           "XAUUSD",
-          "US30",
-          "USA30"
+          "US30"
         ]
       }
     },
@@ -1093,47 +1140,6 @@
           "XAUUSD",
           "XAUUSD.M"
         ]
-      }
-    },
-    {
-      "key": "APEX-8ER6-RFSK",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "terrythutloa@gmail.com",
-      "clientName": "Tebogo",
-      "mainText": "Tebogo",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790709966901,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790710003098,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": "48J12882LF739624G",
-      "purchaseOrderId": "2DP41137SN0101939",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790710003098,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": []
       }
     },
     {
@@ -18442,8 +18448,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "US30",
-          "XAUUSD.B",
           "XAUUSD"
         ]
       }
