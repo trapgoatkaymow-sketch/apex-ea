@@ -217,7 +217,7 @@
       "usedAt": 1790578643784,
       "deviceId": "134dccce-b0b8-4354-ad46-3b14b17fa3bb",
       "boundAt": 1790578643784,
-      "updatedAt": 1790694315825,
+      "updatedAt": 1790694316549,
       "scanReset": null,
       "robotAccountId": "e1f7b8be-2e52-40bb-b874-39f49803eb59",
       "robotLogin": "430608351",
@@ -370,8 +370,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30"
+          "XAUUSD"
         ]
       }
     },
@@ -882,7 +881,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NAS100"
+          "NAS100",
+          "GOLD",
+          "US30"
         ]
       }
     },
@@ -1093,7 +1094,7 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "BTCUSD"
+          "DYNAMIC100"
         ]
       }
     },
@@ -1503,8 +1504,7 @@
           "USDJPY",
           "XAUUSD",
           "US30",
-          "GOLD",
-          "GBPUSD"
+          "GOLD"
         ]
       }
     },
@@ -2130,9 +2130,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSDM",
-          "US30",
-          "US30M"
+          "BTCUSD",
+          "BTCUSDM",
+          "XAUUSD",
+          "XAUUSDM"
         ]
       }
     },
@@ -5331,7 +5332,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "XAUUSD",
+          "EURUSD",
+          "US30",
+          "XAUUSD.M",
+          "US100"
+        ]
       }
     },
     {
@@ -5466,7 +5474,6 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
           "USDJPY"
         ]
       }
@@ -6965,9 +6972,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
           ".US30.",
-          "GOLD"
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
