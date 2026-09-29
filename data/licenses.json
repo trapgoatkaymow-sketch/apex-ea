@@ -50,6 +50,51 @@
       }
     },
     {
+      "key": "APEX-YQXE-R9YJ",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "steadykidmusic@gmail.com",
+      "clientName": "Sinethemba Andries Xana",
+      "mainText": "Sinethemba Andries Xana",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790670230791,
+      "usedAt": 1790670390864,
+      "deviceId": "97c4251b-857f-4495-9942-e73866b30c6f",
+      "boundAt": 1790670390864,
+      "updatedAt": 1790683364057,
+      "scanReset": null,
+      "robotAccountId": "aeb7fba2-9b9d-4aa2-9581-d4af3537d647",
+      "robotLogin": "4081555",
+      "robotServer": "RazorMarkets-Live",
+      "robotCompany": "Razor Markets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790673265586,
+      "clientSymbols": [
+        "GBPUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790683364057,
+      "purchaseCaptureId": "9WJ92918BA1380106",
+      "purchaseOrderId": "0KH98879447804638",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": 1790670255864,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "GBPUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-UFB7-6XU2",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -178,51 +223,6 @@
         "symbols": [
           "GOLD",
           "XAUUSD"
-        ]
-      }
-    },
-    {
-      "key": "APEX-YQXE-R9YJ",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "steadykidmusic@gmail.com",
-      "clientName": "Sinethemba Andries Xana",
-      "mainText": "Sinethemba Andries Xana",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790670230791,
-      "usedAt": 1790670390864,
-      "deviceId": "97c4251b-857f-4495-9942-e73866b30c6f",
-      "boundAt": 1790670390864,
-      "updatedAt": 1790683361458,
-      "scanReset": null,
-      "robotAccountId": "aeb7fba2-9b9d-4aa2-9581-d4af3537d647",
-      "robotLogin": "4081555",
-      "robotServer": "RazorMarkets-Live",
-      "robotCompany": "Razor Markets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790673265586,
-      "clientSymbols": [
-        "GBPUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790683361458,
-      "purchaseCaptureId": "9WJ92918BA1380106",
-      "purchaseOrderId": "0KH98879447804638",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790670255864,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "GBPUSD"
         ]
       }
     },
@@ -926,8 +926,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "USDJPY",
+          "EURUSD",
           "XAUUSD",
-          "EURUSD"
+          "XUAUSD"
         ]
       }
     },
@@ -1246,9 +1248,7 @@
         "strategy": "scalper",
         "symbols": [
           "US30",
-          "XAUUSD",
-          "US30CASH",
-          "GOLD"
+          "XAUUSD"
         ]
       }
     },
@@ -2782,7 +2782,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "NAS100"
+        ]
       }
     },
     {
@@ -3426,10 +3430,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -4438,9 +4439,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -4771,11 +4770,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -4863,8 +4858,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "GOLD"
+          "XAUUSD"
         ]
       }
     },
@@ -6315,12 +6309,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "BTCUSD",
-          "BTCUSD.M",
-          "XAUUSD",
-          "XAUUSD.M"
-        ]
+        "symbols": []
       }
     },
     {
@@ -10844,11 +10833,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD",
-          "USA30",
-          "XAUUSDC",
-          "USA100",
-          "XAUUSD"
+          "XAUUSDC"
         ]
       }
     },
@@ -11033,9 +11018,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          ".US30.",
+          "EURUSD"
         ]
       }
     },
