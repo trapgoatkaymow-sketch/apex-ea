@@ -19,7 +19,7 @@
       "usedAt": 1790618126660,
       "deviceId": "c43e2fae-2d32-4e91-9656-06cb716a24c5",
       "boundAt": 1790618126660,
-      "updatedAt": 1790685518022,
+      "updatedAt": 1790685542548,
       "scanReset": null,
       "robotAccountId": "d86df0ea-257b-4e43-9e6d-afa2503ede23",
       "robotLogin": "202295253",
@@ -32,7 +32,7 @@
         "US30",
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790685518022,
+      "clientSymbolsUpdatedAt": 1790685542548,
       "purchaseCaptureId": "26X18521CF005674F",
       "purchaseOrderId": "88C92979ND948382P",
       "purchaseSource": "paypal-giveaway",
@@ -44,7 +44,53 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD.B",
-          "US30"
+          "US30",
+          "XAUUSD"
+        ]
+      }
+    },
+    {
+      "key": "APEX-Z6SN-W4Q7",
+      "botId": "vector-x-pro-2-0-muljiz22",
+      "botName": "VECTOR X PRO 2.0",
+      "clientEmail": "mahlatsemokgokolo8@gmail.com",
+      "clientName": "Mahlatse",
+      "mainText": "Mahlatse",
+      "mentorEmail": "direkopano5@gmail.com",
+      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
+      "mentorName": "kopanofx",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "1m",
+      "expiresAt": 1793276484097,
+      "createdAt": 1790684484097,
+      "usedAt": 1790684653003,
+      "deviceId": "b7c30c7d-4a48-4c1a-80f4-23544b99b3a5",
+      "boundAt": 1790684653003,
+      "updatedAt": 1790685516898,
+      "scanReset": null,
+      "robotAccountId": "8b38c46b-903b-424a-a68b-71afac4b3673",
+      "robotLogin": "362210911",
+      "robotServer": "XMGlobal-MT5 12",
+      "robotCompany": "XM",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790576032048,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790685516898,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790684517433,
+      "bot": {
+        "id": "vector-x-pro-2-0-muljiz22",
+        "name": "VECTOR X PRO 2.0",
+        "photo": "/api/licenses/photo?botId=vector-x-pro-2-0-muljiz22&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
         ]
       }
     },
@@ -219,8 +265,7 @@
         "strategy": "scalper",
         "symbols": [
           "GBPUSD",
-          "XAUUSD",
-          "US30"
+          "XAUUSD"
         ]
       }
     },
@@ -357,51 +402,6 @@
         "symbols": [
           "XAUUSD",
           "XAUUSDM"
-        ]
-      }
-    },
-    {
-      "key": "APEX-Z6SN-W4Q7",
-      "botId": "vector-x-pro-2-0-muljiz22",
-      "botName": "VECTOR X PRO 2.0",
-      "clientEmail": "mahlatsemokgokolo8@gmail.com",
-      "clientName": "Mahlatse",
-      "mainText": "Mahlatse",
-      "mentorEmail": "direkopano5@gmail.com",
-      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
-      "mentorName": "kopanofx",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "1m",
-      "expiresAt": 1793276484097,
-      "createdAt": 1790684484097,
-      "usedAt": 1790684653003,
-      "deviceId": "b7c30c7d-4a48-4c1a-80f4-23544b99b3a5",
-      "boundAt": 1790684653003,
-      "updatedAt": 1790685464873,
-      "scanReset": null,
-      "robotAccountId": "8b38c46b-903b-424a-a68b-71afac4b3673",
-      "robotLogin": "362210911",
-      "robotServer": "XMGlobal-MT5 12",
-      "robotCompany": "XM",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790576032048,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790685464873,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790684517433,
-      "bot": {
-        "id": "vector-x-pro-2-0-muljiz22",
-        "name": "VECTOR X PRO 2.0",
-        "photo": "/api/licenses/photo?botId=vector-x-pro-2-0-muljiz22&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
         ]
       }
     },
@@ -1196,7 +1196,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -2083,9 +2085,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2910,8 +2910,7 @@
           "NAS100",
           "BTCUSDM",
           "XAUUSD247M",
-          "US30",
-          "XAUUSDM"
+          "US30"
         ]
       }
     },
@@ -7607,9 +7606,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "VOL80"
-        ]
+        "symbols": []
       }
     },
     {
@@ -10180,7 +10177,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
