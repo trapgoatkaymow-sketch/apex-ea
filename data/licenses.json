@@ -105,7 +105,7 @@
       "usedAt": 1790706951659,
       "deviceId": "9fc51cd2-c0f8-4eb9-a02c-4ef3adb5d692",
       "boundAt": 1790706951659,
-      "updatedAt": 1790707133128,
+      "updatedAt": 1790707146855,
       "scanReset": null,
       "robotAccountId": "f4b2435c-d032-4f0b-be46-63b056123e05",
       "robotLogin": "55037947",
@@ -113,8 +113,10 @@
       "robotCompany": "HFM Investments Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790707047480,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790707133128,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790707146855,
       "purchaseCaptureId": "0H628757YN600483S",
       "purchaseOrderId": "1BB316859R948582U",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -911,11 +913,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "USDJPY",
-          "ETHUSD",
-          "ETHUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5295,9 +5293,7 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "GBPUSD",
-          "EURUSD",
-          "USDJPY"
+          "XAUUSD"
         ]
       }
     },
