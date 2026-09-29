@@ -151,14 +151,14 @@
       "usedAt": 1790671831512,
       "deviceId": "0b5f7627-b061-48a9-8921-27517cacd681",
       "boundAt": 1790671831512,
-      "updatedAt": 1790706652712,
+      "updatedAt": 1790706654450,
       "scanReset": null,
-      "robotAccountId": "3b2921b3-397e-47ff-9df9-64de0c0af435",
-      "robotLogin": "1550091030",
-      "robotServer": "JustMarkets-Live7",
-      "robotCompany": "JustMarkets Global",
+      "robotAccountId": "892b741e-f7db-4453-885a-ae1569bcbaba",
+      "robotLogin": "1550090975",
+      "robotServer": "JustMarkets-LIVE7",
+      "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790705838557,
+      "robotConnectedAt": 1790706652921,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790706652031,
       "purchaseCaptureId": "5H687590885309600",
@@ -3288,9 +3288,7 @@
           "USCASH",
           "NASDAQ",
           "USTECH",
-          "XAAUSD",
-          "BOOM",
-          "STEP"
+          "XAAUSD"
         ]
       }
     },
@@ -20824,7 +20822,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
