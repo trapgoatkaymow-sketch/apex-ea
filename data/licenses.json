@@ -19,14 +19,14 @@
       "usedAt": 1790507377860,
       "deviceId": "39cb2939-c05c-48a6-bada-fac06944eba7",
       "boundAt": 1790593260612,
-      "updatedAt": 1790713571367,
+      "updatedAt": 1790713578293,
       "scanReset": null,
-      "robotAccountId": "1e216cdb-ad18-4a54-8021-395600e27ec4",
+      "robotAccountId": "583e0475-b712-4e3c-af97-44d61c472702",
       "robotLogin": "477300407",
       "robotServer": "Exness-MT5Trial9",
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790619860552,
+      "robotConnectedAt": 1790706162335,
       "clientSymbols": [
         "BTCUSD",
         "BTCUSDM",
@@ -839,10 +839,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -4162,7 +4159,9 @@
           "EURUSD",
           "XAUUSD",
           "TSLA.NAS24",
-          "TSLA"
+          "TSLA",
+          "GBPUSD",
+          "US30"
         ]
       }
     },
@@ -4301,10 +4300,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "BTCUSD",
+          "US30C",
           "XAUUSD",
-          "NAS100",
-          "XAUUSDM"
+          "NAS100"
         ]
       }
     },
