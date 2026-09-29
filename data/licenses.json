@@ -619,13 +619,7 @@
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790655299454,
-      "clientSymbols": [
-        "US30",
-        "XAUUSD",
-        "GBPUSD",
-        "GBPUSDM",
-        "EURUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790701768766,
       "purchaseCaptureId": "23S772325E042962V",
       "purchaseOrderId": "6XE438554R260452V",
@@ -636,13 +630,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "XAUUSD",
-          "GBPUSD",
-          "GBPUSDM",
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1567,7 +1555,8 @@
           "XAUUSD",
           "NAS100",
           "US30",
-          "CRASH150INDEX"
+          "CRASH150INDEX",
+          "WALLSTREET30"
         ]
       }
     },
@@ -1870,7 +1859,8 @@
           "AUDUSD",
           "AUDCAD",
           "USDCAD",
-          "AUDJPY"
+          "AUDJPY",
+          "USDCHF"
         ]
       }
     },
@@ -4372,7 +4362,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -6390,11 +6384,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSDM",
-          "EURUSDM",
-          "BTCUSDM"
-        ]
+        "symbols": []
       }
     },
     {
