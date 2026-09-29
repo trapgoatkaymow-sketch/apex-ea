@@ -1,6 +1,48 @@
 {
   "licenses": [
     {
+      "key": "APEX-T245-H6R4",
+      "botId": "vector-x-pro-ea-mul8lgik",
+      "botName": "VECTOR X PRO EA",
+      "clientEmail": "direkopano5@gmail.com",
+      "clientName": "Kopano",
+      "mainText": "Kopano",
+      "mentorEmail": "direkopano5@gmail.com",
+      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
+      "mentorName": "kopanofx",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790599464144,
+      "usedAt": 1790599888590,
+      "deviceId": "e30cbbf0-7f9e-4a6f-91c2-3e019e8715de",
+      "boundAt": 1790599888590,
+      "updatedAt": 1790661009640,
+      "scanReset": null,
+      "robotAccountId": "ae0e79a7-5b8c-4dfa-9729-3646175cd0b1",
+      "robotLogin": "592067533",
+      "robotServer": "FxPro-MT5 Demo",
+      "robotCompany": "FxPro Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790660986073,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "bot": {
+        "id": "vector-x-pro-ea-mul8lgik",
+        "name": "VECTOR X PRO EA",
+        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-32M2-47GY",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -45,48 +87,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-T245-H6R4",
-      "botId": "vector-x-pro-ea-mul8lgik",
-      "botName": "VECTOR X PRO EA",
-      "clientEmail": "direkopano5@gmail.com",
-      "clientName": "Kopano",
-      "mainText": "Kopano",
-      "mentorEmail": "direkopano5@gmail.com",
-      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
-      "mentorName": "kopanofx",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790599464144,
-      "usedAt": 1790599888590,
-      "deviceId": "e30cbbf0-7f9e-4a6f-91c2-3e019e8715de",
-      "boundAt": 1790599888590,
-      "updatedAt": 1790660987599,
-      "scanReset": null,
-      "robotAccountId": "ae0e79a7-5b8c-4dfa-9729-3646175cd0b1",
-      "robotLogin": "592067533",
-      "robotServer": "FxPro-MT5 Demo",
-      "robotCompany": "FxPro Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790660986073,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "bot": {
-        "id": "vector-x-pro-ea-mul8lgik",
-        "name": "VECTOR X PRO EA",
-        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
         ]
       }
     },
@@ -715,14 +715,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "BTCUSD",
-          "BTCUSDM",
-          "XAUUS",
-          "XAUUSD",
-          "XAUUSDM",
-          "GBPUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -889,7 +882,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSDM",
+          "EURUSDM",
+          "BTCUSDM"
+        ]
       }
     },
     {
@@ -1077,8 +1074,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100",
-          "US30"
+          "NAS100"
         ]
       }
     },
@@ -1164,10 +1160,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1660,7 +1653,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1702,9 +1697,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
