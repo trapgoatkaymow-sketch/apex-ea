@@ -536,7 +536,10 @@
         "strategy": "scalper",
         "symbols": [
           "US30M",
-          "XAUUSD"
+          "XAUUSD",
+          "BTCUSD",
+          "BTCUSDM",
+          "US500M"
         ]
       }
     },
@@ -671,7 +674,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -982,10 +988,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30.",
-          "GOLD",
-          "GOLDMICRO",
-          "XAUUSDM"
+          ".US30."
         ]
       }
     },
@@ -1433,9 +1436,7 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790615598763,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790670163903,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -1524,7 +1525,7 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
-      "emailSentAt": 1790670071691,
+      "emailSentAt": 1790670108652,
       "bot": {
         "id": "zar-charts-v6--mujqkxbp",
         "name": "ZAR CHARTS V6+",
@@ -2401,9 +2402,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
