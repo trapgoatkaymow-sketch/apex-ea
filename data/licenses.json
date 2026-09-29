@@ -19,7 +19,7 @@
       "usedAt": 1790527666015,
       "deviceId": "45602774-1989-4cf8-9031-4740eb48af05",
       "boundAt": 1790542522624,
-      "updatedAt": 1790691459477,
+      "updatedAt": 1790691462682,
       "scanReset": null,
       "robotAccountId": "256a54f1-2933-4ccf-be03-3f085631cf92",
       "robotLogin": "987850913",
@@ -35,7 +35,7 @@
         "XAUUUSD",
         "XAUUSD.MIC"
       ],
-      "clientSymbolsUpdatedAt": 1790691459477,
+      "clientSymbolsUpdatedAt": 1790691462682,
       "purchaseCaptureId": "63J562168S248470V",
       "purchaseOrderId": "7PB24779NY2662151",
       "purchaseSource": "paypal-giveaway",
@@ -1508,7 +1508,8 @@
           "XAUUSD",
           "GBPUSD",
           "USDCHF",
-          "US30"
+          "US30",
+          "BTCUSD"
         ]
       }
     },
@@ -1605,7 +1606,8 @@
         "symbols": [
           "XAUUSD",
           ".US30.",
-          "GOLD"
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
@@ -1650,7 +1652,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
