@@ -41,10 +41,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -74,7 +71,11 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790675232655,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "NAS100",
+        "GOLD",
+        "US30"
+      ],
       "clientSymbolsUpdatedAt": 1790693346811,
       "purchaseCaptureId": "4XS12182UV421763D",
       "purchaseOrderId": "1TC77409RM390525G",
