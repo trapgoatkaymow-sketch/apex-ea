@@ -67,14 +67,14 @@
       "usedAt": 1790520706774,
       "deviceId": "c2f6985a-add0-4f05-aa7f-dcf4172df75a",
       "boundAt": 1790546164620,
-      "updatedAt": 1790644873363,
+      "updatedAt": 1790644876392,
       "scanReset": null,
-      "robotAccountId": "94693f77-6a78-40a4-a939-7e7f021b8170",
+      "robotAccountId": "456864b2-be9f-4cf7-b9d2-bd05362aa1ed",
       "robotLogin": "322204596",
       "robotServer": "XMGlobal-MT5 8",
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790578659605,
+      "robotConnectedAt": 1790641672909,
       "clientSymbols": [
         "US30",
         "XAUUSD",
@@ -115,7 +115,7 @@
       "usedAt": 1790615833347,
       "deviceId": "fe68c7ec-704c-40af-af13-8c4ccdcf9aef",
       "boundAt": 1790615833347,
-      "updatedAt": 1790644840225,
+      "updatedAt": 1790644843783,
       "scanReset": null,
       "robotAccountId": "570b27ed-bc9c-4b4f-8ea4-7061be8df8e0",
       "robotLogin": "477331636",
@@ -222,7 +222,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -665,11 +668,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "EURUSD",
-          "EURJPY"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1013,8 +1012,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30.",
-          "GOLD"
+          ".US30."
         ]
       }
     },
@@ -11955,7 +11953,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "EURUSD",
+          "USDJPY",
+          "AUDUSD",
+          "NZDUSD",
+          "GBPUSD"
+        ]
       }
     },
     {
