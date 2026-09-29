@@ -123,7 +123,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -213,7 +216,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "USDJPY"
+        ]
       },
       "emailSentAt": null
     },
@@ -285,7 +291,14 @@
       "robotCompany": "HFM South Africa",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790600152566,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "EURUSD",
+        "USA30",
+        "XAUUSDC",
+        "USA100",
+        "XAUUSD",
+        "GER40"
+      ],
       "clientSymbolsUpdatedAt": 1790666343064,
       "purchaseCaptureId": "4WW41642RB596924B",
       "purchaseOrderId": "6F78496781130894L",
@@ -296,13 +309,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "USA30",
-          "XAUUSDC",
-          "USA100",
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -716,7 +723,9 @@
       "robotCompany": "",
       "robotPlatform": "",
       "robotConnectedAt": null,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "USDJPY"
+      ],
       "clientSymbolsUpdatedAt": 1790666291801,
       "purchaseCaptureId": "8SK166745U032701K",
       "purchaseOrderId": "2Y222365CH611624M",
@@ -1481,7 +1490,6 @@
         "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
           "EURUSD",
           "GBPUSD",
           "USDJPY",
