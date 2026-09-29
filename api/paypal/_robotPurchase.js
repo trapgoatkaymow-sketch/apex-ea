@@ -106,7 +106,7 @@ export const GIVEAWAY_COUNTDOWN_HOURS = Math.max(
   Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 10
 );
 /** Bump to force a fresh on-page countdown latch (checkout stays open). */
-export const GIVEAWAY_COUNTDOWN_VERSION = 2;
+export const GIVEAWAY_COUNTDOWN_VERSION = 3;
 
 function countdownFromLatched(row) {
   const ms = Date.parse(String(row?.countdownEndsAt || "").trim());
@@ -168,17 +168,7 @@ export function getGiveawayWindow(nowMs = Date.now()) {
 }
 
 async function readLatchedWindow() {
-  if (memoryGiveawayWindow?.startsAt) {
-    const ms = Date.parse(memoryGiveawayWindow.startsAt);
-    if (Number.isFinite(ms)) {
-      return {
-        startMs: ms,
-        durationMs: durationFromLatched(memoryGiveawayWindow),
-        countdownEndsAtMs: countdownFromLatched(memoryGiveawayWindow),
-        countdownVersion: Number(memoryGiveawayWindow.countdownVersion) || 0,
-      };
-    }
-  }
+  // Always re-read durable so ops extensions (e.g. +12h) win over warm memory.
   try {
     const { durableRead } = await import("../_durableJson.js");
     const doc = await durableRead({
@@ -199,20 +189,44 @@ async function readLatchedWindow() {
     const ms = Date.parse(startsAt);
     if (Number.isFinite(ms)) {
       const durationMs = durationFromLatched(parsed);
-      const countdownEndsAtMs = countdownFromLatched(parsed);
+      let countdownEndsAtMs = countdownFromLatched(parsed);
       const countdownVersion = Number(parsed?.countdownVersion) || 0;
+      // If warm memory has a later countdown (just extended this instance), keep it.
+      const memEnd = countdownFromLatched(memoryGiveawayWindow);
+      if (Number.isFinite(memEnd) && (!Number.isFinite(countdownEndsAtMs) || memEnd > countdownEndsAtMs)) {
+        countdownEndsAtMs = memEnd;
+      }
       memoryGiveawayWindow = {
         startsAt: new Date(ms).toISOString(),
         durationMs,
-        countdownVersion,
+        countdownVersion: Math.max(
+          countdownVersion,
+          Number(memoryGiveawayWindow?.countdownVersion) || 0
+        ),
         ...(Number.isFinite(countdownEndsAtMs)
           ? { countdownEndsAt: new Date(countdownEndsAtMs).toISOString() }
           : {}),
       };
-      return { startMs: ms, durationMs, countdownEndsAtMs, countdownVersion };
+      return {
+        startMs: ms,
+        durationMs,
+        countdownEndsAtMs,
+        countdownVersion: memoryGiveawayWindow.countdownVersion,
+      };
     }
   } catch {
-    // fall through — latch a new start
+    // fall through — memory / latch
+  }
+  if (memoryGiveawayWindow?.startsAt) {
+    const ms = Date.parse(memoryGiveawayWindow.startsAt);
+    if (Number.isFinite(ms)) {
+      return {
+        startMs: ms,
+        durationMs: durationFromLatched(memoryGiveawayWindow),
+        countdownEndsAtMs: countdownFromLatched(memoryGiveawayWindow),
+        countdownVersion: Number(memoryGiveawayWindow.countdownVersion) || 0,
+      };
+    }
   }
   return null;
 }
@@ -424,6 +438,54 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
     !Number.isFinite(countdownEndsAtMs) ||
     storedVersion < GIVEAWAY_COUNTDOWN_VERSION
   ) {
+    // v3+: prefer packaged absolute countdown (e.g. +12h extend) over a 10h reset.
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const { fileURLToPath } = await import("url");
+      const here = path.dirname(fileURLToPath(import.meta.url));
+      const localPath = path.resolve(here, "../../data/giveaway-window.json");
+      if (fs.existsSync(localPath)) {
+        const packaged = JSON.parse(fs.readFileSync(localPath, "utf8") || "{}");
+        const packagedEnd = Date.parse(String(packaged?.countdownEndsAt || ""));
+        const packagedVer = Number(packaged?.countdownVersion) || 0;
+        if (
+          packagedVer >= GIVEAWAY_COUNTDOWN_VERSION &&
+          Number.isFinite(packagedEnd) &&
+          packagedEnd > nowMs
+        ) {
+          const startsAt = new Date(latched.startMs).toISOString();
+          await writeGiveawayWindowDoc(
+            {
+              startsAt,
+              durationMs: Math.max(
+                durationMs,
+                Number(packaged.durationMs) || 0
+              ),
+              latchedAt: startsAt,
+              countdownEndsAt: new Date(packagedEnd).toISOString(),
+              countdownSetAt: new Date(nowMs).toISOString(),
+              countdownVersion: GIVEAWAY_COUNTDOWN_VERSION,
+              extendedAt: new Date(nowMs).toISOString(),
+              extendedByHours: Number(packaged.extendedByHours) || 12,
+              extendedByDays: 0,
+            },
+            "chore: latch packaged giveaway countdown"
+          );
+          return windowFromStart(
+            latched.startMs,
+            nowMs,
+            Math.max(durationMs, Number(packaged.durationMs) || 0),
+            packagedEnd
+          );
+        }
+      }
+    } catch {
+      // fall through
+    }
+    if (Number.isFinite(countdownEndsAtMs) && storedVersion < GIVEAWAY_COUNTDOWN_VERSION) {
+      return await extendGiveawayCountdownByHours(12, nowMs);
+    }
     return await setGiveawayCountdownHours(GIVEAWAY_COUNTDOWN_HOURS, nowMs);
   }
   if (durationMs > (latched.durationMs || 0)) {
