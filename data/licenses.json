@@ -19,7 +19,7 @@
       "usedAt": 1790578643784,
       "deviceId": "134dccce-b0b8-4354-ad46-3b14b17fa3bb",
       "boundAt": 1790578643784,
-      "updatedAt": 1790681360548,
+      "updatedAt": 1790681374758,
       "scanReset": null,
       "robotAccountId": "1fd20ec6-a5b5-4500-9774-6c46454f0d04",
       "robotLogin": "430608351",
@@ -30,7 +30,7 @@
       "clientSymbols": [
         "GOLD"
       ],
-      "clientSymbolsUpdatedAt": 1790681352688,
+      "clientSymbolsUpdatedAt": 1790681374758,
       "purchaseCaptureId": "3DR51862MJ587425E",
       "purchaseOrderId": "6BM825507G750993H",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -320,7 +320,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -986,7 +990,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "VOL80"
+          "VOL80",
+          "EURUSD"
         ]
       }
     },
@@ -1079,8 +1084,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "US30",
           "XAUUSD.B",
-          "US30"
+          "XAUUSD"
         ]
       }
     },
@@ -2710,7 +2716,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -3072,7 +3081,8 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "GOLD"
+          "GOLD",
+          "GOL"
         ]
       }
     },
@@ -8590,7 +8600,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
