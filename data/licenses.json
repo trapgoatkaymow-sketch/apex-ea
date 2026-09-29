@@ -19,7 +19,7 @@
       "usedAt": 1790694160897,
       "deviceId": "10041a63-e2a2-42fe-87dd-df687b23f9f2",
       "boundAt": 1790694160897,
-      "updatedAt": 1790716374629,
+      "updatedAt": 1790716375062,
       "scanReset": null,
       "robotAccountId": "dc91cc4f-c188-47d8-8c9c-93003bc9d7ee",
       "robotLogin": "70025857",
@@ -66,7 +66,7 @@
       "usedAt": 1790695759054,
       "deviceId": "50402dd5-5269-4b3d-8983-684aaba5a067",
       "boundAt": 1790695759054,
-      "updatedAt": 1790716374629,
+      "updatedAt": 1790716375062,
       "scanReset": null,
       "robotAccountId": "dc91cc4f-c188-47d8-8c9c-93003bc9d7ee",
       "robotLogin": "70025857",
@@ -329,10 +329,7 @@
       "robotCompany": "FxPro Markets Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790715520132,
-      "clientSymbols": [
-        "NAS100",
-        "XAUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790716349257,
       "purchaseCaptureId": "58066041SF874112Y",
       "purchaseOrderId": "6S735032FC770353C",
@@ -343,7 +340,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "XAUSD"
+        ]
       }
     },
     {
@@ -428,7 +428,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "EURUSD"
+        ]
       }
     },
     {
@@ -2922,7 +2925,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "AUDUSD"
+        ]
       }
     },
     {
