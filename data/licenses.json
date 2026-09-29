@@ -19,7 +19,7 @@
       "usedAt": 1790502836000,
       "deviceId": "b51a46ee-c8e3-4574-ac61-f8c8ce163cfe",
       "boundAt": 1790502836000,
-      "updatedAt": 1790690044871,
+      "updatedAt": 1790690064477,
       "scanReset": null,
       "robotAccountId": "3f721fbb-911c-4333-bf8e-45e4384b3359",
       "robotLogin": "4100960",
@@ -41,7 +41,7 @@
         "USDCAD",
         "AUDJPY"
       ],
-      "clientSymbolsUpdatedAt": 1790690044871,
+      "clientSymbolsUpdatedAt": 1790690064477,
       "purchaseCaptureId": "2YT837351C480962Y",
       "purchaseOrderId": "5D7505032G3441132",
       "purchaseSource": "paypal-giveaway",
@@ -99,14 +99,14 @@
       "purchaseCaptureId": "2TT81771MW6531121",
       "purchaseOrderId": "04F06778WC931652K",
       "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": []
-      },
-      "emailSentAt": null
+      }
     },
     {
       "key": "APEX-T434-DPDF",
@@ -685,7 +685,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -1564,7 +1568,16 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USA100",
+          "BTCUSD",
+          "XAUUSD",
+          "USDJPY",
+          "GBPJPY",
+          "NAS100",
+          "US30",
+          "US30.F"
+        ]
       }
     },
     {
@@ -1676,7 +1689,8 @@
         "symbols": [
           "XAUUSD",
           ".US30.",
-          "GOLD"
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
@@ -1852,8 +1866,7 @@
         "symbols": [
           "GBPUSD",
           "XAUUSD",
-          "US30",
-          "USA30"
+          "US30"
         ]
       }
     },
