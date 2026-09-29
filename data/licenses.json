@@ -321,7 +321,7 @@
       "usedAt": 1790714219044,
       "deviceId": "06ba00e9-649d-441d-bc07-67057bc1f018",
       "boundAt": 1790714458657,
-      "updatedAt": 1790716325329,
+      "updatedAt": 1790716325574,
       "scanReset": null,
       "robotAccountId": "76a30a5c-0612-4830-9a4d-50229be21bcb",
       "robotLogin": "296267078",
@@ -580,7 +580,7 @@
       "purchaseCaptureId": "91R35215GV074552Y",
       "purchaseOrderId": "2KL6485353866032N",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790713712413,
+      "emailSentAt": 1790713704266,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -662,7 +662,7 @@
       "purchaseCaptureId": "91R35215GV074552Y",
       "purchaseOrderId": "2KL6485353866032N",
       "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790713785677,
+      "emailSentAt": 1790713804552,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -1730,9 +1730,7 @@
           "EURUSD",
           "XAUUSD",
           "TSLA.NAS24",
-          "TSLA",
-          "GBPUSD",
-          "US30"
+          "TSLA"
         ]
       }
     },
@@ -2561,7 +2559,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100",
+          "USA30"
+        ]
       }
     },
     {
@@ -2790,7 +2792,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -3672,13 +3676,15 @@
       "purchaseCaptureId": "7XR31027M1236800C",
       "purchaseOrderId": "5A095604M5941613Y",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790711322617,
+      "emailSentAt": 1790711317527,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -4146,7 +4152,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
       }
     },
     {
@@ -4782,7 +4791,7 @@
       "purchaseCaptureId": "4KJ92175VB117770D",
       "purchaseOrderId": "80S42053XX4850318",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790710758872,
+      "emailSentAt": 1790710659137,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -5274,7 +5283,7 @@
       "purchaseCaptureId": "0YB89377VL9448143",
       "purchaseOrderId": "4K749742CP6126531",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790712786819,
+      "emailSentAt": 1790712823616,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -6399,7 +6408,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -11133,11 +11144,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "GBPUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -41834,10 +41841,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "VOL80"
-        ]
+        "symbols": []
       }
     },
     {
