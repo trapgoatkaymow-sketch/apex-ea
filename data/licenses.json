@@ -128,6 +128,7 @@
       "purchaseCaptureId": "7B448096A61995346",
       "purchaseOrderId": "0ST185864T708474X",
       "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -136,8 +137,7 @@
         "symbols": [
           "XAUUSD"
         ]
-      },
-      "emailSentAt": null
+      }
     },
     {
       "key": "APEX-K2KM-XE98",
@@ -10486,7 +10486,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD"
+        ]
       },
       "emailSentAt": null
     },
