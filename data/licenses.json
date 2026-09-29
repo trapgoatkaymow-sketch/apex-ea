@@ -19,7 +19,7 @@
       "usedAt": 1790660572466,
       "deviceId": "c34b8ef6-907b-41a2-8769-9f1e31b387bb",
       "boundAt": 1790660572466,
-      "updatedAt": 1790709365131,
+      "updatedAt": 1790709383974,
       "scanReset": null,
       "robotAccountId": "d12ce8ef-fd9a-4457-8175-ca8dc6293c10",
       "robotLogin": "168928052",
@@ -31,7 +31,7 @@
         "XAUUSD",
         "GOLD"
       ],
-      "clientSymbolsUpdatedAt": 1790709365131,
+      "clientSymbolsUpdatedAt": 1790709383974,
       "purchaseCaptureId": "37370201TK881900T",
       "purchaseOrderId": "5BJ119750P087105Y",
       "purchaseSource": "paypal-giveaway",
@@ -66,7 +66,7 @@
       "usedAt": 1790708809962,
       "deviceId": "6a2fd6ea-6fac-465e-b5af-3401c1f1d5ff",
       "boundAt": 1790708809962,
-      "updatedAt": 1790709364612,
+      "updatedAt": 1790709369200,
       "scanReset": null,
       "robotAccountId": "55d40eb2-ba65-4e42-820f-fdce340508a8",
       "robotLogin": "1250338515",
@@ -74,8 +74,10 @@
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790709245460,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790709364612,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790709369200,
       "purchaseCaptureId": "6R561555WN2904614",
       "purchaseOrderId": "62302923MH7610135",
       "purchaseSource": "paypal-giveaway",
@@ -450,9 +452,7 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSD",
-          "GOLD",
-          "XAUUSDM"
+          "XAUUSD"
         ]
       }
     },
@@ -1135,7 +1135,9 @@
           "EURUSD",
           "XAUUSD",
           "TSLA.NAS24",
-          "TSLA"
+          "TSLA",
+          "GBPUSD",
+          "US30"
         ]
       }
     },
@@ -1272,7 +1274,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "NAS100",
+          "NASDAQ100",
+          "US30"
         ]
       }
     },
@@ -2091,9 +2095,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
