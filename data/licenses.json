@@ -105,18 +105,18 @@
       "usedAt": 1790724457389,
       "deviceId": "e43f586e-60cb-426f-b700-7bd95e56e036",
       "boundAt": 1790724457389,
-      "updatedAt": 1790725562677,
+      "updatedAt": 1790725566320,
       "scanReset": null,
-      "robotAccountId": "4dfb05cc-47c0-40a4-8d01-d58858648d4f",
-      "robotLogin": "55055928",
-      "robotServer": "HFMarketsKE-Live2",
-      "robotCompany": "HFM Investments Ltd",
+      "robotAccountId": "f6508c28-2817-4caa-948b-36f38e1914f9",
+      "robotLogin": "55021128",
+      "robotServer": "HFMarketsSA-Live2",
+      "robotCompany": "HFM South Africa",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790725561263,
+      "robotConnectedAt": 1790725061265,
       "clientSymbols": [
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790725546369,
+      "clientSymbolsUpdatedAt": 1790725566320,
       "purchaseCaptureId": "3T4151723P1113233",
       "purchaseOrderId": "4XR22761TC3360437",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -126,7 +126,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -442,7 +444,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "AUDCAD"
+        ]
       }
     },
     {
@@ -11894,13 +11899,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "BTCUSD",
-          "BTCUSDM",
-          "XAUUSD",
-          "XAUUSDM",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
