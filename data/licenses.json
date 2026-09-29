@@ -68,7 +68,7 @@
       "usedAt": 1790520706774,
       "deviceId": "c2f6985a-add0-4f05-aa7f-dcf4172df75a",
       "boundAt": 1790546164620,
-      "updatedAt": 1790685104170,
+      "updatedAt": 1790685105850,
       "scanReset": null,
       "robotAccountId": "52a0a82b-df24-4f9d-9e23-ddc460a7db89",
       "robotLogin": "322204596",
@@ -82,7 +82,7 @@
         "GOLD",
         "EURUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790685104170,
+      "clientSymbolsUpdatedAt": 1790685105850,
       "purchaseCaptureId": "96V1347582853945B",
       "purchaseOrderId": "2S504082WA638554Y",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -515,7 +515,8 @@
           "USDJPY",
           "USDJPYM",
           "XAUUSD",
-          ".USTECH."
+          ".USTECH.",
+          "USDCAD"
         ]
       }
     },
@@ -647,8 +648,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD",
-          "USDJPY"
+          "EURUSD"
         ]
       }
     },
@@ -747,6 +747,7 @@
         "symbols": [
           "XAUUSD",
           "EURUSD",
+          "NAS100",
           "USDJPY"
         ]
       }
@@ -1149,8 +1150,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAGUSD",
-          "XAUUSD"
+          "XAGUSD"
         ]
       }
     },
@@ -1593,8 +1593,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100",
-          "XAUUSDM5"
+          "NAS100"
         ]
       }
     },
