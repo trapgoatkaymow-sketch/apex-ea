@@ -65,12 +65,12 @@
       "boundAt": 1790647830446,
       "updatedAt": 1790648700619,
       "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
+      "robotAccountId": "7e41d018-41e4-485d-b2ae-d34ade1d5eb4",
+      "robotLogin": "63392147",
+      "robotServer": "OctaFX-Real",
+      "robotCompany": "OctaFX",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790648697201,
       "clientSymbols": [
         "USDJPY",
         "EURUSD",
@@ -135,11 +135,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -362,15 +358,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "XAUUSD",
-          "BTCAUDM",
-          "BTCUSD",
-          "BTCUSDM",
-          "USOILM",
-          "USOIL"
-        ]
+        "symbols": []
       }
     },
     {
@@ -726,8 +714,7 @@
         "symbols": [
           "XAUUSD",
           "XAUUSDM",
-          "BTCUSDM",
-          "US30"
+          "BTCUSDM"
         ]
       }
     },
@@ -1021,8 +1008,7 @@
         "strategy": "scalper",
         "symbols": [
           "US30",
-          "EURUSD",
-          "EURJPY"
+          "EURUSD"
         ]
       }
     },
@@ -2202,7 +2188,9 @@
           "XAUUSD",
           "US30",
           "NAS100",
-          "GOLD"
+          "GOLD",
+          "XAUUUSD",
+          "XAUUSD.MIC"
         ]
       }
     },
@@ -5443,7 +5431,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -5653,6 +5644,7 @@
         "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSD",
           "EURUSD",
           "GBPUSD",
           "USDJPY",
