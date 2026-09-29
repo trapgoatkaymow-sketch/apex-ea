@@ -19,7 +19,7 @@
       "usedAt": 1790583816530,
       "deviceId": "a3e24e18-e9ab-479c-b105-51e9f92ba122",
       "boundAt": 1790598322010,
-      "updatedAt": 1790642452124,
+      "updatedAt": 1790642464362,
       "scanReset": null,
       "robotAccountId": "fe4e1b65-808a-4e5b-a417-051dd635d10d",
       "robotLogin": "411170164",
@@ -65,7 +65,7 @@
       "usedAt": 1790584956618,
       "deviceId": "22a2114b-22d3-40a4-a58d-052458e1e46f",
       "boundAt": 1790626900756,
-      "updatedAt": 1790642430835,
+      "updatedAt": 1790642464362,
       "scanReset": null,
       "robotAccountId": "fe4e1b65-808a-4e5b-a417-051dd635d10d",
       "robotLogin": "411170164",
@@ -130,9 +130,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSD.M",
-          "NAS100",
-          "USTEC.M"
+          "NAS100"
         ]
       }
     },
@@ -223,14 +221,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD",
-          "USDJPY",
-          "XAUAUDM",
-          "US30",
-          "XAUUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -278,8 +269,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30.",
-          "GOLD"
+          ".US30."
         ]
       }
     },
@@ -1019,8 +1009,7 @@
         "symbols": [
           "XAUUSD",
           "XAUUSDM",
-          "XAUUDM",
-          "NAS100"
+          "XAUUDM"
         ]
       }
     },
@@ -2676,7 +2665,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -11657,7 +11649,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "EURUSD",
+          "USDJPY",
+          "AUDUSD",
+          "NZDUSD",
+          "GBPUSD"
+        ]
       }
     },
     {
