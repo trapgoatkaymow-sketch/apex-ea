@@ -159,10 +159,10 @@
       "duration": "lifetime",
       "expiresAt": null,
       "createdAt": 1790708744211,
-      "usedAt": 1790708880232,
+      "usedAt": 1790708885975,
       "deviceId": "2e0dfb77-6556-46f8-b00a-a49cade4ac2f",
-      "boundAt": 1790708880232,
-      "updatedAt": 1790708880232,
+      "boundAt": 1790708885975,
+      "updatedAt": 1790708885975,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -1063,7 +1063,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAGUSD",
+          "NAS100",
+          "US30",
+          "DJ30",
+          "XAUUSD",
+          "DE30"
+        ]
       }
     },
     {
@@ -1855,7 +1862,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
