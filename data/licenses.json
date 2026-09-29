@@ -19,7 +19,7 @@
       "usedAt": 1790603139610,
       "deviceId": "ecff11b1-63d5-4893-b0dc-911ba452bb11",
       "boundAt": 1790603139610,
-      "updatedAt": 1790701941633,
+      "updatedAt": 1790701944234,
       "scanReset": null,
       "robotAccountId": "a36bd2e0-d3ff-4aa5-a17d-5ac147467e01",
       "robotLogin": "2050857139",
@@ -35,7 +35,7 @@
         "USDJPY",
         "USDJPY.M"
       ],
-      "clientSymbolsUpdatedAt": 1790701941633,
+      "clientSymbolsUpdatedAt": 1790701944234,
       "purchaseCaptureId": "0AC32273FP200035A",
       "purchaseOrderId": "5GN40557G76124231",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -1370,7 +1370,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "XAUUSD",
+          "EURUSD",
+          "US30",
+          "XAUUSD.M",
+          "US100"
+        ]
       }
     },
     {
@@ -4503,11 +4510,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "NAS100",
-          "XAUUSD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6427,7 +6430,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSDM",
+          "EURUSDM",
+          "BTCUSDM"
+        ]
       }
     },
     {
@@ -7478,8 +7485,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GBPUSD",
-          "GOLD",
           "XAUUSDM"
         ]
       }
@@ -14022,11 +14027,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "GBPUSD"
-        ]
+        "symbols": []
       }
     },
     {
