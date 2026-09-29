@@ -216,6 +216,55 @@
       }
     },
     {
+      "key": "APEX-P9FV-M5UH",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "moyana1@icloud.com",
+      "clientName": "David",
+      "mainText": "David",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790611840026,
+      "usedAt": 1790613995150,
+      "deviceId": "9d1a9075-c313-4ce3-a2b2-7804387724c6",
+      "boundAt": 1790613995150,
+      "updatedAt": 1790699242406,
+      "scanReset": null,
+      "robotAccountId": "37cee0a9-e7b8-4ae3-a92f-383924b909e7",
+      "robotLogin": "169927",
+      "robotServer": "SpaceMarkets-Live",
+      "robotCompany": "Space Markets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790697604972,
+      "clientSymbols": [
+        "XAUUSD",
+        "EURUSD",
+        "USDJPY"
+      ],
+      "clientSymbolsUpdatedAt": 1790699242406,
+      "purchaseCaptureId": "0TU59906TW132954G",
+      "purchaseOrderId": "7DR08530C97117326",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790696039073,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "USDJPY"
+        ]
+      }
+    },
+    {
       "key": "APEX-TRV2-SA4A",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -392,55 +441,6 @@
       }
     },
     {
-      "key": "APEX-P9FV-M5UH",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "moyana1@icloud.com",
-      "clientName": "David",
-      "mainText": "David",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790611840026,
-      "usedAt": 1790613995150,
-      "deviceId": "9d1a9075-c313-4ce3-a2b2-7804387724c6",
-      "boundAt": 1790613995150,
-      "updatedAt": 1790699235591,
-      "scanReset": null,
-      "robotAccountId": "37cee0a9-e7b8-4ae3-a92f-383924b909e7",
-      "robotLogin": "169927",
-      "robotServer": "SpaceMarkets-Live",
-      "robotCompany": "Space Markets (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790697604972,
-      "clientSymbols": [
-        "XAUUSD",
-        "EURUSD",
-        "USDJPY"
-      ],
-      "clientSymbolsUpdatedAt": 1790699235591,
-      "purchaseCaptureId": "0TU59906TW132954G",
-      "purchaseOrderId": "7DR08530C97117326",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790696039073,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "USDJPY"
-        ]
-      }
-    },
-    {
       "key": "APEX-BF2D-BU7S",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -569,7 +569,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "BTCUSDM"
+          "US30M",
+          "XAUUSD"
         ]
       }
     },
@@ -618,9 +619,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSDM",
+          "XAUUSD",
+          "GBPUSDM",
+          "USDJPYM",
           "EURUSDM",
-          "BTCUSDM"
+          "XAUUSDM"
         ]
       }
     },
@@ -887,11 +890,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "USDCAD",
-          "USDCADM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2059,7 +2058,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100"
+        ]
       }
     },
     {
@@ -2390,10 +2392,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -8598,11 +8597,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
