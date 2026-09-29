@@ -1768,7 +1768,8 @@
           "XAUUSD",
           "NAS100",
           "US30",
-          "XAUUSDM"
+          "XAUUSDM",
+          "US30M"
         ]
       }
     },
@@ -2410,9 +2411,7 @@
           "EURUSD",
           "XAUUSD",
           "TSLA.NAS24",
-          "TSLA",
-          "GBPUSD",
-          "US30"
+          "TSLA"
         ]
       }
     },
@@ -3966,7 +3965,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
