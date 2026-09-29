@@ -240,14 +240,14 @@
       "usedAt": 1790518844700,
       "deviceId": "7d2d796f-df67-44c3-872c-439f4229661b",
       "boundAt": 1790518844700,
-      "updatedAt": 1790694702995,
+      "updatedAt": 1790694706943,
       "scanReset": null,
-      "robotAccountId": "c0c8345e-ba92-4a52-8b1a-c700ad357e2c",
+      "robotAccountId": "28d5eae2-1405-4902-90ac-a0e29d5908ad",
       "robotLogin": "472398",
       "robotServer": "FusionMarkets-Live",
       "robotCompany": "Fusion Markets Pty Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790694680770,
+      "robotConnectedAt": 1790519465360,
       "clientSymbols": [
         "EURUSD",
         "XAUUSD",
@@ -255,7 +255,7 @@
         "TSLA",
         "GBPUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790694702995,
+      "clientSymbolsUpdatedAt": 1790694706943,
       "purchaseCaptureId": "8KB015628F509202W",
       "purchaseOrderId": "4U174119MA067245U",
       "purchaseSource": "paypal-giveaway",
@@ -269,7 +269,8 @@
           "EURUSD",
           "XAUUSD",
           "TSLA.NAS24",
-          "TSLA"
+          "TSLA",
+          "GBPUSD"
         ]
       }
     },
@@ -990,10 +991,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD",
-          "GBPUSD",
-          "EURUSD",
-          "USDJPY"
+          "GOLD"
         ]
       }
     },
@@ -1268,7 +1266,8 @@
         "symbols": [
           "GBPUSD",
           "XAUUSD",
-          "US30"
+          "US30",
+          "USA30"
         ]
       }
     },
@@ -2035,10 +2034,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "BTCUSD",
-          "BTCUSDM",
-          "XAUUSD",
-          "XAUUSDM"
+          "XAUUSDM",
+          "US30",
+          "US30M"
         ]
       }
     },
@@ -2818,7 +2816,7 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "DYNAMIC100"
+          "BTCUSD"
         ]
       }
     },
@@ -3228,9 +3226,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3534,7 +3530,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "GBPUSD",
+          "USDJPY",
+          "USDCHF",
+          "AUDUSD",
+          "USDCAD"
+        ]
       }
     },
     {
@@ -3956,7 +3959,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -4212,7 +4219,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD247",
-          "NAS100"
+          "NAS100",
+          "USA100"
         ]
       }
     },
@@ -4777,7 +4785,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "BTCUSD",
+          "NAS100",
+          "USDJPY",
+          ".US30."
+        ]
       }
     },
     {
@@ -5025,7 +5040,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "NAS100"
+        ]
       }
     },
     {
@@ -5266,8 +5285,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH.",
-          ".USTECH."
+          "USTECH."
         ]
       }
     },
@@ -5744,7 +5762,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -7423,7 +7444,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -7768,8 +7792,11 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
+          "US30",
           ".US30.",
-          "GOLD"
+          "GOLD",
+          "GOLDMICRO",
+          "XAUUSDM"
         ]
       }
     },
@@ -7857,9 +7884,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD",
-          "USDJPY",
-          "XAUUSD"
+          "EURUSD"
         ]
       }
     },
@@ -8340,9 +8365,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "XAUUSDM"
+          "XAUUSD"
         ]
       }
     },
@@ -11261,9 +11284,7 @@
           "XAUDUSD247C",
           "XAUUSD247C",
           "XAUUSD",
-          "GBPAUD",
-          "USDZAR",
-          "AUDCAD"
+          "GBPAUD"
         ]
       }
     },
@@ -11826,20 +11847,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "GBPUSD",
-          "XAUUSD",
-          "NAS100",
-          "US30",
-          "BTCUSD",
-          "USDCAD",
-          "XAUUSDM",
-          "US30M",
-          "EURUSDM",
-          "USDJPY",
-          "USTEC"
-        ]
+        "symbols": []
       }
     },
     {
