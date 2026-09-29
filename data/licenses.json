@@ -1,6 +1,57 @@
 {
   "licenses": [
     {
+      "key": "APEX-8JFP-HC2W",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "mathikzsfx@gmail.com",
+      "clientName": "Keoratile",
+      "mainText": "Keoratile",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790499701512,
+      "usedAt": 1790499793491,
+      "deviceId": "fcd584f0-934b-410d-a56a-5ffc9218eb23",
+      "boundAt": 1790499793491,
+      "updatedAt": 1790662658529,
+      "scanReset": null,
+      "robotAccountId": "845f98ce-5244-45ed-9d63-fe5279aa1993",
+      "robotLogin": "4059279",
+      "robotServer": "RazorMarkets-Live",
+      "robotCompany": "Razor Markets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790573432075,
+      "clientSymbols": [
+        "XAUUSD",
+        "NAS100",
+        "US30",
+        "EURGBP"
+      ],
+      "clientSymbolsUpdatedAt": 1790662658529,
+      "purchaseCaptureId": "2A631048XJ125473B",
+      "purchaseOrderId": "76269877S5844410Y",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "NAS100",
+          "US30",
+          "EURGBP"
+        ]
+      }
+    },
+    {
       "key": "APEX-WVGY-ED8P",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -443,52 +494,6 @@
       "clientSymbolsUpdatedAt": 1790662619417,
       "purchaseCaptureId": "5HN29044VW6685929",
       "purchaseOrderId": "6C9588348H333705X",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
-      "key": "APEX-8JFP-HC2W",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "mathikzsfx@gmail.com",
-      "clientName": "Keoratile",
-      "mainText": "Keoratile",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790499701512,
-      "usedAt": 1790499793491,
-      "deviceId": "fcd584f0-934b-410d-a56a-5ffc9218eb23",
-      "boundAt": 1790499793491,
-      "updatedAt": 1790662618867,
-      "scanReset": null,
-      "robotAccountId": "845f98ce-5244-45ed-9d63-fe5279aa1993",
-      "robotLogin": "4059279",
-      "robotServer": "RazorMarkets-Live",
-      "robotCompany": "Razor Markets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790573432075,
-      "clientSymbols": [
-        "XAUUSD",
-        "NAS100",
-        "US30",
-        "EURGBP"
-      ],
-      "clientSymbolsUpdatedAt": 1790662618867,
-      "purchaseCaptureId": "2A631048XJ125473B",
-      "purchaseOrderId": "76269877S5844410Y",
       "purchaseSource": "paypal-giveaway",
       "emailSentAt": null,
       "bot": {
@@ -2095,7 +2100,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM",
+          "XAUUDM",
+          "NAS100"
+        ]
       }
     },
     {
@@ -2275,7 +2285,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30"
         ]
       }
     },
@@ -2628,9 +2639,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3012,7 +3021,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "NAS100"
+        ]
       }
     },
     {
@@ -4290,8 +4303,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUAUD",
-          "AUDCAD"
+          "XAUAUD"
         ]
       },
       "emailSentAt": null
@@ -4512,8 +4524,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100",
-          "US30"
+          "NAS100"
         ]
       },
       "emailSentAt": null
@@ -4700,9 +4711,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       },
       "emailSentAt": null
     },
@@ -5979,13 +5988,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "BTCUSD",
-          "NAS100",
-          "USDJPY"
-        ]
+        "symbols": []
       },
       "emailSentAt": null
     },
@@ -23452,9 +23455,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD"
-        ]
+        "symbols": []
       },
       "emailSentAt": null
     },
