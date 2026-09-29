@@ -82,7 +82,7 @@
       "usedAt": 1790507377860,
       "deviceId": "39cb2939-c05c-48a6-bada-fac06944eba7",
       "boundAt": 1790593260612,
-      "updatedAt": 1790682948852,
+      "updatedAt": 1790682949630,
       "scanReset": null,
       "robotAccountId": "1e216cdb-ad18-4a54-8021-395600e27ec4",
       "robotLogin": "477300407",
@@ -94,9 +94,10 @@
         "BTCUSD",
         "BTCUSDM",
         "XAUUSD",
-        "XAUUSDM"
+        "XAUUSDM",
+        "US30"
       ],
-      "clientSymbolsUpdatedAt": 1790682948852,
+      "clientSymbolsUpdatedAt": 1790682949630,
       "purchaseCaptureId": "65614812WB9605058",
       "purchaseOrderId": "0LE84617GG6487505",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -110,7 +111,8 @@
           "BTCUSD",
           "BTCUSDM",
           "XAUUSD",
-          "XAUUSDM"
+          "XAUUSDM",
+          "US30"
         ]
       }
     },
@@ -199,6 +201,53 @@
         "symbols": [
           "XAUUSD",
           "EURUSD"
+        ]
+      }
+    },
+    {
+      "key": "APEX-FCRG-WAJX",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "aureviacapitalptyltd@gmail.com",
+      "clientName": "Tristan Williams",
+      "mainText": "Tristan Williams",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790525399460,
+      "usedAt": 1790525661400,
+      "deviceId": "9b528d78-19a7-489a-8ed2-08b5f9aac4fa",
+      "boundAt": 1790525661400,
+      "updatedAt": 1790682933858,
+      "scanReset": null,
+      "robotAccountId": "d86df0ea-257b-4e43-9e6d-afa2503ede23",
+      "robotLogin": "202295253",
+      "robotServer": "Deriv-Demo",
+      "robotCompany": "Deriv.com Limited",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790665275331,
+      "clientSymbols": [
+        "XAUUSD",
+        "BTCUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790682933858,
+      "purchaseCaptureId": "26X18521CF005674F",
+      "purchaseOrderId": "88C92979ND948382P",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -336,53 +385,6 @@
       }
     },
     {
-      "key": "APEX-FCRG-WAJX",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "aureviacapitalptyltd@gmail.com",
-      "clientName": "Tristan Williams",
-      "mainText": "Tristan Williams",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790525399460,
-      "usedAt": 1790525661400,
-      "deviceId": "9b528d78-19a7-489a-8ed2-08b5f9aac4fa",
-      "boundAt": 1790525661400,
-      "updatedAt": 1790682914654,
-      "scanReset": null,
-      "robotAccountId": "d86df0ea-257b-4e43-9e6d-afa2503ede23",
-      "robotLogin": "202295253",
-      "robotServer": "Deriv-Demo",
-      "robotCompany": "Deriv.com Limited",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790665275331,
-      "clientSymbols": [
-        "XAUUSD",
-        "BTCUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790682914654,
-      "purchaseCaptureId": "26X18521CF005674F",
-      "purchaseOrderId": "88C92979ND948382P",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD"
-        ]
-      }
-    },
-    {
       "key": "APEX-A6UD-GK8S",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -426,7 +428,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100"
+          "NAS100",
+          "XAUUSDM5"
         ]
       }
     },
@@ -523,8 +526,7 @@
         "symbols": [
           "US30",
           "XAUUSD",
-          "US30CASH",
-          "GOLD"
+          "US30CASH"
         ]
       }
     },
@@ -842,7 +844,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD247"
+          "XAUUSD247",
+          "NAS100"
         ]
       }
     },
