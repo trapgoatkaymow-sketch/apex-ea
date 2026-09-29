@@ -116,14 +116,14 @@
       "usedAt": 1790545450499,
       "deviceId": "7a488ab5-4477-4872-9a9b-37fa8419f4ad",
       "boundAt": 1790545450499,
-      "updatedAt": 1790705756248,
+      "updatedAt": 1790705757411,
       "scanReset": null,
-      "robotAccountId": "9c2f82b0-00b0-40dc-829b-4c7a31ab9223",
+      "robotAccountId": "6c8e70bc-4cdd-437b-a4a6-9315e0e6dd75",
       "robotLogin": "987840315",
       "robotServer": "Trade245Global-Live",
       "robotCompany": "Trade245 Global (Pty) Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790676340961,
+      "robotConnectedAt": 1790705755603,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
       "purchaseCaptureId": "83122148HN9384747",
@@ -638,7 +638,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "AUDUSD",
+          "EURUSD",
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -684,12 +688,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSDM",
-          "EURUSD",
-          "EURUSDM"
-        ]
+        "symbols": []
       }
     },
     {
