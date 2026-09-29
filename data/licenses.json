@@ -64,7 +64,7 @@
       "usedAt": 1790682846991,
       "deviceId": "f54ac6ed-ed61-4ceb-9d73-c9192e57979f",
       "boundAt": 1790682846991,
-      "updatedAt": 1790682851632,
+      "updatedAt": 1790682861743,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -73,7 +73,7 @@
       "robotPlatform": "",
       "robotConnectedAt": null,
       "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790682851632,
+      "clientSymbolsUpdatedAt": 1790682861743,
       "purchaseCaptureId": "5U016178462106211",
       "purchaseOrderId": "59F72666MC5924347",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -174,8 +174,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100",
-          "XAUUSDM5"
+          "NAS100"
         ]
       }
     },
@@ -410,7 +409,8 @@
           "XAUUSD",
           "US30",
           "GOLD",
-          "GOL"
+          "GOL",
+          "SILVER"
         ]
       }
     },
@@ -646,8 +646,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD",
-          "XAUUSD"
+          "GOLD"
         ]
       }
     },
@@ -911,7 +910,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -4040,11 +4042,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NZDUSD",
-          "US30",
-          "USDJPY",
-          "XAUUSD",
-          "GOLD"
+          "NAS100"
         ]
       }
     },
@@ -9002,7 +9000,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "BTCUSDM",
+          "XAUUSD",
+          "XAUUSDM",
+          "GBPUSD"
+        ]
       }
     },
     {
