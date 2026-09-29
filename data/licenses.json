@@ -1,6 +1,61 @@
 {
   "licenses": [
     {
+      "key": "APEX-AQU8-QREV",
+      "botId": "matlala-charts-mujqzuzn",
+      "botName": "MATLALA CHARTS",
+      "clientEmail": "ayandahobana988@gmail.com",
+      "clientName": "Ayanda",
+      "mainText": "Ayanda",
+      "mentorEmail": "somelezemnqayana1705@gmail.com",
+      "mentorId": "b0beb691-2044-46d7-a482-a025707b6deb",
+      "mentorName": "call m3 smnq",
+      "used": false,
+      "commissionEligible": false,
+      "commissionReason": "",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790672636708,
+      "usedAt": null,
+      "deviceId": null,
+      "boundAt": null,
+      "updatedAt": 1790672793883,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790672793883,
+      "bot": {
+        "id": "matlala-charts-mujqzuzn",
+        "name": "MATLALA CHARTS",
+        "photo": "/logo.png",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "GER30",
+          "BTCUSD",
+          "USDJPY",
+          "EURUSD",
+          "NAS100",
+          "NASDAQ",
+          "GOLD",
+          "BTCUSDM",
+          "XAUUSDM",
+          "GBPUSD",
+          "US30M"
+        ]
+      }
+    },
+    {
       "key": "APEX-V2B7-WUS4",
       "botId": "alpha-prime-ai-v2-mucqrgdm",
       "botName": "ALPHA PRIME AI V2",
@@ -759,61 +814,6 @@
       }
     },
     {
-      "key": "APEX-AQU8-QREV",
-      "botId": "matlala-charts-mujqzuzn",
-      "botName": "MATLALA CHARTS",
-      "clientEmail": "ayandahobana988@gmail.com",
-      "clientName": "Ayanda",
-      "mainText": "Ayanda",
-      "mentorEmail": "somelezemnqayana1705@gmail.com",
-      "mentorId": "b0beb691-2044-46d7-a482-a025707b6deb",
-      "mentorName": "call m3 smnq",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790672636708,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790672690730,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790672690730,
-      "bot": {
-        "id": "matlala-charts-mujqzuzn",
-        "name": "MATLALA CHARTS",
-        "photo": "/logo.png",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "GER30",
-          "BTCUSD",
-          "USDJPY",
-          "EURUSD",
-          "NAS100",
-          "NASDAQ",
-          "GOLD",
-          "BTCUSDM",
-          "XAUUSDM",
-          "GBPUSD",
-          "US30M"
-        ]
-      }
-    },
-    {
       "key": "APEX-BY27-NS56",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1172,11 +1172,12 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NZDUSD",
-          "US30",
-          "USDJPY",
           "XAUUSD",
-          "GOLD"
+          "NAS100",
+          "GOLD",
+          "USDJPY",
+          "NZDUSD",
+          "US30"
         ]
       }
     },
@@ -1863,7 +1864,8 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "EURUSD"
         ]
       }
     },
@@ -2050,8 +2052,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH.",
-          ".USTECH."
+          "USTECH."
         ]
       }
     },
@@ -2225,10 +2226,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "GBPUSD",
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -7258,7 +7256,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -12306,9 +12307,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       },
       "emailSentAt": null
     },
