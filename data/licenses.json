@@ -1,6 +1,65 @@
 {
   "licenses": [
     {
+      "key": "APEX-EWFX-UNJM",
+      "botId": "equity-sniper-pro-mulhvsa9",
+      "botName": "Equity Sniper Pro",
+      "clientEmail": "entolwana@gmail.com",
+      "clientName": "MRMONEY",
+      "mainText": "MRMONEY",
+      "mentorEmail": "entolwana@gmail.com",
+      "mentorId": "d2f52379-d76e-403d-af7b-1e311f6b211b",
+      "mentorName": "MRMONEY",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "not_paid",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790625822940,
+      "usedAt": 1790625895942,
+      "deviceId": "b251632e-b3d1-4634-9033-c8793f6c4f46",
+      "boundAt": 1790625895942,
+      "updatedAt": 1790679156832,
+      "scanReset": null,
+      "robotAccountId": "039f4a78-02c6-407b-a98b-e23f9e455247",
+      "robotLogin": "1301973997",
+      "robotServer": "XMGlobal-MT5 6",
+      "robotCompany": "XM Global Limited",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790679155424,
+      "clientSymbols": [
+        "EURUSD",
+        "GBPUSD",
+        "USDJPY",
+        "GBPJPY",
+        "US30CASH",
+        "NASDAQ",
+        "US500CASH",
+        "GOLD"
+      ],
+      "clientSymbolsUpdatedAt": 1790666036604,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "equity-sniper-pro-mulhvsa9",
+        "name": "Equity Sniper Pro",
+        "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "EURUSD",
+          "GBPUSD",
+          "USDJPY",
+          "GBPJPY",
+          "US30CASH",
+          "NASDAQ",
+          "US500CASH",
+          "GOLD"
+        ]
+      }
+    },
+    {
       "key": "APEX-FDNZ-HZJE",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -408,7 +467,7 @@
       "usedAt": 1790539481252,
       "deviceId": "665aab0d-2654-4325-bfa0-78be908dc5ff",
       "boundAt": 1790539481252,
-      "updatedAt": 1790679089901,
+      "updatedAt": 1790679094461,
       "scanReset": null,
       "robotAccountId": "5a9e79d2-f7b7-4025-b5d5-8a686658aadc",
       "robotLogin": "4118667",
@@ -432,6 +491,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSDM",
+          "EURUSDM",
           "BTCUSDM"
         ]
       }
@@ -670,14 +731,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD",
-          "USDJPY",
-          "XAUAUDM",
-          "US30",
-          "XAUUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -866,7 +920,8 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "GOLD"
         ]
       }
     },
@@ -1158,8 +1213,7 @@
           "XAUUSD",
           "NAS100",
           "USCASH",
-          "NASDAQ",
-          "USTECH"
+          "NASDAQ"
         ]
       }
     },
@@ -2289,7 +2343,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD"
+          "GOLD",
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
         ]
       }
     },
@@ -2648,7 +2705,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NAS100"
+          "NZDUSD",
+          "US30",
+          "USDJPY",
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -3176,7 +3237,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "GOLD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -3704,7 +3769,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -3859,21 +3927,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "VOL20",
-          "EURJPY",
-          "USDJPY",
-          "GBPJPY",
-          "VOL10",
-          "VOL80",
-          "BOOM200",
-          "B",
-          "BTCUSD",
-          ".USTECH.",
-          "NAS100",
-          "XAUUSD",
-          ".DE30.M"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3960,7 +4014,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -5218,8 +5274,7 @@
         "symbols": [
           "BTCUSD",
           "XAUUSD",
-          "NAS100",
-          "XAUUSDM"
+          "NAS100"
         ]
       }
     },
@@ -5305,10 +5360,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5436,12 +5488,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "BTCUSDM",
-          "XAUUSD",
-          "XAUUSDM",
-          "GBPUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5845,12 +5892,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "XAUUSD",
-          "TSLA.NAS24",
-          "TSLA"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5899,8 +5941,7 @@
         "symbols": [
           "US30",
           "XAUUSD",
-          "GOLD",
-          "EURUSD"
+          "GOLD"
         ]
       }
     },
@@ -12997,65 +13038,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-EWFX-UNJM",
-      "botId": "equity-sniper-pro-mulhvsa9",
-      "botName": "Equity Sniper Pro",
-      "clientEmail": "entolwana@gmail.com",
-      "clientName": "MRMONEY",
-      "mainText": "MRMONEY",
-      "mentorEmail": "entolwana@gmail.com",
-      "mentorId": "d2f52379-d76e-403d-af7b-1e311f6b211b",
-      "mentorName": "MRMONEY",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "not_paid",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790625822940,
-      "usedAt": 1790625895942,
-      "deviceId": "b251632e-b3d1-4634-9033-c8793f6c4f46",
-      "boundAt": 1790625895942,
-      "updatedAt": 1790666036604,
-      "scanReset": null,
-      "robotAccountId": "76c65d2e-2591-490f-8a18-498b9a9d8ba4",
-      "robotLogin": "1301973997",
-      "robotServer": "XMGlobal-MT5 6",
-      "robotCompany": "XM Global Limited",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790626003063,
-      "clientSymbols": [
-        "EURUSD",
-        "GBPUSD",
-        "USDJPY",
-        "GBPJPY",
-        "US30CASH",
-        "NASDAQ",
-        "US500CASH",
-        "GOLD"
-      ],
-      "clientSymbolsUpdatedAt": 1790666036604,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "equity-sniper-pro-mulhvsa9",
-        "name": "Equity Sniper Pro",
-        "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "GBPUSD",
-          "USDJPY",
-          "GBPJPY",
-          "US30CASH",
-          "NASDAQ",
-          "US500CASH",
-          "GOLD"
-        ]
       }
     },
     {
