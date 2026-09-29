@@ -36,6 +36,7 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
+      "emailSentAt": null,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -46,8 +47,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "emailSentAt": null
+      }
     },
     {
       "key": "APEX-PN9K-4GEX",
@@ -93,14 +93,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "BTCUSD",
-          "BTCUSDM",
-          "XAUUS",
-          "XAUUSD",
-          "XAUUSDM",
-          "GBPUSD"
-        ]
+        "symbols": []
       },
       "emailSentAt": null
     },
@@ -149,12 +142,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NASDAQ",
-          "USA100.",
-          "USA100",
-          "US30",
-          "USA30"
+          "XAUUSD"
         ]
       },
       "emailSentAt": null
