@@ -1090,13 +1090,16 @@
       "purchaseCaptureId": "58066041SF874112Y",
       "purchaseOrderId": "6S735032FC770353C",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790715134270,
+      "emailSentAt": 1790715119835,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "XAUSD"
+        ]
       }
     },
     {
@@ -6257,14 +6260,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUDUSD247C",
-          "XAUUSD247C",
-          "XAUUSD",
-          "GBPAUD",
-          "USDZAR",
-          "AUDCAD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -16573,7 +16569,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD"
+          "GOLD",
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
         ]
       }
     },
