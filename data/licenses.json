@@ -481,11 +481,7 @@
       "robotCompany": "Jarocel (Pty) Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790674914404,
-      "clientSymbols": [
-        "XAUUSD",
-        "VOL80",
-        "EURUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790686683649,
       "purchaseCaptureId": "93U07525R1791262K",
       "purchaseOrderId": "0X4769313F4522629",
@@ -542,7 +538,12 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NAS100"
+          "XAUUSD",
+          "NAS100",
+          "GOLD",
+          "USDJPY",
+          "NZDUSD",
+          "US30"
         ]
       }
     },
@@ -2394,7 +2395,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "US30"
         ]
       }
     },
@@ -12277,10 +12279,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GBPUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
