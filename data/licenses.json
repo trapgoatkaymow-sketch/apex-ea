@@ -1,6 +1,51 @@
 {
   "licenses": [
     {
+      "key": "APEX-UCF4-XCV8",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "nqubekosithole121@icloud.com",
+      "clientName": "Nqubeko Sithole",
+      "mainText": "Nqubeko Sithole",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790541623610,
+      "usedAt": 1790541716963,
+      "deviceId": "f04746ab-cac5-4cb8-b602-07a7465bdefd",
+      "boundAt": 1790541716963,
+      "updatedAt": 1790698701377,
+      "scanReset": null,
+      "robotAccountId": "6bf306dd-708b-4d17-b705-4777227ed58a",
+      "robotLogin": "295687795",
+      "robotServer": "Exness-MT5Real27",
+      "robotCompany": "Exness Technologies Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790698268613,
+      "clientSymbols": [
+        "BTCUSDM"
+      ],
+      "clientSymbolsUpdatedAt": 1790698701377,
+      "purchaseCaptureId": "96M736157N0080433",
+      "purchaseOrderId": "4B022747EV4922222",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790695531405,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "BTCUSDM"
+        ]
+      }
+    },
+    {
       "key": "APEX-T9TQ-8YJQ",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -105,51 +150,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-UCF4-XCV8",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "nqubekosithole121@icloud.com",
-      "clientName": "Nqubeko Sithole",
-      "mainText": "Nqubeko Sithole",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790541623610,
-      "usedAt": 1790541716963,
-      "deviceId": "f04746ab-cac5-4cb8-b602-07a7465bdefd",
-      "boundAt": 1790541716963,
-      "updatedAt": 1790698669179,
-      "scanReset": null,
-      "robotAccountId": "6bf306dd-708b-4d17-b705-4777227ed58a",
-      "robotLogin": "295687795",
-      "robotServer": "Exness-MT5Real27",
-      "robotCompany": "Exness Technologies Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790698268613,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790698669179,
-      "purchaseCaptureId": "96M736157N0080433",
-      "purchaseOrderId": "4B022747EV4922222",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790695531405,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
         ]
       }
     },
@@ -792,13 +792,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "USDJPY",
-          "WTI",
-          "EURUSD",
-          "XAUUSD",
-          "AUDCAD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1207,7 +1201,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "USDCAD",
+          "USDCADM"
+        ]
       }
     },
     {
@@ -33542,11 +33540,7 @@
           ".DE30.MIC",
           "VOL_80",
           "BTCUSD.M",
-          "BTC",
-          "DJ30",
-          "NAS100",
-          "NASDAQ",
-          "DJ39"
+          "BTC"
         ]
       }
     },
