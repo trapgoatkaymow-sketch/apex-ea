@@ -19,7 +19,7 @@
       "usedAt": 1790617507704,
       "deviceId": "3855942c-5a2d-4bbe-9950-66a6755c538c",
       "boundAt": 1790617507704,
-      "updatedAt": 1790663754757,
+      "updatedAt": 1790663755797,
       "scanReset": null,
       "robotAccountId": "b1db1b79-d3df-49af-a54e-44307629b51e",
       "robotLogin": "54975542",
@@ -60,14 +60,14 @@
       "usedAt": 1790444151767,
       "deviceId": "565d524a-edc2-4753-8613-90ea3c171313",
       "boundAt": 1790636218554,
-      "updatedAt": 1790663737344,
+      "updatedAt": 1790663749999,
       "scanReset": null,
-      "robotAccountId": "c21707d1-4742-4395-aa1c-653fc65bbab9",
-      "robotLogin": "1200523115",
-      "robotServer": "JustMarkets-Demo3",
-      "robotCompany": "JustMarkets Global",
+      "robotAccountId": "24efde04-a154-42f8-aea4-a228e3b9d658",
+      "robotLogin": "55035897",
+      "robotServer": "HFMarketsKE-Live2",
+      "robotCompany": "HFM Investments Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790658687934,
+      "robotConnectedAt": 1790661314616,
       "clientSymbols": [
         "XAUUSD",
         "NASDAQ",
@@ -77,7 +77,7 @@
         "USA30",
         "EURUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790663729991,
+      "clientSymbolsUpdatedAt": 1790663749999,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -111,14 +111,14 @@
       "usedAt": 1789999612585,
       "deviceId": "b70f6593-c7ef-400a-82c0-fd960e0db8cb",
       "boundAt": 1790601206730,
-      "updatedAt": 1790663737344,
+      "updatedAt": 1790663743494,
       "scanReset": null,
-      "robotAccountId": "c21707d1-4742-4395-aa1c-653fc65bbab9",
-      "robotLogin": "1200523115",
-      "robotServer": "JustMarkets-Demo3",
-      "robotCompany": "JustMarkets Global",
+      "robotAccountId": "24efde04-a154-42f8-aea4-a228e3b9d658",
+      "robotLogin": "55035897",
+      "robotServer": "HFMarketsKE-Live2",
+      "robotCompany": "HFM Investments Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790658687934,
+      "robotConnectedAt": 1790661314616,
       "clientSymbols": [
         "XAUUSD"
       ],
@@ -295,7 +295,7 @@
       "usedAt": 1790622999985,
       "deviceId": "51caf15c-2e80-4b73-a53b-1c8aea8c3616",
       "boundAt": 1790622999985,
-      "updatedAt": 1790663718244,
+      "updatedAt": 1790663718947,
       "scanReset": null,
       "robotAccountId": "083fa522-d78d-46f8-ae65-03d8648ea784",
       "robotLogin": "55053945",
@@ -850,7 +850,10 @@
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790661742354,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "AUDUSD",
+        "US100.STD"
+      ],
       "clientSymbolsUpdatedAt": 1790663597671,
       "purchaseCaptureId": "24T37785FY217861M",
       "purchaseOrderId": "46115445H9375602D",
@@ -861,7 +864,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "AUDUSD"
+        ]
       }
     },
     {
@@ -949,9 +954,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1421,7 +1424,9 @@
           "BTCUSDM",
           "XAUUS",
           "XAUUSD",
-          "XAUUSDM"
+          "XAUUSDM",
+          "GBPUSD",
+          "GBPUS"
         ]
       }
     },
@@ -3987,7 +3992,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
