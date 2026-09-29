@@ -19,7 +19,7 @@
       "usedAt": 1790551855381,
       "deviceId": "867f9c08-1904-4b55-81de-2801d9b04265",
       "boundAt": 1790551855381,
-      "updatedAt": 1790669116864,
+      "updatedAt": 1790669119870,
       "scanReset": null,
       "robotAccountId": "adb91690-f667-4944-afbc-9fdf33cb1e94",
       "robotLogin": "1500006861",
@@ -31,7 +31,7 @@
         "XAUUSD",
         "XAUUSD.M"
       ],
-      "clientSymbolsUpdatedAt": 1790669116864,
+      "clientSymbolsUpdatedAt": 1790669119870,
       "purchaseCaptureId": "84F02787YH383613K",
       "purchaseOrderId": "6D943867HY3768810",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -40,6 +40,50 @@
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
+      }
+    },
+    {
+      "key": "APEX-HH6R-GZS5",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "nogwazalungisani33@gmail.com",
+      "clientName": "Lungisani Nogwaza",
+      "mainText": "Lungisani Nogwaza",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790668909048,
+      "usedAt": 1790669023426,
+      "deviceId": "1a1cf902-47e1-49ec-be13-79fe48e5ea8c",
+      "boundAt": 1790669023426,
+      "updatedAt": 1790669118679,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": 1790669118679,
+      "purchaseCaptureId": "96182812VN604652T",
+      "purchaseOrderId": "44H56384XA276640D",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": []
       }
@@ -238,47 +282,6 @@
           "US30",
           ".US30."
         ]
-      }
-    },
-    {
-      "key": "APEX-HH6R-GZS5",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "nogwazalungisani33@gmail.com",
-      "clientName": "Lungisani Nogwaza",
-      "mainText": "Lungisani Nogwaza",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790668909048,
-      "usedAt": 1790669023426,
-      "deviceId": "1a1cf902-47e1-49ec-be13-79fe48e5ea8c",
-      "boundAt": 1790669023426,
-      "updatedAt": 1790669073322,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790669073322,
-      "purchaseCaptureId": "96182812VN604652T",
-      "purchaseOrderId": "44H56384XA276640D",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
-        "strategy": "scalper",
-        "symbols": []
       }
     },
     {
@@ -2864,7 +2867,10 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "GOLD",
+          "GOLDMICRO",
+          "XAUUSDM"
         ]
       }
     },
