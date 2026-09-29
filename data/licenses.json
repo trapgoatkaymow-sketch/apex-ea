@@ -273,6 +273,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSD",
+          "US30",
           ".US30.",
           "EURUSD"
         ]
@@ -503,7 +505,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -861,12 +866,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "GOLD",
-          "USDJPY",
           "NZDUSD",
-          "US30"
+          "US30",
+          "USDJPY",
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -1050,8 +1054,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "USDJPY",
+          "EURUSD",
           "XAUUSD",
-          "USDJPY"
+          "XUAUSD"
         ]
       }
     },
@@ -1272,7 +1278,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD",
+          "GBPUSD",
+          "GBPUSDM",
+          "EURUSD"
+        ]
       }
     },
     {
@@ -2390,7 +2402,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -5775,14 +5789,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAGUSD",
-          "NAS100",
-          "US30",
-          "DJ30",
-          "XAUUSD",
-          "DE30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -7227,7 +7234,11 @@
           ".DE30.MIC",
           "VOL_80",
           "BTCUSD.M",
-          "BTC"
+          "BTC",
+          "DJ30",
+          "NAS100",
+          "NASDAQ",
+          "DJ39"
         ]
       }
     },
