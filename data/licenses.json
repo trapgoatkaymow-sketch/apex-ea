@@ -19,7 +19,7 @@
       "usedAt": 1790527666015,
       "deviceId": "45602774-1989-4cf8-9031-4740eb48af05",
       "boundAt": 1790542522624,
-      "updatedAt": 1790691715904,
+      "updatedAt": 1790691716726,
       "scanReset": null,
       "robotAccountId": "256a54f1-2933-4ccf-be03-3f085631cf92",
       "robotLogin": "987850913",
@@ -75,7 +75,7 @@
       "usedAt": 1790527605127,
       "deviceId": "efb993b2-25b0-4baf-8a38-fcaa03f1c040",
       "boundAt": 1790527605127,
-      "updatedAt": 1790691715904,
+      "updatedAt": 1790691716726,
       "scanReset": null,
       "robotAccountId": "256a54f1-2933-4ccf-be03-3f085631cf92",
       "robotLogin": "987850913",
@@ -648,8 +648,7 @@
         "symbols": [
           "GBPUSD",
           "XAUUSD",
-          "US30",
-          "USA30"
+          "US30"
         ]
       }
     },
@@ -1640,7 +1639,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "USDJPY"
         ]
       }
     },
@@ -3315,8 +3315,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSD",
           "EURUSD",
-          "EURUSDM"
+          "XAUUSDM"
         ]
       }
     },
