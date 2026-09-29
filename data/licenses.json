@@ -260,7 +260,12 @@
       "robotCompany": "Weltrade Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790591235868,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "EURUSD",
+        "USDJPY",
+        "USDCAD",
+        "XAUUSD"
+      ],
       "clientSymbolsUpdatedAt": 1790668485804,
       "purchaseCaptureId": "4UG054951Y056194E",
       "purchaseOrderId": "1SE59585UX617444N",
@@ -404,7 +409,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "XAUUSD",
+          "GBPUSD"
+        ]
       }
     },
     {
@@ -974,7 +983,8 @@
           "US30",
           "XAUUSD",
           "USTECH",
-          ".USTECH.MIC"
+          ".USTECH.MIC",
+          "USDJPY"
         ]
       }
     },
