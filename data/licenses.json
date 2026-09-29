@@ -495,10 +495,7 @@
         "strategy": "scalper",
         "symbols": [
           "US30M",
-          "XAUUSD",
-          "BTCUSD",
-          "BTCUSDM",
-          "US500M"
+          "XAUUSD"
         ]
       }
     },
@@ -947,7 +944,10 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "GOLD",
+          "GOLDMICRO",
+          "XAUUSDM"
         ]
       }
     },
@@ -1263,11 +1263,12 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NZDUSD",
-          "US30",
-          "USDJPY",
           "XAUUSD",
-          "GOLD"
+          "NAS100",
+          "GOLD",
+          "USDJPY",
+          "NZDUSD",
+          "US30"
         ]
       }
     },
@@ -1436,7 +1437,9 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790615598763,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "XAUUSD"
+      ],
       "clientSymbolsUpdatedAt": 1790670163903,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
