@@ -48,10 +48,11 @@
  * Gen 91 — Auto license email after PayPal (emailSentAt + capture idempotency).
  * Gen 92 — Mentor login: www redirect, passwordUpdatedAt on reset, no TempPass wipe.
  * Gen 93 — Super admin Deactivated mentors button on Mentor Management.
+ * Gen 94 — Fix localStorage quota “storage is full” during MetaTrader connect.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 93;
+export const UI_SHELL_GENERATION = 94;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -61,7 +62,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 93;
+export const UI_SHELL_FLOOR = 94;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

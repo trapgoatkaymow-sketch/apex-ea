@@ -110,7 +110,13 @@ function persistMt5Session(session) {
     if (!session) localStorage.removeItem(MT5_SESSION_KEY);
     else localStorage.setItem(MT5_SESSION_KEY, JSON.stringify(session));
   } catch {
-    // ignore
+    try {
+      clearAppStoragePressure({ dropBackup: true, dropHeavyCaches: true });
+      if (!session) localStorage.removeItem(MT5_SESSION_KEY);
+      else localStorage.setItem(MT5_SESSION_KEY, JSON.stringify(session));
+    } catch {
+      // ignore — in-memory session still works for this visit
+    }
   }
 }
 
@@ -238,8 +244,16 @@ function isRealProfilePhoto(value) {
   );
 }
 
-/** Photos kept in localStorage must stay tiny — mobile Safari quota is ~5MB total. */
-const MAX_STORED_DATA_URL = 48_000;
+/**
+ * Photos in localStorage must stay tiny — mobile Safari / Chrome WebView
+ * share a ~5MB origin quota. Data-URL embeds are the #1 cause of
+ * “storage is full” during MetaTrader connect (state persist races).
+ * Always prefer a durable API path; never keep base64 in localStorage.
+ */
+/** Cap cached roster size so mentor portals with thousands of keys cannot fill quota. */
+const MAX_STORED_LICENSE_KEYS = 120;
+const MAX_STORED_SIGNUPS = 80;
+const MAX_BACKUP_CHARS = 700_000;
 
 function slimPhotoForStorage(value, botId = "") {
   const photo = String(value || "").trim();
@@ -247,17 +261,101 @@ function slimPhotoForStorage(value, botId = "") {
   // Keep the packaged logo as-is. Never invent a /api/licenses/photo URL for it —
   // that 404s for most bots and leaves Home with a broken image for ~1s.
   if (!photo || photo === "/logo.png") return "/logo.png";
-  if (photo.startsWith("/api/licenses/photo") || /^https?:\/\//i.test(photo)) return photo;
-  if (photo.startsWith("data:image/")) {
-    // Large embeds blow quota — keep a durable API path so Home can still load.
-    if (photo.length > MAX_STORED_DATA_URL) {
-      return id
-        ? `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`
-        : "/logo.png";
-    }
+  if (photo.startsWith("/api/licenses/photo") || /^https?:\/\//i.test(photo)) {
     return photo;
   }
+  if (photo.startsWith("data:image/")) {
+    // Never persist base64 — Home loads full quality from /api/licenses/photo.
+    return id
+      ? `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`
+      : "/logo.png";
+  }
+  if (photo.length > 2_000) {
+    return id
+      ? `/api/licenses/photo?botId=${encodeURIComponent(id)}&v=full`
+      : "/logo.png";
+  }
   return photo;
+}
+
+function slimLicenseRowForStorage(row) {
+  if (!row || typeof row !== "object") return row;
+  const botId = String(row.botId || row.bot?.id || "").trim();
+  const bot = row.bot
+    ? {
+        id: String(row.bot.id || botId || "").trim(),
+        name: String(row.bot.name || row.botName || "Bot").trim() || "Bot",
+        photo: slimPhotoForStorage(row.bot.photo, row.bot.id || botId),
+        strategy: String(row.bot.strategy || "scalper"),
+        symbols: Array.isArray(row.bot.symbols)
+          ? row.bot.symbols.slice(0, 40)
+          : [],
+      }
+    : null;
+  return {
+    key: row.key,
+    botId,
+    botName: String(row.botName || bot?.name || "Bot").trim() || "Bot",
+    clientEmail: String(row.clientEmail || "").trim().toLowerCase(),
+    clientName: String(row.clientName || "").trim(),
+    mainText: String(row.mainText || "").trim(),
+    mentorEmail: String(row.mentorEmail || "").trim().toLowerCase(),
+    mentorId: String(row.mentorId || "").trim(),
+    mentorName: String(row.mentorName || "").trim(),
+    used: Boolean(row.used),
+    duration: String(row.duration || "lifetime"),
+    expiresAt: row.expiresAt == null || row.expiresAt === "" ? null : Number(row.expiresAt) || null,
+    createdAt: Number(row.createdAt) || Date.now(),
+    usedAt: row.usedAt ? Number(row.usedAt) : null,
+    deviceId: String(row.deviceId || "").trim() || null,
+    boundAt: row.boundAt ? Number(row.boundAt) : null,
+    updatedAt: Number(row.updatedAt || row.usedAt || row.createdAt) || Date.now(),
+    scanReset: row.scanReset || null,
+    robotAccountId: String(row.robotAccountId || "").trim(),
+    robotLogin: String(row.robotLogin || "").trim(),
+    robotServer: String(row.robotServer || "").trim(),
+    robotCompany: String(row.robotCompany || "").trim(),
+    robotPlatform: String(row.robotPlatform || "").trim(),
+    robotConnectedAt: row.robotConnectedAt ? Number(row.robotConnectedAt) : null,
+    clientSymbols: Array.isArray(row.clientSymbols)
+      ? row.clientSymbols.slice(0, 40)
+      : [],
+    clientSymbolsUpdatedAt: row.clientSymbolsUpdatedAt
+      ? Number(row.clientSymbolsUpdatedAt)
+      : null,
+    bot,
+  };
+}
+
+function capLicenseKeysForStorage(list, coverEmail = "") {
+  const rows = Array.isArray(list) ? list.map(slimLicenseRowForStorage) : [];
+  if (rows.length <= MAX_STORED_LICENSE_KEYS) return rows;
+  const cover = String(coverEmail || "")
+    .trim()
+    .toLowerCase();
+  const stamp = (row) =>
+    Number(row?.updatedAt || row?.usedAt || row?.createdAt || 0) || 0;
+  const mine = cover
+    ? rows.filter((r) => String(r.clientEmail || "").toLowerCase() === cover)
+    : [];
+  const others = cover
+    ? rows.filter((r) => String(r.clientEmail || "").toLowerCase() !== cover)
+    : rows;
+  mine.sort((a, b) => stamp(b) - stamp(a));
+  others.sort((a, b) => stamp(b) - stamp(a));
+  const kept = [...mine, ...others].slice(0, MAX_STORED_LICENSE_KEYS);
+  return kept;
+}
+
+function capSignupsForStorage(list) {
+  const rows = Array.isArray(list) ? list : [];
+  if (rows.length <= MAX_STORED_SIGNUPS) return rows;
+  return [...rows]
+    .sort(
+      (a, b) =>
+        (Number(b?.createdAt) || 0) - (Number(a?.createdAt) || 0)
+    )
+    .slice(0, MAX_STORED_SIGNUPS);
 }
 
 /** Prefer a real uploaded/synced photo over the placeholder logo. */
@@ -273,8 +371,13 @@ function pickProfilePhoto(...candidates) {
 }
 
 function slimPayloadForStorage(payload) {
+  const coverEmail = String(payload?.coverEmail || "").trim().toLowerCase();
   return {
     ...payload,
+    signups: capSignupsForStorage(payload.signups || []),
+    premiumScannerEmails: Array.isArray(payload.premiumScannerEmails)
+      ? payload.premiumScannerEmails.slice(0, MAX_STORED_SIGNUPS)
+      : [],
     eas: (payload.eas || []).map((ea) => ({
       ...ea,
       ownerEmail: String(ea.ownerEmail || ea.mentorEmail || "")
@@ -282,20 +385,14 @@ function slimPayloadForStorage(payload) {
         .toLowerCase(),
       ownerId: String(ea.ownerId || ea.mentorId || "").trim(),
       photo: slimPhotoForStorage(ea.photo, ea.id),
+      symbols: Array.isArray(ea.symbols) ? ea.symbols.slice(0, 40) : [],
     })),
     bots: (payload.bots || []).map((bot) => ({
       ...bot,
       photo: slimPhotoForStorage(bot.photo, bot.id),
+      symbols: Array.isArray(bot.symbols) ? bot.symbols.slice(0, 40) : [],
     })),
-    licenseKeys: (payload.licenseKeys || []).map((row) => ({
-      ...row,
-      bot: row.bot
-        ? {
-            ...row.bot,
-            photo: slimPhotoForStorage(row.bot.photo, row.bot.id || row.botId),
-          }
-        : row.bot,
-    })),
+    licenseKeys: capLicenseKeysForStorage(payload.licenseKeys || [], coverEmail),
   };
 }
 
@@ -370,17 +467,26 @@ function stabilizePayload(payload) {
   return slim;
 }
 
+function trySetLocal(key, raw) {
+  localStorage.setItem(key, raw);
+}
+
+function writeBackupIfRoom(raw) {
+  if (!raw || raw.length > MAX_BACKUP_CHARS) return;
+  try {
+    trySetLocal(BACKUP_KEY, raw);
+  } catch {
+    // Backup is optional — primary save already succeeded.
+  }
+}
+
 function saveState(payload) {
   const slim = stabilizePayload(payload);
   const raw = JSON.stringify(slim);
-  localStorage.setItem(STORAGE_KEY, raw);
+  trySetLocal(STORAGE_KEY, raw);
   // Keep the last non-empty EA snapshot so an empty overwrite can be recovered.
   if (eaCount(slim) > 0) {
-    try {
-      localStorage.setItem(BACKUP_KEY, raw);
-    } catch {
-      // Backup is optional — primary save already succeeded.
-    }
+    writeBackupIfRoom(raw);
   }
 }
 
@@ -392,34 +498,72 @@ function clearEaBackup() {
   }
 }
 
-function clearAppStoragePressure() {
-  // Keep primary + backup + device access — never wipe robot memory under quota pressure.
+function trimTradeHistoryStore(max = 40) {
+  try {
+    const raw = JSON.parse(
+      localStorage.getItem("apexea-trade-history-v2") || "null"
+    );
+    const trades = Array.isArray(raw?.trades) ? raw.trades : [];
+    if (trades.length <= max) return;
+    localStorage.setItem(
+      "apexea-trade-history-v2",
+      JSON.stringify({ trades: trades.slice(0, max) })
+    );
+  } catch {
+    try {
+      localStorage.removeItem("apexea-trade-history-v2");
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function clearAppStoragePressure({
+  dropBackup = false,
+  dropHeavyCaches = true,
+} = {}) {
+  // Keep primary + device access — never wipe robot memory under quota pressure.
   try {
     clearBotPhotoCache();
   } catch {
     // ignore
   }
   try {
-    // Drop known heavy keys that are not required for EA save.
+    // Drop known heavy keys that are not required for EA / MT5 save.
     // Do NOT clear apexea-daily-scans-v1 — quotas must persist through the day.
-    // Do NOT clear BACKUP_KEY — recovering robots after a bad write depends on it.
     const keep = new Set([
       STORAGE_KEY,
-      BACKUP_KEY,
-      "apexea-app-v1-backup",
+      ...(dropBackup ? [] : [BACKUP_KEY, "apexea-app-v1-backup"]),
       "apexea-daily-scans-v1",
       "apexea-device-id",
       "apexea-device-access-v1",
       "apexea-build-id-v1",
       "apexea-shell-gen-v1",
+      "apexea-ui-lock-floor-v1",
       "apexea-mt5-session",
+      "apexea-mt5-creds-v1",
       "apexea-trade-history-v2",
     ]);
+    if (dropBackup) {
+      localStorage.removeItem(BACKUP_KEY);
+      localStorage.removeItem("apexea-app-v1-backup");
+    }
     localStorage.removeItem("apexea-float-pos");
     localStorage.removeItem("apexea-float-pos-zeta");
     localStorage.removeItem("apexea-float-pos-v2");
     localStorage.removeItem("apexea-self-host-recent-v1");
+    localStorage.removeItem("apexea-self-host-active-job-v1");
     localStorage.removeItem("apexea-trade-management");
+    localStorage.removeItem("apexea-daily-trades-v1");
+    if (dropHeavyCaches) {
+      // Mentors roster / calendar caches are re-fetched; safe to drop under pressure.
+      localStorage.removeItem("apexea-mentors-v1");
+      localStorage.removeItem("apexea-mentor-banking-v1");
+      localStorage.removeItem("apexea-economic-calendar-v1");
+      localStorage.removeItem("apexea-deleted-license-keys-v1");
+      localStorage.removeItem("apexea-deleted-signup-emails-v1");
+      trimTradeHistoryStore(40);
+    }
     // Sweep other apexea scratch keys that can bloat Safari's ~5MB quota.
     const doomed = [];
     for (let i = 0; i < localStorage.length; i += 1) {
@@ -430,7 +574,11 @@ function clearAppStoragePressure() {
         (key.includes("cache") ||
           key.includes("float") ||
           key.includes("draft") ||
-          key.includes("scratch"))
+          key.includes("scratch") ||
+          key.includes("mentor") ||
+          key.includes("calendar") ||
+          key.includes("paypal") ||
+          key.includes("self-host"))
       ) {
         doomed.push(key);
       }
@@ -444,6 +592,71 @@ function clearAppStoragePressure() {
     });
   } catch {
     // ignore
+  }
+}
+
+/** Persist primary app state with staged quota recovery (never strand MT connect). */
+function persistAppStateSafely(payload, { onSlimmedPhotos } = {}) {
+  const slim = stabilizePayload(payload);
+  const raw = JSON.stringify(slim);
+  try {
+    trySetLocal(STORAGE_KEY, raw);
+    if (eaCount(slim) > 0) writeBackupIfRoom(raw);
+    return { ok: true, slim };
+  } catch {
+    // Stage 1: free scratch + mentor/calendar caches, keep backup.
+  }
+  try {
+    clearAppStoragePressure({ dropBackup: false, dropHeavyCaches: true });
+    const again = JSON.stringify(stabilizePayload(payload));
+    trySetLocal(STORAGE_KEY, again);
+    if (eaCount(slim) > 0) writeBackupIfRoom(again);
+    return { ok: true, slim, recovered: true };
+  } catch {
+    // Stage 2: drop backup duplicate (often ~half the quota).
+  }
+  try {
+    clearAppStoragePressure({ dropBackup: true, dropHeavyCaches: true });
+    const stripped = stripAllEmbeddedPhotos(stabilizePayload(payload));
+    const strippedRaw = JSON.stringify(stripped);
+    trySetLocal(STORAGE_KEY, strippedRaw);
+    onSlimmedPhotos?.(stripped);
+    return { ok: true, slim: stripped, recovered: true, stripped: true };
+  } catch {
+    // Stage 3: absolute minimum — robots + session email only.
+  }
+  try {
+    clearEaBackup();
+    clearAppStoragePressure({ dropBackup: true, dropHeavyCaches: true });
+    try {
+      localStorage.removeItem("apexea-trade-history-v2");
+    } catch {
+      // ignore
+    }
+    const minimal = stripAllEmbeddedPhotos(
+      slimPayloadForStorage({
+        activeInterface: payload.activeInterface || "zeta",
+        coverEmail: payload.coverEmail || "",
+        signups: [],
+        eas: payload.eas || [],
+        bots: payload.bots || [],
+        licenseKeys: capLicenseKeysForStorage(
+          payload.licenseKeys || [],
+          payload.coverEmail || ""
+        ).slice(0, 40),
+        catalog: Array.isArray(payload.catalog)
+          ? payload.catalog.slice(0, 20)
+          : [],
+        symbolMeta: {},
+        appColor: payload.appColor || "",
+        premiumScannerEmails: [],
+      })
+    );
+    trySetLocal(STORAGE_KEY, JSON.stringify(minimal));
+    onSlimmedPhotos?.(minimal);
+    return { ok: true, slim: minimal, recovered: true, stripped: true };
+  } catch {
+    return { ok: false };
   }
 }
 
@@ -473,22 +686,12 @@ export function AppProvider({ children }) {
   // Free quota from older oversized photo embeds / backups as soon as the app boots.
   if (typeof window !== "undefined") {
     try {
-      clearAppStoragePressure();
+      clearAppStoragePressure({ dropHeavyCaches: true });
       if (saved) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(slimPayloadForStorage(saved)));
+        persistAppStateSafely(saved);
       }
     } catch {
-      try {
-        clearAppStoragePressure();
-        if (saved) {
-          localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(stripAllEmbeddedPhotos(saved))
-          );
-        }
-      } catch {
-        // ignore — persist effect will keep trying
-      }
+      // ignore — persist effect will keep trying
     }
   }
   const [activeInterface, setActiveInterface] = useState(
@@ -711,89 +914,54 @@ export function AppProvider({ children }) {
     };
 
     const flush = () => {
-      try {
-        const slim = stabilizePayload(payload);
-        const raw = JSON.stringify(slim);
-        // Skip identical writes — 5s license polls used to thrash localStorage on Android.
-        if (raw === lastPersistRawRef.current) return;
-        lastPersistRawRef.current = raw;
-        localStorage.setItem(STORAGE_KEY, raw);
-        if (eaCount(slim) > 0) {
-          try {
-            localStorage.setItem(BACKUP_KEY, raw);
-          } catch {
-            // Backup is optional — primary save already succeeded.
-          }
-        }
-      } catch {
-        try {
-          clearAppStoragePressure();
-          saveState(payload);
-        } catch {
-          try {
-            clearAppStoragePressure();
-            const stripped = stripAllEmbeddedPhotos(payload);
-            saveState(stripped);
-            // Slim in-memory state so we stop rewriting oversized embeds.
-            setEas((prev) =>
-              prev.map((ea) => ({ ...ea, photo: slimPhotoForStorage(ea.photo, ea.id) }))
-            );
-            setBots((prev) =>
-              prev.map((bot) => ({ ...bot, photo: slimPhotoForStorage(bot.photo, bot.id) }))
-            );
-            setLicenseKeys((prev) =>
-              prev.map((row) =>
-                row.bot
-                  ? {
-                      ...row,
-                      bot: {
-                        ...row.bot,
-                        photo: slimPhotoForStorage(
-                          row.bot.photo,
-                          row.bot.id || row.botId
-                        ),
-                      },
-                    }
-                  : row
-              )
-            );
-            // Recovered after clearing cache — photos reload from the API.
-            // Avoid alarming unlock / activate with a storage toast.
-          } catch {
-            try {
-              clearEaBackup();
-              const minimal = stripAllEmbeddedPhotos(payload);
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(minimal));
-              setEas((prev) =>
-                prev.map((ea) => ({ ...ea, photo: slimPhotoForStorage(ea.photo, ea.id) }))
-              );
-              setBots((prev) =>
-                prev.map((bot) => ({ ...bot, photo: slimPhotoForStorage(bot.photo, bot.id) }))
-              );
-              setLicenseKeys((prev) =>
-                prev.map((row) =>
-                  row.bot
-                    ? {
-                        ...row,
-                        bot: {
-                          ...row.bot,
-                          photo: slimPhotoForStorage(
-                            row.bot.photo,
-                            row.bot.id || row.botId
-                          ),
-                        },
-                      }
-                    : row
-                )
-              );
-            } catch {
-              showToast(
-                "Could not save — storage is full. Clear site data for apex-ea.com and retry."
-              );
-            }
-          }
-        }
+      const preview = JSON.stringify(stabilizePayload(payload));
+      // Skip identical writes — 5s license polls used to thrash localStorage on Android.
+      if (preview === lastPersistRawRef.current) return;
+
+      const applySlimmedPhotos = () => {
+        setEas((prev) =>
+          prev.map((ea) => ({
+            ...ea,
+            photo: slimPhotoForStorage(ea.photo, ea.id),
+          }))
+        );
+        setBots((prev) =>
+          prev.map((bot) => ({
+            ...bot,
+            photo: slimPhotoForStorage(bot.photo, bot.id),
+          }))
+        );
+        setLicenseKeys((prev) =>
+          capLicenseKeysForStorage(prev, coverEmail).map((row) =>
+            row.bot
+              ? {
+                  ...row,
+                  bot: {
+                    ...row.bot,
+                    photo: slimPhotoForStorage(
+                      row.bot.photo,
+                      row.bot.id || row.botId
+                    ),
+                  },
+                }
+              : row
+          )
+        );
+      };
+
+      const result = persistAppStateSafely(payload, {
+        onSlimmedPhotos: () => applySlimmedPhotos(),
+      });
+      if (result.ok) {
+        lastPersistRawRef.current = JSON.stringify(result.slim || {});
+        if (result.stripped) applySlimmedPhotos();
+        return;
       }
+      // Last resort only — connect / unlock must not strand on a scary toast
+      // when robots are already in memory for this session.
+      showToast(
+        "Could not save — storage is full. Clear site data for apex-ea.com and retry."
+      );
     };
 
     // Light debounce on native so rapid poll setState does not thrash disk,

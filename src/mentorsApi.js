@@ -94,7 +94,50 @@ function readLocalMentors() {
 }
 
 function writeLocalMentors(mentors) {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify({ mentors }));
+  const list = Array.isArray(mentors) ? mentors : [];
+  // Cap local mentor cache — full 300+ roster with banking blows mobile quota.
+  const MAX_LOCAL = 80;
+  const slim = list.slice(0, MAX_LOCAL).map((m) => ({
+    id: m.id,
+    username: m.username,
+    email: m.email,
+    contact: m.contact || "",
+    role: m.role || "mentor",
+    status: m.status || "pending",
+    createdAt: m.createdAt || Date.now(),
+    password: m.password,
+    banking: m.banking,
+    licenseKeysAllowed: m.licenseKeysAllowed,
+    inviteCode: m.inviteCode,
+    appColor: m.appColor,
+    appColorUpdatedAt: m.appColorUpdatedAt,
+    deactivatedAt: m.deactivatedAt || null,
+    deactivatedReason: m.deactivatedReason || "",
+  }));
+  const raw = JSON.stringify({ mentors: slim });
+  try {
+    localStorage.setItem(LOCAL_KEY, raw);
+  } catch {
+    try {
+      // Drop banking details under pressure — re-fetched from API.
+      localStorage.setItem(
+        LOCAL_KEY,
+        JSON.stringify({
+          mentors: slim.slice(0, 40).map((m) => ({
+            ...m,
+            banking: undefined,
+            password: undefined,
+          })),
+        })
+      );
+    } catch {
+      try {
+        localStorage.removeItem(LOCAL_KEY);
+      } catch {
+        // ignore
+      }
+    }
+  }
 }
 
 function emptyBanking() {
