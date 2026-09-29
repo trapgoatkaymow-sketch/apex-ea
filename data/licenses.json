@@ -270,7 +270,7 @@
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790694896226,
       "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790695126452,
+      "clientSymbolsUpdatedAt": 1790695191578,
       "purchaseCaptureId": "3RX14489AE409321R",
       "purchaseOrderId": "6DN32722PJ1449421",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -323,7 +323,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD",
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
+        ]
       }
     },
     {
@@ -3906,7 +3911,8 @@
           "USDJPY",
           "XAUUSD",
           "US30",
-          "GOLD"
+          "GOLD",
+          "GBPUSD"
         ]
       }
     },
@@ -11509,8 +11515,7 @@
           "XAUUSD",
           "GBPUSD",
           "USDCHF",
-          "US30",
-          "BTCUSD"
+          "US30"
         ]
       }
     },
@@ -17968,9 +17973,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
