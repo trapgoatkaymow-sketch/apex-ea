@@ -1,6 +1,57 @@
 {
   "licenses": [
     {
+      "key": "APEX-2WVS-WHEB",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "mangweyanasibiya@icloud.com",
+      "clientName": "Client",
+      "mainText": "Client",
+      "mentorEmail": "trapgoatkaymow22@icloud.com",
+      "mentorId": "",
+      "mentorName": "APEX EA",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "invite_migrate_bypass",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789976770223,
+      "usedAt": 1789979875482,
+      "deviceId": "4f552243-3075-4d14-935e-c05b47098c7d",
+      "boundAt": 1789979875482,
+      "updatedAt": 1790690002162,
+      "scanReset": null,
+      "robotAccountId": "dfb44efa-211c-4e0e-bc2b-524186b9714e",
+      "robotLogin": "645360",
+      "robotServer": "RCGMarkets-Real",
+      "robotCompany": "RCG Markets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790666030976,
+      "clientSymbols": [
+        "US30",
+        "XAUUSD",
+        "EURUSD",
+        "USDJPY"
+      ],
+      "clientSymbolsUpdatedAt": 1790690002162,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": [
+          "US30",
+          "XAUUSD",
+          "EURUSD",
+          "USDJPY"
+        ]
+      }
+    },
+    {
       "key": "APEX-M58J-6EED",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -66,7 +117,7 @@
       "usedAt": 1789931769879,
       "deviceId": "a50af6e6-f638-47df-a9ab-9722fd346d91",
       "boundAt": 1790077448757,
-      "updatedAt": 1790689995211,
+      "updatedAt": 1790689999987,
       "scanReset": null,
       "robotAccountId": "19e72e50-48c7-4bcb-a3b5-dd9eb4e61cf7",
       "robotLogin": "4104886",
@@ -81,7 +132,7 @@
         "GOLD",
         "NAS100"
       ],
-      "clientSymbolsUpdatedAt": 1790689995211,
+      "clientSymbolsUpdatedAt": 1790689999987,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -327,8 +378,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "USDJPY"
+          "EURUSD"
         ]
       }
     },
@@ -1279,7 +1329,8 @@
         "symbols": [
           "XAUUSD",
           ".US30.",
-          "GOLD"
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
@@ -1848,52 +1899,6 @@
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
-      "key": "APEX-2WVS-WHEB",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "mangweyanasibiya@icloud.com",
-      "clientName": "Client",
-      "mainText": "Client",
-      "mentorEmail": "trapgoatkaymow22@icloud.com",
-      "mentorId": "",
-      "mentorName": "APEX EA",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "invite_migrate_bypass",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789976770223,
-      "usedAt": 1789979875482,
-      "deviceId": "4f552243-3075-4d14-935e-c05b47098c7d",
-      "boundAt": 1789979875482,
-      "updatedAt": 1790689374887,
-      "scanReset": null,
-      "robotAccountId": "dfb44efa-211c-4e0e-bc2b-524186b9714e",
-      "robotLogin": "645360",
-      "robotServer": "RCGMarkets-Real",
-      "robotCompany": "RCG Markets (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790666030976,
-      "clientSymbols": [
-        "US30",
-        "XAUUSD",
-        "EURUSD",
-        "USDJPY"
-      ],
-      "clientSymbolsUpdatedAt": 1790689374887,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
       }
