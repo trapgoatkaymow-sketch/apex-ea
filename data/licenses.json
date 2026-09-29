@@ -1,6 +1,79 @@
 {
   "licenses": [
     {
+      "key": "APEX-2CG2-9GFB",
+      "botId": "dominator-x-mub9aynd",
+      "botName": "DOMINATOR X",
+      "clientEmail": "nasclipa01@gmail.com",
+      "clientName": "Percy’s iOS",
+      "mainText": "Percy’s iOS",
+      "mentorEmail": "nasclipa01@gmail.com",
+      "mentorId": "75d0750a-f37f-4605-9817-33b101eb9e18",
+      "mentorName": "nascliperr_traders",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789996312256,
+      "usedAt": 1790022471228,
+      "deviceId": "ace962c5-e01a-4708-99bb-044e7697e160",
+      "boundAt": 1790525916949,
+      "updatedAt": 1790666848259,
+      "scanReset": null,
+      "robotAccountId": "6a35e8a7-304a-41b5-b50e-69c4d1c63a87",
+      "robotLogin": "5983008",
+      "robotServer": "Headway-Demo",
+      "robotCompany": "Jarocel (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790574205047,
+      "clientSymbols": [
+        "XAUUSD",
+        "XAUUSD.MIC",
+        ".USTECH.",
+        ".USTECH.MIC",
+        ".US30.",
+        ".US30.MIC",
+        ".DE30.",
+        ".DE30.MIC",
+        "VOL_80",
+        "BTCUSD.M",
+        "BTC",
+        "DJ30",
+        "NAS100",
+        "NASDAQ",
+        "DJ39"
+      ],
+      "clientSymbolsUpdatedAt": 1790666848259,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "dominator-x-mub9aynd",
+        "name": "DOMINATOR X",
+        "photo": "/api/licenses/photo?botId=dominator-x-mub9aynd&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.MIC",
+          ".USTECH.",
+          ".USTECH.MIC",
+          ".US30.",
+          ".US30.MIC",
+          ".DE30.",
+          ".DE30.MIC",
+          "VOL_80",
+          "BTCUSD.M",
+          "BTC",
+          "DJ30",
+          "NAS100",
+          "NASDAQ",
+          "DJ39"
+        ]
+      }
+    },
+    {
       "key": "APEX-2ZUE-VECV",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -102,79 +175,6 @@
           ".US30.",
           "GOLD",
           "GOLDMICRO"
-        ]
-      }
-    },
-    {
-      "key": "APEX-2CG2-9GFB",
-      "botId": "dominator-x-mub9aynd",
-      "botName": "DOMINATOR X",
-      "clientEmail": "nasclipa01@gmail.com",
-      "clientName": "Percy’s iOS",
-      "mainText": "Percy’s iOS",
-      "mentorEmail": "nasclipa01@gmail.com",
-      "mentorId": "75d0750a-f37f-4605-9817-33b101eb9e18",
-      "mentorName": "nascliperr_traders",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789996312256,
-      "usedAt": 1790022471228,
-      "deviceId": "ace962c5-e01a-4708-99bb-044e7697e160",
-      "boundAt": 1790525916949,
-      "updatedAt": 1790666828320,
-      "scanReset": null,
-      "robotAccountId": "6a35e8a7-304a-41b5-b50e-69c4d1c63a87",
-      "robotLogin": "5983008",
-      "robotServer": "Headway-Demo",
-      "robotCompany": "Jarocel (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790574205047,
-      "clientSymbols": [
-        "XAUUSD",
-        "XAUUSD.MIC",
-        ".USTECH.",
-        ".USTECH.MIC",
-        ".US30.",
-        ".US30.MIC",
-        ".DE30.",
-        ".DE30.MIC",
-        "VOL_80",
-        "BTCUSD.M",
-        "BTC",
-        "DJ30",
-        "NAS100",
-        "NASDAQ",
-        "DJ39"
-      ],
-      "clientSymbolsUpdatedAt": 1790666828320,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "dominator-x-mub9aynd",
-        "name": "DOMINATOR X",
-        "photo": "/api/licenses/photo?botId=dominator-x-mub9aynd&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSD.MIC",
-          ".USTECH.",
-          ".USTECH.MIC",
-          ".US30.",
-          ".US30.MIC",
-          ".DE30.",
-          ".DE30.MIC",
-          "VOL_80",
-          "BTCUSD.M",
-          "BTC",
-          "DJ30",
-          "NAS100",
-          "NASDAQ",
-          "DJ39"
         ]
       }
     },
@@ -1370,7 +1370,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "GBPUSD",
+          "XAUUSD",
+          "USDJPY",
+          "AUDUSD",
+          "BTCUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -1595,7 +1603,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "US30"
         ]
       }
     },
@@ -1726,13 +1735,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "USA30",
-          "XAUUSDC",
-          "USA100",
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2028,7 +2031,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USDJPY"
+        ]
       }
     },
     {
@@ -3910,12 +3915,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "US30",
-          "EURGBP"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5239,7 +5239,12 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "NASDAQ",
+          "USA100.",
+          "USA100",
+          "US30",
+          "USA30"
         ]
       }
     },
@@ -5412,8 +5417,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH.",
-          ".USTECH."
+          "USTECH."
         ]
       }
     },
@@ -5820,7 +5824,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "AUDUSD"
+          "AUDUSD",
+          "US100.STD"
         ]
       }
     },
@@ -6007,14 +6012,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GBPUSD",
-          "XAUUSD",
-          "EURUSD",
-          "US30",
-          "XAUUSD.M",
-          "US100"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6331,8 +6329,7 @@
         "symbols": [
           "BTCUSD",
           "XAUUSD",
-          "NAS100",
-          "XAUUSDM"
+          "NAS100"
         ]
       }
     },
@@ -6642,8 +6639,7 @@
           "GBPUSD",
           "AUDUSD",
           "GBPJPY",
-          "USDJPY",
-          "USDJPY.M"
+          "USDJPY"
         ]
       }
     },
@@ -7123,7 +7119,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -7564,9 +7562,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -8606,7 +8602,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       },
       "emailSentAt": null
     },
