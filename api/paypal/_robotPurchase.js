@@ -241,6 +241,9 @@ async function writeGiveawayWindowDoc(doc, message) {
       ...(doc?.extendedByDays != null
         ? { extendedByDays: doc.extendedByDays }
         : {}),
+      ...(doc?.extendedByHours != null
+        ? { extendedByHours: doc.extendedByHours }
+        : {}),
       ...(doc?.countdownSetAt ? { countdownSetAt: doc.countdownSetAt } : {}),
       countdownVersion:
         Number(doc?.countdownVersion) || GIVEAWAY_COUNTDOWN_VERSION,
@@ -326,6 +329,49 @@ export async function setGiveawayCountdownHours(
     durationMs,
     Date.parse(countdownEndsAt)
   );
+}
+
+/**
+ * Add hours onto the current display countdown (from remaining end, or now if past).
+ * Checkout stays open after the timer hits zero.
+ */
+export async function extendGiveawayCountdownByHours(
+  hours = 12,
+  nowMs = Date.now()
+) {
+  const hrs = Math.max(1, Number(hours) || 12);
+  const addMs = hrs * 60 * 60 * 1000;
+  const latched = await readLatchedWindow();
+  const startMs = latched?.startMs || nowMs;
+  const prevEnd = Number.isFinite(latched?.countdownEndsAtMs)
+    ? latched.countdownEndsAtMs
+    : nowMs;
+  const nextEnd = Math.max(prevEnd, nowMs) + addMs;
+  const durationMs = Math.max(
+    latched?.durationMs || 0,
+    GIVEAWAY_DURATION_MS,
+    addMs * 10
+  );
+  const startsAt = new Date(startMs).toISOString();
+  const countdownEndsAt = new Date(nextEnd).toISOString();
+  await writeGiveawayWindowDoc(
+    {
+      startsAt,
+      durationMs,
+      latchedAt: startsAt,
+      countdownEndsAt,
+      countdownSetAt: new Date(nowMs).toISOString(),
+      countdownVersion: Math.max(
+        Number(latched?.countdownVersion) || 0,
+        GIVEAWAY_COUNTDOWN_VERSION
+      ),
+      extendedAt: new Date(nowMs).toISOString(),
+      extendedByDays: 0,
+      extendedByHours: hrs,
+    },
+    `chore: extend giveaway countdown by ${hrs}h`
+  );
+  return windowFromStart(startMs, nowMs, durationMs, nextEnd);
 }
 
 /**
