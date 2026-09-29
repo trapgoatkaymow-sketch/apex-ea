@@ -90,22 +90,57 @@ const GIVEAWAY_WINDOW_BLOB = "apexea/giveaway-window.json";
 const GIVEAWAY_WINDOW_GITHUB = "data/giveaway-window.json";
 const GIVEAWAY_WINDOW_FIREBASE = "apexea/giveawayWindow";
 
-/** @type {{ startsAt: string, durationMs?: number } | null} */
+/**
+ * @type {{
+ *   startsAt: string,
+ *   durationMs?: number,
+ *   countdownEndsAt?: string,
+ *   countdownVersion?: number,
+ * } | null}
+ */
 let memoryGiveawayWindow = null;
 
-function windowFromStart(startMs, nowMs = Date.now(), durationMs = GIVEAWAY_DURATION_MS) {
+/** Display-only urgency window — checkout stays open after this elapses. */
+export const GIVEAWAY_COUNTDOWN_HOURS = Math.max(
+  1,
+  Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 10
+);
+/** Bump to force a fresh on-page countdown latch (checkout stays open). */
+export const GIVEAWAY_COUNTDOWN_VERSION = 2;
+
+function countdownFromLatched(row) {
+  const ms = Date.parse(String(row?.countdownEndsAt || "").trim());
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function windowFromStart(
+  startMs,
+  nowMs = Date.now(),
+  durationMs = GIVEAWAY_DURATION_MS,
+  countdownEndsAtMs = null
+) {
   const dur = Math.max(60_000, Number(durationMs) || GIVEAWAY_DURATION_MS);
-  const endMs = startMs + dur;
-  const remainingMs = Math.max(0, endMs - nowMs);
+  // Purchase window can stay long; countdown is a separate display deadline.
+  const purchaseEndMs = startMs + dur;
+  const displayEndMs = Number.isFinite(countdownEndsAtMs)
+    ? countdownEndsAtMs
+    : purchaseEndMs;
+  const remainingMs = Math.max(0, displayEndMs - nowMs);
   const notStarted = nowMs < startMs;
-  const expired = nowMs >= endMs;
+  const countdownExpired = nowMs >= displayEndMs;
+  // Checkout must keep working after the on-page timer hits zero.
+  const purchaseOpen = !notStarted;
   return {
     startsAt: new Date(startMs).toISOString(),
-    endsAt: new Date(endMs).toISOString(),
+    endsAt: new Date(displayEndMs).toISOString(),
+    countdownEndsAt: new Date(displayEndMs).toISOString(),
     durationMs: dur,
     remainingMs,
-    active: !notStarted && !expired,
-    expired,
+    active: purchaseOpen,
+    // Never mark the offer "expired" for checkout — timer is display-only.
+    expired: false,
+    countdownExpired,
+    purchaseOpen,
     notStarted,
     serverNow: new Date(nowMs).toISOString(),
   };
@@ -127,7 +162,8 @@ export function getGiveawayWindow(nowMs = Date.now()) {
   return windowFromStart(
     Number.isFinite(startMs) ? startMs : nowMs,
     nowMs,
-    durationFromLatched(memoryGiveawayWindow)
+    durationFromLatched(memoryGiveawayWindow),
+    countdownFromLatched(memoryGiveawayWindow)
   );
 }
 
@@ -135,7 +171,12 @@ async function readLatchedWindow() {
   if (memoryGiveawayWindow?.startsAt) {
     const ms = Date.parse(memoryGiveawayWindow.startsAt);
     if (Number.isFinite(ms)) {
-      return { startMs: ms, durationMs: durationFromLatched(memoryGiveawayWindow) };
+      return {
+        startMs: ms,
+        durationMs: durationFromLatched(memoryGiveawayWindow),
+        countdownEndsAtMs: countdownFromLatched(memoryGiveawayWindow),
+        countdownVersion: Number(memoryGiveawayWindow.countdownVersion) || 0,
+      };
     }
   }
   try {
@@ -158,11 +199,17 @@ async function readLatchedWindow() {
     const ms = Date.parse(startsAt);
     if (Number.isFinite(ms)) {
       const durationMs = durationFromLatched(parsed);
+      const countdownEndsAtMs = countdownFromLatched(parsed);
+      const countdownVersion = Number(parsed?.countdownVersion) || 0;
       memoryGiveawayWindow = {
         startsAt: new Date(ms).toISOString(),
         durationMs,
+        countdownVersion,
+        ...(Number.isFinite(countdownEndsAtMs)
+          ? { countdownEndsAt: new Date(countdownEndsAtMs).toISOString() }
+          : {}),
       };
-      return { startMs: ms, durationMs };
+      return { startMs: ms, durationMs, countdownEndsAtMs, countdownVersion };
     }
   } catch {
     // fall through — latch a new start
@@ -170,15 +217,34 @@ async function readLatchedWindow() {
   return null;
 }
 
-async function latchStart(nowMs, durationMs = GIVEAWAY_DURATION_MS) {
-  const startsAt = new Date(nowMs).toISOString();
-  const dur = Math.max(60_000, Number(durationMs) || GIVEAWAY_DURATION_MS);
-  memoryGiveawayWindow = { startsAt, durationMs: dur };
+async function writeGiveawayWindowDoc(doc, message) {
+  const startsAt = String(doc?.startsAt || "").trim();
+  const durationMs = Math.max(
+    60_000,
+    Number(doc?.durationMs) || GIVEAWAY_DURATION_MS
+  );
+  const countdownEndsAt = String(doc?.countdownEndsAt || "").trim();
+  memoryGiveawayWindow = {
+    startsAt,
+    durationMs,
+    countdownVersion:
+      Number(doc?.countdownVersion) || GIVEAWAY_COUNTDOWN_VERSION,
+    ...(countdownEndsAt ? { countdownEndsAt } : {}),
+  };
   const payload = JSON.stringify(
     {
       startsAt,
-      durationMs: dur,
-      latchedAt: startsAt,
+      durationMs,
+      latchedAt: String(doc?.latchedAt || startsAt),
+      ...(countdownEndsAt ? { countdownEndsAt } : {}),
+      ...(doc?.extendedAt ? { extendedAt: doc.extendedAt } : {}),
+      ...(doc?.extendedByDays != null
+        ? { extendedByDays: doc.extendedByDays }
+        : {}),
+      ...(doc?.countdownSetAt ? { countdownSetAt: doc.countdownSetAt } : {}),
+      countdownVersion:
+        Number(doc?.countdownVersion) || GIVEAWAY_COUNTDOWN_VERSION,
+      purchasesOpenAfterCountdown: true,
     },
     null,
     2
@@ -186,18 +252,80 @@ async function latchStart(nowMs, durationMs = GIVEAWAY_DURATION_MS) {
   try {
     const { durableWrite } = await import("../_durableJson.js");
     await durableWrite({
-      raw: payload,
+      raw: payload + "\n",
       blobPath: GIVEAWAY_WINDOW_BLOB,
       firebasePath: GIVEAWAY_WINDOW_FIREBASE,
       githubPath: GIVEAWAY_WINDOW_GITHUB,
       localPaths: ["data/giveaway-window.json"],
       githubMode: "fallback",
-      message: `giveaway window start ${startsAt}`,
+      message: message || `giveaway window ${startsAt}`,
     });
   } catch {
     // memory latch still works for this instance
   }
-  return { startMs: nowMs, durationMs: dur };
+  return {
+    startMs: Date.parse(startsAt),
+    durationMs,
+    countdownEndsAtMs: countdownFromLatched({ countdownEndsAt }),
+  };
+}
+
+async function latchStart(nowMs, durationMs = GIVEAWAY_DURATION_MS) {
+  const startsAt = new Date(nowMs).toISOString();
+  const dur = Math.max(60_000, Number(durationMs) || GIVEAWAY_DURATION_MS);
+  const countdownEndsAt = new Date(
+    nowMs + GIVEAWAY_COUNTDOWN_HOURS * 60 * 60 * 1000
+  ).toISOString();
+  return writeGiveawayWindowDoc(
+    {
+      startsAt,
+      durationMs: dur,
+      latchedAt: startsAt,
+      countdownEndsAt,
+      countdownSetAt: startsAt,
+    },
+    `giveaway window start ${startsAt}`
+  );
+}
+
+/**
+ * Reset the on-page countdown to N hours from now.
+ * Checkout stays open after the timer hits zero.
+ */
+export async function setGiveawayCountdownHours(
+  hours = GIVEAWAY_COUNTDOWN_HOURS,
+  nowMs = Date.now()
+) {
+  const hrs = Math.max(1, Number(hours) || GIVEAWAY_COUNTDOWN_HOURS);
+  const latched = await readLatchedWindow();
+  const startMs = latched?.startMs || nowMs;
+  const durationMs = Math.max(
+    latched?.durationMs || 0,
+    GIVEAWAY_DURATION_MS,
+    // Keep purchase window far past the short display countdown.
+    hrs * 60 * 60 * 1000 * 100
+  );
+  const countdownEndsAt = new Date(nowMs + hrs * 60 * 60 * 1000).toISOString();
+  const startsAt = new Date(startMs).toISOString();
+  await writeGiveawayWindowDoc(
+    {
+      startsAt,
+      durationMs,
+      latchedAt: startsAt,
+      countdownEndsAt,
+      countdownSetAt: new Date(nowMs).toISOString(),
+      countdownVersion: GIVEAWAY_COUNTDOWN_VERSION,
+      extendedAt: new Date(nowMs).toISOString(),
+      extendedByDays: 0,
+    },
+    `chore: set giveaway countdown to ${hrs}h`
+  );
+  return windowFromStart(
+    startMs,
+    nowMs,
+    durationMs,
+    Date.parse(countdownEndsAt)
+  );
 }
 
 /**
@@ -211,37 +339,26 @@ export async function extendGiveawayWindowByDays(days = 4, nowMs = Date.now()) {
   const prevDur = latched?.durationMs || GIVEAWAY_DURATION_MS;
   const nextDur = Math.max(prevDur + addMs, GIVEAWAY_DURATION_MS);
   const startsAt = new Date(startMs).toISOString();
-  memoryGiveawayWindow = { startsAt, durationMs: nextDur };
-  const payload = JSON.stringify(
+  const countdownEndsAtMs = latched?.countdownEndsAtMs;
+  await writeGiveawayWindowDoc(
     {
       startsAt,
       durationMs: nextDur,
       latchedAt: startsAt,
       extendedAt: new Date(nowMs).toISOString(),
       extendedByDays: Number(days) || 0,
+      ...(Number.isFinite(countdownEndsAtMs)
+        ? { countdownEndsAt: new Date(countdownEndsAtMs).toISOString() }
+        : {}),
     },
-    null,
-    2
+    `chore: extend giveaway window by ${days} days`
   );
-  try {
-    const { durableWrite } = await import("../_durableJson.js");
-    await durableWrite({
-      raw: payload,
-      blobPath: GIVEAWAY_WINDOW_BLOB,
-      firebasePath: GIVEAWAY_WINDOW_FIREBASE,
-      githubPath: GIVEAWAY_WINDOW_GITHUB,
-      localPaths: ["data/giveaway-window.json"],
-      githubMode: "fallback",
-      message: `chore: extend giveaway window by ${days} days`,
-    });
-  } catch {
-    // memory still holds the extension for this instance
-  }
-  return windowFromStart(startMs, nowMs, nextDur);
+  return windowFromStart(startMs, nowMs, nextDur, countdownEndsAtMs);
 }
 
 /**
  * Resolve the shared giveaway window (latches start on first live hit if unset).
+ * Display countdown is separate from checkout — payments stay open after zero.
  */
 export async function resolveGiveawayWindow(nowMs = Date.now()) {
   const envStart = Date.parse(GIVEAWAY_STARTS_AT_ENV);
@@ -252,42 +369,35 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
   if (!latched || !Number.isFinite(latched.startMs)) {
     latched = await latchStart(nowMs);
   }
-  // If storage still has the original 24h duration, bump to the extended default
-  // so redeploying this build lengthens the live offer without a new start.
+  // Keep purchase window at least the configured default (long).
   const durationMs = Math.max(latched.durationMs || 0, GIVEAWAY_DURATION_MS);
+  let countdownEndsAtMs = latched.countdownEndsAtMs;
+  const storedVersion = Number(latched.countdownVersion) || 0;
+  // Version bump (2 = 10h display) latches a fresh countdown once per bump.
+  if (
+    !Number.isFinite(countdownEndsAtMs) ||
+    storedVersion < GIVEAWAY_COUNTDOWN_VERSION
+  ) {
+    return await setGiveawayCountdownHours(GIVEAWAY_COUNTDOWN_HOURS, nowMs);
+  }
   if (durationMs > (latched.durationMs || 0)) {
     const startsAt = new Date(latched.startMs).toISOString();
-    memoryGiveawayWindow = { startsAt, durationMs };
-    // Best-effort persist so Firebase/Blob stop serving the short window.
-    try {
-      const { durableWrite } = await import("../_durableJson.js");
-      await durableWrite({
-        raw: JSON.stringify(
-          {
-            startsAt,
-            durationMs,
-            latchedAt: startsAt,
-            extendedAt: new Date(nowMs).toISOString(),
-            extendedByDays: 4,
-          },
-          null,
-          2
-        ),
-        blobPath: GIVEAWAY_WINDOW_BLOB,
-        firebasePath: GIVEAWAY_WINDOW_FIREBASE,
-        githubPath: GIVEAWAY_WINDOW_GITHUB,
-        localPaths: ["data/giveaway-window.json"],
-        githubMode: "fallback",
-        message: "chore: extend giveaway window by 4 days",
-      });
-    } catch {
-      // memory bump still applies for this instance
-    }
+    await writeGiveawayWindowDoc(
+      {
+        startsAt,
+        durationMs,
+        latchedAt: startsAt,
+        countdownEndsAt: new Date(countdownEndsAtMs).toISOString(),
+        extendedAt: new Date(nowMs).toISOString(),
+        extendedByDays: 4,
+      },
+      "chore: extend giveaway purchase window"
+    );
   }
-  return windowFromStart(latched.startMs, nowMs, durationMs);
+  return windowFromStart(latched.startMs, nowMs, durationMs, countdownEndsAtMs);
 }
 
-/** Throws 403/410 when the giveaway link is outside its offer window. */
+/** Throws 403 when the giveaway has not started. Timer expiry does not block pay. */
 export async function assertGiveawayActive(nowMs = Date.now()) {
   const window = await resolveGiveawayWindow(nowMs);
   if (window.notStarted) {
@@ -296,14 +406,7 @@ export async function assertGiveawayActive(nowMs = Date.now()) {
     err.data = { giveaway: window };
     throw err;
   }
-  if (window.expired) {
-    const err = new Error(
-      "This giveaway has ended — the link no longer works"
-    );
-    err.status = 410;
-    err.data = { giveaway: window };
-    throw err;
-  }
+  // Intentionally no expired/410 check — countdown is urgency UI only.
   return window;
 }
 

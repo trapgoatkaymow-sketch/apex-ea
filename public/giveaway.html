@@ -376,8 +376,9 @@
       const tS = document.getElementById("t-s");
       const endedBox = document.getElementById("ended-box");
       let giveawayActive = true;
-      // Provisional 4-day remainder until server syncs the shared end time.
-      let endsAtMs = Date.now() + 4 * 24 * 60 * 60 * 1000;
+      // Provisional 10h urgency countdown until server syncs display end time.
+      // Checkout stays open after this hits zero.
+      let endsAtMs = Date.now() + 10 * 60 * 60 * 1000;
       let timerSynced = false;
 
       function setMsg(text, kind) {
@@ -415,27 +416,25 @@
         tS.textContent = pad2(s);
       }
 
-      function lockExpiredUi(reason) {
-        giveawayActive = false;
+      function showCountdownEndedUi() {
+        // Display-only — keep checkout / PayPal working after the timer hits 0.
         timerEl.classList.add("is-expired");
         paintDigits(0);
-        timerLabel.textContent = "Offer ended";
-        timerEnds.textContent = "This link no longer works";
-        endedBox.classList.remove("hidden");
-        buyForm.classList.add("hidden");
-        hidePayUi();
-        setMsg(reason || "This giveaway has ended.", "err");
+        timerLabel.textContent = "Offer ending soon";
+        timerEnds.textContent = "Still open — complete checkout below";
+        endedBox.classList.add("hidden");
+        buyForm.classList.remove("hidden");
+        giveawayActive = true;
       }
 
       function tickTimer() {
         if (!endsAtMs) return;
         const left = endsAtMs - Date.now();
         if (left <= 0) {
-          lockExpiredUi(
-            "This giveaway has ended — the link no longer works."
-          );
+          showCountdownEndedUi();
           return;
         }
+        timerEl.classList.remove("is-expired");
         paintDigits(left);
         if (timerSynced) {
           timerEnds.textContent = "Ends " + formatEndLocal(endsAtMs);
@@ -514,7 +513,7 @@
 
       async function createGiveawayOrder() {
         if (!giveawayActive) {
-          throw new Error("This 24-hour giveaway has ended");
+          throw new Error("Checkout is not available right now — try again");
         }
         const { name, email } = readBuyer();
         if (!name) throw new Error("Enter your name before paying");
@@ -726,19 +725,16 @@
             priceLabel.textContent = "$" + Number(giveaway.amount).toFixed(2);
           }
 
-          const serverEnd = Date.parse(windowInfo.endsAt || "");
+          const serverEnd = Date.parse(
+            windowInfo.countdownEndsAt || windowInfo.endsAt || ""
+          );
           if (Number.isFinite(serverEnd) && serverEnd > 0) {
-            // Align local countdown to the shared server end time (real 24h window).
+            // Align local urgency countdown to the shared display end time.
             endsAtMs = serverEnd;
             timerSynced = true;
             tickTimer();
           }
-          if (windowInfo.expired || (endsAtMs && endsAtMs <= Date.now())) {
-            lockExpiredUi(
-              "This 24-hour giveaway has ended — the link no longer works."
-            );
-            return;
-          }
+          // Timer hitting zero must NOT hide checkout — payments stay open.
           if (windowInfo.notStarted) {
             giveawayActive = false;
             buyForm.classList.add("hidden");
@@ -747,6 +743,7 @@
             setMsg("This giveaway has not started yet. Check back soon.", "err");
             return;
           }
+          giveawayActive = windowInfo.purchaseOpen !== false;
 
           if (!cfg.ready || !clientId) {
             setMsg(
