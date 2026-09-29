@@ -163,7 +163,7 @@
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790574049471,
       "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790719098430,
+      "clientSymbolsUpdatedAt": 1790719123637,
       "purchaseCaptureId": "71A328701E931971M",
       "purchaseOrderId": "2XH73423T4120641P",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -203,8 +203,10 @@
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790574049471,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
+      "clientSymbols": [
+        "GOLD"
+      ],
+      "clientSymbolsUpdatedAt": 1790719134097,
       "purchaseCaptureId": "71A328701E931971M",
       "purchaseOrderId": "2XH73423T4120641P",
       "purchaseSource": "paypal-giveaway",
@@ -341,7 +343,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -1001,7 +1004,13 @@
           "US100CASH",
           "BTCUSD",
           "XAUUSD",
-          "NAS100"
+          "NAS100",
+          "USCASH",
+          "NASDAQ",
+          "USTECH",
+          "XAAUSD",
+          "BOOM",
+          "STEP"
         ]
       }
     },
@@ -4838,10 +4847,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "NAS100"
-        ]
+        "symbols": []
       }
     },
     {
