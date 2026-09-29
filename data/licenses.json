@@ -236,7 +236,7 @@
       "clientSymbols": [
         "GOLD"
       ],
-      "clientSymbolsUpdatedAt": 1790700167380,
+      "clientSymbolsUpdatedAt": 1790700169381,
       "purchaseCaptureId": "3DR51862MJ587425E",
       "purchaseOrderId": "6BM825507G750993H",
       "purchaseSource": "paypal-giveaway",
@@ -1917,7 +1917,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "USDCAD",
+          "USDCADM",
+          "USDZARM"
+        ]
       }
     },
     {
@@ -8806,8 +8811,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "US30",
           "XAUUSD.B",
-          "US30"
+          "XAUUSD"
         ]
       }
     },
