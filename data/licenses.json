@@ -59,7 +59,7 @@
       "usedAt": 1790613995150,
       "deviceId": "9d1a9075-c313-4ce3-a2b2-7804387724c6",
       "boundAt": 1790613995150,
-      "updatedAt": 1790658473960,
+      "updatedAt": 1790658474723,
       "scanReset": null,
       "robotAccountId": "31fcc848-0e42-4c80-951d-ca6189eec514",
       "robotLogin": "169927",
@@ -107,7 +107,7 @@
       "usedAt": 1790612043529,
       "deviceId": "9d1a9075-c313-4ce3-a2b2-7804387724c6",
       "boundAt": 1790612043529,
-      "updatedAt": 1790658473960,
+      "updatedAt": 1790658474723,
       "scanReset": null,
       "robotAccountId": "31fcc848-0e42-4c80-951d-ca6189eec514",
       "robotLogin": "169927",
@@ -376,7 +376,7 @@
       "usedAt": 1790622795745,
       "deviceId": "fcc3b1fe-9f7c-4d17-aa88-4121f5387b43",
       "boundAt": 1790622795745,
-      "updatedAt": 1790658405289,
+      "updatedAt": 1790658407138,
       "scanReset": null,
       "robotAccountId": "1f111798-3cfd-4de2-bd07-ae6e6e1af91e",
       "robotLogin": "188712826",
@@ -400,13 +400,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "BTCUSD",
-          "BTCUSDM",
-          "XAUUS",
-          "XAUUSD",
-          "XAUUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2281,7 +2275,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "BTCUSD",
+          "NAS100",
+          "USDJPY"
+        ]
       }
     },
     {
@@ -13165,10 +13165,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "US30",
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
