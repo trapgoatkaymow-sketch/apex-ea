@@ -1,6 +1,53 @@
 {
   "licenses": [
     {
+      "key": "APEX-F6DS-J3BV",
+      "botId": "kyriotes-ea-mulgswyj",
+      "botName": "KYRIOTES EA",
+      "clientEmail": "seerthando@gmail.com",
+      "clientName": "THANDO",
+      "mainText": "THANDO",
+      "mentorEmail": "seerthando@gmail.com",
+      "mentorId": "c861dad3-ab4a-449f-9b06-3128ef1a198b",
+      "mentorName": "THANDO JR",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790613224535,
+      "usedAt": 1790613837784,
+      "deviceId": "15155b29-9b52-4efb-904b-7ca58a7abd6d",
+      "boundAt": 1790613837784,
+      "updatedAt": 1790664401570,
+      "scanReset": null,
+      "robotAccountId": "08a00e02-e717-40c1-8d7c-cc46f9b27ed0",
+      "robotLogin": "4049358",
+      "robotServer": "RazorMarkets-Live",
+      "robotCompany": "Razor Markets",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790664400226,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "bot": {
+        "id": "kyriotes-ea-mulgswyj",
+        "name": "KYRIOTES EA",
+        "photo": "/logo.png",
+        "strategy": "scalper",
+        "symbols": [
+          "EURUSD",
+          "XAUUSD",
+          "US30",
+          "USDJPY",
+          "GBPUSD"
+        ]
+      },
+      "emailSentAt": null
+    },
+    {
       "key": "APEX-FCRG-WAJX",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1319,7 +1366,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "XAUUSD",
+          "EURUSD",
+          "US30",
+          "XAUUSD.M",
+          "US100"
+        ]
       }
     },
     {
@@ -17431,53 +17485,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      },
-      "emailSentAt": null
-    },
-    {
-      "key": "APEX-F6DS-J3BV",
-      "botId": "kyriotes-ea-mulgswyj",
-      "botName": "KYRIOTES EA",
-      "clientEmail": "seerthando@gmail.com",
-      "clientName": "THANDO",
-      "mainText": "THANDO",
-      "mentorEmail": "seerthando@gmail.com",
-      "mentorId": "c861dad3-ab4a-449f-9b06-3128ef1a198b",
-      "mentorName": "THANDO JR",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790613224535,
-      "usedAt": 1790613837784,
-      "deviceId": "15155b29-9b52-4efb-904b-7ca58a7abd6d",
-      "boundAt": 1790613837784,
-      "updatedAt": 1790634128181,
-      "scanReset": null,
-      "robotAccountId": "1221a64b-0dbf-4ac1-8e71-cb7cddd74e8c",
-      "robotLogin": "4049358",
-      "robotServer": "RazorMarkets-Live",
-      "robotCompany": "Razor Markets",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790632762150,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "bot": {
-        "id": "kyriotes-ea-mulgswyj",
-        "name": "KYRIOTES EA",
-        "photo": "/logo.png",
-        "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "XAUUSD",
-          "US30",
-          "USDJPY",
-          "GBPUSD"
-        ]
       },
       "emailSentAt": null
     },
