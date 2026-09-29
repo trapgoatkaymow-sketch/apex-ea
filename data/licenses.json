@@ -16,10 +16,10 @@
       "duration": "lifetime",
       "expiresAt": null,
       "createdAt": 1790669609273,
-      "usedAt": 1790669725998,
+      "usedAt": 1790669735427,
       "deviceId": "83797d36-cec9-46f3-b7dc-33f78f42b2a0",
-      "boundAt": 1790669725998,
-      "updatedAt": 1790669750253,
+      "boundAt": 1790669735427,
+      "updatedAt": 1790669752231,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -30,7 +30,7 @@
       "clientSymbols": [
         "XAUUSD.S"
       ],
-      "clientSymbolsUpdatedAt": 1790669750253,
+      "clientSymbolsUpdatedAt": 1790669752231,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -306,7 +306,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -403,7 +406,8 @@
         "symbols": [
           "US30M",
           "XAUUSD",
-          "BTCUSD"
+          "BTCUSD",
+          "BTCUSDM"
         ]
       }
     },
@@ -862,8 +866,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "USDJPY",
+          "EURUSD",
           "XAUUSD",
-          "USDJPY"
+          "XUAUSD"
         ]
       }
     },
@@ -3531,10 +3537,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30.",
-          "GOLD",
-          "GOLDMICRO",
-          "XAUUSDM"
+          ".US30."
         ]
       }
     },
