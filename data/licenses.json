@@ -19,7 +19,7 @@
       "usedAt": 1790573576458,
       "deviceId": "7fbfd6ca-402c-4cb4-8f5d-827733d55b63",
       "boundAt": 1790573576458,
-      "updatedAt": 1790667101793,
+      "updatedAt": 1790667103529,
       "scanReset": null,
       "robotAccountId": "7e226a92-e841-4aa8-b0e5-b2efb0bee99b",
       "robotLogin": "17150816",
@@ -30,7 +30,7 @@
       "clientSymbols": [
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790667101793,
+      "clientSymbolsUpdatedAt": 1790667103529,
       "purchaseCaptureId": "0TN757652D3154818",
       "purchaseOrderId": "4PP98028V7031651F",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -972,11 +972,7 @@
           ".DE30.MIC",
           "VOL_80",
           "BTCUSD.M",
-          "BTC",
-          "DJ30",
-          "NAS100",
-          "NASDAQ",
-          "DJ39"
+          "BTC"
         ]
       }
     },
@@ -2042,7 +2038,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "US30"
         ]
       }
     },
@@ -2173,13 +2170,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "USA30",
-          "XAUUSDC",
-          "USA100",
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2389,7 +2380,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USDJPY"
+        ]
       }
     },
     {
@@ -4675,12 +4668,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "GOLD",
-          "USDJPY",
           "NZDUSD",
-          "US30"
+          "US30",
+          "USDJPY",
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -6279,8 +6271,7 @@
           "XAUUSD",
           "EURUSD",
           "US30",
-          "XAUUSD.M",
-          "US100"
+          "XAUUSD.M"
         ]
       }
     },
@@ -6553,8 +6544,7 @@
         "symbols": [
           "BTCUSD",
           "XAUUSD",
-          "NAS100",
-          "XAUUSDM"
+          "NAS100"
         ]
       }
     },
