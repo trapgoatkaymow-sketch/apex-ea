@@ -89,6 +89,7 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
+      "emailSentAt": null,
       "bot": {
         "id": "trading-24-7-mujlmqvi",
         "name": "TRADING 24/7",
@@ -97,8 +98,7 @@
         "symbols": [
           "XAUUSD"
         ]
-      },
-      "emailSentAt": null
+      }
     },
     {
       "key": "APEX-WQ6P-632T",
@@ -735,7 +735,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "AUDUSD",
+          "EURUSD"
+        ]
       }
     },
     {
@@ -830,7 +833,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100",
+          "BTCUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -1655,14 +1663,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "GBPUSD",
-          "AUDUSD",
-          "GBPJPY",
-          "USDJPY",
-          "USDJPY.M"
-        ]
+        "symbols": []
       }
     },
     {
