@@ -124,7 +124,7 @@
       "clientSymbols": [
         "GOLD"
       ],
-      "clientSymbolsUpdatedAt": 1790666486862,
+      "clientSymbolsUpdatedAt": 1790666531763,
       "purchaseCaptureId": "3DR51862MJ587425E",
       "purchaseOrderId": "6BM825507G750993H",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -384,7 +384,7 @@
       "usedAt": 1789835597462,
       "deviceId": "6f84a30e-c462-40a1-852b-b5bfcc9fe081",
       "boundAt": 1789835597462,
-      "updatedAt": 1790666523432,
+      "updatedAt": 1790666523720,
       "scanReset": null,
       "robotAccountId": "f03d902c-e2d5-4960-ae31-941e9b6fed90",
       "robotLogin": "477289721",
@@ -407,7 +407,7 @@
         "US30",
         "XAUUDSM"
       ],
-      "clientSymbolsUpdatedAt": 1790666523432,
+      "clientSymbolsUpdatedAt": 1790666523720,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -417,7 +417,21 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD",
+          "BTCUSD",
+          "US30CASH",
+          "USDJPY",
+          "XAUUSDM",
+          "US30M",
+          "USDJPYM",
+          "EURUSD",
+          "EURUSDM",
+          "XAUUSM",
+          "BTCUSDM",
+          "US30",
+          "XAUUDSM"
+        ]
       }
     },
     {
@@ -502,7 +516,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -549,7 +566,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "US30"
         ]
       }
     },
@@ -8207,7 +8225,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       },
       "emailSentAt": null
     },
