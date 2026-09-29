@@ -607,7 +607,8 @@
           "AUDUSD",
           "USDCAD",
           "EURGBP",
-          "XAUUSD"
+          "XAUUSD",
+          "XAUUSDI"
         ]
       }
     },
@@ -2042,7 +2043,8 @@
           "XAUUSD",
           "GOLD",
           "GBPUSD",
-          "GAUUSD"
+          "GAUUSD",
+          "USDCAD"
         ]
       }
     },
@@ -2255,10 +2257,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2840,7 +2839,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -2884,7 +2885,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -4306,10 +4310,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5314,7 +5315,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "USDJPY"
         ]
       }
     },
@@ -5652,8 +5654,7 @@
           "XAUUSD",
           "GBPUSD",
           "USDCHF",
-          "US30",
-          "BTCUSD"
+          "US30"
         ]
       }
     },
@@ -5703,8 +5704,7 @@
         "symbols": [
           "XAUUSD",
           ".US30.",
-          "GOLD",
-          "XAUUSDM"
+          "GOLD"
         ]
       }
     },
@@ -9871,7 +9871,9 @@
           "XAUDUSD247C",
           "XAUUSD247C",
           "XAUUSD",
-          "GBPAUD"
+          "GBPAUD",
+          "USDZAR",
+          "AUDCAD"
         ]
       }
     },
