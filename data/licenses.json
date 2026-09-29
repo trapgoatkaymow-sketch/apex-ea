@@ -32,14 +32,63 @@
       "purchaseCaptureId": "5HN29044VW6685929",
       "purchaseOrderId": "6C9588348H333705X",
       "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      },
-      "emailSentAt": null
+      }
+    },
+    {
+      "key": "APEX-KVB5-ECK5",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "aureviacapitalptyltd@gmail.com",
+      "clientName": "Tristan Williams",
+      "mainText": "Tristan Williams",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790525395039,
+      "usedAt": 1790618126660,
+      "deviceId": "c43e2fae-2d32-4e91-9656-06cb716a24c5",
+      "boundAt": 1790618126660,
+      "updatedAt": 1790662139613,
+      "scanReset": null,
+      "robotAccountId": "800b7b8e-eeb5-4025-a445-d0279596ae05",
+      "robotLogin": "15696",
+      "robotServer": "SwyftMarkets-Live",
+      "robotCompany": "Swyft Markets South Africa (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790621998618,
+      "clientSymbols": [
+        "US30",
+        "XAUUSD.B",
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790662139613,
+      "purchaseCaptureId": "26X18521CF005674F",
+      "purchaseOrderId": "88C92979ND948382P",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "US30",
+          "XAUUSD.B",
+          "XAUUSD"
+        ]
+      }
     },
     {
       "key": "APEX-CFTU-NABA",
@@ -420,51 +469,6 @@
       }
     },
     {
-      "key": "APEX-KVB5-ECK5",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "aureviacapitalptyltd@gmail.com",
-      "clientName": "Tristan Williams",
-      "mainText": "Tristan Williams",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790525395039,
-      "usedAt": 1790618126660,
-      "deviceId": "c43e2fae-2d32-4e91-9656-06cb716a24c5",
-      "boundAt": 1790618126660,
-      "updatedAt": 1790662122589,
-      "scanReset": null,
-      "robotAccountId": "800b7b8e-eeb5-4025-a445-d0279596ae05",
-      "robotLogin": "15696",
-      "robotServer": "SwyftMarkets-Live",
-      "robotCompany": "Swyft Markets South Africa (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790621998618,
-      "clientSymbols": [
-        "US30",
-        "XAUUSD.B",
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790662122589,
-      "purchaseCaptureId": "26X18521CF005674F",
-      "purchaseOrderId": "88C92979ND948382P",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
       "key": "APEX-4P3T-FKN6",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -552,7 +556,8 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "GOLD"
         ]
       }
     },
@@ -733,7 +738,9 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSD"
+          "XAUUSD",
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
@@ -873,7 +880,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "GBPUSD",
+          "XAUUSD",
+          "USDJPY",
+          "AUDUSD",
+          "BTCUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -1317,9 +1332,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1626,7 +1639,11 @@
           ".DE30.MIC",
           "VOL_80",
           "BTCUSD.M",
-          "BTC"
+          "BTC",
+          "DJ30",
+          "NAS100",
+          "NASDAQ",
+          "DJ39"
         ]
       }
     },
