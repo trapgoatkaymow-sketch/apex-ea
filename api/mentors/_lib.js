@@ -64,6 +64,28 @@ export const DURABLE_MENTOR_PASSWORDS = Object.freeze({
   "trapgoatkaymow@gmail.com": "TempPass12",
 });
 
+/**
+ * Prior passwordHash/salt pairs that must still unlock login when a store merge
+ * or TempPass repair replaced the active hash. On match we restore that pair.
+ * Includes the pre-wipe custom hash and the TempPass12 seed hash.
+ */
+export const MENTOR_PASSWORD_HISTORY = Object.freeze({
+  "trapgoatkaymow@gmail.com": Object.freeze([
+    Object.freeze({
+      // Custom password (active before Sept 21 TempPass wipe)
+      salt: "b70837cff675554ba58d13b4864fd511",
+      passwordHash:
+        "e00d6896f602f9f3dfa5a53a5a4eea18424e3d910e1231f05e61cd1858d60cc0",
+    }),
+    Object.freeze({
+      // TempPass12 seed — keep accepted so either password still works
+      salt: "5a8e9b9a34a4ed987feff5257528e93f",
+      passwordHash:
+        "6cbc8eafe4153c3ab1aabb2493ae24424fa0c4c6607e8a83f4b84d31cc92f85e",
+    }),
+  ]),
+});
+
 /** Mentor who may use Mentor Management (approve/decline) like super admin. */
 export const MENTOR_OPERATOR_EMAIL = "trapgoatkaymow@gmail.com";
 
@@ -1311,6 +1333,38 @@ export async function loginMentor({ email, password }) {
         passwordHash: row.passwordHash,
         salt: row.salt,
         status: "approved",
+      });
+    }
+
+    // Prior hashes (custom password wiped by an old TempPass repair, etc.).
+    const history = MENTOR_PASSWORD_HISTORY[key] || [];
+    for (const row of history) {
+      if (!row?.passwordHash || !row?.salt) continue;
+      if (hashPassword(pass, row.salt) !== row.passwordHash) continue;
+      const passwordUpdatedAt = Date.now();
+      try {
+        await mutateStore((listIn) => {
+          const list = ensureSuperAdminRecord(listIn);
+          const idx = findMentorIndex(list, key);
+          if (idx < 0) return list;
+          list[idx] = {
+            ...list[idx],
+            passwordHash: row.passwordHash,
+            salt: row.salt,
+            status: "approved",
+            passwordUpdatedAt,
+          };
+          return list;
+        }, `chore: restore mentor password from history for ${key}`);
+      } catch {
+        // best-effort durable sync
+      }
+      return finishApprovedLogin({
+        ...mentor,
+        passwordHash: row.passwordHash,
+        salt: row.salt,
+        status: "approved",
+        passwordUpdatedAt,
       });
     }
 
