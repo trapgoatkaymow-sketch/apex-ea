@@ -101,53 +101,6 @@
       }
     },
     {
-      "key": "APEX-Y2P3-MKM8",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "lakishim4@gmail.com",
-      "clientName": "Kamogelo Mathaila",
-      "mainText": "Kamogelo Mathaila",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790613896310,
-      "usedAt": 1790613955545,
-      "deviceId": "9fb88496-8e43-4cf9-a953-7cc994f85ca6",
-      "boundAt": 1790613955545,
-      "updatedAt": 1790668320118,
-      "scanReset": null,
-      "robotAccountId": "280fb1b3-339a-420d-bdb8-e1ab9877497c",
-      "robotLogin": "54984970",
-      "robotServer": "HFMarketsSA-Live2",
-      "robotCompany": "HF Markets SA (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790668016327,
-      "clientSymbols": [
-        "XAUUSD",
-        "USDJPY"
-      ],
-      "clientSymbolsUpdatedAt": 1790668282545,
-      "purchaseCaptureId": "9WT94124MV901553A",
-      "purchaseOrderId": "4NL56768H3598133U",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "USDJPY"
-        ]
-      }
-    },
-    {
       "key": "APEX-M8QJ-26XZ",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -166,7 +119,7 @@
       "usedAt": 1790574462055,
       "deviceId": "964b6d01-5ad6-46f8-a630-14e4467f6d21",
       "boundAt": 1790574462055,
-      "updatedAt": 1790668317058,
+      "updatedAt": 1790668337451,
       "scanReset": null,
       "robotAccountId": "5e0063c6-6e65-4431-983d-2593b40fa9cd",
       "robotLogin": "92649659",
@@ -183,7 +136,7 @@
         "NZDUSD",
         "GBPUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790668317058,
+      "clientSymbolsUpdatedAt": 1790668337451,
       "purchaseCaptureId": "6LN9970030895834M",
       "purchaseOrderId": "4X423643R86077003",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -201,6 +154,53 @@
           "AUDUSD",
           "NZDUSD",
           "GBPUSD"
+        ]
+      }
+    },
+    {
+      "key": "APEX-Y2P3-MKM8",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "lakishim4@gmail.com",
+      "clientName": "Kamogelo Mathaila",
+      "mainText": "Kamogelo Mathaila",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790613896310,
+      "usedAt": 1790613955545,
+      "deviceId": "9fb88496-8e43-4cf9-a953-7cc994f85ca6",
+      "boundAt": 1790613955545,
+      "updatedAt": 1790668323818,
+      "scanReset": null,
+      "robotAccountId": "280fb1b3-339a-420d-bdb8-e1ab9877497c",
+      "robotLogin": "54984970",
+      "robotServer": "HFMarketsSA-Live2",
+      "robotCompany": "HF Markets SA (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790668016327,
+      "clientSymbols": [
+        "XAUUSD",
+        "USDJPY"
+      ],
+      "clientSymbolsUpdatedAt": 1790668323818,
+      "purchaseCaptureId": "9WT94124MV901553A",
+      "purchaseOrderId": "4NL56768H3598133U",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "USDJPY"
         ]
       }
     },
@@ -297,7 +297,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD",
+          "XAUUSD",
+          "GBPUSD"
+        ]
       }
     },
     {
@@ -547,7 +551,8 @@
           "US30",
           "XAUUSD",
           "USTECH",
-          ".USTECH.MIC"
+          ".USTECH.MIC",
+          "USDJPY"
         ]
       }
     },
@@ -578,12 +583,7 @@
       "robotCompany": "Weltrade Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790591235868,
-      "clientSymbols": [
-        "EURUSD",
-        "USDJPY",
-        "USDCAD",
-        "XAUUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790668265267,
       "purchaseCaptureId": "4UG054951Y056194E",
       "purchaseOrderId": "1SE59585UX617444N",
