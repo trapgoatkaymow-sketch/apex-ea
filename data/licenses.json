@@ -42,6 +42,47 @@
       }
     },
     {
+      "key": "APEX-8F95-NT4K",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "makgobolealfredshammah59@gmail.com",
+      "clientName": "Alfred",
+      "mainText": "Alfred",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790625786157,
+      "usedAt": 1790695924096,
+      "deviceId": "b94482c4-52eb-499c-b4c8-447c24e32d5e",
+      "boundAt": 1790696839004,
+      "updatedAt": 1790698044510,
+      "scanReset": null,
+      "robotAccountId": "1d9bdeaa-ff0e-4c73-b929-35834a6ea38b",
+      "robotLogin": "17520789",
+      "robotServer": "Headway-Real",
+      "robotCompany": "Jarocel (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790697065655,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": 1790698044510,
+      "purchaseCaptureId": "3D036926XF248171S",
+      "purchaseOrderId": "4E6928739A523522H",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": 1790695899221,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
       "key": "APEX-NWUD-XFDA",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -117,47 +158,6 @@
       "purchaseOrderId": "27718880V0150503V",
       "purchaseSource": "paypal-giveaway-webhook",
       "emailSentAt": 1790695561670,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
-      "key": "APEX-8F95-NT4K",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "makgobolealfredshammah59@gmail.com",
-      "clientName": "Alfred",
-      "mainText": "Alfred",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790625786157,
-      "usedAt": 1790695924096,
-      "deviceId": "9959dd94-328e-4965-b0fc-400d7a821fac",
-      "boundAt": 1790698035008,
-      "updatedAt": 1790698035008,
-      "scanReset": null,
-      "robotAccountId": "1d9bdeaa-ff0e-4c73-b929-35834a6ea38b",
-      "robotLogin": "17520789",
-      "robotServer": "Headway-Real",
-      "robotCompany": "Jarocel (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790697065655,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790697285700,
-      "purchaseCaptureId": "3D036926XF248171S",
-      "purchaseOrderId": "4E6928739A523522H",
-      "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790695899221,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -1242,7 +1242,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUDUSD247C",
+          "XAUUSD247C",
+          "XAUUSD",
+          "GBPAUD",
+          "USDZAR",
+          "AUDCAD"
+        ]
       }
     },
     {
@@ -15640,9 +15647,7 @@
         "strategy": "scalper",
         "symbols": [
           "US30",
-          "XAUUSD",
-          "US30CASH",
-          "GOLD"
+          "XAUUSD"
         ]
       }
     },
