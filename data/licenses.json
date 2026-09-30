@@ -19,7 +19,7 @@
       "usedAt": 1790701602621,
       "deviceId": "22f15baf-be45-4090-bdb6-044562cd2ab0",
       "boundAt": 1790701602621,
-      "updatedAt": 1790796980206,
+      "updatedAt": 1790796999686,
       "scanReset": null,
       "robotAccountId": "6ade62e5-ae9b-4ae3-a2da-596459271950",
       "robotLogin": "10332705",
@@ -29,9 +29,10 @@
       "robotConnectedAt": 1790778702454,
       "clientSymbols": [
         "XAUUSD",
-        "GOLD"
+        "GOLD",
+        "GBPJPY"
       ],
-      "clientSymbolsUpdatedAt": 1790796980206,
+      "clientSymbolsUpdatedAt": 1790796999686,
       "purchaseCaptureId": "6U208103185440743",
       "purchaseOrderId": "5U8240116W937882D",
       "purchaseSource": "paypal-giveaway",
@@ -43,7 +44,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "GBPJPY"
         ]
       }
     },
@@ -485,7 +487,12 @@
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790786832688,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "XAUUSD",
+        "NAS100",
+        ".USTECH.",
+        "US30"
+      ],
       "clientSymbolsUpdatedAt": 1790796867320,
       "purchaseCaptureId": "0XX67553SX564525H",
       "purchaseOrderId": "67E15785SB7500922",
@@ -496,7 +503,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -818,11 +827,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "USDZAR",
-          "EURAUD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -10245,10 +10250,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "US30",
-          "NAS100"
+          "EURUSD"
         ]
       }
     },
