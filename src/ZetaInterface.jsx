@@ -13,6 +13,7 @@ import TopBar from "./TopBar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
 import {
   START_SILENT_OPEN_DELAY_MS,
+  listAppPairs,
   pickSelectedSymbol,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
@@ -161,16 +162,25 @@ export default function ZetaInterface() {
       showToast("Connect MetaTrader before START");
       return;
     }
-    const symbol = pickSelectedSymbol(ctx.activeBot, ctx.eas, ctx.appSymbols);
-    if (!symbol) {
+    const pairs = listAppPairs(ctx.activeBot, ctx.eas, ctx.appSymbols);
+    if (!pairs.length) {
       setV2Running(false);
       showToast("Add a pair first, then press START");
       return;
     }
 
-    showToast(`${activeBot?.name || "Bot"} started · opens ${symbol} in 20s`);
-    // Silent START open: wait ~20s, then open the selected symbol without
-    // showing Chart Scanner UI. Cancelled if the user hits STOP.
+    const tradePlan = pairs
+      .map((sym) => {
+        const meta = ctx.getSymbolMeta?.(sym) || {};
+        const n = Math.max(1, Math.floor(Number(meta.trades) || 1));
+        return `${sym}×${n}`;
+      })
+      .join(" · ");
+    showToast(
+      `${activeBot?.name || "Bot"} started · opens ${tradePlan} in 20s`
+    );
+    // Silent START open: wait ~20s, then open every Your pairs symbol
+    // with its Number of trades (all at once). Cancelled on STOP.
     if (silentOpenTimerRef.current) {
       clearTimeout(silentOpenTimerRef.current);
       silentOpenTimerRef.current = null;
@@ -193,13 +203,14 @@ export default function ZetaInterface() {
         });
         if (silentOpenRunRef.current !== runId) return;
         if (result?.ok) {
-          const ladder =
-            result.riskReward ||
-            (result.takeProfit1 != null
-              ? "TP 1:2 · 1:3 · 1:4"
-              : "M15/M30/H1");
+          const labels = Array.isArray(result.pairs)
+            ? result.pairs
+                .filter((row) => row?.ok)
+                .map((row) => `${row.symbol}×${row.opened}`)
+                .join(" · ")
+            : result.symbols?.join(" · ") || result.symbol;
           showToast(
-            `Opened ${result.side || ""} ${result.symbol} · SL ${result.stopLoss} · ${ladder}`
+            `Opened ${result.opened || 0} trades · ${labels || ""}`
               .replace(/\s+/g, " ")
               .trim()
           );

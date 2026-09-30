@@ -1,6 +1,9 @@
 /**
  * Silent START → open: after a short delay, run the same OpenAI + SL/TP
- * ladder as Chart Scanner (no scanner UI), then place TP1/TP2/TP3 threads.
+ * ladder as Chart Scanner (no scanner UI) for every pair in Your pairs.
+ *
+ * Each pair opens its configured Number of trades (TP1/TP2/TP3 cycle).
+ * All pairs execute at the same time (Promise.all).
  *
  * TP ladder (non-H4, same as scanner): TP1 1:2 · TP2 1:3 · TP3 1:4
  * Stop loss comes from OpenAI and is widened with buildSafeMultiTpLevels.
@@ -27,10 +30,17 @@ export const START_SILENT_OPEN_DELAY_MS = 20_000;
 /** Scanner timeframes used by the START button open. */
 export const START_SCANNER_TIMEFRAMES = ["M15", "M30", "H1"];
 
+const TF_FOR_TP_SLOT = ["M15", "M30", "H1"];
+
 function clampLot(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return 0.01;
   return Number(Math.min(1000, n).toFixed(4));
+}
+
+function clampTrades(value) {
+  const n = Math.floor(Number(value) || 1);
+  return Math.min(20, Math.max(1, n));
 }
 
 function toFiniteNumber(value) {
@@ -40,11 +50,10 @@ function toFiniteNumber(value) {
 }
 
 /**
- * Pick the selected / first pair from "Your pairs".
- * PairsSheet writes to eas[].symbols (appSymbols) — not bots[].symbols /
- * clientSymbols — so START must read the same list the user just edited.
+ * All pairs from Your pairs / active EA symbols (de-duped, stable order).
+ * Prefers the same lists the Pairs sheet writes (eas[].symbols / appSymbols).
  */
-export function pickSelectedSymbol(activeBot, eas = [], appSymbols = null) {
+export function listAppPairs(activeBot, eas = [], appSymbols = null) {
   const botId = String(activeBot?.id || "").trim();
   const rows = Array.isArray(eas) ? eas : [];
   const ea =
@@ -65,10 +74,10 @@ export function pickSelectedSymbol(activeBot, eas = [], appSymbols = null) {
   const fromClient = Array.isArray(ea?.clientSymbols) ? ea.clientSymbols : [];
   const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
 
-  const list = [...fromEa, ...fromAllEas, ...fromApp, ...fromClient, ...fromBot]
+  // Prefer active EA order first (Your pairs), then the rest.
+  const list = [...fromEa, ...fromApp, ...fromAllEas, ...fromClient, ...fromBot]
     .map((s) => normalizeBrokerSymbol(s))
     .filter(Boolean);
-  // Prefer active EA order; de-dupe while keeping first hit.
   const seen = new Set();
   const unique = [];
   for (const s of list) {
@@ -77,7 +86,12 @@ export function pickSelectedSymbol(activeBot, eas = [], appSymbols = null) {
     seen.add(key);
     unique.push(s);
   }
-  return unique[0] || "";
+  return unique;
+}
+
+/** First pair — kept for callers that only need a quick presence check. */
+export function pickSelectedSymbol(activeBot, eas = [], appSymbols = null) {
+  return listAppPairs(activeBot, eas, appSymbols)[0] || "";
 }
 
 /**
@@ -165,40 +179,39 @@ function buildScannerAlignedSetup({
 }
 
 /**
- * One open thread per TP target — same map as Chart Scanner Execute.
- * Trade 1 → TP1 (1:2), Trade 2 → TP2 (1:3), Trade 3 → TP3 (1:4).
- * Shared SL from the OpenAI scan (widened to instrument floors).
+ * Trade index → TP target (cycles forever), same as Chart Scanner Execute:
+ *   T1 → TP1, T2 → TP2, T3 → TP3, T4 → TP1, …
  */
-function buildTpThreads({ signal, lot }) {
-  const map = [
-    {
-      timeframe: "M15",
-      target: "TP1",
-      takeProfitKey: "takeProfit1",
-      tradeNo: 1,
-    },
-    {
-      timeframe: "M30",
-      target: "TP2",
-      takeProfitKey: "takeProfit2",
-      tradeNo: 2,
-    },
-    {
-      timeframe: "H1",
-      target: "TP3",
-      takeProfitKey: "takeProfit3",
-      tradeNo: 3,
-    },
-  ];
+function targetForTradeIndex(index) {
+  const n = Math.max(0, Math.floor(Number(index) || 0));
+  const slot = n % 3;
+  if (slot === 0) {
+    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: n + 1 };
+  }
+  if (slot === 1) {
+    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: n + 1 };
+  }
+  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
+}
+
+/**
+ * Build Exact Number of trades threads for one pair.
+ * Shared SL from the OpenAI scan; TP cycles 1:2 / 1:3 / 1:4.
+ */
+function buildTpThreads({ signal, lot, tradeCount }) {
+  const count = clampTrades(tradeCount);
+  const volume = clampLot(lot);
   const threads = [];
-  for (const row of map) {
-    const takeProfit = toFiniteNumber(signal?.[row.takeProfitKey]);
+  for (let i = 0; i < count; i += 1) {
+    const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
+    const takeProfit = toFiniteNumber(signal?.[takeProfitKey]);
     if (takeProfit == null || takeProfit <= 0) continue;
+    const slot = i % 3;
     threads.push({
-      timeframe: row.timeframe,
-      target: row.target,
-      tradeNo: row.tradeNo,
-      volume: lot,
+      timeframe: TF_FOR_TP_SLOT[slot] || "M15",
+      target,
+      tradeNo,
+      volume,
       takeProfit,
       entry: signal.entry,
       stopLoss: signal.stopLoss,
@@ -210,41 +223,24 @@ function buildTpThreads({ signal, lot }) {
 }
 
 /**
- * Silently open TP threads for the selected symbol (no Chart Scanner UI).
- * Flow matches scanner: live quote → OpenAI side/SL → 1:2/1:3/1:4 TPs → place.
- * @returns {Promise<{ ok: boolean, symbol?: string, opened?: number, error?: string }>}
+ * Scan + open one pair: live quote → OpenAI → Number of trades threads.
+ * Fires all placeTrade calls for that pair concurrently.
  */
-export async function runSilentStartOpen({
-  activeBot,
-  eas,
-  appSymbols = null,
-  mt5Session,
+async function openPairSilent({
+  symbol,
+  accountId,
+  region = "",
   getSymbolMeta,
-  publishOrbTrade,
-  variant = "zeta",
+  comment,
+  botName = "Bot",
 } = {}) {
-  const accountId = String(mt5Session?.accountId || "").trim();
-  if (!accountId) {
-    return { ok: false, error: "Connect MetaTrader before START open" };
-  }
-
-  const symbol = pickSelectedSymbol(activeBot, eas, appSymbols);
-  if (!symbol) {
-    return { ok: false, error: "Add a pair first (selected symbol required)" };
-  }
-
-  const remaining = loadScansLeft(variant);
-  if (remaining <= 0) {
-    return { ok: false, error: "No charts left today" };
-  }
-
   const meta = getSymbolMeta?.(symbol) || {};
   const actionRaw = String(meta.action || "BOTH").toUpperCase();
   const preferredSide =
     actionRaw === "SELL" ? "SELL" : actionRaw === "BUY" ? "BUY" : "";
   const lot = clampLot(meta.lotSize);
+  const tradeCount = clampTrades(meta.trades);
 
-  // 1) Live broker quote — never use hardcoded estimate prices for SL/TP.
   let quote;
   try {
     quote = await getSymbolQuote({
@@ -256,17 +252,25 @@ export async function runSilentStartOpen({
     return {
       ok: false,
       symbol,
+      opened: 0,
+      tradeCount,
       error: error?.message || "Could not fetch live quote",
     };
   }
+
   const livePrice = toFiniteNumber(quote?.price);
   const tradeSymbol =
     normalizeBrokerSymbol(quote?.symbol || symbol) || symbol;
   if (livePrice == null || livePrice <= 0) {
-    return { ok: false, symbol: tradeSymbol, error: "No live price for symbol" };
+    return {
+      ok: false,
+      symbol: tradeSymbol,
+      opened: 0,
+      tradeCount,
+      error: "No live price for symbol",
+    };
   }
 
-  // 2) OpenAI scan — same engine as Chart Scanner (side + protective stop).
   let ai;
   try {
     ai = await analyzeSymbolWithOpenAI({
@@ -279,11 +283,12 @@ export async function runSilentStartOpen({
     return {
       ok: false,
       symbol: tradeSymbol,
+      opened: 0,
+      tradeCount,
       error: error?.message || "OpenAI scan failed",
     };
   }
 
-  // Prefer live ask/bid over AI entry; keep AI stop + side.
   const signal = buildScannerAlignedSetup({
     symbol: tradeSymbol,
     side: ai?.side || preferredSide || "BUY",
@@ -304,89 +309,72 @@ export async function runSilentStartOpen({
     return {
       ok: false,
       symbol: tradeSymbol,
+      opened: 0,
+      tradeCount,
       error: "Could not build scanner SL/TP1/TP2/TP3",
     };
   }
 
-  const threads = buildTpThreads({ signal, lot });
+  const threads = buildTpThreads({ signal, lot, tradeCount });
   if (!threads.length) {
     return {
       ok: false,
       symbol: tradeSymbol,
-      error: "Could not build M15/M30/H1 scanner threads",
-    };
-  }
-
-  consumeScan(variant);
-
-  const comment = buildScannerFillComment({
-    botName: activeBot?.name,
-    variant: "default",
-    premium: false,
-  });
-
-  publishOrbTrade?.({
-    botName: activeBot?.name || "Bot",
-    comment,
-    symbol: tradeSymbol,
-    lotSize: lot,
-    action: signal.side,
-    side: signal.side,
-    entry: signal.entry,
-    stopLoss: signal.stopLoss,
-    takeProfit: signal.takeProfit1,
-    target: "TP1",
-  });
-
-  let opened = 0;
-  let lastError = "";
-  const openedTfs = [];
-  const openedTargets = [];
-  for (const thread of threads) {
-    try {
-      const fill = await placeTrade({
-        accountId,
-        symbol: tradeSymbol,
-        volume: thread.volume,
-        side: thread.side,
-        stopLoss: thread.stopLoss,
-        takeProfit: thread.takeProfit,
-        region: mt5Session?.region || "",
-        comment,
-        source: "chart-scanner",
-      });
-      opened += 1;
-      openedTfs.push(thread.timeframe);
-      openedTargets.push(thread.target);
-      recordTrade({
-        botName: activeBot?.name || "Bot",
-        symbol: normalizeBrokerSymbol(fill?.symbol || tradeSymbol) || tradeSymbol,
-        lotSize: thread.volume,
-        action: thread.side,
-        side: thread.side,
-        comment,
-        entry: thread.entry,
-        stopLoss: thread.stopLoss,
-        takeProfit: thread.takeProfit,
-        target: `${thread.target}/${thread.timeframe}`,
-      });
-    } catch (error) {
-      lastError = error?.message || "Trade failed";
-    }
-  }
-
-  if (!opened) {
-    return {
-      ok: false,
-      symbol: tradeSymbol,
       opened: 0,
-      error: lastError || "Open failed",
+      tradeCount,
+      error: "Could not build trade threads",
     };
   }
+
+  // Place every thread for this pair at the same time.
+  const settled = await Promise.all(
+    threads.map(async (thread) => {
+      try {
+        const fill = await placeTrade({
+          accountId,
+          symbol: tradeSymbol,
+          volume: thread.volume,
+          side: thread.side,
+          stopLoss: thread.stopLoss,
+          takeProfit: thread.takeProfit,
+          region,
+          comment,
+          source: "chart-scanner",
+        });
+        recordTrade({
+          botName,
+          symbol:
+            normalizeBrokerSymbol(fill?.symbol || tradeSymbol) || tradeSymbol,
+          lotSize: thread.volume,
+          action: thread.side,
+          side: thread.side,
+          comment,
+          entry: thread.entry,
+          stopLoss: thread.stopLoss,
+          takeProfit: thread.takeProfit,
+          target: `${thread.target}/${thread.timeframe}`,
+        });
+        return { ok: true, thread, fill };
+      } catch (error) {
+        return {
+          ok: false,
+          thread,
+          error: error?.message || "Trade failed",
+        };
+      }
+    })
+  );
+
+  const opened = settled.filter((row) => row.ok).length;
+  const lastError =
+    settled.find((row) => !row.ok)?.error ||
+    (opened ? null : "Open failed");
+
   return {
-    ok: true,
+    ok: opened > 0,
     symbol: tradeSymbol,
     opened,
+    tradeCount,
     side: signal.side,
     entry: signal.entry,
     stopLoss: signal.stopLoss,
@@ -394,8 +382,130 @@ export async function runSilentStartOpen({
     takeProfit2: signal.takeProfit2,
     takeProfit3: signal.takeProfit3,
     riskReward: signal.riskReward,
-    timeframes: openedTfs,
-    targets: openedTargets,
-    error: lastError || null,
+    lot,
+    targets: settled.filter((r) => r.ok).map((r) => r.thread.target),
+    error: lastError,
+  };
+}
+
+/**
+ * Silently open every Your pairs symbol with its Number of trades.
+ * All pairs are scanned + opened concurrently.
+ * @returns {Promise<{ ok: boolean, opened?: number, pairs?: object[], error?: string }>}
+ */
+export async function runSilentStartOpen({
+  activeBot,
+  eas,
+  appSymbols = null,
+  mt5Session,
+  getSymbolMeta,
+  publishOrbTrade,
+  variant = "zeta",
+} = {}) {
+  const accountId = String(mt5Session?.accountId || "").trim();
+  if (!accountId) {
+    return { ok: false, error: "Connect MetaTrader before START open" };
+  }
+
+  const pairs = listAppPairs(activeBot, eas, appSymbols);
+  if (!pairs.length) {
+    return { ok: false, error: "Add a pair first (selected symbol required)" };
+  }
+
+  const remaining = loadScansLeft(variant);
+  if (remaining <= 0) {
+    return { ok: false, error: "No charts left today" };
+  }
+
+  // One START session = one chart scan credit (multi-pair fan-out).
+  consumeScan(variant);
+
+  const comment = buildScannerFillComment({
+    botName: activeBot?.name,
+    variant: "default",
+    premium: false,
+  });
+  const botName = activeBot?.name || "Bot";
+  const region = mt5Session?.region || "";
+
+  // Announce the first pair on the orb; all pairs still open together.
+  const firstMeta = getSymbolMeta?.(pairs[0]) || {};
+  publishOrbTrade?.({
+    botName,
+    comment,
+    symbol: pairs[0],
+    lotSize: clampLot(firstMeta.lotSize),
+    action: String(firstMeta.action || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY",
+    side: String(firstMeta.action || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY",
+    entry: null,
+    stopLoss: null,
+    takeProfit: null,
+    target: "TP1",
+  });
+
+  // Every Your pairs symbol runs at the same time.
+  const results = await Promise.all(
+    pairs.map((symbol) =>
+      openPairSilent({
+        symbol,
+        accountId,
+        region,
+        getSymbolMeta,
+        comment,
+        botName,
+      })
+    )
+  );
+
+  const okRows = results.filter((row) => row?.ok);
+  const opened = results.reduce((sum, row) => sum + (Number(row?.opened) || 0), 0);
+  const lastError =
+    results.find((row) => row?.error && !row?.ok)?.error ||
+    results.find((row) => row?.error)?.error ||
+    null;
+
+  if (!opened) {
+    return {
+      ok: false,
+      opened: 0,
+      pairs: results,
+      symbols: pairs,
+      error: lastError || "Open failed",
+    };
+  }
+
+  // Refresh orb with the first successful fill details.
+  const primary = okRows[0];
+  if (primary) {
+    publishOrbTrade?.({
+      botName,
+      comment,
+      symbol: primary.symbol,
+      lotSize: primary.lot,
+      action: primary.side,
+      side: primary.side,
+      entry: primary.entry,
+      stopLoss: primary.stopLoss,
+      takeProfit: primary.takeProfit1,
+      target: "TP1",
+    });
+  }
+
+  return {
+    ok: true,
+    opened,
+    pairCount: pairs.length,
+    successPairs: okRows.length,
+    symbols: okRows.map((row) => row.symbol),
+    pairs: results,
+    side: primary?.side,
+    symbol: primary?.symbol,
+    entry: primary?.entry,
+    stopLoss: primary?.stopLoss,
+    takeProfit1: primary?.takeProfit1,
+    takeProfit2: primary?.takeProfit2,
+    takeProfit3: primary?.takeProfit3,
+    riskReward: primary?.riskReward,
+    error: lastError,
   };
 }
