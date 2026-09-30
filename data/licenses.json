@@ -19,7 +19,7 @@
       "usedAt": 1790675124344,
       "deviceId": "a43e481e-7174-436f-8dda-3fdbee4dfb40",
       "boundAt": 1790675124344,
-      "updatedAt": 1790747848832,
+      "updatedAt": 1790747859284,
       "scanReset": null,
       "robotAccountId": "5b9fa1af-3b5d-4792-b280-d09b7a04ad67",
       "robotLogin": "296427574",
@@ -30,12 +30,9 @@
       "clientSymbols": [
         "XAUUSD",
         "XAUUSDM",
-        "XAUUSD.M",
-        "EURUSD",
-        "USDJPY",
-        "GBPUSD"
+        "XAUUSD.M"
       ],
-      "clientSymbolsUpdatedAt": 1790747848832,
+      "clientSymbolsUpdatedAt": 1790747859284,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -50,6 +47,53 @@
           "XAUUSDM",
           "XAUUSD.M"
         ]
+      }
+    },
+    {
+      "key": "APEX-44ZP-AXWM",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "tumelob677@gmail.com",
+      "clientName": "Tumza",
+      "mainText": "Tumza",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789621205293,
+      "usedAt": 1790063693289,
+      "deviceId": "2d4ea64e-ad04-4ba1-893b-a15989b6f9d7",
+      "boundAt": 1790063819307,
+      "updatedAt": 1790747849299,
+      "scanReset": null,
+      "robotAccountId": "bbecd21a-b4fe-443d-9771-07aa65196633",
+      "robotLogin": "592052821",
+      "robotServer": "FxPro-MT5 Demo",
+      "robotCompany": "FxPro",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790747297230,
+      "clientSymbols": [
+        "XAUUSD",
+        "GOLD",
+        "U30",
+        "BTCUSD",
+        "BITCOIN"
+      ],
+      "clientSymbolsUpdatedAt": 1790747849299,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": []
       }
     },
     {
@@ -308,55 +352,9 @@
         "symbols": [
           "XAUUSD",
           "EURUSD",
-          "US30"
+          "US30",
+          "USDJPY"
         ]
-      }
-    },
-    {
-      "key": "APEX-44ZP-AXWM",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "tumelob677@gmail.com",
-      "clientName": "Tumza",
-      "mainText": "Tumza",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789621205293,
-      "usedAt": 1790063693289,
-      "deviceId": "2d4ea64e-ad04-4ba1-893b-a15989b6f9d7",
-      "boundAt": 1790063819307,
-      "updatedAt": 1790747832685,
-      "scanReset": null,
-      "robotAccountId": "bbecd21a-b4fe-443d-9771-07aa65196633",
-      "robotLogin": "592052821",
-      "robotServer": "FxPro-MT5 Demo",
-      "robotCompany": "FxPro",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790747297230,
-      "clientSymbols": [
-        "XAUUSD",
-        "GOLD",
-        "U30",
-        "BTCUSD",
-        "BITCOIN"
-      ],
-      "clientSymbolsUpdatedAt": 1790747832685,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": []
       }
     },
     {
