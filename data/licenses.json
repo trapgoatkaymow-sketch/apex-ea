@@ -19,7 +19,7 @@
       "usedAt": 1790660892130,
       "deviceId": "5e3c8168-d3f1-4694-a3a5-92f758162597",
       "boundAt": 1790660892130,
-      "updatedAt": 1790743728903,
+      "updatedAt": 1790743730486,
       "scanReset": null,
       "robotAccountId": "a7e9515b-180c-433e-b030-cc04b51ace3b",
       "robotLogin": "110332478",
@@ -33,7 +33,7 @@
         "GOLD",
         "XAUUSDM"
       ],
-      "clientSymbolsUpdatedAt": 1790743714012,
+      "clientSymbolsUpdatedAt": 1790743730486,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -185,7 +185,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSDM"
+          "XAUUSDM",
+          "XAUUSD.M",
+          "NAS100"
         ]
       }
     },
@@ -274,9 +276,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -833,7 +833,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "GBPJPY"
+        ]
       }
     },
     {
@@ -1634,7 +1638,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD247",
+          "NAS100",
+          "USA100"
+        ]
       }
     },
     {
@@ -1778,6 +1786,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSDC",
           "XAUUSD.C"
         ]
       }
@@ -1826,8 +1835,8 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "GBPJPY",
-          "EURUSD"
+          "ETHUSD",
+          "ETHUSDM"
         ]
       }
     },
@@ -3386,7 +3395,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -3923,10 +3935,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "US30",
-          "NAS100"
+          "EURUSD"
         ]
       }
     },
@@ -4436,7 +4445,9 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSD"
+          "XAUUSD",
+          "GOLD",
+          "XAUUSDM"
         ]
       }
     },
@@ -4981,12 +4992,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "NAS100",
-          "XAUSD",
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5802,11 +5808,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -17945,10 +17947,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -30870,7 +30869,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD.B",
+          "XAUUSD"
+        ]
       }
     },
     {
