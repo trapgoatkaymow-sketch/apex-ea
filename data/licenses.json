@@ -111,7 +111,7 @@
       "usedAt": 1790722251763,
       "deviceId": "951e80e5-e5da-4a82-b056-fe929c3aa78e",
       "boundAt": 1790722251763,
-      "updatedAt": 1790744252647,
+      "updatedAt": 1790744255523,
       "scanReset": null,
       "robotAccountId": "6e7da745-e9ca-4202-878c-30a82b68c01f",
       "robotLogin": "223444083",
@@ -125,7 +125,7 @@
         "BTCUSD",
         "BTCUSDM"
       ],
-      "clientSymbolsUpdatedAt": 1790744252647,
+      "clientSymbolsUpdatedAt": 1790744255523,
       "purchaseCaptureId": "4SE01034WC4719802",
       "purchaseOrderId": "9EU87303XM775873C",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -1307,8 +1307,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30"
+          "XAUUSD"
         ]
       }
     },
@@ -1925,7 +1924,7 @@
       "purchaseCaptureId": "4AK53474AC992252X",
       "purchaseOrderId": "16D71999C8272330P",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790743204532,
+      "emailSentAt": 1790743267104,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -3213,7 +3212,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUS",
+          "EURUSD",
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -5385,7 +5388,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "XAUSD",
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -30264,7 +30272,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD"
+        ]
       }
     },
     {
