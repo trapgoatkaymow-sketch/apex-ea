@@ -295,7 +295,7 @@
         "USDJPY",
         "GOLD"
       ],
-      "clientSymbolsUpdatedAt": 1790747799683,
+      "clientSymbolsUpdatedAt": 1790747822573,
       "purchaseCaptureId": "7MW359208U617213K",
       "purchaseOrderId": "431241891B215303Y",
       "purchaseSource": "paypal-giveaway",
@@ -797,7 +797,9 @@
         "symbols": [
           "XAUUSD",
           "NAS100",
-          "US30"
+          "US30",
+          "XAUUSDM",
+          "US30M"
         ]
       }
     },
@@ -2299,7 +2301,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD",
+          "GBPUSD",
+          "GBPUSDM",
+          "EURUSD"
+        ]
       }
     },
     {
@@ -14440,11 +14448,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
           "NAS100",
           "GOLD",
-          "USDJPY",
-          "NZDUSD",
           "US30"
         ]
       }
