@@ -501,6 +501,53 @@
       }
     },
     {
+      "key": "APEX-KP5D-CW9B",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "johnson.brent2006@gmail.com",
+      "clientName": "Brent Johnson",
+      "mainText": "Brent Johnson",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "1m10d",
+      "expiresAt": 1794219778291,
+      "createdAt": 1790763778291,
+      "usedAt": 1790765808373,
+      "deviceId": "a5ef4c00-74dc-46f9-ae45-93a73bc45b4a",
+      "boundAt": 1790765808373,
+      "updatedAt": 1790770072537,
+      "scanReset": null,
+      "robotAccountId": "4e186e69-0f93-4e7b-a2d7-2027f1ae16dd",
+      "robotLogin": "516142759",
+      "robotServer": "FxPro-MT5",
+      "robotCompany": "FxPro Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790769031269,
+      "clientSymbols": [
+        "XAUUSD",
+        "GOLD"
+      ],
+      "clientSymbolsUpdatedAt": 1790770072537,
+      "purchaseCaptureId": "43304948FX487353B",
+      "purchaseOrderId": "3RG45069LN700730A",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790763882000,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
+      }
+    },
+    {
       "key": "APEX-WJG7-ESG8",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -583,52 +630,6 @@
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
-      }
-    },
-    {
-      "key": "APEX-KP5D-CW9B",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "johnson.brent2006@gmail.com",
-      "clientName": "Brent Johnson",
-      "mainText": "Brent Johnson",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "1m10d",
-      "expiresAt": 1794219778291,
-      "createdAt": 1790763778291,
-      "usedAt": 1790765808373,
-      "deviceId": "a5ef4c00-74dc-46f9-ae45-93a73bc45b4a",
-      "boundAt": 1790765808373,
-      "updatedAt": 1790770063702,
-      "scanReset": null,
-      "robotAccountId": "4e186e69-0f93-4e7b-a2d7-2027f1ae16dd",
-      "robotLogin": "516142759",
-      "robotServer": "FxPro-MT5",
-      "robotCompany": "FxPro Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790769031269,
-      "clientSymbols": [
-        "XAUUSD",
-        "GOLD"
-      ],
-      "clientSymbolsUpdatedAt": 1790770063702,
-      "purchaseCaptureId": "43304948FX487353B",
-      "purchaseOrderId": "3RG45069LN700730A",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790763882000,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
           "XAUUSD"
@@ -730,7 +731,7 @@
         "GBPUS",
         "US30"
       ],
-      "clientSymbolsUpdatedAt": 1790765463495,
+      "clientSymbolsUpdatedAt": 1790770061160,
       "purchaseCaptureId": "0HP668830V358462V",
       "purchaseOrderId": "9GH45153DD112544A",
       "purchaseSource": "paypal-giveaway",
@@ -1571,8 +1572,6 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          "GBPUSD",
           "XAUUSDM"
         ]
       }
@@ -2992,8 +2991,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "GOLD",
-          "GOL"
+          "GOLD"
         ]
       }
     },
@@ -3920,7 +3918,8 @@
           "EURUSD",
           "US30",
           "USDJPY",
-          "GOLD"
+          "GOLD",
+          "XXAXAUXAUUXAUUSD"
         ]
       }
     },
@@ -4419,11 +4418,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD",
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6641,8 +6636,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD",
-          "GOLDMICRO"
+          "GOLD"
         ]
       }
     },
@@ -7100,7 +7094,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSDM"
+          "GOLD",
+          "XAUSD"
         ]
       }
     },
@@ -17885,7 +17880,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
       }
     },
     {
