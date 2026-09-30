@@ -154,7 +154,8 @@
           "USDJPY",
           "GBPUSD",
           "NZDUSD",
-          "WALLSTREET30"
+          "WALLSTREET30",
+          "GOLD"
         ]
       }
     },
@@ -257,8 +258,7 @@
           "XAUUSD",
           "NAS100",
           "XAGUSD",
-          "BTCUSD",
-          "XAUUSD.MICRO"
+          "BTCUSD"
         ]
       }
     },
@@ -14213,7 +14213,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
