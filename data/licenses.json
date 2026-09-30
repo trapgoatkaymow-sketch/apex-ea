@@ -66,21 +66,21 @@
       "usedAt": 1790763154959,
       "deviceId": "7cee01b2-ad4a-4468-838f-cd33aea5938a",
       "boundAt": 1790763154959,
-      "updatedAt": 1790803649396,
+      "updatedAt": 1790803651618,
       "scanReset": null,
-      "robotAccountId": "02465697-3e0b-4fc5-bcc0-8962639c459a",
-      "robotLogin": "159624",
-      "robotServer": "SpaceMarkets-Live",
-      "robotCompany": "Space Markets (Pty) Ltd",
+      "robotAccountId": "64d49840-1c82-4a4b-9305-2e5efae0da8d",
+      "robotLogin": "2100243371",
+      "robotServer": "JustMarkets-Live",
+      "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790803506800,
+      "robotConnectedAt": 1790774544359,
       "clientSymbols": [
         "XAUUSD",
         "NAS100",
         "US30",
         "USDJPY"
       ],
-      "clientSymbolsUpdatedAt": 1790803611325,
+      "clientSymbolsUpdatedAt": 1790803651618,
       "purchaseCaptureId": "8AJ86034168815921",
       "purchaseOrderId": "8V662465WG990805R",
       "purchaseSource": "paypal-giveaway",
@@ -91,10 +91,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "US30",
-          "USDJPY"
+          "XAUUSD"
         ]
       }
     },
@@ -4174,7 +4171,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30"
+        ]
       }
     },
     {
@@ -16351,7 +16351,10 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "USDJPY",
+          "US30",
+          "US30CASH"
         ]
       }
     },
@@ -21411,7 +21414,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USDJPY",
+          "XAUUSD"
+        ]
       }
     },
     {
