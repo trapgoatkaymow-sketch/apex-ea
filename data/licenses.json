@@ -1,6 +1,53 @@
 {
   "licenses": [
     {
+      "key": "APEX-KRHR-9EJH",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "kashifnaveed036@gmail.com",
+      "clientName": "Kashif Naveed",
+      "mainText": "Kashif Naveed",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790508823633,
+      "usedAt": 1790509300600,
+      "deviceId": "40cba8ad-6306-475c-9136-dd5c004ef3a8",
+      "boundAt": 1790509300600,
+      "updatedAt": 1790787449097,
+      "scanReset": null,
+      "robotAccountId": "6701ccf5-7a05-48b3-b092-c080c46efb72",
+      "robotLogin": "180019499",
+      "robotServer": "HFMarketsSA-Live14",
+      "robotCompany": "HFM",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790560594402,
+      "clientSymbols": [
+        "BTCUSDX",
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790787449097,
+      "purchaseCaptureId": "06D963895A845991A",
+      "purchaseOrderId": "2DW506896W038072W",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790695081827,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": [
+          "BTCUSDX",
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-CEY2-GWUB",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -126,8 +173,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "GOLD"
+          "EURUSD",
+          "USDJPY",
+          "GBPUSD",
+          "NZDUSD"
         ]
       }
     },
@@ -222,53 +271,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
-        ]
-      }
-    },
-    {
-      "key": "APEX-KRHR-9EJH",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "kashifnaveed036@gmail.com",
-      "clientName": "Kashif Naveed",
-      "mainText": "Kashif Naveed",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790508823633,
-      "usedAt": 1790509300600,
-      "deviceId": "40cba8ad-6306-475c-9136-dd5c004ef3a8",
-      "boundAt": 1790509300600,
-      "updatedAt": 1790787423943,
-      "scanReset": null,
-      "robotAccountId": "6701ccf5-7a05-48b3-b092-c080c46efb72",
-      "robotLogin": "180019499",
-      "robotServer": "HFMarketsSA-Live14",
-      "robotCompany": "HFM",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790560594402,
-      "clientSymbols": [
-        "BTCUSDX",
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790787423943,
-      "purchaseCaptureId": "06D963895A845991A",
-      "purchaseOrderId": "2DW506896W038072W",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790695081827,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": [
-          "BTCUSDX",
           "XAUUSD"
         ]
       }
@@ -5633,11 +5635,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUS",
-          "EURUSD",
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -35660,7 +35658,8 @@
           "XAUUSD",
           "GBPUSD",
           "GBPUSDM",
-          "EURUSD"
+          "EURUSD",
+          "XAUUSDM"
         ]
       }
     },
