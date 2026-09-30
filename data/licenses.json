@@ -19,7 +19,7 @@
       "usedAt": 1789979035182,
       "deviceId": "f15f99ea-bafc-43d7-87c6-380184295105",
       "boundAt": 1790762999944,
-      "updatedAt": 1790801164000,
+      "updatedAt": 1790801169246,
       "scanReset": null,
       "robotAccountId": "455e5d47-23fb-4594-9eb6-9fe96b7f6077",
       "robotLogin": "296362801",
@@ -34,7 +34,7 @@
         "BTCUSDM",
         "GBPUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790801164000,
+      "clientSymbolsUpdatedAt": 1790801169246,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -44,7 +44,13 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "BTCUSD",
+          "XAUUSD",
+          "XAUUSDM",
+          "BTCUSDM",
+          "GBPUSD"
+        ]
       }
     },
     {
