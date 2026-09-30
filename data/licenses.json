@@ -66,14 +66,14 @@
       "usedAt": 1790695924096,
       "deviceId": "6695dc9f-01be-4fa3-b7bf-3a6a15943a4f",
       "boundAt": 1790710745000,
-      "updatedAt": 1790754546218,
+      "updatedAt": 1790754548261,
       "scanReset": null,
-      "robotAccountId": "1d9bdeaa-ff0e-4c73-b929-35834a6ea38b",
+      "robotAccountId": "5ce25d81-8744-4684-92df-79ae88aa0cd1",
       "robotLogin": "17520789",
       "robotServer": "Headway-Real",
       "robotCompany": "Jarocel (Pty) Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790697065655,
+      "robotConnectedAt": 1790754546253,
       "clientSymbols": [
         "GOLD"
       ],
@@ -2060,7 +2060,10 @@
           "BTCUSDM",
           "XAUUS",
           "XAUUSD",
-          "XAUUSDM"
+          "XAUUSDM",
+          "GBPUSD",
+          "GBPUS",
+          "US30"
         ]
       }
     },
@@ -15169,7 +15172,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
