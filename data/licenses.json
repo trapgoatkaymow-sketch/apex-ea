@@ -125,8 +125,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "EURUSDM",
-          "GBPUSDM"
+          "EURUSDM"
         ]
       }
     },
@@ -294,7 +293,7 @@
       "usedAt": 1790684653003,
       "deviceId": "88a892d9-79dc-4556-8a6a-d50a76b2deb2",
       "boundAt": 1790686790705,
-      "updatedAt": 1790762017175,
+      "updatedAt": 1790762017955,
       "scanReset": null,
       "robotAccountId": "67159cbd-9efd-46bd-b886-cb38b668ddb9",
       "robotLogin": "362210911",
@@ -305,7 +304,7 @@
       "clientSymbols": [
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790762014374,
+      "clientSymbolsUpdatedAt": 1790762017955,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -372,6 +371,51 @@
       }
     },
     {
+      "key": "APEX-T245-H6R4",
+      "botId": "vector-x-pro-ea-mul8lgik",
+      "botName": "VECTOR X PRO EA",
+      "clientEmail": "direkopano5@gmail.com",
+      "clientName": "Kopano",
+      "mainText": "Kopano",
+      "mentorEmail": "direkopano5@gmail.com",
+      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
+      "mentorName": "kopanofx",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790599464144,
+      "usedAt": 1790599888590,
+      "deviceId": "cfe92f4e-0de4-4942-9197-0b627aeeca1b",
+      "boundAt": 1790755896884,
+      "updatedAt": 1790762016986,
+      "scanReset": null,
+      "robotAccountId": "26b9cc26-8ae3-4375-8aee-9e431df9bce6",
+      "robotLogin": "1200526388",
+      "robotServer": "JustMarkets-Demo3",
+      "robotCompany": "Just Global Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790761055373,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790756012747,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "vector-x-pro-ea-mul8lgik",
+        "name": "VECTOR X PRO EA",
+        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-VXA5-9H5M",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -414,6 +458,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
+          "EURUSD",
           "NAS100"
         ]
       }
@@ -601,10 +646,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSD.M",
-          "USDJPY",
-          "USDJPY.M",
-          "BTCUSD"
+          "XAUUSD.M"
         ]
       }
     },
@@ -1140,7 +1182,8 @@
           "NAS100",
           "NASDAQ",
           "DJ39",
-          "VOL80"
+          "VOL80",
+          "XAUUSD.S"
         ]
       }
     },
@@ -3473,51 +3516,6 @@
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
-      }
-    },
-    {
-      "key": "APEX-T245-H6R4",
-      "botId": "vector-x-pro-ea-mul8lgik",
-      "botName": "VECTOR X PRO EA",
-      "clientEmail": "direkopano5@gmail.com",
-      "clientName": "Kopano",
-      "mainText": "Kopano",
-      "mentorEmail": "direkopano5@gmail.com",
-      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
-      "mentorName": "kopanofx",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790599464144,
-      "usedAt": 1790599888590,
-      "deviceId": "cfe92f4e-0de4-4942-9197-0b627aeeca1b",
-      "boundAt": 1790755896884,
-      "updatedAt": 1790761120626,
-      "scanReset": null,
-      "robotAccountId": "26b9cc26-8ae3-4375-8aee-9e431df9bce6",
-      "robotLogin": "1200526388",
-      "robotServer": "JustMarkets-Demo3",
-      "robotCompany": "Just Global Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790761055373,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790756012747,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "vector-x-pro-ea-mul8lgik",
-        "name": "VECTOR X PRO EA",
-        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
         "strategy": "scalper",
         "symbols": [
           "XAUUSD"
