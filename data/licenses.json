@@ -19,19 +19,19 @@
       "usedAt": 1790702913049,
       "deviceId": "0e579b77-2c3d-469b-8a49-f3353f6ecb4b",
       "boundAt": 1790702913049,
-      "updatedAt": 1790745744516,
+      "updatedAt": 1790745748250,
       "scanReset": null,
-      "robotAccountId": "77d1dd3a-490e-4265-8e04-ac9c61355ab2",
+      "robotAccountId": "5e193557-843b-49bb-9e10-3c24ddd82dd1",
       "robotLogin": "4009541",
       "robotServer": "RazorMarkets-Live",
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790745301231,
+      "robotConnectedAt": 1790714998220,
       "clientSymbols": [
         "XAUUSD",
         "XAUUSDM"
       ],
-      "clientSymbolsUpdatedAt": 1790745671515,
+      "clientSymbolsUpdatedAt": 1790745748250,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -41,7 +41,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -1209,9 +1212,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSDM",
-          "BTCUSD",
-          "BTCUSDM"
+          "XAUUSDM"
         ]
       }
     },
