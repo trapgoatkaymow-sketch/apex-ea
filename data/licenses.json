@@ -19,7 +19,7 @@
       "usedAt": 1790782029689,
       "deviceId": "4d3700fb-06a0-4ae6-8e52-3527018f98f2",
       "boundAt": 1790782029689,
-      "updatedAt": 1790782822328,
+      "updatedAt": 1790782823159,
       "scanReset": null,
       "robotAccountId": "db8da392-2dc6-4c89-8679-8e1f0e23ba12",
       "robotLogin": "1285611",
@@ -27,8 +27,10 @@
       "robotCompany": "JP Markets SA (Pty) Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790782208848,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790782822328,
+      "clientSymbols": [
+        "USDJPY"
+      ],
+      "clientSymbolsUpdatedAt": 1790782823159,
       "purchaseCaptureId": "6CV35313M40708346",
       "purchaseOrderId": "9GU20134LM462680T",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -38,7 +40,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USDJPY"
+        ]
       }
     },
     {
@@ -81,9 +85,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -258,12 +260,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "USDJPY",
-          "XAUUSD",
-          "H1",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1552,7 +1549,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USDJPY",
+          "XAUUSD"
+        ]
       }
     },
     {
