@@ -19,14 +19,14 @@
       "usedAt": 1790538492263,
       "deviceId": "545984cb-18fe-4b86-9326-38d2afbe63c7",
       "boundAt": 1790538591318,
-      "updatedAt": 1790802449020,
+      "updatedAt": 1790802452820,
       "scanReset": null,
-      "robotAccountId": "f2da193a-f6ae-4f48-9565-449c4c587c12",
+      "robotAccountId": "850af6d6-4572-4c56-b4ba-06298569662c",
       "robotLogin": "477081786",
       "robotServer": "ExnessMU-MT5Trial9",
       "robotCompany": "Exness (MU) Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790696019448,
+      "robotConnectedAt": 1790802451482,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790802422769,
       "purchaseCaptureId": "0XJ07512BE067182K",
@@ -1790,14 +1790,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "NAS100",
-          "XAUUSD.M",
-          "USDJPY",
-          "USDJPY.M"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2758,7 +2751,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD",
+          "XAUUSD"
+        ]
       }
     },
     {
