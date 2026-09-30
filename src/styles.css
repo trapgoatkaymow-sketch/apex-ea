@@ -1031,18 +1031,14 @@ html:has(.phone[data-interface="v2"]) body {
   font-weight: 700;
 }
 
-/* START 15-minute countdown under the action deck (replaces pair-list toast). */
+/* START “Opening positions · 15” status under the action deck. */
 .start-countdown {
   margin: 10px 0 0;
   text-align: center;
-  font-family: var(--font-display, "Segoe UI", sans-serif);
-  font-size: 1.65rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #fff;
-  text-shadow:
-    0 0 18px rgba(var(--pink-rgb), 0.55),
-    0 1px 2px rgba(0, 0, 0, 0.55);
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.92);
   font-variant-numeric: tabular-nums;
 }
 

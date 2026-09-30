@@ -23,19 +23,21 @@ import {
 } from "./tradeLevels.js";
 
 /** Delay after START before the silent OpenAI scan + open runs. */
-export const START_SILENT_OPEN_DELAY_MS = 15 * 60 * 1000;
+export const START_SILENT_OPEN_DELAY_MS = 15_000;
 
 /** Scanner timeframes used by the START button (like EA Chart). */
 export const START_SCANNER_TIMEFRAMES = ["M30", "H1", "H4"];
 
 const TF_FOR_TP_SLOT = ["M30", "H1", "H4"];
 
-/** Format remaining ms as M:SS / MM:SS for the home countdown. */
+/** Seconds left for the START “Opening positions” countdown. */
+export function formatStartCountdownSeconds(ms) {
+  return String(Math.max(0, Math.ceil(Number(ms) / 1000)));
+}
+
+/** @deprecated use formatStartCountdownSeconds — kept for older imports */
 export function formatStartCountdown(ms) {
-  const total = Math.max(0, Math.ceil(Number(ms) / 1000));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
+  return formatStartCountdownSeconds(ms);
 }
 
 function clampLot(value) {

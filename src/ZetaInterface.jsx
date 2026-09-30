@@ -13,7 +13,7 @@ import TopBar from "./TopBar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
 import {
   START_SILENT_OPEN_DELAY_MS,
-  formatStartCountdown,
+  formatStartCountdownSeconds,
   listAppPairs,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
@@ -53,7 +53,7 @@ export default function ZetaInterface() {
   const silentOpenTimerRef = useRef(null);
   const silentOpenRunRef = useRef(0);
   const countdownEndsAtRef = useRef(0);
-  // Always read the latest pairs / session when the 15m timer fires.
+  // Always read the latest pairs / session when the 15s timer fires.
   const silentOpenCtxRef = useRef({});
   silentOpenCtxRef.current = {
     activeBot,
@@ -144,7 +144,7 @@ export default function ZetaInterface() {
     };
   }, []);
 
-  // Live 15-minute countdown under START (replaces the old pair-list toast).
+  // Live 15s “Opening positions” countdown under START.
   useEffect(() => {
     if (!running || !countdownEndsAtRef.current) {
       setStartCountdownMs(null);
@@ -155,7 +155,7 @@ export default function ZetaInterface() {
       setStartCountdownMs(left > 0 ? left : 0);
     };
     tick();
-    const id = setInterval(tick, 250);
+    const id = setInterval(tick, 200);
     return () => clearInterval(id);
   }, [running, startStatus]);
 
@@ -197,10 +197,10 @@ export default function ZetaInterface() {
       return;
     }
 
-    // Show only the 15-minute countdown — no pair-list toast clutter.
+    // Show “Opening positions · 15” countdown — no big timer / pair-list toast.
     countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
     setStartCountdownMs(START_SILENT_OPEN_DELAY_MS);
-    setStartStatus("countdown");
+    setStartStatus("opening");
 
     if (silentOpenTimerRef.current) {
       clearTimeout(silentOpenTimerRef.current);
@@ -213,7 +213,8 @@ export default function ZetaInterface() {
       if (silentOpenRunRef.current !== runId) return;
       void (async () => {
         setStartStatus("scanning");
-        setStartCountdownMs(0);
+        setStartCountdownMs(null);
+        countdownEndsAtRef.current = 0;
         const latest = silentOpenCtxRef.current || {};
         let result;
         try {
@@ -226,13 +227,11 @@ export default function ZetaInterface() {
             getSymbolMeta: latest.getSymbolMeta,
             publishOrbTrade: latest.publishOrbTrade,
             variant: "zeta",
-            onProgress: ({ phase, symbol, index, pairCount }) => {
+            onProgress: ({ phase, symbol }) => {
               if (silentOpenRunRef.current !== runId) return;
               if (phase === "scanning") setStartStatus("scanning");
               else if (phase === "opening") {
-                setStartStatus(
-                  `opening ${symbol || ""} (${index}/${pairCount})`.trim()
-                );
+                setStartStatus(symbol ? `placing ${symbol}` : "placing");
               }
             },
           });
@@ -321,10 +320,16 @@ export default function ZetaInterface() {
               {running && startStatus ? (
                 <p className="start-countdown" aria-live="polite">
                   {startStatus === "scanning"
-                    ? "Scanning…"
-                    : startStatus.startsWith("opening")
-                      ? startStatus.replace(/^opening/, "Opening")
-                      : formatStartCountdown(startCountdownMs ?? 0)}
+                    ? "Scanning with OpenAI…"
+                    : startStatus.startsWith("placing")
+                      ? `Opening positions${
+                          startStatus.length > 8
+                            ? ` · ${startStatus.slice(8).trim()}`
+                            : ""
+                        }…`
+                      : `Opening positions · ${formatStartCountdownSeconds(
+                          startCountdownMs ?? 0
+                        )}s`}
                 </p>
               ) : (
                 <p className="powered-badge">
