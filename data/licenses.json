@@ -19,7 +19,7 @@
       "usedAt": null,
       "deviceId": null,
       "boundAt": null,
-      "updatedAt": 1790756286445,
+      "updatedAt": 1790756290589,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -32,7 +32,7 @@
       "purchaseCaptureId": "60P7309494380443S",
       "purchaseOrderId": "1S553579VP9908928",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": null,
+      "emailSentAt": 1790756290589,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -751,7 +751,7 @@
       "purchaseCaptureId": "609315616E542302C",
       "purchaseOrderId": "5X268543X80455949",
       "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790755858370,
+      "emailSentAt": 1790755927966,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -913,13 +913,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD",
-          "U30",
-          "BTCUSD",
-          "BITCOIN"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1302,7 +1296,8 @@
           "NAS100",
           "NASDAQ",
           "DJ39",
-          "VOL80"
+          "VOL80",
+          "XAUUSD.S"
         ]
       }
     },
@@ -1859,7 +1854,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAAUSD",
+          "GOLDMIC",
+          "XAUUSDMIC",
+          "GOLDMICRO",
+          "US30"
+        ]
       }
     },
     {
@@ -9865,7 +9867,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
