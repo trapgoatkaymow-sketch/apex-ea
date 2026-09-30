@@ -252,13 +252,7 @@
       "robotCompany": "FxPro",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790772047207,
-      "clientSymbols": [
-        "XAUUSD",
-        "GOLD",
-        "U30",
-        "BTCUSD",
-        "BITCOIN"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790787167435,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -1116,7 +1110,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1164,9 +1160,7 @@
           "XAUUSD",
           "BTCUSD",
           "BTCUSDM",
-          "US500M",
-          "US30C",
-          "XAUUSDC"
+          "US500M"
         ]
       }
     },
@@ -1594,7 +1588,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD"
+          "XAUUSD",
+          "EURUSD",
+          "US30",
+          "NAS100"
         ]
       }
     },
