@@ -19,14 +19,14 @@
       "usedAt": 1790561206548,
       "deviceId": "cda2fc98-3390-4676-96ee-ed8bc427ba9b",
       "boundAt": 1790666868452,
-      "updatedAt": 1790770286707,
+      "updatedAt": 1790770290752,
       "scanReset": null,
-      "robotAccountId": "ed9b083a-9893-4072-b9ee-0cc503323ff1",
-      "robotLogin": "8869898",
+      "robotAccountId": "418c37ee-5dc7-4fbe-b1dc-fda4ced78be1",
+      "robotLogin": "8863289",
       "robotServer": "VaultMarkets-Live",
       "robotCompany": "VaultMarkets (Pty) Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790667948138,
+      "robotConnectedAt": 1790770107514,
       "clientSymbols": [
         "EURUSD",
         "XAUUSD",
@@ -34,7 +34,7 @@
         "XAAUSD.MIC",
         "XAUUSD.MIC"
       ],
-      "clientSymbolsUpdatedAt": 1790770286707,
+      "clientSymbolsUpdatedAt": 1790770290752,
       "purchaseCaptureId": "97H27463CM256084R",
       "purchaseOrderId": "79F26569AX9662826",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -50,6 +50,51 @@
           "GBPUSD",
           "XAAUSD.MIC",
           "XAUUSD.MIC"
+        ]
+      }
+    },
+    {
+      "key": "APEX-N6R4-QK7M",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "trapgoatkaymow@gmail.com",
+      "clientName": "Kamogelo Machaba",
+      "mainText": "Kamogelo Machaba",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789672146702,
+      "usedAt": 1789999612585,
+      "deviceId": "1b461e2c-7013-496f-8bf2-cda5ad514f0c",
+      "boundAt": 1790767219368,
+      "updatedAt": 1790770288347,
+      "scanReset": null,
+      "robotAccountId": "e2bb619d-3a10-455f-94ba-5624af639799",
+      "robotLogin": "318528232",
+      "robotServer": "XMGlobal-MT5 7",
+      "robotCompany": "XM Global Limited",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790751912342,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790770288347,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
         ]
       }
     },
@@ -136,7 +181,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -338,49 +384,6 @@
           "BTCUSD",
           "XAUUSDM"
         ]
-      }
-    },
-    {
-      "key": "APEX-N6R4-QK7M",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "trapgoatkaymow@gmail.com",
-      "clientName": "Kamogelo Machaba",
-      "mainText": "Kamogelo Machaba",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789672146702,
-      "usedAt": 1789999612585,
-      "deviceId": "1b461e2c-7013-496f-8bf2-cda5ad514f0c",
-      "boundAt": 1790767219368,
-      "updatedAt": 1790770262881,
-      "scanReset": null,
-      "robotAccountId": "e2bb619d-3a10-455f-94ba-5624af639799",
-      "robotLogin": "318528232",
-      "robotServer": "XMGlobal-MT5 7",
-      "robotCompany": "XM Global Limited",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790751912342,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790770262881,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": []
       }
     },
     {
@@ -728,13 +731,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSDM",
-          "XAU",
-          "EURUSD",
-          "EURUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1000,9 +997,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "XAUUSD",
-          "NAS100"
+          "USDJPY"
         ]
       }
     },
@@ -1834,7 +1829,12 @@
           "BTCUSD.M",
           "XAUUSD",
           "XAUUSD.M",
-          "US30"
+          "US30",
+          "USDJPY",
+          "USDJPY.M",
+          "WTI.M",
+          "GBPUSD",
+          "GBPUSD.M"
         ]
       }
     },
