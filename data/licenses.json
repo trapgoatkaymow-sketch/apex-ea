@@ -64,7 +64,7 @@
       "usedAt": 1790715195313,
       "deviceId": "f9b24eb3-7f4b-46d7-bdfa-70b845a408bf",
       "boundAt": 1790715233891,
-      "updatedAt": 1790786213477,
+      "updatedAt": 1790786216897,
       "scanReset": null,
       "robotAccountId": "2dcb741b-0794-45cd-a8c1-da65e30e555d",
       "robotLogin": "592140048",
@@ -76,7 +76,7 @@
         "XAUUSD",
         "GOLD"
       ],
-      "clientSymbolsUpdatedAt": 1790786213477,
+      "clientSymbolsUpdatedAt": 1790786216897,
       "purchaseCaptureId": "58066041SF874112Y",
       "purchaseOrderId": "6S735032FC770353C",
       "purchaseSource": "paypal-giveaway",
@@ -124,7 +124,7 @@
         "USDJPY",
         "AUDCAD"
       ],
-      "clientSymbolsUpdatedAt": 1790786200232,
+      "clientSymbolsUpdatedAt": 1790786202322,
       "purchaseCaptureId": "63P76901GL302614F",
       "purchaseOrderId": "0XS70015C2200251G",
       "purchaseSource": "paypal-giveaway",
@@ -226,8 +226,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "XAUUSDM"
+          "XAUUSD"
         ]
       }
     },
@@ -391,7 +390,12 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790762598181,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "GOLD",
+        "BTCUSD",
+        "US30CASH",
+        "USDJPY"
+      ],
       "clientSymbolsUpdatedAt": 1790786114060,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -768,11 +772,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUS",
-          "XAUUSD.M"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5567,7 +5567,8 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSD"
+          "XAUUSD",
+          "H1"
         ]
       }
     },
