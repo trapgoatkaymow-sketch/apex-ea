@@ -1092,6 +1092,10 @@ function normalizeLicense(row) {
     clientSymbolsUpdatedAt: row?.clientSymbolsUpdatedAt
       ? Number(row.clientSymbolsUpdatedAt)
       : null,
+    // Mentor EA template sync stamp — must survive normalize/merge.
+    mentorSymbolsSyncedAt: row?.mentorSymbolsSyncedAt
+      ? Number(row.mentorSymbolsSyncedAt) || null
+      : null,
     // PayPal robot-purchase stamps (idempotent auto-fulfill).
     purchaseCaptureId: String(row?.purchaseCaptureId || "").trim() || null,
     purchaseOrderId: String(row?.purchaseOrderId || "").trim() || null,
@@ -1207,6 +1211,12 @@ function mergeLicenseLists(...lists) {
         item.purchaseCaptureId || prev.purchaseCaptureId || null,
       purchaseOrderId: item.purchaseOrderId || prev.purchaseOrderId || null,
       purchaseSource: item.purchaseSource || prev.purchaseSource || null,
+      mentorSymbolsSyncedAt: (() => {
+        const a = Number(item.mentorSymbolsSyncedAt) || 0;
+        const b = Number(prev.mentorSymbolsSyncedAt) || 0;
+        const best = Math.max(a, b);
+        return best || null;
+      })(),
       updatedAt: Math.max(
         prev.updatedAt || 0,
         item.updatedAt || 0,
@@ -1217,11 +1227,38 @@ function mergeLicenseLists(...lists) {
       ),
       bot:
         item.bot || prev.bot
-          ? {
-              ...(prev.bot || {}),
-              ...(item.bot || {}),
-              photo: nextPhoto || prev.bot?.photo || item.bot?.photo || "/logo.png",
-            }
+          ? (() => {
+              const prevSyms = Array.isArray(prev.bot?.symbols)
+                ? prev.bot.symbols
+                : [];
+              const itemSyms = Array.isArray(item.bot?.symbols)
+                ? item.bot.symbols
+                : [];
+              const prevSync = Number(prev.mentorSymbolsSyncedAt) || 0;
+              const itemSync = Number(item.mentorSymbolsSyncedAt) || 0;
+              // Never let an empty/stale local seed wipe a mentor-synced template.
+              let nextSymbols = prevSyms;
+              if (itemSync || prevSync) {
+                if (itemSync > prevSync && itemSyms.length) nextSymbols = itemSyms;
+                else if (prevSync > itemSync && prevSyms.length) nextSymbols = prevSyms;
+                else if (itemSyms.length) nextSymbols = itemSyms;
+                else if (prevSyms.length) nextSymbols = prevSyms;
+              } else if (preferIncoming) {
+                nextSymbols = itemSyms.length ? itemSyms : prevSyms;
+              } else {
+                nextSymbols = prevSyms.length ? prevSyms : itemSyms;
+              }
+              return {
+                ...(prev.bot || {}),
+                ...(item.bot || {}),
+                photo:
+                  nextPhoto ||
+                  prev.bot?.photo ||
+                  item.bot?.photo ||
+                  "/logo.png",
+                symbols: nextSymbols,
+              };
+            })()
           : null,
     });
   });
