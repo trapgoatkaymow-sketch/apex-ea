@@ -12,6 +12,7 @@ import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import {
   START_SILENT_OPEN_DELAY_MS,
+  formatStartCountdown,
   listAppPairs,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
@@ -72,6 +73,7 @@ export default function V2Interface() {
   } = useApp();
   const silentOpenTimerRef = useRef(null);
   const silentOpenRunRef = useRef(0);
+  const countdownEndsAtRef = useRef(0);
   const silentOpenCtxRef = useRef({});
   silentOpenCtxRef.current = {
     activeBot,
@@ -87,6 +89,23 @@ export default function V2Interface() {
   const [platform, setPlatform] = useState("MT5");
   const [trades, setTrades] = useState(1);
   const [floatCycle, setFloatCycle] = useState(false);
+  const [startCountdownMs, setStartCountdownMs] = useState(null);
+  const [startStatus, setStartStatus] = useState("");
+
+  useEffect(() => {
+    if (!v2Running || !countdownEndsAtRef.current) {
+      if (!v2Running) setStartCountdownMs(null);
+      return undefined;
+    }
+    const tick = () => {
+      const left = countdownEndsAtRef.current - Date.now();
+      setStartCountdownMs(left > 0 ? left : 0);
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [v2Running, startStatus]);
+
   const [floatSrc, setFloatSrc] = useState(
     () =>
       getCachedBotPhotoSync(activeBot?.id) ||
@@ -221,8 +240,10 @@ export default function V2Interface() {
                       silentOpenTimerRef.current = null;
                     }
                     silentOpenRunRef.current += 1;
+                    countdownEndsAtRef.current = 0;
+                    setStartCountdownMs(null);
+                    setStartStatus("");
                     clearOrbTrade?.();
-                    showToast("Bot stopped");
                     return;
                   }
                   const ctx = silentOpenCtxRef.current || {};
@@ -244,19 +265,9 @@ export default function V2Interface() {
                     showToast("Add a pair first, then press START");
                     return;
                   }
-                  const tradePlan = pairs
-                    .map((sym) => {
-                      const meta = ctx.getSymbolMeta?.(sym) || {};
-                      const n = Math.max(
-                        1,
-                        Math.floor(Number(meta.trades) || 1)
-                      );
-                      return `${sym}×${n}`;
-                    })
-                    .join(" · ");
-                  showToast(
-                    `${activeBot?.name || "Bot"} started · ${pairs.length} pairs · ${tradePlan} in 15s · M30/H1/H4`
-                  );
+                  countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
+                  setStartCountdownMs(START_SILENT_OPEN_DELAY_MS);
+                  setStartStatus("countdown");
                   if (silentOpenTimerRef.current) {
                     clearTimeout(silentOpenTimerRef.current);
                     silentOpenTimerRef.current = null;
@@ -267,7 +278,8 @@ export default function V2Interface() {
                     silentOpenTimerRef.current = null;
                     if (silentOpenRunRef.current !== runId) return;
                     void (async () => {
-                      showToast(`Scanning ${pairs.length} pairs with OpenAI (M30/H1/H4)…`);
+                      setStartStatus("scanning");
+                      setStartCountdownMs(0);
                       const latest = silentOpenCtxRef.current || {};
                       let result;
                       try {
@@ -280,25 +292,33 @@ export default function V2Interface() {
                           getSymbolMeta: latest.getSymbolMeta,
                           publishOrbTrade: latest.publishOrbTrade,
                           variant: "v2",
+                          onProgress: ({ phase, symbol, index, pairCount }) => {
+                            if (silentOpenRunRef.current !== runId) return;
+                            if (phase === "scanning") setStartStatus("scanning");
+                            else if (phase === "opening") {
+                              setStartStatus(
+                                `opening ${symbol || ""} (${index}/${pairCount})`.trim()
+                              );
+                            }
+                          },
                         });
                       } catch (error) {
                         if (silentOpenRunRef.current !== runId) return;
+                        countdownEndsAtRef.current = 0;
+                        setStartCountdownMs(null);
+                        setStartStatus("");
                         showToast(error?.message || "START open failed");
                         return;
                       }
                       if (silentOpenRunRef.current !== runId) return;
+                      countdownEndsAtRef.current = 0;
+                      setStartCountdownMs(null);
+                      setStartStatus("");
                       if (result?.ok) {
-                        const labels = Array.isArray(result.pairs)
-                          ? result.pairs
-                              .map((row) =>
-                                row?.ok
-                                  ? `${row.symbol}×${row.opened}`
-                                  : `${row.symbol}×fail`
-                              )
-                              .join(" · ")
-                          : result.symbols?.join(" · ") || result.symbol;
                         showToast(
-                          `Opened ${result.opened || 0} trades on ${result.successPairs || 0}/${result.pairCount || pairs.length} pairs · ${labels || ""}`
+                          `Opened ${result.opened || 0} trades · ${
+                            result.symbols?.join(" · ") || result.symbol || ""
+                          }`
                             .replace(/\s+/g, " ")
                             .trim()
                         );
