@@ -19,18 +19,18 @@
       "usedAt": 1789982735143,
       "deviceId": "a36f4f73-b7e4-4dbb-98a9-a3c7a32af204",
       "boundAt": 1789982735143,
-      "updatedAt": 1790802990607,
+      "updatedAt": 1790802993506,
       "scanReset": null,
-      "robotAccountId": "f3ea9f4e-aad5-4268-a25d-b82db00721b3",
+      "robotAccountId": "04426449-0ab0-4a98-a606-c29af0072468",
       "robotLogin": "4094962",
       "robotServer": "RazorMarkets-Live",
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790685584292,
+      "robotConnectedAt": 1790802992191,
       "clientSymbols": [
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790779216421,
+      "clientSymbolsUpdatedAt": 1790802987042,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -514,8 +514,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD",
-          "BTCUSD"
+          "GOLD"
         ]
       }
     },
@@ -1268,8 +1267,7 @@
           "US30",
           "US30.STD",
           "XAUUSD",
-          "XAUUSD.M",
-          "US100.STD"
+          "XAUUSD.M"
         ]
       }
     },
@@ -2843,14 +2841,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "NAS100",
-          "XAUUSD.M",
-          "USDJPY",
-          "USDJPY.M"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3637,7 +3628,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD",
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -5213,8 +5207,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD",
-          "EURUSD"
+          "GOLD"
         ]
       }
     },
