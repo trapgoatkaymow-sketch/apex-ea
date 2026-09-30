@@ -277,7 +277,7 @@
       "usedAt": 1790743654259,
       "deviceId": "93d64990-7fdb-4201-ab9e-b4f8e21c50dc",
       "boundAt": 1790743654259,
-      "updatedAt": 1790744225793,
+      "updatedAt": 1790744226665,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -286,9 +286,10 @@
       "robotPlatform": "",
       "robotConnectedAt": null,
       "clientSymbols": [
-        "XAGUSD"
+        "XAGUSD",
+        "EURUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790744225793,
+      "clientSymbolsUpdatedAt": 1790744226665,
       "purchaseCaptureId": "8FF87801KN186231T",
       "purchaseOrderId": "7X034397YW958212L",
       "purchaseSource": "paypal-giveaway",
@@ -298,7 +299,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAGUSD",
+          "EURUSD"
+        ]
       }
     },
     {
@@ -890,7 +894,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -1914,7 +1921,7 @@
       "purchaseCaptureId": "4AK53474AC992252X",
       "purchaseOrderId": "16D71999C8272330P",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790743204532,
+      "emailSentAt": 1790743267104,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -2496,7 +2503,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD.C"
+        ]
       }
     },
     {
@@ -5376,7 +5385,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "XAUSD",
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -5937,8 +5951,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH.",
-          ".USTECH."
+          "USTECH."
         ]
       }
     },
