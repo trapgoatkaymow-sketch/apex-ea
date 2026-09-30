@@ -240,7 +240,7 @@
       "usedAt": 1790726313223,
       "deviceId": "17ae4eca-3c65-453e-86e9-f0755747ce71",
       "boundAt": 1790726313223,
-      "updatedAt": 1790726485039,
+      "updatedAt": 1790726486230,
       "scanReset": null,
       "robotAccountId": "91b25667-4578-40a6-aa43-81c576873492",
       "robotLogin": "4018724",
@@ -281,7 +281,7 @@
       "usedAt": 1790725946088,
       "deviceId": "629a15e3-d308-461d-9d2a-9a17585f20a2",
       "boundAt": 1790725946088,
-      "updatedAt": 1790726485039,
+      "updatedAt": 1790726486230,
       "scanReset": null,
       "robotAccountId": "91b25667-4578-40a6-aa43-81c576873492",
       "robotLogin": "4018724",
@@ -987,11 +987,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJYY",
-          "USDJYP",
-          "USDJPYM5",
-          "XAUUSD",
-          "USDJPY"
+          "USDJPY",
+          "ETHUSD",
+          "ETHUSDM"
         ]
       }
     },
@@ -2440,7 +2438,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD"
+          "XAUUSD",
+          "EURUSD",
+          "US30",
+          "NAS100"
         ]
       }
     },
