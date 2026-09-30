@@ -19,7 +19,7 @@
       "usedAt": 1790541949051,
       "deviceId": "8ccbc82b-f675-4a5c-88c9-f461a0080d9c",
       "boundAt": 1790541949051,
-      "updatedAt": 1790801608664,
+      "updatedAt": 1790801616118,
       "scanReset": null,
       "robotAccountId": "de50e4e2-875e-41a7-8ba6-6bb58fc336c8",
       "robotLogin": "335452473",
@@ -28,9 +28,12 @@
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790748439658,
       "clientSymbols": [
-        "GOLD"
+        "GOLD",
+        ".US30.",
+        "USDJPY",
+        "NAS100"
       ],
-      "clientSymbolsUpdatedAt": 1790801608664,
+      "clientSymbolsUpdatedAt": 1790801616118,
       "purchaseCaptureId": "9DD10362XK0496517",
       "purchaseOrderId": "7JR85041XS116822H",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -41,7 +44,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD"
+          "GOLD",
+          ".US30.",
+          "USDJPY",
+          "NAS100"
         ]
       }
     },
@@ -1424,7 +1430,8 @@
           "USTECM",
           "BTCUSDM",
           "DE30M",
-          "US30M"
+          "US30M",
+          "XAUUSDM"
         ]
       }
     },
