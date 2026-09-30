@@ -13,6 +13,7 @@ import TopBar from "./TopBar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
 import {
   START_SILENT_OPEN_DELAY_MS,
+  pickSelectedSymbol,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
@@ -25,6 +26,7 @@ export default function ZetaInterface() {
     activeBot,
     bots,
     eas,
+    appSymbols,
     selectBot,
     removeActiveBot,
     setPairsOpen,
@@ -49,6 +51,16 @@ export default function ZetaInterface() {
   } = useApp();
   const silentOpenTimerRef = useRef(null);
   const silentOpenRunRef = useRef(0);
+  // Always read the latest pairs / session when the 20s timer fires.
+  const silentOpenCtxRef = useRef({});
+  silentOpenCtxRef.current = {
+    activeBot,
+    eas,
+    appSymbols,
+    mt5Session,
+    getSymbolMeta,
+    publishOrbTrade,
+  };
 
   const [lotSize, setLotSize] = useState("0.01");
   const [action, setAction] = useState("BOTH");
@@ -141,7 +153,22 @@ export default function ZetaInterface() {
       return;
     }
 
-    showToast(`${activeBot?.name || "Bot"} started`);
+    // Fail fast so START feels broken less often (pair / MT5 checks).
+    const ctx = silentOpenCtxRef.current || {};
+    const accountId = String(ctx.mt5Session?.accountId || "").trim();
+    if (!accountId) {
+      setV2Running(false);
+      showToast("Connect MetaTrader before START");
+      return;
+    }
+    const symbol = pickSelectedSymbol(ctx.activeBot, ctx.eas, ctx.appSymbols);
+    if (!symbol) {
+      setV2Running(false);
+      showToast("Add a pair first, then press START");
+      return;
+    }
+
+    showToast(`${activeBot?.name || "Bot"} started · opens ${symbol} in 20s`);
     // Silent START open: wait ~20s, then open the selected symbol without
     // showing Chart Scanner UI. Cancelled if the user hits STOP.
     if (silentOpenTimerRef.current) {
@@ -154,12 +181,14 @@ export default function ZetaInterface() {
       silentOpenTimerRef.current = null;
       if (silentOpenRunRef.current !== runId) return;
       void (async () => {
+        const latest = silentOpenCtxRef.current || {};
         const result = await runSilentStartOpen({
-          activeBot,
-          eas,
-          mt5Session,
-          getSymbolMeta,
-          publishOrbTrade,
+          activeBot: latest.activeBot,
+          eas: latest.eas,
+          appSymbols: latest.appSymbols,
+          mt5Session: latest.mt5Session,
+          getSymbolMeta: latest.getSymbolMeta,
+          publishOrbTrade: latest.publishOrbTrade,
           variant: "zeta",
         });
         if (silentOpenRunRef.current !== runId) return;

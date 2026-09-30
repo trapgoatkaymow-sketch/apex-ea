@@ -63,18 +63,45 @@ function clampLot(value) {
   return Number(Math.min(1000, n).toFixed(4));
 }
 
-/** Pick the selected / first pair on this EA. */
-export function pickSelectedSymbol(activeBot, eas = []) {
+/**
+ * Pick the selected / first pair from "Your pairs".
+ * PairsSheet writes to eas[].symbols (appSymbols) — not bots[].symbols /
+ * clientSymbols — so START must read the same list the user just edited.
+ */
+export function pickSelectedSymbol(activeBot, eas = [], appSymbols = null) {
   const botId = String(activeBot?.id || "").trim();
-  const ea = (Array.isArray(eas) ? eas : []).find(
-    (row) => String(row?.id || "").trim() === botId
+  const rows = Array.isArray(eas) ? eas : [];
+  const ea =
+    (botId && rows.find((row) => String(row?.id || "").trim() === botId)) ||
+    rows[0] ||
+    null;
+
+  const fromEa = Array.isArray(ea?.symbols) ? ea.symbols : [];
+  const fromAllEas = rows.flatMap((row) =>
+    Array.isArray(row?.symbols) ? row.symbols : []
   );
+  const fromApp =
+    appSymbols instanceof Set
+      ? Array.from(appSymbols)
+      : Array.isArray(appSymbols)
+        ? appSymbols
+        : [];
   const fromClient = Array.isArray(ea?.clientSymbols) ? ea.clientSymbols : [];
   const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
-  const list = (fromClient.length ? fromClient : fromBot)
+
+  const list = [...fromEa, ...fromAllEas, ...fromApp, ...fromClient, ...fromBot]
     .map((s) => normalizeBrokerSymbol(s))
     .filter(Boolean);
-  return list[0] || "";
+  // Prefer active EA order; de-dupe while keeping first hit.
+  const seen = new Set();
+  const unique = [];
+  for (const s of list) {
+    const key = s.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(s);
+  }
+  return unique[0] || "";
 }
 
 /** Build a scanner-style setup for one START timeframe (M15 / M30 / H1). */
@@ -134,6 +161,7 @@ function buildTimeframeThreads({ symbol, side, lot }) {
 export async function runSilentStartOpen({
   activeBot,
   eas,
+  appSymbols = null,
   mt5Session,
   getSymbolMeta,
   publishOrbTrade,
@@ -144,7 +172,7 @@ export async function runSilentStartOpen({
     return { ok: false, error: "Connect MetaTrader before START open" };
   }
 
-  const symbol = pickSelectedSymbol(activeBot, eas);
+  const symbol = pickSelectedSymbol(activeBot, eas, appSymbols);
   if (!symbol) {
     return { ok: false, error: "Add a pair first (selected symbol required)" };
   }
