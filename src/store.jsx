@@ -3039,7 +3039,26 @@ export function AppProvider({ children }) {
       try {
         const remote = await resetClientScansRemote(key, { adminEmail: actor });
         if (remote) {
-          setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
+          // Patch scanReset onto the existing row — a sparse API grant must not
+          // wipe used/device/client fields via mergeLicenses.
+          setLicenseKeys((prev) => {
+            const existing =
+              (Array.isArray(prev) ? prev : []).find(
+                (row) => normalizeLicenseKey(row?.key) === key
+              ) || null;
+            const patched = existing
+              ? {
+                  ...existing,
+                  scanReset: remote.scanReset || existing.scanReset || null,
+                  updatedAt: Math.max(
+                    Number(remote.updatedAt) || 0,
+                    Number(existing.updatedAt) || 0,
+                    Date.now()
+                  ),
+                }
+              : remote;
+            return mergeLicenses(prev, [patched]);
+          });
           // Apply the grant on this device too (admin often tests the same key).
           try {
             const { applyRemoteScanGrant } = await import("./scanQuota.js");

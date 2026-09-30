@@ -1030,10 +1030,12 @@ function shouldReplacePhoto(prevPhoto, nextPhoto) {
 function normalizeScanReset(raw) {
   if (!raw || typeof raw !== "object") return null;
   const day = String(raw.day || "").trim();
+  const dayUtc = String(raw.dayUtc || "").trim();
   const resetAt = Number(raw.resetAt) || 0;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !resetAt) return null;
   return {
     day,
+    ...( /^\d{4}-\d{2}-\d{2}$/.test(dayUtc) ? { dayUtc } : {}),
     resetAt,
     grantedBy: normalizeEmail(raw.grantedBy || ""),
   };
@@ -1584,7 +1586,9 @@ export async function listLicenses(options = {}) {
     // Mentors lookup is best-effort.
   }
 
-  return licenses;
+  // Apply fast-path scan resets so admin list/refresh shows grants before the
+  // background licenses.json stamp finishes.
+  return overlayScanResets(licenses);
 }
 
 /** Tombstoned keys — clients keep these out of Available / migrate forever. */
@@ -2668,7 +2672,111 @@ export async function deactivateLicense(
   return result;
 }
 
-/** Super admin grants a fresh daily scan quota for this license/client. */
+/** Tiny durable map for scan resets — avoids rewriting the full licenses.json. */
+const SCAN_RESET_BLOB = process.env.SCAN_RESETS_BLOB_PATH || "apexea/scan-resets.json";
+const SCAN_RESET_FB = process.env.SCAN_RESETS_FIREBASE_PATH || "apexea/scan-resets";
+const SCAN_RESET_TMP = path.join("/tmp", "apexea-scan-resets.json");
+let memoryScanResets = null;
+let memoryScanResetsAt = 0;
+
+async function readScanResetMap({ preferFresh = false } = {}) {
+  if (
+    !preferFresh &&
+    memoryScanResets &&
+    Date.now() - memoryScanResetsAt < 15_000
+  ) {
+    return { ...memoryScanResets };
+  }
+  try {
+    const hit = await durableRead({
+      blobPath: SCAN_RESET_BLOB,
+      firebasePath: SCAN_RESET_FB,
+      localPaths: [SCAN_RESET_TMP],
+    });
+    const raw = hit?.raw ? JSON.parse(hit.raw) : null;
+    const map =
+      raw && typeof raw === "object" && raw.resets && typeof raw.resets === "object"
+        ? raw.resets
+        : raw && typeof raw === "object" && !Array.isArray(raw)
+          ? raw
+          : {};
+    memoryScanResets = map;
+    memoryScanResetsAt = Date.now();
+    return { ...map };
+  } catch {
+    return memoryScanResets ? { ...memoryScanResets } : {};
+  }
+}
+
+async function writeScanResetMap(map) {
+  const body = JSON.stringify({
+    resets: map || {},
+    updatedAt: Date.now(),
+  });
+  memoryScanResets = { ...(map || {}) };
+  memoryScanResetsAt = Date.now();
+  try {
+    fs.writeFileSync(SCAN_RESET_TMP, body, "utf8");
+  } catch {
+    // ignore
+  }
+  try {
+    await durableWrite({
+      raw: body,
+      blobPath: SCAN_RESET_BLOB,
+      firebasePath: SCAN_RESET_FB,
+      localPaths: [SCAN_RESET_TMP],
+      githubMode: "never",
+      message: "scan resets update",
+    });
+  } catch (error) {
+    // Memory + /tmp already hold the grant for this instance; do not fail
+    // the admin UI when Firebase/Blob is briefly unavailable.
+    console.warn("scan-resets durable write failed", error?.message || error);
+  }
+}
+
+function lookupScanResetGrant(map, rawKey) {
+  if (!map || typeof map !== "object") return null;
+  const formatted = formatLicenseKey(rawKey);
+  const compact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const direct =
+    map[formatted] ||
+    map[normalizeLicenseKey(rawKey)] ||
+    map[compact] ||
+    null;
+  if (direct) return normalizeScanReset(direct);
+  for (const value of Object.values(map)) {
+    if (!value || typeof value !== "object") continue;
+    const key = normalizeLicenseKey(value.key || "");
+    const c = String(value.compact || key.replace(/-/g, ""));
+    if (key && (key === formatted || key === normalizeLicenseKey(rawKey))) {
+      return normalizeScanReset(value);
+    }
+    if (c && c === compact) return normalizeScanReset(value);
+  }
+  return null;
+}
+
+async function overlayScanResets(licenses) {
+  const list = Array.isArray(licenses) ? licenses : [];
+  if (!list.length) return list;
+  const map = await readScanResetMap();
+  if (!map || !Object.keys(map).length) return list;
+  return list.map((row) => {
+    const grant = lookupScanResetGrant(map, row?.key);
+    if (!grant) return row;
+    const existing = Number(row?.scanReset?.resetAt) || 0;
+    if (Number(grant.resetAt) <= existing) return row;
+    return { ...row, scanReset: grant, updatedAt: Math.max(Number(row?.updatedAt) || 0, grant.resetAt) };
+  });
+}
+
+/**
+ * Super admin grants a fresh daily scan quota for this license/client.
+ * Fast path: write a tiny scan-resets durable map (Firebase/Blob) and return
+ * immediately. The full licenses.json stamp runs in the background.
+ */
 export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
@@ -2715,34 +2823,63 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
     grantedBy: admin,
   };
 
+  // 1) Fast durable grant (does not rewrite the huge licenses store).
+  const map = await readScanResetMap({ preferFresh: true });
+  map[formattedKey] = {
+    ...scanReset,
+    key: formattedKey,
+    compact: wantCompact,
+  };
+  await writeScanResetMap(map);
+
+  // 2) Patch warm in-memory license cache so this process returns a full row.
   let result = null;
-  const write = await mutateStore((licenses) => {
-    const idx = licenses.findIndex(rowMatches);
-    if (idx < 0) {
-      const err = new Error("Invalid license key");
-      err.status = 404;
-      throw err;
+  if (Array.isArray(memoryLicenses)) {
+    const idx = memoryLicenses.findIndex(rowMatches);
+    if (idx >= 0) {
+      memoryLicenses[idx] = {
+        ...memoryLicenses[idx],
+        scanReset,
+        updatedAt: now,
+      };
+      result = memoryLicenses[idx];
+      memoryLicensesAt = Date.now();
     }
+  }
+
+  // 3) Background stamp on the full license store (best-effort).
+  void mutateStore((licenses) => {
+    const idx = licenses.findIndex(rowMatches);
+    if (idx < 0) return licenses;
     licenses[idx] = {
       ...licenses[idx],
       scanReset,
       updatedAt: now,
     };
-    result = licenses[idx];
+    result = result || licenses[idx];
     return licenses;
-  }, `scan reset granted: ${formattedKey}`);
+  }, `scan reset granted: ${formattedKey}`).catch(() => {});
 
-  // Prefer durable, but don't fail the admin UI if GitHub is slow — kick a
-  // background mirror so clients can still pick up the grant shortly after.
-  if (write?.durable === false) {
+  if (!result) {
     try {
-      void mirrorLicensesToDurableStores();
+      const store = await readStore({ preferFresh: false });
+      result = store.licenses.find(rowMatches) || null;
     } catch {
-      // best-effort
+      result = null;
     }
   }
 
-  return result;
+  if (result) {
+    return { ...result, scanReset, updatedAt: now };
+  }
+
+  // Key may live only on another instance — still return the grant so admin UI
+  // completes; clients pick it up via overlayScanResets on email/key fetch.
+  return {
+    key: formattedKey,
+    scanReset,
+    updatedAt: now,
+  };
 }
 
 export async function deleteLicense(rawKey) {
@@ -2783,20 +2920,25 @@ export async function findLicense(rawKey) {
   // on another serverless instance.
   const store = await readStore({ preferFresh: true });
   const licenses = store.licenses;
-  return (
+  const hit =
     licenses.find((row) => {
       const key = normalizeLicenseKey(row.key);
       if (!key) return false;
       return variants.has(key) || compactOf(key) === wantCompact;
-    }) || null
-  );
+    }) || null;
+  if (!hit) return null;
+  const [withGrant] = await overlayScanResets([hit]);
+  return withGrant || hit;
 }
 
 export async function findLicensesByEmail(email) {
   const key = normalizeEmail(email);
   if (!key) return [];
   const store = await readStore({ preferFresh: true });
-  return store.licenses.filter((row) => normalizeEmail(row.clientEmail) === key);
+  const rows = store.licenses.filter(
+    (row) => normalizeEmail(row.clientEmail) === key
+  );
+  return overlayScanResets(rows);
 }
 
 /** Push the merged license store to every durable backend (Firebase/Blob/GitHub). */
