@@ -164,10 +164,14 @@ export default function ZetaInterface() {
         });
         if (silentOpenRunRef.current !== runId) return;
         if (result?.ok) {
+          const tfs = Array.isArray(result.timeframes) && result.timeframes.length
+            ? result.timeframes.join("/")
+            : "M15/M30/H1";
           showToast(
-            `Opened ${result.side || ""} ${result.symbol} · ${result.opened} thread${
-              result.opened === 1 ? "" : "s"
-            }`.replace(/\s+/g, " ").trim()
+            `Opened ${result.side || ""} ${result.symbol} · ${tfs}`.replace(
+              /\s+/g,
+              " "
+            ).trim()
           );
         } else if (result?.error) {
           showToast(result.error);

@@ -9,10 +9,16 @@ import {
   placeTrade,
 } from "./metaApi.js";
 import { consumeScan, loadScansLeft } from "./scanQuota.js";
-import { buildSafeMultiTpLevels, normalizeTradeSide } from "./tradeLevels.js";
+import {
+  buildSafeMultiTpLevels,
+  normalizeTradeSide,
+} from "./tradeLevels.js";
 
 /** Delay after START before the silent open runs. */
 export const START_SILENT_OPEN_DELAY_MS = 20_000;
+
+/** Scanner timeframes used by the START button open. */
+export const START_SCANNER_TIMEFRAMES = ["M15", "M30", "H1"];
 
 function estimateEntryForSymbol(symbol) {
   const raw = String(symbol || "")
@@ -51,27 +57,10 @@ function estimateEntryForSymbol(symbol) {
   return 100;
 }
 
-function clampTrades(value) {
-  const n = Math.floor(Number(value) || 1);
-  return Math.min(20, Math.max(1, n));
-}
-
 function clampLot(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return 0.01;
   return Number(Math.min(1000, n).toFixed(4));
-}
-
-function targetForTradeIndex(index) {
-  const n = Math.max(0, Math.floor(Number(index) || 0));
-  const slot = n % 3;
-  if (slot === 0) {
-    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: n + 1 };
-  }
-  if (slot === 1) {
-    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: n + 1 };
-  }
-  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
 }
 
 /** Pick the selected / first pair on this EA. */
@@ -88,21 +77,54 @@ export function pickSelectedSymbol(activeBot, eas = []) {
   return list[0] || "";
 }
 
-function buildSetup(symbol, preferredSide = "BUY") {
+/** Build a scanner-style setup for one START timeframe (M15 / M30 / H1). */
+function buildSetup(symbol, preferredSide = "BUY", timeframe = "M15") {
   const side = normalizeTradeSide(preferredSide, { trustSide: true });
   const entry = estimateEntryForSymbol(symbol);
+  const levels = buildSafeMultiTpLevels({
+    symbol,
+    side,
+    entry,
+    timeframe,
+  });
   return {
     symbol,
     detectedSymbol: symbol,
     side,
-    ...buildSafeMultiTpLevels({
-      symbol,
-      side,
-      entry,
-      timeframe: "M15",
-    }),
+    timeframe,
+    ...levels,
     source: "silent-start",
   };
+}
+
+/**
+ * One open thread per scanner timeframe: M15 → TP1, M30 → TP2, H1 → TP3.
+ * Matches Chart Scanner thread mapping while covering the three START TFs.
+ */
+function buildTimeframeThreads({ symbol, side, lot }) {
+  const map = [
+    { timeframe: "M15", target: "TP1", takeProfitKey: "takeProfit1", tradeNo: 1 },
+    { timeframe: "M30", target: "TP2", takeProfitKey: "takeProfit2", tradeNo: 2 },
+    { timeframe: "H1", target: "TP3", takeProfitKey: "takeProfit3", tradeNo: 3 },
+  ];
+  const threads = [];
+  for (const row of map) {
+    const signal = buildSetup(symbol, side, row.timeframe);
+    const takeProfit = Number(signal?.[row.takeProfitKey]);
+    if (!Number.isFinite(takeProfit) || takeProfit <= 0) continue;
+    threads.push({
+      timeframe: row.timeframe,
+      target: row.target,
+      tradeNo: row.tradeNo,
+      volume: lot,
+      takeProfit,
+      entry: signal.entry,
+      stopLoss: signal.stopLoss,
+      side: signal.side,
+      signal,
+    });
+  }
+  return threads;
 }
 
 /**
@@ -136,19 +158,11 @@ export async function runSilentStartOpen({
   const actionRaw = String(meta.action || "BOTH").toUpperCase();
   const side =
     actionRaw === "SELL" ? "SELL" : actionRaw === "BUY" ? "BUY" : "BUY";
-  const tradeCount = clampTrades(meta.trades);
   const lot = clampLot(meta.lotSize);
-  const signal = buildSetup(symbol, side);
-
-  const threads = [];
-  for (let i = 0; i < tradeCount; i += 1) {
-    const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
-    const takeProfit = Number(signal?.[takeProfitKey]);
-    if (!Number.isFinite(takeProfit) || takeProfit <= 0) continue;
-    threads.push({ target, takeProfit, tradeNo, volume: lot });
-  }
+  // START always uses scanner M15 + M30 + H1 (not a single hardcoded TF).
+  const threads = buildTimeframeThreads({ symbol, side, lot });
   if (!threads.length) {
-    return { ok: false, error: "Could not build TP threads for this symbol" };
+    return { ok: false, error: "Could not build M15/M30/H1 scanner threads" };
   }
 
   consumeScan(variant);
@@ -159,46 +173,49 @@ export async function runSilentStartOpen({
     premium: false,
   });
 
+  const primary = threads[0];
   publishOrbTrade?.({
     botName: activeBot?.name || "Bot",
     comment,
     symbol,
     lotSize: lot,
-    action: signal.side,
-    side: signal.side,
-    entry: signal.entry,
-    stopLoss: signal.stopLoss,
-    takeProfit: signal.takeProfit1,
-    target: "TP1",
+    action: primary.side,
+    side: primary.side,
+    entry: primary.entry,
+    stopLoss: primary.stopLoss,
+    takeProfit: primary.takeProfit,
+    target: primary.target,
   });
 
   let opened = 0;
   let lastError = "";
+  const openedTfs = [];
   for (const thread of threads) {
     try {
       const fill = await placeTrade({
         accountId,
         symbol,
         volume: thread.volume,
-        side: signal.side,
-        stopLoss: signal.stopLoss,
+        side: thread.side,
+        stopLoss: thread.stopLoss,
         takeProfit: thread.takeProfit,
         region: mt5Session?.region || "",
         comment,
         source: "chart-scanner",
       });
       opened += 1;
+      openedTfs.push(thread.timeframe);
       recordTrade({
         botName: activeBot?.name || "Bot",
         symbol: normalizeBrokerSymbol(fill?.symbol || symbol) || symbol,
         lotSize: thread.volume,
-        action: signal.side,
-        side: signal.side,
+        action: thread.side,
+        side: thread.side,
         comment,
-        entry: signal.entry,
-        stopLoss: signal.stopLoss,
+        entry: thread.entry,
+        stopLoss: thread.stopLoss,
         takeProfit: thread.takeProfit,
-        target: thread.target,
+        target: `${thread.target}/${thread.timeframe}`,
       });
     } catch (error) {
       lastError = error?.message || "Trade failed";
@@ -212,7 +229,8 @@ export async function runSilentStartOpen({
     ok: true,
     symbol,
     opened,
-    side: signal.side,
+    side: primary.side,
+    timeframes: openedTfs,
     error: lastError || null,
   };
 }
