@@ -282,6 +282,9 @@ export function normalizeLicense(row) {
     clientSymbolsUpdatedAt: row?.clientSymbolsUpdatedAt
       ? Number(row.clientSymbolsUpdatedAt)
       : null,
+    mentorSymbolsSyncedAt: row?.mentorSymbolsSyncedAt
+      ? Number(row.mentorSymbolsSyncedAt) || null
+      : null,
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
