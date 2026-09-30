@@ -2995,7 +2995,12 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD"
+          "EURUSD",
+          "0.01",
+          "US3",
+          "US5",
+          "US1",
+          "US2"
         ]
       }
     },
@@ -3892,7 +3897,8 @@
           "XAUUSDM",
           "XAUUDM",
           "NAS100",
-          "VOLATILITY75INDEX"
+          "VOLATILITY75INDEX",
+          "BTCUSD"
         ]
       }
     },
@@ -17737,9 +17743,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
