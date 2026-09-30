@@ -19,14 +19,14 @@
       "usedAt": 1790580419161,
       "deviceId": "134dccce-b0b8-4354-ad46-3b14b17fa3bb",
       "boundAt": 1790580419161,
-      "updatedAt": 1790737225496,
+      "updatedAt": 1790737226978,
       "scanReset": null,
-      "robotAccountId": "e1f7b8be-2e52-40bb-b874-39f49803eb59",
+      "robotAccountId": "b73712a3-a456-4682-9641-291176523d21",
       "robotLogin": "430608351",
       "robotServer": "XMGlobal-MT5 18",
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790693486425,
+      "robotConnectedAt": 1790737226591,
       "clientSymbols": [
         "GOLD"
       ],
@@ -64,14 +64,14 @@
       "usedAt": 1790578643784,
       "deviceId": "134dccce-b0b8-4354-ad46-3b14b17fa3bb",
       "boundAt": 1790578643784,
-      "updatedAt": 1790737224890,
+      "updatedAt": 1790737226978,
       "scanReset": null,
-      "robotAccountId": "e1f7b8be-2e52-40bb-b874-39f49803eb59",
+      "robotAccountId": "b73712a3-a456-4682-9641-291176523d21",
       "robotLogin": "430608351",
       "robotServer": "XMGlobal-MT5 18",
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790693486425,
+      "robotConnectedAt": 1790737226591,
       "clientSymbols": [
         "GOLD"
       ],
@@ -1228,8 +1228,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD",
-          "USDJPY"
+          "GOLD"
         ]
       }
     },
@@ -10826,7 +10825,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -47437,11 +47439,12 @@
         "photo": "/api/licenses/photo?botId=venom-scalper-v1-0-mujtiwsh&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
           "US30",
           "NASDAQ",
           "EURUSD",
-          "GBPUSD"
+          "GBPUSD",
+          "XAUUSD.M",
+          "XAUUSD"
         ]
       }
     },
