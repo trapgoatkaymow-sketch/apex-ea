@@ -146,7 +146,7 @@
       "usedAt": 1790705021059,
       "deviceId": "665aab0d-2654-4325-bfa0-78be908dc5ff",
       "boundAt": 1790705021059,
-      "updatedAt": 1790767501719,
+      "updatedAt": 1790767502016,
       "scanReset": null,
       "robotAccountId": "35cc0432-100d-4409-8615-110ab99fbcc7",
       "robotLogin": "223442971",
@@ -157,7 +157,7 @@
       "clientSymbols": [
         "EURUSDM"
       ],
-      "clientSymbolsUpdatedAt": 1790767392521,
+      "clientSymbolsUpdatedAt": 1790767502016,
       "purchaseCaptureId": "8HR07620917589051",
       "purchaseOrderId": "8E789276JS7992416",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -338,7 +338,7 @@
       "usedAt": 1790508697258,
       "deviceId": "c0b7631f-0f31-483b-bd99-0de0ac25db21",
       "boundAt": 1790508697258,
-      "updatedAt": 1790767490133,
+      "updatedAt": 1790767493487,
       "scanReset": null,
       "robotAccountId": "d9dc420f-8e63-4fce-be60-f650381fcff7",
       "robotLogin": "4108107",
@@ -353,7 +353,7 @@
         "USTECH",
         "EURUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790767490133,
+      "clientSymbolsUpdatedAt": 1790767493487,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -464,10 +464,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GOLD",
-          "XAUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -598,7 +595,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -788,7 +787,15 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GBPUSD",
+          "BTCUSD",
+          "USDCAD",
+          "EURUSD",
+          "USDJPY",
+          "GOLD"
+        ]
       }
     },
     {
