@@ -60,7 +60,7 @@
       "usedAt": 1790710587869,
       "deviceId": "a1d2836b-eaee-41d7-9bd5-4851e2ac3520",
       "boundAt": 1790710587869,
-      "updatedAt": 1790750312169,
+      "updatedAt": 1790750312972,
       "scanReset": null,
       "robotAccountId": "021c470d-8692-40aa-90d6-345f223b24d9",
       "robotLogin": "477027331",
@@ -166,7 +166,7 @@
       "usedAt": 1789999612585,
       "deviceId": "ff122000-1e75-4997-994c-5318881793dc",
       "boundAt": 1790745188532,
-      "updatedAt": 1790750296301,
+      "updatedAt": 1790750297212,
       "scanReset": null,
       "robotAccountId": "f754717d-feb2-47dc-a789-391fc5f598a9",
       "robotLogin": "318528232",
@@ -209,7 +209,7 @@
       "usedAt": 1790444151767,
       "deviceId": "e9abef64-4e21-48af-9b18-1da4aaf236ae",
       "boundAt": 1790722472505,
-      "updatedAt": 1790750296301,
+      "updatedAt": 1790750297212,
       "scanReset": null,
       "robotAccountId": "f754717d-feb2-47dc-a789-391fc5f598a9",
       "robotLogin": "318528232",
@@ -807,7 +807,7 @@
       "usedAt": 1790669725998,
       "deviceId": "83797d36-cec9-46f3-b7dc-33f78f42b2a0",
       "boundAt": 1790669725998,
-      "updatedAt": 1790750187591,
+      "updatedAt": 1790750187604,
       "scanReset": null,
       "robotAccountId": "7fd5d150-60b1-44e3-adae-126a31530ca6",
       "robotLogin": "1200526962",
@@ -852,7 +852,7 @@
       "usedAt": 1790085769269,
       "deviceId": "6247c664-97a7-486c-958b-756f24d3385f",
       "boundAt": 1790085769269,
-      "updatedAt": 1790750187591,
+      "updatedAt": 1790750187604,
       "scanReset": null,
       "robotAccountId": "7fd5d150-60b1-44e3-adae-126a31530ca6",
       "robotLogin": "1200526962",
@@ -916,7 +916,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD"
+        ]
       }
     },
     {
@@ -1075,7 +1077,8 @@
           "XAUUSD",
           "GBPAUD",
           "USDZAR",
-          "AUDCAD"
+          "AUDCAD",
+          "USDJPY"
         ]
       }
     },
@@ -1640,7 +1643,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "METATRADER"
+          "METATRADER",
+          "METATRADERR"
         ]
       }
     },
@@ -1748,7 +1752,8 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM"
+          "XAUUSDM",
+          "USDJPYM"
         ]
       }
     },
@@ -1816,8 +1821,7 @@
           "USDJPY",
           "GBPJPY",
           "ETHUSD",
-          "EURJPY",
-          "BTCJPYM"
+          "EURJPY"
         ]
       }
     },
