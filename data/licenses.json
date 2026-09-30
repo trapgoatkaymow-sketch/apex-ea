@@ -19,7 +19,7 @@
       "usedAt": 1790710587869,
       "deviceId": "63820fb8-9eff-499e-ae89-e869cf6df823",
       "boundAt": 1790751388559,
-      "updatedAt": 1790751608718,
+      "updatedAt": 1790751620671,
       "scanReset": null,
       "robotAccountId": "10ac0127-0e6f-4459-aa8e-b21c4834637a",
       "robotLogin": "134630186",
@@ -66,7 +66,7 @@
       "usedAt": 1790751423188,
       "deviceId": "63820fb8-9eff-499e-ae89-e869cf6df823",
       "boundAt": 1790751423188,
-      "updatedAt": 1790751608718,
+      "updatedAt": 1790751620671,
       "scanReset": null,
       "robotAccountId": "10ac0127-0e6f-4459-aa8e-b21c4834637a",
       "robotLogin": "134630186",
@@ -641,8 +641,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "EURUSD",
-          "GER30"
+          "EURUSD"
         ]
       }
     },
@@ -3040,8 +3039,7 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM",
-          "USDJPYM"
+          "XAUUSDM"
         ]
       }
     },
@@ -3170,12 +3168,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSDM",
-          "BTCUSD",
-          "BTCUSDM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3242,7 +3235,8 @@
           "USDJPY",
           "GBPJPY",
           "ETHUSD",
-          "EURJPY"
+          "EURJPY",
+          "BTCJPYM"
         ]
       }
     },
@@ -4457,7 +4451,7 @@
       "purchaseCaptureId": "7B146232XJ617320L",
       "purchaseOrderId": "28L92564E12462732",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790749886553,
+      "emailSentAt": 1790749800543,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -5486,7 +5480,9 @@
         "symbols": [
           "XAUUSD",
           "EURUSD",
-          "US30"
+          "US30",
+          "USDJPY",
+          "GOLD"
         ]
       }
     },
