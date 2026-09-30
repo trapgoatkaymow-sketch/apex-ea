@@ -12,7 +12,7 @@ import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import {
   START_SILENT_OPEN_DELAY_MS,
-  formatStartCountdown,
+  formatStartCountdownSeconds,
   listAppPairs,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
@@ -267,7 +267,7 @@ export default function V2Interface() {
                   }
                   countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
                   setStartCountdownMs(START_SILENT_OPEN_DELAY_MS);
-                  setStartStatus("countdown");
+                  setStartStatus("opening");
                   if (silentOpenTimerRef.current) {
                     clearTimeout(silentOpenTimerRef.current);
                     silentOpenTimerRef.current = null;
@@ -279,7 +279,8 @@ export default function V2Interface() {
                     if (silentOpenRunRef.current !== runId) return;
                     void (async () => {
                       setStartStatus("scanning");
-                      setStartCountdownMs(0);
+                      setStartCountdownMs(null);
+                      countdownEndsAtRef.current = 0;
                       const latest = silentOpenCtxRef.current || {};
                       let result;
                       try {
@@ -292,12 +293,12 @@ export default function V2Interface() {
                           getSymbolMeta: latest.getSymbolMeta,
                           publishOrbTrade: latest.publishOrbTrade,
                           variant: "v2",
-                          onProgress: ({ phase, symbol, index, pairCount }) => {
+                          onProgress: ({ phase, symbol }) => {
                             if (silentOpenRunRef.current !== runId) return;
                             if (phase === "scanning") setStartStatus("scanning");
                             else if (phase === "opening") {
                               setStartStatus(
-                                `opening ${symbol || ""} (${index}/${pairCount})`.trim()
+                                symbol ? `placing ${symbol}` : "placing"
                               );
                             }
                           },
@@ -366,10 +367,16 @@ export default function V2Interface() {
             {v2Running && startStatus ? (
               <p className="start-countdown" aria-live="polite">
                 {startStatus === "scanning"
-                  ? "Scanning…"
-                  : startStatus.startsWith("opening")
-                    ? startStatus.replace(/^opening/, "Opening")
-                    : formatStartCountdown(startCountdownMs ?? 0)}
+                  ? "Scanning with OpenAI…"
+                  : startStatus.startsWith("placing")
+                    ? `Opening positions${
+                        startStatus.length > 8
+                          ? ` · ${startStatus.slice(8).trim()}`
+                          : ""
+                      }…`
+                    : `Opening positions · ${formatStartCountdownSeconds(
+                        startCountdownMs ?? 0
+                      )}s`}
               </p>
             ) : (
               <p className="v2-powered-by" aria-label="Powered by apexEA">

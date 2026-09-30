@@ -1,7 +1,7 @@
 /**
  * Silent START → Chart Scanner style open (no scanner UI):
- *   15-minute countdown → OpenAI scan (M30/H1/H4) → open Number of trades
- *   for every pair in Your pairs.
+ *   15s “Opening positions” countdown → OpenAI scan (M30/H1/H4) → open
+ *   Number of trades for every pair in Your pairs.
  *
  * Ladder (same as Chart Scanner):
  *   H4 → TP1 1:1 · TP2 1:2 · TP3 1:3
