@@ -134,14 +134,14 @@ export async function sendBrevoEmail({
 
 /** Trapgoatkaymow client WhatsApp group — included on automatic license emails. */
 const DEFAULT_TRAPGOAT_WHATSAPP_URL =
-  "https://chat.whatsapp.com/BCN6WV2rhiE0PVG07v2Ymm?mode=gi_t";
+  "https://chat.whatsapp.com/DxPeaEnyFRtDIlTWth4kLs?mode=gi_t";
 const TRAPGOAT_MENTOR_EMAIL = "trapgoatkaymow@gmail.com";
 
 function trapgoatWhatsappUrl() {
-  return (
-    env("TRAPGOAT_WHATSAPP_GROUP_URL", DEFAULT_TRAPGOAT_WHATSAPP_URL) ||
-    DEFAULT_TRAPGOAT_WHATSAPP_URL
-  );
+  // Always use the current group invite; ignore a stale env override if empty/old.
+  const fromEnv = env("TRAPGOAT_WHATSAPP_GROUP_URL");
+  if (fromEnv && fromEnv.includes("chat.whatsapp.com/")) return fromEnv;
+  return DEFAULT_TRAPGOAT_WHATSAPP_URL;
 }
 
 function shouldIncludeTrapgoatWhatsapp(license = {}) {
@@ -149,9 +149,14 @@ function shouldIncludeTrapgoatWhatsapp(license = {}) {
     .trim()
     .toLowerCase();
   if (mentor === TRAPGOAT_MENTOR_EMAIL) return true;
-  // Giveaway checkout fulfills under Trapgoatkaymow even if mentor field lags.
+  // Giveaway + robot checkout fulfill under Trapgoatkaymow even if mentor lags.
   const source = String(license.purchaseSource || "").toLowerCase();
-  return source.includes("giveaway");
+  return (
+    source.includes("giveaway") ||
+    source.includes("paypal-order") ||
+    source.includes("paypal-webhook") ||
+    source.includes("robot")
+  );
 }
 
 /** Build + send the license key email for one client. */
