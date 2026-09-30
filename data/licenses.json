@@ -64,7 +64,7 @@
       "usedAt": 1790578652172,
       "deviceId": "74e44991-b419-444c-9ecf-5e813c219ccd",
       "boundAt": 1790578652172,
-      "updatedAt": 1790727165264,
+      "updatedAt": 1790727165829,
       "scanReset": null,
       "robotAccountId": "32c5f260-a2d5-4751-b22c-29d2948a4bfb",
       "robotLogin": "296424201",
@@ -220,9 +220,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "ETHUSD",
-          "ETHUSDM"
+          "USDJYY",
+          "USDJYP",
+          "USDJPYM5",
+          "XAUUSD",
+          "USDJPY"
         ]
       }
     },
@@ -1296,7 +1298,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -2562,7 +2566,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -2777,7 +2784,8 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "EURUSD"
+          "EURUSD",
+          "GER30"
         ]
       }
     },
@@ -2986,7 +2994,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD"
+          "EURUSD",
+          "US30"
         ]
       }
     },
@@ -15224,7 +15233,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "EURUSD"
         ]
       }
     },
@@ -21021,11 +21030,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSDM",
-          "EURUSDM",
-          "BTCUSDM"
-        ]
+        "symbols": []
       }
     },
     {
