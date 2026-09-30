@@ -230,11 +230,26 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
       const body = await readJsonBody(req);
-      const account = await upsertMt5Account(body);
-      // Stamp onto licenses so mentor-trade (separate serverless fn) can see it.
+      // Registry upsert must stay fast — MetaTrader UI arms after this returns.
+      const account = await Promise.race([
+        upsertMt5Account(body),
+        new Promise((_, reject) => {
+          const err = new Error(
+            "Account registry is busy — connection still works, retry sync later"
+          );
+          err.status = 503;
+          setTimeout(() => reject(err), 12_000);
+        }),
+      ]);
+      // Stamp onto licenses so mentor-trade can see it. Cap wait so a slow
+      // licenses durable write cannot 504 the whole connect (was hanging on
+      // "Arming ApexEA trading engine").
       if (account?.accountId && account?.email) {
         try {
-          await setLicenseRobotSession(account.email, account);
+          await Promise.race([
+            setLicenseRobotSession(account.email, account),
+            new Promise((resolve) => setTimeout(resolve, 6_000)),
+          ]);
         } catch {
           // best-effort — registry row still returned
         }

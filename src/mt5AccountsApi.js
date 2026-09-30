@@ -2,16 +2,37 @@ import { apiUrl } from "./apiOrigin.js";
 
 const API_PATH = "/api/mt5-accounts";
 
-async function apiFetch(path = "", { method = "GET", body } = {}) {
-  const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
-    method,
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
+async function apiFetch(
+  path = "",
+  { method = "GET", body, timeoutMs = 15_000 } = {}
+) {
+  const controller = new AbortController();
+  const timer =
+    Number(timeoutMs) > 0
+      ? setTimeout(() => controller.abort(), Number(timeoutMs))
+      : null;
+  let response;
+  try {
+    response = await fetch(`${apiUrl(API_PATH)}${path}`, {
+      method,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (timer) clearTimeout(timer);
+    if (error?.name === "AbortError") {
+      const err = new Error("Account sync timed out — trading still works");
+      err.status = 504;
+      throw err;
+    }
+    throw error;
+  }
+  if (timer) clearTimeout(timer);
   const text = await response.text();
   let data = null;
   try {

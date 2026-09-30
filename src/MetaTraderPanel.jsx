@@ -634,15 +634,18 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
           currency: connected.currency || "",
         });
       }
-      await syncHostedAccount(nextSession, coverEmail);
+      // Never block the arming UI on registry sync — /api/mt5-accounts was
+      // 504ing on license stamps and left clients stuck on this step.
       pushEngineLog("Trading engine armed · MT5 connected");
       showToast(`Connected ${nextSession.company}`);
       setStep("browse");
       setQuery("");
       setResults([]);
       setCreds(emptyLogin);
-      await sleep(700);
       setEngineMode("idle");
+      setConnecting(false);
+      void syncHostedAccount(nextSession, coverEmail);
+      return;
     } catch (error) {
       setEngineMode("idle");
       showToast(error.message || "Connection failed");

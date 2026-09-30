@@ -2927,23 +2927,64 @@ export async function setLicenseRobotSession(email, session = {}) {
     err.status = 400;
     throw err;
   }
+  // Fast skip: mentors / emails with no used license must not trigger a full
+  // licenses durable write — that was hanging MetaTrader on "Arming engine".
+  try {
+    const licenses = await listLicenses({ preferFresh: false });
+    const hasUsed = (Array.isArray(licenses) ? licenses : []).some(
+      (row) => normalizeEmail(row?.clientEmail) === key && row?.used
+    );
+    if (!hasUsed) {
+      return { ok: true, email: key, updated: 0, skipped: true };
+    }
+  } catch {
+    // continue to mutate path
+  }
   const now = Date.now();
   let updated = 0;
+  const nextLogin = String(session.login || "").trim();
+  const nextServer = String(session.server || "").trim();
+  const nextCompany = String(session.company || "").trim();
+  const nextPlatform =
+    String(session.platform || "MT5").trim().toUpperCase() === "MT4"
+      ? "MT4"
+      : "MT5";
+  // Second skip: session already stamped identically — avoid licenses rewrite.
+  try {
+    const licenses = await listLicenses({ preferFresh: false });
+    const needsWrite = (Array.isArray(licenses) ? licenses : []).some((row) => {
+      if (normalizeEmail(row?.clientEmail) !== key || !row?.used) return false;
+      return (
+        String(row.robotAccountId || "").trim() !== accountId ||
+        String(row.robotLogin || "").trim() !== nextLogin ||
+        String(row.robotServer || "").trim() !== nextServer
+      );
+    });
+    if (!needsWrite) {
+      return { ok: true, email: key, updated: 0, skipped: true };
+    }
+  } catch {
+    // continue
+  }
   await mutateStore((licenses) => {
     for (let i = 0; i < licenses.length; i += 1) {
       if (normalizeEmail(licenses[i]?.clientEmail) !== key) continue;
       // Only stamp used keys — unused inventory must not flip to "Connected".
       if (!licenses[i]?.used) continue;
+      if (
+        String(licenses[i].robotAccountId || "").trim() === accountId &&
+        String(licenses[i].robotLogin || "").trim() === nextLogin &&
+        String(licenses[i].robotServer || "").trim() === nextServer
+      ) {
+        continue;
+      }
       licenses[i] = {
         ...licenses[i],
         robotAccountId: accountId,
-        robotLogin: String(session.login || "").trim(),
-        robotServer: String(session.server || "").trim(),
-        robotCompany: String(session.company || "").trim(),
-        robotPlatform:
-          String(session.platform || "MT5").trim().toUpperCase() === "MT4"
-            ? "MT4"
-            : "MT5",
+        robotLogin: nextLogin,
+        robotServer: nextServer,
+        robotCompany: nextCompany,
+        robotPlatform: nextPlatform,
         robotConnectedAt: Number(session.connectedAt) || now,
         updatedAt: now,
       };
