@@ -1325,7 +1325,12 @@ html:has(.phone[data-interface="v2"]) body {
   grid-template-columns: 1fr auto;
   gap: 10px;
   align-items: end;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
+}
+
+.pairs-custom-hint {
+  margin: 0 0 18px !important;
+  color: rgba(255, 255, 255, 0.58) !important;
 }
 
 .pairs-field {
