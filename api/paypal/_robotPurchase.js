@@ -103,10 +103,10 @@ let memoryGiveawayWindow = null;
 /** Display-only urgency window — checkout stays open after this elapses. */
 export const GIVEAWAY_COUNTDOWN_HOURS = Math.max(
   1,
-  Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 10
+  Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 17
 );
 /** Bump to force a fresh on-page countdown latch (checkout stays open). */
-export const GIVEAWAY_COUNTDOWN_VERSION = 3;
+export const GIVEAWAY_COUNTDOWN_VERSION = 4;
 
 function countdownFromLatched(row) {
   const ms = Date.parse(String(row?.countdownEndsAt || "").trim());
@@ -433,12 +433,12 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
   const durationMs = Math.max(latched.durationMs || 0, GIVEAWAY_DURATION_MS);
   let countdownEndsAtMs = latched.countdownEndsAtMs;
   const storedVersion = Number(latched.countdownVersion) || 0;
-  // Version bump (2 = 10h display) latches a fresh countdown once per bump.
+  // Version bump latches a fresh countdown once per bump (v4 = +17h).
   if (
     !Number.isFinite(countdownEndsAtMs) ||
     storedVersion < GIVEAWAY_COUNTDOWN_VERSION
   ) {
-    // v3+: prefer packaged absolute countdown (e.g. +12h extend) over a 10h reset.
+    // Prefer packaged absolute countdown when still in the future.
     try {
       const fs = await import("fs");
       const path = await import("path");
@@ -467,7 +467,8 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
               countdownSetAt: new Date(nowMs).toISOString(),
               countdownVersion: GIVEAWAY_COUNTDOWN_VERSION,
               extendedAt: new Date(nowMs).toISOString(),
-              extendedByHours: Number(packaged.extendedByHours) || 12,
+              extendedByHours:
+                Number(packaged.extendedByHours) || GIVEAWAY_COUNTDOWN_HOURS,
               extendedByDays: 0,
             },
             "chore: latch packaged giveaway countdown"
@@ -483,9 +484,7 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
     } catch {
       // fall through
     }
-    if (Number.isFinite(countdownEndsAtMs) && storedVersion < GIVEAWAY_COUNTDOWN_VERSION) {
-      return await extendGiveawayCountdownByHours(12, nowMs);
-    }
+    // Fresh 17h display from deploy time (timer was at zero).
     return await setGiveawayCountdownHours(GIVEAWAY_COUNTDOWN_HOURS, nowMs);
   }
   if (durationMs > (latched.durationMs || 0)) {
