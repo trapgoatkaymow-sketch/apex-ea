@@ -37,7 +37,7 @@
         "US30",
         "US30.F"
       ],
-      "clientSymbolsUpdatedAt": 1790782253155,
+      "clientSymbolsUpdatedAt": 1790802691254,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -5202,7 +5202,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -6335,8 +6338,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "GOLD"
+          "GBPJPY"
         ]
       }
     },
@@ -9441,7 +9443,8 @@
         "strategy": "scalper",
         "symbols": [
           "BTCUSDX",
-          "XAUUSD"
+          "XAUUSD",
+          "XAUUSF"
         ]
       }
     },
@@ -12717,7 +12720,8 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSD"
+          "XAUUSD",
+          "XAAUSD"
         ]
       }
     },
