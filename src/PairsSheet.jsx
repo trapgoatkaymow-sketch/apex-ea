@@ -14,10 +14,17 @@ export default function PairsSheet() {
   const [query, setQuery] = useState("");
   const [custom, setCustom] = useState("");
 
-  const selected = useMemo(
-    () => catalog.filter((s) => appSymbols.has(s)),
-    [catalog, appSymbols]
-  );
+  // Include typed custom broker symbols even if catalog state lags behind.
+  const selected = useMemo(() => {
+    const fromCatalog = catalog.filter((s) => appSymbols.has(s));
+    const extras = Array.from(appSymbols).filter(
+      (s) =>
+        !fromCatalog.some(
+          (c) => String(c).toLowerCase() === String(s).toLowerCase()
+        )
+    );
+    return [...fromCatalog, ...extras];
+  }, [catalog, appSymbols]);
 
   const available = useMemo(() => {
     const q = String(query || "")
@@ -71,16 +78,18 @@ export default function PairsSheet() {
 
         <form className="pairs-add-row" onSubmit={handleAddCustom}>
           <label className="pairs-field">
-            <span>Add a pair</span>
+            <span>Type your broker symbol</span>
             <input
               type="text"
               value={custom}
-              onChange={(e) => setCustom(e.target.value.toUpperCase())}
-              placeholder="e.g. XAUUSD or EURUSD"
-              autoCapitalize="characters"
+              onChange={(e) => setCustom(e.target.value.replace(/\s+/g, ""))}
+              placeholder="e.g. XAUUSDm, EURUSD.r, .US30."
+              autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
               enterKeyHint="done"
+              inputMode="text"
+              autoComplete="off"
             />
           </label>
           <button
@@ -91,6 +100,10 @@ export default function PairsSheet() {
             Add
           </button>
         </form>
+        <p className="pairs-note pairs-custom-hint">
+          Can’t find your pair? Type the exact symbol from your broker, then tap Add
+          — you can edit lot size and trades after.
+        </p>
 
         <section className="pairs-section">
           <div className="pairs-section-head">
