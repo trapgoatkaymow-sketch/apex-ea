@@ -19,20 +19,20 @@
       "usedAt": 1790808215493,
       "deviceId": "7f69a6c1-abde-4032-843d-143b1d36bb70",
       "boundAt": 1790808450035,
-      "updatedAt": 1790808960492,
+      "updatedAt": 1790808969952,
       "scanReset": null,
-      "robotAccountId": "2a1eb594-1f9e-409b-92f7-fc957bc404d0",
-      "robotLogin": "41537829",
-      "robotServer": "OctaFX-Real",
-      "robotCompany": "Octa Markets Incorporated",
+      "robotAccountId": "a695852a-b824-4bba-af86-a30ed51c9262",
+      "robotLogin": "2002538145",
+      "robotServer": "JustMarkets-Live",
+      "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790808713111,
+      "robotConnectedAt": 1790808458040,
       "clientSymbols": [
         "XAUUSD",
         "US30",
         ".US30."
       ],
-      "clientSymbolsUpdatedAt": 1790808960492,
+      "clientSymbolsUpdatedAt": 1790808969952,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "4BA37370XN399313V",
       "purchaseOrderId": "7H808665NN656440B",
@@ -9925,7 +9925,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -41310,11 +41314,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
