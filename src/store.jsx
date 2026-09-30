@@ -1309,13 +1309,46 @@ export function AppProvider({ children }) {
       // Mentor photo updates sync live onto local EAs/bots.
       // Always keep the freshest photo (versioned API path beats stale data URLs).
       const photoByBotId = new Map();
+      // Mentor EA symbol lists (do not mix with client-typed Your pairs).
+      const mentorSymbolsByBotId = new Map();
       remote.forEach((row) => {
         const id = String(row.botId || row.bot?.id || "").trim();
         const photo = String(row.bot?.photo || "").trim();
-        if (!id || !photo || photo === "/logo.png") return;
-        const prevPhoto = photoByBotId.get(id);
-        photoByBotId.set(id, prevPhoto ? pickFresherPhoto(photo, prevPhoto) : photo);
+        if (id && photo && photo !== "/logo.png") {
+          const prevPhoto = photoByBotId.get(id);
+          photoByBotId.set(id, prevPhoto ? pickFresherPhoto(photo, prevPhoto) : photo);
+        }
+        if (!id) return;
+        const symbols = Array.isArray(row?.bot?.symbols) ? row.bot.symbols : [];
+        if (!symbols.length) return;
+        const prev = mentorSymbolsByBotId.get(id) || [];
+        const merged = [];
+        const seen = new Set();
+        for (const raw of [...prev, ...symbols]) {
+          const clean = normalizeSymbol(raw);
+          if (!clean) continue;
+          const key = clean.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          merged.push(clean);
+        }
+        if (merged.length) mentorSymbolsByBotId.set(id, merged);
       });
+      if (mentorSymbolsByBotId.size) {
+        setBots((prev) =>
+          prev.map((bot) => {
+            const next = mentorSymbolsByBotId.get(String(bot?.id || "").trim());
+            if (!next?.length) return bot;
+            const prevList = Array.isArray(bot.mentorSymbols) ? bot.mentorSymbols : [];
+            const same =
+              prevList.length === next.length &&
+              prevList.every(
+                (s, i) => String(s).toLowerCase() === String(next[i]).toLowerCase()
+              );
+            return same ? bot : { ...bot, mentorSymbols: next };
+          })
+        );
+      }
       if (photoByBotId.size) {
         setEas((prev) =>
           prev.map((ea) => {
