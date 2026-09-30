@@ -63,14 +63,14 @@
       "usedAt": 1790726331095,
       "deviceId": "4487242a-55bf-4ee9-80d0-fd2897039be4",
       "boundAt": 1790764762104,
-      "updatedAt": 1790810564292,
+      "updatedAt": 1790810572942,
       "scanReset": null,
-      "robotAccountId": "d8f91ac7-76b0-4613-aade-7eb0eadc1490",
+      "robotAccountId": "5c50ed03-11a9-48f1-902a-e0310afa037f",
       "robotLogin": "1285348",
       "robotServer": "PXBTTrading-1",
       "robotCompany": "PrimeXBT (Pty) Ltd",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790754905375,
+      "robotConnectedAt": 1790810561396,
       "clientSymbols": [
         "XAUUSD",
         "BTCUSD",
@@ -620,7 +620,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -4508,7 +4510,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -6732,7 +6738,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "GOLD"
+          ".US30."
         ]
       }
     },
