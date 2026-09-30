@@ -256,10 +256,12 @@ export function normalizeLicense(row) {
       const raw = row?.scanReset;
       if (!raw || typeof raw !== "object") return null;
       const day = String(raw.day || "").trim();
+      const dayUtc = String(raw.dayUtc || "").trim();
       const resetAt = Number(raw.resetAt) || 0;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !resetAt) return null;
       return {
         day,
+        ...( /^\d{4}-\d{2}-\d{2}$/.test(dayUtc) ? { dayUtc } : {}),
         resetAt,
         grantedBy: String(raw.grantedBy || "")
           .trim()

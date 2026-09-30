@@ -1464,6 +1464,27 @@ export function AppProvider({ children }) {
     };
   }, [refreshLicenses]);
 
+  // When super-admin resets daily charts, apply the grant as soon as licenses update.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { applyRemoteScanGrant, pickLatestScanGrant } = await import(
+          "./scanQuota.js"
+        );
+        if (cancelled) return;
+        const grant = pickLatestScanGrant(licenseKeys);
+        if (!grant) return;
+        applyRemoteScanGrant(grant);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [licenseKeys]);
+
   // If mentor uploaded a photo after the license was issued (still /logo.png on
   // the key), upgrade local bots/EAs when the photo API starts serving bytes.
   // Also try sibling botIds that share the same EA name (older keys).
@@ -3009,6 +3030,7 @@ export function AppProvider({ children }) {
       const allowedAdmins = new Set([
         normalizeEmail(SUPER_ADMIN_EMAIL),
         "trapgoatkaymow@gmail.com",
+        "trapgoatkaymow22@icloud.com",
       ]);
       if (!actor || !allowedAdmins.has(actor)) {
         showToast("Only super admin can reset client daily charts");
@@ -3016,9 +3038,20 @@ export function AppProvider({ children }) {
       }
       try {
         const remote = await resetClientScansRemote(key, { adminEmail: actor });
-        if (remote) setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
-        showToast("Daily charts reset for today — client can analyze again");
-        return remote;
+        if (remote) {
+          setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
+          // Apply the grant on this device too (admin often tests the same key).
+          try {
+            const { applyRemoteScanGrant } = await import("./scanQuota.js");
+            applyRemoteScanGrant(remote.scanReset);
+          } catch {
+            // ignore
+          }
+          showToast("Daily charts reset for today — client can analyze again");
+          return remote;
+        }
+        showToast("Could not reset daily charts");
+        return null;
       } catch (error) {
         showToast(error.message || "Could not reset daily charts");
         return null;

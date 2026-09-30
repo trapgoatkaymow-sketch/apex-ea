@@ -131,9 +131,14 @@ function grantIsForToday(grant) {
   if (!resetAt) return false;
   const today = todayKey();
   const stamped = String(grant.day || "").trim();
-  // Accept either the stamped day or the local calendar day of resetAt so
-  // UTC server stamps still apply for SA (UTC+2) overnight windows.
-  return stamped === today || localDayFromTs(resetAt) === today;
+  const stampedUtc = String(grant.dayUtc || "").trim();
+  // Accept SA day, UTC day, or the local calendar day of resetAt so
+  // overnight timezone skew cannot block a fresh admin reset.
+  return (
+    stamped === today ||
+    stampedUtc === today ||
+    localDayFromTs(resetAt) === today
+  );
 }
 
 /**

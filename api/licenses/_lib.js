@@ -2688,24 +2688,30 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
   const allowedAdmin =
     admin &&
-    (admin === superAdmin || admin === "trapgoatkaymow@gmail.com");
+    (admin === superAdmin ||
+      admin === "trapgoatkaymow@gmail.com" ||
+      admin === "trapgoatkaymow22@icloud.com");
   if (!allowedAdmin) {
     const err = new Error("Only super admin can reset client daily scans");
     err.status = 403;
     throw err;
   }
 
-  // Stamp the day in Africa/Johannesburg (UTC+2, no DST) so it matches
-  // client localStorage quota days for the primary SA audience.
-  const now = new Date();
-  const saMs = now.getTime() + 2 * 60 * 60 * 1000;
-  const sa = new Date(saMs);
+  // Stamp both SA (UTC+2) and UTC calendar days so client grant matching
+  // works whether the phone is on SA time or UTC overnight.
+  const now = Date.now();
+  const sa = new Date(now + 2 * 60 * 60 * 1000);
+  const utc = new Date(now);
   const day = `${sa.getUTCFullYear()}-${String(sa.getUTCMonth() + 1).padStart(2, "0")}-${String(
     sa.getUTCDate()
   ).padStart(2, "0")}`;
+  const dayUtc = `${utc.getUTCFullYear()}-${String(utc.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    utc.getUTCDate()
+  ).padStart(2, "0")}`;
   const scanReset = {
     day,
-    resetAt: Date.now(),
+    dayUtc,
+    resetAt: now,
     grantedBy: admin,
   };
 
@@ -2720,20 +2726,20 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
     licenses[idx] = {
       ...licenses[idx],
       scanReset,
-      updatedAt: Date.now(),
+      updatedAt: now,
     };
     result = licenses[idx];
     return licenses;
   }, `scan reset granted: ${formattedKey}`);
 
+  // Prefer durable, but don't fail the admin UI if GitHub is slow — kick a
+  // background mirror so clients can still pick up the grant shortly after.
   if (write?.durable === false) {
-    const err = new Error(
-      String(write?.error || "").trim()
-        ? `Could not reset scans (${write.error})`
-        : "Could not reset scans — try again"
-    );
-    err.status = 503;
-    throw err;
+    try {
+      void mirrorLicensesToDurableStores();
+    } catch {
+      // best-effort
+    }
   }
 
   return result;

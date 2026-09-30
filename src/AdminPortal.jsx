@@ -447,10 +447,28 @@ export default function AdminPortal() {
     setLicenseActionBusy(actionKey);
     try {
       const result = await resetClientScans?.(key, {
-        adminEmail: adminSession?.email || "",
+        adminEmail: adminSession?.email || SUPER_ADMIN_EMAIL || "",
       });
-      if (result) await refreshLicenses?.();
+      if (result) {
+        // Update the open license sheet immediately — don't wait on a full
+        // license-list refresh (that was leaving the button stuck on
+        // "Resetting charts…" for a long time).
+        if (latestKey === key) {
+          setLatestLicenseMeta((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  scanReset: result.scanReset || prev.scanReset || null,
+                }
+              : prev
+          );
+        }
+        void refreshLicenses?.();
+      }
       return result;
+    } catch (error) {
+      showToast(error?.message || "Could not reset daily charts");
+      return null;
     } finally {
       setLicenseActionBusy("");
     }
