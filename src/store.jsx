@@ -44,6 +44,7 @@ import {
   filterOutDeletedLicenses,
   resetClientScansRemote,
   syncClientEaSymbolsRemote,
+  syncMentorBotSymbolsRemote,
 } from "./licensesApi.js";
 import { getOrCreateDeviceId } from "./deviceId.js";
 import {
@@ -822,6 +823,42 @@ export function AppProvider({ children }) {
     };
   }, [adminOpen]);
 
+  // When mentor portal is open, push each EA's symbol list onto all licenses
+  // so client Browse & add shows the live mentor template (not a stale union).
+  const mentorSymbolSyncRef = useRef("");
+  useEffect(() => {
+    if (!adminOpen) return undefined;
+    const list = Array.isArray(eas) ? eas : [];
+    if (!list.length) return undefined;
+    const signature = list
+      .map((ea) => {
+        const id = String(ea?.id || "").trim();
+        const syms = (Array.isArray(ea?.symbols) ? ea.symbols : [])
+          .map((s) => String(s || "").trim().toUpperCase())
+          .filter(Boolean)
+          .join(",");
+        return `${id}:${syms}`;
+      })
+      .sort()
+      .join("|");
+    if (!signature || mentorSymbolSyncRef.current === signature) return undefined;
+    mentorSymbolSyncRef.current = signature;
+    const timer = setTimeout(() => {
+      list.forEach((ea) => {
+        const id = String(ea?.id || "").trim();
+        const symbols = Array.isArray(ea?.symbols) ? ea.symbols : [];
+        if (!id || !symbols.length) return;
+        void syncMentorBotSymbolsRemote(id, symbols, {
+          mentorEmail: ea.ownerEmail || "",
+          name: ea.name || "",
+          photo: ea.photo || "",
+          strategy: ea.strategy || "",
+        }).catch(() => {});
+      });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [adminOpen, eas]);
+
   const setMt5Session = useCallback((session) => {
     setMt5SessionState(session);
     persistMt5Session(session);
@@ -1309,8 +1346,11 @@ export function AppProvider({ children }) {
       // Mentor photo updates sync live onto local EAs/bots.
       // Always keep the freshest photo (versioned API path beats stale data URLs).
       const photoByBotId = new Map();
-      // Mentor EA symbol lists (do not mix with client-typed Your pairs).
+      // Mentor EA template per bot — NEVER union every license (that mixed in
+      // every client's typed pairs after an older client-symbols bug).
+      // Prefer: this phone's activated key → newest mentorSymbolsSyncedAt → newest row.
       const mentorSymbolsByBotId = new Map();
+      const mentorSymbolsRank = new Map();
       remote.forEach((row) => {
         const id = String(row.botId || row.bot?.id || "").trim();
         const photo = String(row.bot?.photo || "").trim();
@@ -1321,23 +1361,57 @@ export function AppProvider({ children }) {
         if (!id) return;
         const symbols = Array.isArray(row?.bot?.symbols) ? row.bot.symbols : [];
         if (!symbols.length) return;
-        const prev = mentorSymbolsByBotId.get(id) || [];
-        const merged = [];
+        const clean = [];
         const seen = new Set();
-        for (const raw of [...prev, ...symbols]) {
-          const clean = normalizeSymbol(raw);
-          if (!clean) continue;
-          const key = clean.toLowerCase();
+        for (const raw of symbols) {
+          const sym = normalizeSymbol(raw);
+          if (!sym) continue;
+          const key = sym.toLowerCase();
           if (seen.has(key)) continue;
           seen.add(key);
-          merged.push(clean);
+          clean.push(sym);
         }
-        if (merged.length) mentorSymbolsByBotId.set(id, merged);
+        if (!clean.length) return;
+        const rowKey = normalizeLicenseKey(row?.key);
+        const syncedAt = Number(row?.mentorSymbolsSyncedAt) || 0;
+        const updatedAt = Number(row?.updatedAt || row?.createdAt) || 0;
+        const rank = syncedAt * 1e6 + updatedAt;
+        const prevRank = mentorSymbolsRank.get(id) || 0;
+        // First pass: keep highest rank. Activated key wins later in setBots.
+        if (!mentorSymbolsByBotId.has(id) || rank >= prevRank) {
+          mentorSymbolsByBotId.set(id, { symbols: clean, key: rowKey, rank });
+          mentorSymbolsRank.set(id, rank);
+        }
       });
       if (mentorSymbolsByBotId.size) {
         setBots((prev) =>
           prev.map((bot) => {
-            const next = mentorSymbolsByBotId.get(String(bot?.id || "").trim());
+            const botId = String(bot?.id || "").trim();
+            const cover = normalizeLicenseKey(bot?.licenseKey);
+            let next = mentorSymbolsByBotId.get(botId)?.symbols || null;
+            // Prefer the exact license this phone activated with.
+            if (cover) {
+              const mine = remote.find(
+                (row) =>
+                  String(row?.botId || row?.bot?.id || "").trim() === botId &&
+                  normalizeLicenseKey(row?.key) === cover &&
+                  Array.isArray(row?.bot?.symbols) &&
+                  row.bot.symbols.length
+              );
+              if (mine) {
+                const clean = [];
+                const seen = new Set();
+                for (const raw of mine.bot.symbols) {
+                  const sym = normalizeSymbol(raw);
+                  if (!sym) continue;
+                  const key = sym.toLowerCase();
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  clean.push(sym);
+                }
+                if (clean.length) next = clean;
+              }
+            }
             if (!next?.length) return bot;
             const prevList = Array.isArray(bot.mentorSymbols) ? bot.mentorSymbols : [];
             const same =
@@ -2195,7 +2269,15 @@ export function AppProvider({ children }) {
         );
         setBots((prev) =>
           prev.map((bot) =>
-            bot.id === id ? { ...bot, name, photo: statePhoto, active: true } : bot
+            bot.id === id
+              ? {
+                  ...bot,
+                  name,
+                  photo: statePhoto,
+                  active: true,
+                  mentorSymbols: cleanSymbols,
+                }
+              : bot
           )
         );
         setLicenseKeys((prev) =>
@@ -2206,20 +2288,37 @@ export function AppProvider({ children }) {
               ...row,
               botName: name || row.botName,
               updatedAt: Date.now(),
+              mentorSymbolsSyncedAt: Date.now(),
               bot: {
                 ...(row.bot || { id, name, strategy: "scalper", symbols: [] }),
                 id,
                 name: name || row.bot?.name || row.botName || "Bot",
                 photo: licensePhoto,
+                strategy: strategy || row.bot?.strategy || "scalper",
+                // Mentor EA template — Browse & add reads this, not client pairs.
+                symbols: cleanSymbols,
               },
             };
           })
         );
         showToast(`${name} profile updated`);
-        // Pull the rewritten license photos quickly so client apps sync.
-        window.setTimeout(() => {
-          void refreshLicenses();
-        }, 400);
+        // Push mentor symbols to every client license for this EA.
+        void syncMentorBotSymbolsRemote(id, cleanSymbols, {
+          mentorEmail: owner.ownerEmail,
+          name,
+          photo: licensePhoto,
+          strategy,
+        })
+          .then(() => {
+            window.setTimeout(() => {
+              void refreshLicenses();
+            }, 400);
+          })
+          .catch(() => {
+            window.setTimeout(() => {
+              void refreshLicenses();
+            }, 400);
+          });
       } else {
         setEas((prev) => [
           {
@@ -2240,9 +2339,16 @@ export function AppProvider({ children }) {
             photo: statePhoto,
             active: true,
             selected: true,
+            mentorSymbols: cleanSymbols,
           },
         ]);
         showToast(`${name} created`);
+        void syncMentorBotSymbolsRemote(botId, cleanSymbols, {
+          mentorEmail: owner.ownerEmail,
+          name,
+          photo: licensePhoto,
+          strategy,
+        }).catch(() => {});
       }
       setEditingEaId(null);
       return true;

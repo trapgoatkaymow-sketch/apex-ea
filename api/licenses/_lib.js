@@ -2860,6 +2860,7 @@ export function sendJson(res, status, payload) {
 /**
  * Persist the client's allowed EA pairs onto their used license rows so mentor
  * Self Hosting can refuse symbols that are not on that EA ("Your pairs").
+ * Never overwrites bot.symbols — that list is the mentor EA template.
  */
 export async function setLicenseClientSymbols(
   email,
@@ -2891,24 +2892,9 @@ export async function setLicenseClientSymbols(
       if (wantKey && normalizeLicenseKey(row.key) !== wantKey) continue;
       const rowBot = String(row.botId || row.bot?.id || "").trim();
       if (wantBot && rowBot && rowBot !== wantBot) continue;
-      const prevBot =
-        row.bot && typeof row.bot === "object"
-          ? row.bot
-          : {
-              id: rowBot,
-              name: row.botName || "Bot",
-              photo: "/logo.png",
-              strategy: "scalper",
-              symbols: [],
-            };
       licenses[i] = {
         ...row,
-        bot: {
-          ...prevBot,
-          id: prevBot.id || rowBot,
-          name: prevBot.name || row.botName || "Bot",
-          symbols: cleanSymbols,
-        },
+        // Keep mentor bot.symbols untouched — client pairs live only here.
         clientSymbols: cleanSymbols,
         clientSymbolsUpdatedAt: now,
         updatedAt: now,
@@ -2918,6 +2904,74 @@ export async function setLicenseClientSymbols(
     return licenses;
   }, `chore: client EA symbols ${key} (${cleanSymbols.length})`);
   return { ok: true, email: key, updated, symbols: cleanSymbols };
+}
+
+/**
+ * Rewrite mentor EA template symbols onto every license for this botId.
+ * Used when a mentor saves Create/Edit EA so Browse & add shows the live list.
+ */
+export async function syncMentorBotSymbols(
+  botId,
+  symbols = [],
+  { mentorEmail = "", name = "", photo = "", strategy = "" } = {}
+) {
+  const id = String(botId || "").trim();
+  if (!id) {
+    const err = new Error("botId is required");
+    err.status = 400;
+    throw err;
+  }
+  const cleanSymbols = [
+    ...new Set(
+      (Array.isArray(symbols) ? symbols : [])
+        .map((s) => String(s || "").trim().toUpperCase())
+        .filter(Boolean)
+    ),
+  ];
+  const owner = normalizeEmail(mentorEmail);
+  const botName = String(name || "").trim();
+  const botPhoto = String(photo || "").trim();
+  const botStrategy = String(strategy || "").trim();
+  const now = Date.now();
+  let updated = 0;
+  await mutateStore((licenses) => {
+    for (let i = 0; i < licenses.length; i += 1) {
+      const row = licenses[i];
+      const rowBot = String(row?.botId || row?.bot?.id || "").trim();
+      if (rowBot !== id) continue;
+      if (owner) {
+        const rowOwner = normalizeEmail(row?.mentorEmail || row?.ownerEmail);
+        if (rowOwner && rowOwner !== owner) continue;
+      }
+      const prevBot =
+        row.bot && typeof row.bot === "object"
+          ? row.bot
+          : {
+              id,
+              name: row.botName || "Bot",
+              photo: "/logo.png",
+              strategy: "scalper",
+              symbols: [],
+            };
+      licenses[i] = {
+        ...row,
+        botName: botName || row.botName || prevBot.name || "Bot",
+        bot: {
+          ...prevBot,
+          id,
+          name: botName || prevBot.name || row.botName || "Bot",
+          ...(botPhoto ? { photo: botPhoto } : {}),
+          ...(botStrategy ? { strategy: botStrategy } : {}),
+          symbols: cleanSymbols,
+        },
+        mentorSymbolsSyncedAt: now,
+        updatedAt: now,
+      };
+      updated += 1;
+    }
+    return licenses;
+  }, `chore: mentor EA symbols ${id} (${cleanSymbols.length})`);
+  return { ok: true, botId: id, updated, symbols: cleanSymbols };
 }
 
 /**

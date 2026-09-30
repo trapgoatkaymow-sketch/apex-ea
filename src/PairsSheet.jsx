@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useApp } from "./store.jsx";
+import { normalizeLicenseKey } from "./licensesApi.js";
 
 export default function PairsSheet() {
   const {
@@ -17,33 +18,54 @@ export default function PairsSheet() {
   const [custom, setCustom] = useState("");
 
   // Mentor-authored symbols ONLY — never the global catalog / client-typed pairs.
-  // Prefer a stamped mentorSymbols list, then license.bot.symbols (server).
-  // Do NOT fall back to activeBot.symbols (that list gets client additions).
+  // Prefer stamped mentorSymbols, then THIS phone's activated license.bot.symbols.
+  // Do NOT flatMap every license for the bot (that mixed in other clients' pairs).
   const mentorSymbols = useMemo(() => {
     const botId = String(activeBot?.id || "").trim();
-    const cover = String(activeBot?.licenseKey || "").trim().toUpperCase();
-    const rows = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
-      (row) => String(row?.botId || row?.bot?.id || "").trim() === botId
-    );
-    // Prefer the license this phone activated with, then any row that still
-    // has mentor symbols stamped on the bot.
-    const ranked = [...rows].sort((a, b) => {
-      const aKey = String(a?.key || "").trim().toUpperCase();
-      const bKey = String(b?.key || "").trim().toUpperCase();
-      const aMine = cover && aKey === cover ? 1 : 0;
-      const bMine = cover && bKey === cover ? 1 : 0;
-      if (aMine !== bMine) return bMine - aMine;
-      const aLen = Array.isArray(a?.bot?.symbols) ? a.bot.symbols.length : 0;
-      const bLen = Array.isArray(b?.bot?.symbols) ? b.bot.symbols.length : 0;
-      return bLen - aLen;
-    });
+    const cover = normalizeLicenseKey(activeBot?.licenseKey);
     const fromStamp = Array.isArray(activeBot?.mentorSymbols)
       ? activeBot.mentorSymbols
       : [];
-    const fromLicense = ranked.flatMap((row) =>
-      Array.isArray(row?.bot?.symbols) ? row.bot.symbols : []
+
+    let fromLicense = [];
+    const rows = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
+      (row) => String(row?.botId || row?.bot?.id || "").trim() === botId
     );
-    const raw = fromStamp.length ? fromStamp : fromLicense;
+    const mine =
+      (cover &&
+        rows.find((row) => normalizeLicenseKey(row?.key) === cover)) ||
+      null;
+    if (mine && Array.isArray(mine?.bot?.symbols) && mine.bot.symbols.length) {
+      fromLicense = mine.bot.symbols;
+    } else {
+      // Newest mentor-synced / updated row only — never a union of all keys.
+      const ranked = [...rows].sort((a, b) => {
+        const aSync = Number(a?.mentorSymbolsSyncedAt) || 0;
+        const bSync = Number(b?.mentorSymbolsSyncedAt) || 0;
+        if (aSync !== bSync) return bSync - aSync;
+        return (
+          Number(b?.updatedAt || b?.createdAt || 0) -
+          Number(a?.updatedAt || a?.createdAt || 0)
+        );
+      });
+      const best = ranked.find(
+        (row) => Array.isArray(row?.bot?.symbols) && row.bot.symbols.length
+      );
+      fromLicense = best?.bot?.symbols || [];
+    }
+
+    // Prefer the shorter mentor template when stamp was polluted by an old
+    // union merge (stamp huge, activated license already rewritten to 3).
+    let raw = fromStamp;
+    if (
+      fromLicense.length &&
+      (!fromStamp.length ||
+        (fromStamp.length > fromLicense.length && fromLicense.length <= 40))
+    ) {
+      raw = fromLicense;
+    }
+    if (!raw.length) raw = fromLicense;
+
     const out = [];
     const seen = new Set();
     for (const rawSym of raw) {

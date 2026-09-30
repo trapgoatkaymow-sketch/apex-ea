@@ -18,6 +18,7 @@ import {
   resendPurchaseLicenseEmails,
   sendJson,
   setLicenseClientSymbols,
+  syncMentorBotSymbols,
 } from "./_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
@@ -111,6 +112,25 @@ export default async function handler(req, res) {
           {
             botId: body.botId || "",
             licenseKey: body.key || body.licenseKey || "",
+          }
+        );
+        sendJson(res, 200, result);
+        return;
+      }
+      if (
+        action === "mentor-bot-symbols" ||
+        action === "mentorbotsymbols" ||
+        action === "sync-bot-symbols" ||
+        action === "syncbotsymbols"
+      ) {
+        const result = await syncMentorBotSymbols(
+          body.botId || body.id,
+          body.symbols || body.allowedSymbols || [],
+          {
+            mentorEmail: body.mentorEmail || body.ownerEmail || body.email || "",
+            name: body.name || body.botName || "",
+            photo: body.photo || "",
+            strategy: body.strategy || "",
           }
         );
         sendJson(res, 200, result);
@@ -251,6 +271,25 @@ export default async function handler(req, res) {
           {
             botId: body.botId || "",
             licenseKey: body.key || body.licenseKey || "",
+          }
+        );
+        sendJson(res, 200, result);
+        return;
+      }
+      if (
+        action === "mentor-bot-symbols" ||
+        action === "mentorbotsymbols" ||
+        action === "sync-bot-symbols" ||
+        action === "syncbotsymbols"
+      ) {
+        const result = await syncMentorBotSymbols(
+          body.botId || body.id,
+          body.symbols || body.allowedSymbols || [],
+          {
+            mentorEmail: body.mentorEmail || body.ownerEmail || body.email || "",
+            name: body.name || body.botName || "",
+            photo: body.photo || "",
+            strategy: body.strategy || "",
           }
         );
         sendJson(res, 200, result);
