@@ -425,14 +425,14 @@
       "usedAt": 1790007174642,
       "deviceId": "5c0db841-1f82-4d25-8677-71f0b535765a",
       "boundAt": 1790007174642,
-      "updatedAt": 1790727665667,
+      "updatedAt": 1790727670556,
       "scanReset": null,
-      "robotAccountId": "784fde6f-7d57-4ff0-b793-09f64e21a95e",
+      "robotAccountId": "94a05fdf-49b8-4107-a6ef-9497cb87da23",
       "robotLogin": "503793",
       "robotServer": "RCGMarkets-Real",
       "robotCompany": "RCG Markets (Pty) Ltd",
       "robotPlatform": "MT4",
-      "robotConnectedAt": 1790727663070,
+      "robotConnectedAt": 1790586531695,
       "clientSymbols": [
         "XAUUSD",
         "BTCUSD",
@@ -442,7 +442,7 @@
         "EURUSD",
         "USDJPY"
       ],
-      "clientSymbolsUpdatedAt": 1790727651659,
+      "clientSymbolsUpdatedAt": 1790727670556,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -9071,11 +9071,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -19854,10 +19850,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD",
-          "GBPUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -47716,6 +47709,7 @@
         "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSD",
           "EURUSD",
           "GBPUSD",
           "USDJPY",
