@@ -19,7 +19,7 @@
       "usedAt": 1790719138864,
       "deviceId": "82b4558c-a364-48ba-a9c2-a7e73d127f18",
       "boundAt": 1790719138864,
-      "updatedAt": 1790760172527,
+      "updatedAt": 1790760179274,
       "scanReset": null,
       "robotAccountId": "15c587f8-c2a2-4d20-acfc-b0b21e4c4cc5",
       "robotLogin": "477153217",
@@ -408,7 +408,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -588,7 +590,12 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          ".US30."
+          ".US30.",
+          "GOLDMICRO",
+          "US30CASH",
+          "GOLD",
+          "BTCUSD",
+          "EURUSD"
         ]
       }
     },
@@ -1606,7 +1613,10 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "GOLDM"
+          "XAUUSD",
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
         ]
       }
     },
@@ -2113,9 +2123,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "XXUSD",
-          "GOLD"
+          "XAUUSD"
         ]
       }
     },
@@ -3684,11 +3692,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSDM",
-          "XAU"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3837,8 +3841,7 @@
           "USDJPY",
           "XAUUSD",
           "US30",
-          "GOLD",
-          "GBPUSD"
+          "GOLD"
         ]
       }
     },
@@ -4067,10 +4070,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSD.IFX"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6395,7 +6395,9 @@
           "GBPAUD",
           "USDZAR",
           "AUDCAD",
-          "USDJPY"
+          "USDJPY",
+          "EURUSD",
+          "BTCXAU"
         ]
       }
     },
