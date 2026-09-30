@@ -1,6 +1,53 @@
 {
   "licenses": [
     {
+      "key": "APEX-ASPB-C7D4",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "fivestarvault1@gmail.com",
+      "clientName": "Mhlengi",
+      "mainText": "Mhlengi",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789672138157,
+      "usedAt": 1789823002512,
+      "deviceId": "bb46496e-3f39-4065-baca-51a1c7eab121",
+      "boundAt": 1790276869425,
+      "updatedAt": 1790765898324,
+      "scanReset": null,
+      "robotAccountId": "76e8e52c-3525-4442-b5c0-54adedb67c95",
+      "robotLogin": "1550106461",
+      "robotServer": "JustMarkets-LIVE7",
+      "robotCompany": "Just Global Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790753352900,
+      "clientSymbols": [
+        "XAUUSD",
+        "BTCUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790765781491,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-VS94-C77R",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -395,7 +442,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "XXUSD",
+          "GOLD"
         ]
       }
     },
@@ -983,50 +1032,6 @@
       }
     },
     {
-      "key": "APEX-ASPB-C7D4",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "fivestarvault1@gmail.com",
-      "clientName": "Mhlengi",
-      "mainText": "Mhlengi",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789672138157,
-      "usedAt": 1789823002512,
-      "deviceId": "bb46496e-3f39-4065-baca-51a1c7eab121",
-      "boundAt": 1790276869425,
-      "updatedAt": 1790765781491,
-      "scanReset": null,
-      "robotAccountId": "76e8e52c-3525-4442-b5c0-54adedb67c95",
-      "robotLogin": "1550106461",
-      "robotServer": "JustMarkets-LIVE7",
-      "robotCompany": "Just Global Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790753352900,
-      "clientSymbols": [
-        "XAUUSD",
-        "BTCUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790765781491,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
       "key": "APEX-8X2B-YDYV",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1198,7 +1203,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1242,7 +1249,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD"
+          "XAUUSD"
         ]
       }
     },
