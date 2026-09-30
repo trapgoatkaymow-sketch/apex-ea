@@ -76,7 +76,7 @@
         "XAUUSD",
         "XAUUSDM"
       ],
-      "clientSymbolsUpdatedAt": 1790782346420,
+      "clientSymbolsUpdatedAt": 1790807705200,
       "mentorSymbolsSyncedAt": 1790805321498,
       "purchaseCaptureId": "85250618TW083921A",
       "purchaseOrderId": "5K0086732N3603300",
@@ -229,7 +229,7 @@
         "US30CASH",
         "US100CASH"
       ],
-      "clientSymbolsUpdatedAt": 1790807673404,
+      "clientSymbolsUpdatedAt": 1790807699748,
       "mentorSymbolsSyncedAt": 1790805321498,
       "purchaseCaptureId": "86250144JH751110P",
       "purchaseOrderId": "1YJ407409P3204943",
@@ -6037,11 +6037,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -6640,11 +6636,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -8066,7 +8058,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -24220,10 +24216,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "US30",
           "XAUUSD",
-          "US30CASH",
-          "GOLD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -25174,9 +25169,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY",
+          "XAUUSD"
         ]
       }
     },
