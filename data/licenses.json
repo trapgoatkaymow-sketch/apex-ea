@@ -721,7 +721,8 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM"
+          "XAUUSDM",
+          "USDJPYM"
         ]
       }
     },
@@ -1309,8 +1310,7 @@
           "BTCUSD",
           "XAUUSD",
           "XAUUSDM",
-          "BTCUSDM",
-          "GBPUSD"
+          "BTCUSDM"
         ]
       }
     },
@@ -1641,8 +1641,7 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "US30",
-          "BITCOIN"
+          "XAUSD"
         ]
       }
     },
@@ -1690,7 +1689,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD"
+          "GOLD",
+          "XAUUSD",
+          "GOLDM",
+          "USDJPYM"
         ]
       }
     },
@@ -2126,7 +2128,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSD.IFX"
+          ".US30."
         ]
       }
     },
@@ -17566,9 +17568,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "GBPJPY",
-          "EURUSD"
+          "USDJPY"
         ]
       }
     },
