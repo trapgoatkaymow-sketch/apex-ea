@@ -19,7 +19,7 @@
       "usedAt": 1790578463867,
       "deviceId": "3c939676-961d-4e3f-97a1-a840c8e62e7d",
       "boundAt": 1790578463867,
-      "updatedAt": 1790757299007,
+      "updatedAt": 1790757301591,
       "scanReset": null,
       "robotAccountId": "f667e6be-bedb-4df0-97e7-42f7bd78771e",
       "robotLogin": "1200520622",
@@ -35,7 +35,7 @@
         "XAUUSD.M",
         "GBPUSD.M"
       ],
-      "clientSymbolsUpdatedAt": 1790757299007,
+      "clientSymbolsUpdatedAt": 1790757301591,
       "purchaseCaptureId": "0M1300817B259545N",
       "purchaseOrderId": "8UX92125YY012350P",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -290,7 +290,10 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "XAUUSD"
+          "XAUUSD",
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
         ]
       }
     },
@@ -945,7 +948,9 @@
           "GBPAUD",
           "USDZAR",
           "AUDCAD",
-          "USDJPY"
+          "USDJPY",
+          "EURUSD",
+          "BTCXAU"
         ]
       }
     },
@@ -1163,9 +1168,7 @@
           "EURUSD",
           "0.01",
           "US3",
-          "US5",
-          "US1",
-          "US2"
+          "US5"
         ]
       }
     },
@@ -1533,14 +1536,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "NAS100",
-          "US100",
-          "NASDAQ100INDEX",
-          "NASDAQ100",
-          "US30",
-          "US30.STD",
-          "XAUUSD",
-          "XAUUSD.M"
+          "NAS100"
         ]
       }
     },
@@ -6556,7 +6552,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100"
+        ]
       }
     },
     {
@@ -24991,7 +24990,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD"
+        ]
       }
     },
     {
