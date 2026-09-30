@@ -19,7 +19,7 @@
       "usedAt": 1790772498614,
       "deviceId": "99acefc5-149b-44a7-86c0-3e815c6b1404",
       "boundAt": 1790772498614,
-      "updatedAt": 1790773633381,
+      "updatedAt": 1790773634145,
       "scanReset": null,
       "robotAccountId": "8e7cb170-70ad-40df-b195-6730a66ac4a0",
       "robotLogin": "296137069",
@@ -30,7 +30,7 @@
       "clientSymbols": [
         "BTCUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790773633381,
+      "clientSymbolsUpdatedAt": 1790773634145,
       "purchaseCaptureId": "7WT65716MR591204F",
       "purchaseOrderId": "0SM96234KB8895025",
       "purchaseSource": "paypal-giveaway",
@@ -831,7 +831,9 @@
         "strategy": "scalper",
         "symbols": [
           "GBPUSD",
-          "EURUSD"
+          "EURUSD",
+          "XAUUSD",
+          "USDJPY"
         ]
       }
     },
@@ -876,8 +878,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100"
+          "XAUUSD"
         ]
       }
     },
