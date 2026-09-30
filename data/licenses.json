@@ -1,6 +1,52 @@
 {
   "licenses": [
     {
+      "key": "APEX-4GRK-XXU8",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "shamealloggenberg75@gmail.com",
+      "clientName": "Shameal Loggenberg",
+      "mainText": "Shameal Loggenberg",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790789524514,
+      "usedAt": 1790807760999,
+      "deviceId": "0c51d9a1-89a8-4462-b568-d60fa578bf67",
+      "boundAt": 1790807760999,
+      "updatedAt": 1790811212225,
+      "scanReset": null,
+      "robotAccountId": "0d8ce5c8-6eca-4fdc-beaf-c6858df77865",
+      "robotLogin": "8747244",
+      "robotServer": "VaultMarkets-Live",
+      "robotCompany": "VaultMarkets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790790270086,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": 1790807945234,
+      "purchaseCaptureId": "27B24307G01009533",
+      "purchaseOrderId": "86H25452PB451811M",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790789555119,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
+      }
+    },
+    {
       "key": "APEX-XN6W-4BG5",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -185,52 +231,6 @@
           "USDJPYM",
           "BTCUSD",
           "USDZAR"
-        ]
-      }
-    },
-    {
-      "key": "APEX-4GRK-XXU8",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "shamealloggenberg75@gmail.com",
-      "clientName": "Shameal Loggenberg",
-      "mainText": "Shameal Loggenberg",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790789524514,
-      "usedAt": 1790807760999,
-      "deviceId": "0c51d9a1-89a8-4462-b568-d60fa578bf67",
-      "boundAt": 1790807760999,
-      "updatedAt": 1790811094445,
-      "scanReset": null,
-      "robotAccountId": "0d8ce5c8-6eca-4fdc-beaf-c6858df77865",
-      "robotLogin": "8747244",
-      "robotServer": "VaultMarkets-Live",
-      "robotCompany": "VaultMarkets (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790790270086,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1790807945234,
-      "purchaseCaptureId": "27B24307G01009533",
-      "purchaseOrderId": "86H25452PB451811M",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790789555119,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
         ]
       }
     },
@@ -1341,7 +1341,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -3466,7 +3468,7 @@
       "purchaseCaptureId": "81B5988538186004T",
       "purchaseOrderId": "2UU49586RS056141B",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790807888619,
+      "emailSentAt": 1790807850208,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -4351,7 +4353,12 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790805008592,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "BTCUSD",
+        "XAUUSD",
+        "XAUUSDM",
+        "GOLD"
+      ],
       "clientSymbolsUpdatedAt": 1790809087833,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "4E246205W93858807",
@@ -5520,7 +5527,7 @@
         "XAUUSD"
       ],
       "clientSymbolsUpdatedAt": 1790808024760,
-      "mentorSymbolsSyncedAt": 1790807945234,
+      "mentorSymbolsSyncedAt": 1790805321498,
       "purchaseCaptureId": "8ES70140FE775013P",
       "purchaseOrderId": "8MV28501E7922032A",
       "purchaseSource": "paypal-giveaway",
@@ -6111,7 +6118,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -7120,7 +7131,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "GOLD"
+          ".US30."
         ]
       }
     },
@@ -7502,7 +7513,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -19328,7 +19343,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -26413,8 +26432,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "EURUSD",
-          "GER30"
+          ".US30."
         ]
       }
     },
