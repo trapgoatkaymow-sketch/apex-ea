@@ -58,9 +58,9 @@
       "expiresAt": null,
       "createdAt": 1789547073865,
       "usedAt": 1789738691946,
-      "deviceId": "593c2a39-21ad-4531-8bc9-6baa85e52705",
-      "boundAt": 1790804287980,
-      "updatedAt": 1790804287980,
+      "deviceId": "537b8647-d610-461c-9a61-c6557fc3251c",
+      "boundAt": 1789738691946,
+      "updatedAt": 1790804288864,
       "scanReset": null,
       "robotAccountId": "44f40d79-cfc5-4bf3-b20b-a9b07d9a5db2",
       "robotLogin": "55006936",
@@ -68,17 +68,8 @@
       "robotCompany": "HFM",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790804110476,
-      "clientSymbols": [
-        "USA100",
-        "BTCUSD",
-        "XAUUSD",
-        "USDJPY",
-        "GBPJPY",
-        "NAS100",
-        "US30",
-        "US30.F"
-      ],
-      "clientSymbolsUpdatedAt": 1790804285098,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": 1790804288864,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -2333,10 +2324,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100",
-          "US30",
-          "USDJPY"
+          "XAUUSD"
         ]
       }
     },
@@ -9474,7 +9462,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "US30",
+          "USDJPY",
+          "GOLD",
+          "XXAXAUXAUUXAUUSD"
+        ]
       }
     },
     {
@@ -21758,7 +21753,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "USDJPY",
+          "XAUUSD"
+        ]
       }
     },
     {
