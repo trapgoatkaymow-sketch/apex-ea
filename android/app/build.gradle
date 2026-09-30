@@ -7,8 +7,8 @@ android {
         applicationId "com.apexea.zetascalper"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2340
-        versionName "2.34.0"
+        versionCode 2350
+        versionName "2.35.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
