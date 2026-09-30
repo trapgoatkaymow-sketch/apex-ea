@@ -255,7 +255,7 @@ export default function V2Interface() {
                     })
                     .join(" · ");
                   showToast(
-                    `${activeBot?.name || "Bot"} started · ${pairs.length} pairs · ${tradePlan} in 20s`
+                    `${activeBot?.name || "Bot"} started · ${pairs.length} pairs · ${tradePlan} in 15s · M30/H1/H4`
                   );
                   if (silentOpenTimerRef.current) {
                     clearTimeout(silentOpenTimerRef.current);
@@ -267,7 +267,7 @@ export default function V2Interface() {
                     silentOpenTimerRef.current = null;
                     if (silentOpenRunRef.current !== runId) return;
                     void (async () => {
-                      showToast(`Opening ${pairs.length} pairs now…`);
+                      showToast(`Scanning ${pairs.length} pairs with OpenAI (M30/H1/H4)…`);
                       const latest = silentOpenCtxRef.current || {};
                       let result;
                       try {

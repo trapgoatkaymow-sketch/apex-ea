@@ -1,6 +1,10 @@
 /**
- * OpenAI symbol scan for silent START — same TP ladder as Chart Scanner
- * (M15/M30/H1 → TP1 1:2, TP2 1:3, TP3 1:4) without requiring a screenshot.
+ * OpenAI symbol scan for silent START — same engine as Chart Scanner,
+ * without requiring a screenshot. Timeframes: M30 / H1 / H4.
+ *
+ * Ladder matches Chart Scanner:
+ *   H4 → TP1 1:1 · TP2 1:2 · TP3 1:3
+ *   M30/H1 → TP1 1:2 · TP2 1:3 · TP3 1:4
  */
 import { applyCorsHeaders, endOptions } from "../_cors.js";
 import { normalizeBrokerSymbol } from "../_symbolResolve.js";
@@ -10,6 +14,8 @@ import {
   normalizeTradeSide,
   tpRiskRewardLabel,
 } from "../_tradeLevels.js";
+
+const DEFAULT_TIMEFRAMES = ["M30", "H1", "H4"];
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -49,7 +55,7 @@ function toFiniteNumber(value) {
 export async function analyzeSymbolSetupWithOpenAI({
   symbol = "",
   price = null,
-  timeframes = ["M15", "M30", "H1"],
+  timeframes = DEFAULT_TIMEFRAMES,
   preferredSide = "",
 } = {}) {
   const apiKey = requireOpenAiKey();
@@ -66,10 +72,10 @@ export async function analyzeSymbolSetupWithOpenAI({
     throw err;
   }
 
-  const tfList = (Array.isArray(timeframes) ? timeframes : ["M15", "M30", "H1"])
+  const tfList = (Array.isArray(timeframes) ? timeframes : DEFAULT_TIMEFRAMES)
     .map((t) => normalizeChartTimeframe(t))
     .filter(Boolean);
-  const tfs = tfList.length ? tfList : ["M15", "M30", "H1"];
+  const tfs = tfList.length ? tfList : [...DEFAULT_TIMEFRAMES];
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -86,14 +92,14 @@ export async function analyzeSymbolSetupWithOpenAI({
         {
           role: "system",
           content:
-            "You are a MetaTrader market analyst. Return JSON only: " +
-            '{"side":"BUY"|"SELL","confidence":0-100,"timeframe":"M15"|"M30"|"H1",' +
+            "You are a MetaTrader market analyst (same role as Apex EA Chart Scanner). Return JSON only: " +
+            '{"side":"BUY"|"SELL","confidence":0-100,"timeframe":"M30"|"H1"|"H4",' +
             '"stopLoss":number,"analysis":string}. ' +
-            "Choose BUY or SELL for the symbol at the live price using typical M15/M30/H1 structure bias. " +
+            "Choose BUY or SELL for the symbol at the live price using typical M30/H1/H4 structure bias. " +
             "Do NOT default to BUY. stopLoss must be a realistic protective stop FAR enough from entry for the instrument " +
             "(XAUUSD ≥ ~$3–$8, FX ≥ ~15 pips, US30/NAS100 ≥ ~25 points). " +
             "BUY: stopLoss < entry. SELL: stopLoss > entry. " +
-            "timeframe must be one of M15, M30, H1. analysis: one short sentence why.",
+            "timeframe must be one of M30, H1, H4. analysis: one short sentence why.",
         },
         {
           role: "user",
@@ -103,7 +109,7 @@ export async function analyzeSymbolSetupWithOpenAI({
             (preferredSide
               ? `Client pair preference (soft): ${preferredSide}. Prefer chart logic over preference. `
               : "") +
-            "Return side, stopLoss, timeframe (M15/M30/H1), confidence, analysis.",
+            "Return side, stopLoss, timeframe (M30/H1/H4), confidence, analysis — same quality as Chart Scanner.",
         },
       ],
     }),
@@ -136,15 +142,15 @@ export async function analyzeSymbolSetupWithOpenAI({
   const side = normalizeTradeSide(parsed?.side || preferredSide || "BUY", {
     trustSide: true,
   });
-  const timeframe = normalizeChartTimeframe(parsed?.timeframe || "M15");
-  const tf = ["M15", "M30", "H1"].includes(timeframe) ? timeframe : "M15";
+  const timeframe = normalizeChartTimeframe(parsed?.timeframe || "M30");
+  const tf = ["M30", "H1", "H4"].includes(timeframe) ? timeframe : "M30";
+  // Chart Scanner ladder: H4 → 1:1/1:2/1:3 · M30/H1 → 1:2/1:3/1:4
   const levels = buildSafeMultiTpLevels({
     symbol: sym,
     side,
     entry: live,
     stopLoss: parsed?.stopLoss,
-    // Non-H4 → TP1 1:2, TP2 1:3, TP3 1:4 (same as Chart Scanner).
-    timeframe: tf === "H4" ? "M15" : tf,
+    timeframe: tf,
   });
 
   return {
@@ -185,7 +191,7 @@ export default async function handler(req, res) {
     const result = await analyzeSymbolSetupWithOpenAI({
       symbol: body.symbol || body.hintSymbol || "",
       price: body.price ?? body.entry ?? null,
-      timeframes: body.timeframes || ["M15", "M30", "H1"],
+      timeframes: body.timeframes || DEFAULT_TIMEFRAMES,
       preferredSide: body.side || body.action || "",
     });
     sendJson(res, 200, result);

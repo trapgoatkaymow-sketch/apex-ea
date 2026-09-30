@@ -1492,11 +1492,12 @@ async function resolveTradeSymbol(accountId, requested) {
 
 /**
  * Live bid/ask/mid for a connected account symbol (used by silent START scanner).
+ * `fast: true` keeps START snappy (fewer probes / shorter timeouts).
  */
 export async function getSymbolQuote(
   accountId,
   symbol,
-  { side = "BUY" } = {}
+  { side = "BUY", fast = false } = {}
 ) {
   const id = String(accountId || "").trim();
   const requested = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
@@ -1508,6 +1509,60 @@ export async function getSymbolQuote(
 
   const action =
     String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
+  const maxProbes = fast ? 8 : 40;
+  const quoteTimeoutMs = fast ? 4000 : 12000;
+  const subTimeoutMs = fast ? 3000 : 8000;
+
+  async function subscribeSymbol(symbolName) {
+    const name = String(symbolName || "").trim();
+    if (!name) return;
+    try {
+      await mt5Fetch(
+        `/Subscribe?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&interval=0`,
+        { timeoutMs: subTimeoutMs }
+      );
+    } catch {
+      // optional
+    }
+  }
+
+  async function quoteOne(symbolName) {
+    await subscribeSymbol(symbolName);
+    const quote = await mt5Fetch(
+      `/GetQuote?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(symbolName)}`,
+      { timeoutMs: quoteTimeoutMs }
+    );
+    const bid = Number(quote?.bid ?? quote?.Bid ?? quote?.bidPrice);
+    const ask = Number(quote?.ask ?? quote?.Ask ?? quote?.askPrice);
+    const mid = Number(quote?.price ?? quote?.last ?? quote?.Last);
+    let price = null;
+    if (action === "Buy" && Number.isFinite(ask) && ask > 0) price = ask;
+    else if (action === "Sell" && Number.isFinite(bid) && bid > 0) price = bid;
+    else if (Number.isFinite(mid) && mid > 0) price = mid;
+    else if (Number.isFinite(bid) && bid > 0 && Number.isFinite(ask) && ask > 0) {
+      price = (bid + ask) / 2;
+    }
+    if (!(Number.isFinite(price) && price > 0)) return null;
+    return {
+      ok: true,
+      accountId: id,
+      symbol: symbolName,
+      requestedSymbol: requested,
+      bid: Number.isFinite(bid) && bid > 0 ? bid : null,
+      ask: Number.isFinite(ask) && ask > 0 ? ask : null,
+      price,
+      side: action === "Sell" ? "SELL" : "BUY",
+    };
+  }
+
+  // Fast path: try the exact requested spelling before heavy catalog resolve.
+  try {
+    const direct = await quoteOne(requested);
+    if (direct) return direct;
+  } catch {
+    // fall through
+  }
+
   const { symbol: resolvedSym, accountSymbols } =
     await resolveTradeSymbolDetailed(id, requested);
   const probeSymbols = buildTradeSymbolProbe({
@@ -1516,48 +1571,11 @@ export async function getSymbolQuote(
     accountSymbols,
   });
 
-  async function subscribeSymbol(symbolName) {
-    const name = String(symbolName || "").trim();
-    if (!name) return;
+  for (const alt of probeSymbols.slice(0, maxProbes)) {
+    if (String(alt || "").toLowerCase() === requested.toLowerCase()) continue;
     try {
-      await mt5Fetch(
-        `/Subscribe?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&interval=0`,
-        { timeoutMs: 8000 }
-      );
-    } catch {
-      // optional
-    }
-  }
-
-  for (const alt of probeSymbols.slice(0, 40)) {
-    try {
-      await subscribeSymbol(alt);
-      const quote = await mt5Fetch(
-        `/GetQuote?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(alt)}`,
-        { timeoutMs: 12000 }
-      );
-      const bid = Number(quote?.bid ?? quote?.Bid ?? quote?.bidPrice);
-      const ask = Number(quote?.ask ?? quote?.Ask ?? quote?.askPrice);
-      const mid = Number(quote?.price ?? quote?.last ?? quote?.Last);
-      let price = null;
-      if (action === "Buy" && Number.isFinite(ask) && ask > 0) price = ask;
-      else if (action === "Sell" && Number.isFinite(bid) && bid > 0) price = bid;
-      else if (Number.isFinite(mid) && mid > 0) price = mid;
-      else if (Number.isFinite(bid) && bid > 0 && Number.isFinite(ask) && ask > 0) {
-        price = (bid + ask) / 2;
-      }
-      if (Number.isFinite(price) && price > 0) {
-        return {
-          ok: true,
-          accountId: id,
-          symbol: alt,
-          requestedSymbol: requested,
-          bid: Number.isFinite(bid) && bid > 0 ? bid : null,
-          ask: Number.isFinite(ask) && ask > 0 ? ask : null,
-          price,
-          side: action === "Sell" ? "SELL" : "BUY",
-        };
-      }
+      const hit = await quoteOne(alt);
+      if (hit) return hit;
     } catch {
       // try next spelling
     }

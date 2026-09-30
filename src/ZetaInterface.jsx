@@ -51,7 +51,7 @@ export default function ZetaInterface() {
   } = useApp();
   const silentOpenTimerRef = useRef(null);
   const silentOpenRunRef = useRef(0);
-  // Always read the latest pairs / session when the 20s timer fires.
+  // Always read the latest pairs / session when the 15s timer fires.
   const silentOpenCtxRef = useRef({});
   silentOpenCtxRef.current = {
     activeBot,
@@ -177,10 +177,10 @@ export default function ZetaInterface() {
       })
       .join(" · ");
     showToast(
-      `${activeBot?.name || "Bot"} started · ${pairs.length} pairs · ${tradePlan} in 20s`
+      `${activeBot?.name || "Bot"} started · ${pairs.length} pairs · ${tradePlan} in 15s · M30/H1/H4`
     );
-    // Silent START: wait ~20s, then open EVERY frozen Your pairs symbol
-    // with its Number of trades (all at once). Cancelled on STOP.
+    // Silent START: wait ~15s, then Chart-Scanner OpenAI scan (M30/H1/H4)
+    // and open EVERY Your pairs symbol with its Number of trades.
     if (silentOpenTimerRef.current) {
       clearTimeout(silentOpenTimerRef.current);
       silentOpenTimerRef.current = null;
@@ -191,7 +191,7 @@ export default function ZetaInterface() {
       silentOpenTimerRef.current = null;
       if (silentOpenRunRef.current !== runId) return;
       void (async () => {
-        showToast(`Opening ${pairs.length} pairs now…`);
+        showToast(`Scanning ${pairs.length} pairs with OpenAI (M30/H1/H4)…`);
         const latest = silentOpenCtxRef.current || {};
         let result;
         try {

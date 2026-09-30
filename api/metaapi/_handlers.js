@@ -253,6 +253,7 @@ export async function handleQuote(req, res) {
         : Object.fromEntries(new URL(req.url, "http://local").searchParams);
     const result = await mt5GetSymbolQuote(body.accountId, body.symbol, {
       side: body.side || body.action || "BUY",
+      fast: body.fast === true || body.fast === "1" || body.fast === 1,
     });
     sendJson(res, 200, result);
   } catch (error) {

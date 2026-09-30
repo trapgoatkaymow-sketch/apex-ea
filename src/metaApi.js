@@ -139,6 +139,7 @@ export async function getSymbolQuote({
   accountId,
   symbol,
   side = "BUY",
+  fast = false,
   signal,
 } = {}) {
   return apiFetch("/quote", {
@@ -148,6 +149,7 @@ export async function getSymbolQuote({
       accountId: String(accountId || "").trim(),
       symbol: String(symbol || "").trim(),
       side: String(side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY",
+      fast: Boolean(fast),
     },
   });
 }
