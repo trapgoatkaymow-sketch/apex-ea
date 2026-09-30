@@ -411,6 +411,47 @@
       }
     },
     {
+      "key": "APEX-ZWZE-JDQ2",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "thabeden206@gmail.com",
+      "clientName": "Dorah Sabekile Thabede",
+      "mainText": "Dorah Sabekile Thabede",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "1m10d",
+      "expiresAt": 1794229213019,
+      "createdAt": 1790773213019,
+      "usedAt": 1790773435466,
+      "deviceId": "7b5ae325-29f4-42e6-b426-23f959819fda",
+      "boundAt": 1790773435466,
+      "updatedAt": 1790774517517,
+      "scanReset": null,
+      "robotAccountId": "4b774e00-93ba-4bc6-a10a-6b7694c01bf3",
+      "robotLogin": "482021771",
+      "robotServer": "Exness-MT5Real10",
+      "robotCompany": "Exness Technologies Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790773858911,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": 1790774517517,
+      "purchaseCaptureId": "60013599FR5168505",
+      "purchaseOrderId": "8M3375581X960381M",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790773216743,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
       "key": "APEX-SH3J-ZBUR",
       "botId": "venom-scalper-v1-0-mujtiwsh",
       "botName": "VENOM SCALPER V1.0",
@@ -463,47 +504,6 @@
           "XAUUSD.M",
           "XAUUSD"
         ]
-      }
-    },
-    {
-      "key": "APEX-ZWZE-JDQ2",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "thabeden206@gmail.com",
-      "clientName": "Dorah Sabekile Thabede",
-      "mainText": "Dorah Sabekile Thabede",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "1m10d",
-      "expiresAt": 1794229213019,
-      "createdAt": 1790773213019,
-      "usedAt": 1790773435466,
-      "deviceId": "7b5ae325-29f4-42e6-b426-23f959819fda",
-      "boundAt": 1790773435466,
-      "updatedAt": 1790774498865,
-      "scanReset": null,
-      "robotAccountId": "4b774e00-93ba-4bc6-a10a-6b7694c01bf3",
-      "robotLogin": "482021771",
-      "robotServer": "Exness-MT5Real10",
-      "robotCompany": "Exness Technologies Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790773858911,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": 1790774498865,
-      "purchaseCaptureId": "60013599FR5168505",
-      "purchaseOrderId": "8M3375581X960381M",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790773216743,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
-        "strategy": "scalper",
-        "symbols": []
       }
     },
     {
@@ -4881,7 +4881,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD",
+          "XAUUSDM",
+          "US30"
+        ]
       }
     },
     {
@@ -6913,7 +6918,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "USDJPY"
         ]
       }
     },
