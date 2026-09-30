@@ -17,6 +17,11 @@ import {
   listAppPairs,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
+import {
+  START_QUOTA_DAILY,
+  consumeStartChance,
+  loadStartsLeft,
+} from "./startQuota.js";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import { useEffect, useRef, useState } from "react";
 
@@ -71,6 +76,7 @@ export default function ZetaInterface() {
   /** Remaining ms for the home START countdown (null = hidden). */
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
+  const [startsLeft, setStartsLeft] = useState(() => loadStartsLeft());
 
   useEffect(() => {
     if (zetaView !== "symbol-edit" || !editingSymbol) return;
@@ -165,10 +171,14 @@ export default function ZetaInterface() {
     setStartStatus("");
   }
 
+  useEffect(() => {
+    // Refresh remaining START chances when home is shown / day rolls over.
+    if (zetaView === "home") setStartsLeft(loadStartsLeft());
+  }, [zetaView, running]);
+
   function toggleRun() {
-    const next = !running;
-    setV2Running(next);
-    if (!next) {
+    if (running) {
+      setV2Running(false);
       if (silentOpenTimerRef.current) {
         clearTimeout(silentOpenTimerRef.current);
         silentOpenTimerRef.current = null;
@@ -176,6 +186,7 @@ export default function ZetaInterface() {
       silentOpenRunRef.current += 1;
       clearStartCountdown();
       clearOrbTrade?.();
+      setStartsLeft(loadStartsLeft());
       return;
     }
 
@@ -183,7 +194,6 @@ export default function ZetaInterface() {
     const ctx = silentOpenCtxRef.current || {};
     const accountId = String(ctx.mt5Session?.accountId || "").trim();
     if (!accountId) {
-      setV2Running(false);
       clearStartCountdown();
       showToast("Connect MetaTrader before START");
       return;
@@ -191,11 +201,20 @@ export default function ZetaInterface() {
     // Freeze the exact "On your app" list at START press (all selected pairs).
     const pairs = listAppPairs(ctx.activeBot, ctx.eas, ctx.appSymbols).slice();
     if (!pairs.length) {
-      setV2Running(false);
       clearStartCountdown();
       showToast("Add a pair first, then press START");
       return;
     }
+
+    const chance = consumeStartChance();
+    setStartsLeft(chance.left);
+    if (!chance.ok) {
+      clearStartCountdown();
+      showToast("Daily START limit reached (10). Try again tomorrow.");
+      return;
+    }
+
+    setV2Running(true);
 
     // Show “Opening positions · 15” countdown — no big timer / pair-list toast.
     countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
@@ -301,9 +320,19 @@ export default function ZetaInterface() {
                   <span>Pairs</span>
                 </button>
                 <button
-                  className={`stop-btn${running ? " is-running" : ""}`}
+                  className={`stop-btn${running ? " is-running" : ""}${
+                    !running && startsLeft <= 0 ? " is-exhausted" : ""
+                  }`}
                   type="button"
                   onClick={toggleRun}
+                  disabled={!running && startsLeft <= 0}
+                  aria-label={
+                    running
+                      ? "STOP"
+                      : startsLeft <= 0
+                        ? "START locked — 0 chances left today"
+                        : `START · ${startsLeft} of ${START_QUOTA_DAILY} left today`
+                  }
                 >
                   <span className="stop-energy" aria-hidden="true">
                     {Array.from({ length: START_PARTICLE_COUNT }, (_, i) => (
@@ -312,6 +341,11 @@ export default function ZetaInterface() {
                   </span>
                   <span className="stop-core-glow" aria-hidden="true" />
                   <span className="stop-label">{running ? "STOP" : "START"}</span>
+                  {!running ? (
+                    <span className="stop-quota" aria-hidden="true">
+                      {startsLeft}/{START_QUOTA_DAILY}
+                    </span>
+                  ) : null}
                 </button>
                 <button className="glass-btn" type="button" onClick={removeActiveBot}>
                   <span>Remove bot</span>

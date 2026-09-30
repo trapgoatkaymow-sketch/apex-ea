@@ -614,8 +614,8 @@ html:has(.phone[data-interface="v2"]) body {
 
 .stop-btn {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   /* Keep overflow visible so the theme edge glow is not clipped;
      particles are clipped by .stop-energy instead. */
@@ -624,7 +624,7 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 1px;
   color: var(--pink);
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.42), transparent 36%),
@@ -934,7 +934,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 .stop-core-glow {
   position: absolute;
-  inset: 10px;
+  inset: 6px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
@@ -998,13 +998,38 @@ html:has(.phone[data-interface="v2"]) body {
   position: relative;
   z-index: 2;
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   line-height: 1;
   text-shadow:
     0 0 8px rgba(0, 0, 0, 0.65),
     0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.stop-quota {
+  position: relative;
+  z-index: 2;
+  margin-top: 1px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.stop-btn.is-exhausted,
+#v2-trade-btn.is-exhausted {
+  opacity: 0.45;
+  cursor: not-allowed;
+  animation: none;
+  filter: grayscale(0.35);
+}
+
+.stop-btn:disabled,
+#v2-trade-btn:disabled {
+  pointer-events: none;
 }
 
 .powered-badge {
@@ -6067,12 +6092,12 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   position: relative;
   isolation: isolate;
   overflow: visible;
-  width: 72px;
-  height: 72px;
-  min-height: 72px;
-  margin: -10px 2px;
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  margin: -6px 2px;
   padding: 0;
-  gap: 2px;
+  gap: 0;
   border-radius: 50%;
   color: #ffffff;
   background:
@@ -6116,9 +6141,14 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 
 #v2-trade-btn .v2-pill-label {
   color: #ffffff;
-  font-size: 0.58rem;
-  letter-spacing: 0.06em;
+  font-size: 0.5rem;
+  letter-spacing: 0.05em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+#v2-trade-btn .stop-quota {
+  margin-top: 0;
+  font-size: 0.42rem;
 }
 
 .v2-pill-btn.is-running .v2-pill-icon.is-trade,
