@@ -11,8 +11,12 @@ import EconomicCalendarButton from "./EconomicCalendar.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
 import TopBar from "./TopBar.jsx";
 import { buildBotTradeComment } from "./metaApi.js";
+import {
+  START_SILENT_OPEN_DELAY_MS,
+  runSilentStartOpen,
+} from "./silentStartOpen.js";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const START_PARTICLE_COUNT = isNativeApp() ? 6 : 18;
 
@@ -20,6 +24,7 @@ export default function ZetaInterface() {
   const {
     activeBot,
     bots,
+    eas,
     selectBot,
     removeActiveBot,
     setPairsOpen,
@@ -39,7 +44,11 @@ export default function ZetaInterface() {
     setEditingSymbol,
     orbTradeLive,
     clearOrbTrade,
+    mt5Session,
+    publishOrbTrade,
   } = useApp();
+  const silentOpenTimerRef = useRef(null);
+  const silentOpenRunRef = useRef(0);
 
   const [lotSize, setLotSize] = useState("0.01");
   const [action, setAction] = useState("BOTH");
@@ -108,11 +117,63 @@ export default function ZetaInterface() {
     action: orbTradeLive?.action || scriptMeta?.action || "BOTH",
   });
 
+  useEffect(() => {
+    return () => {
+      if (silentOpenTimerRef.current) {
+        clearTimeout(silentOpenTimerRef.current);
+        silentOpenTimerRef.current = null;
+      }
+      silentOpenRunRef.current += 1;
+    };
+  }, []);
+
   function toggleRun() {
     const next = !running;
     setV2Running(next);
-    if (!next) clearOrbTrade?.();
-    showToast(next ? `${activeBot?.name || "Bot"} started` : "Bot stopped");
+    if (!next) {
+      if (silentOpenTimerRef.current) {
+        clearTimeout(silentOpenTimerRef.current);
+        silentOpenTimerRef.current = null;
+      }
+      silentOpenRunRef.current += 1;
+      clearOrbTrade?.();
+      showToast("Bot stopped");
+      return;
+    }
+
+    showToast(`${activeBot?.name || "Bot"} started`);
+    // Silent START open: wait ~20s, then open the selected symbol without
+    // showing Chart Scanner UI. Cancelled if the user hits STOP.
+    if (silentOpenTimerRef.current) {
+      clearTimeout(silentOpenTimerRef.current);
+      silentOpenTimerRef.current = null;
+    }
+    const runId = silentOpenRunRef.current + 1;
+    silentOpenRunRef.current = runId;
+    silentOpenTimerRef.current = setTimeout(() => {
+      silentOpenTimerRef.current = null;
+      if (silentOpenRunRef.current !== runId) return;
+      void (async () => {
+        const result = await runSilentStartOpen({
+          activeBot,
+          eas,
+          mt5Session,
+          getSymbolMeta,
+          publishOrbTrade,
+          variant: "zeta",
+        });
+        if (silentOpenRunRef.current !== runId) return;
+        if (result?.ok) {
+          showToast(
+            `Opened ${result.side || ""} ${result.symbol} · ${result.opened} thread${
+              result.opened === 1 ? "" : "s"
+            }`.replace(/\s+/g, " ").trim()
+          );
+        } else if (result?.error) {
+          showToast(result.error);
+        }
+      })();
+    }, START_SILENT_OPEN_DELAY_MS);
   }
 
   function openLicense() {
