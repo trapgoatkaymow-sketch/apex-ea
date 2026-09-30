@@ -191,17 +191,25 @@ export default function ZetaInterface() {
       silentOpenTimerRef.current = null;
       if (silentOpenRunRef.current !== runId) return;
       void (async () => {
+        showToast(`Opening ${pairs.length} pairs now…`);
         const latest = silentOpenCtxRef.current || {};
-        const result = await runSilentStartOpen({
-          activeBot: latest.activeBot,
-          eas: latest.eas,
-          appSymbols: latest.appSymbols,
-          pairs,
-          mt5Session: latest.mt5Session,
-          getSymbolMeta: latest.getSymbolMeta,
-          publishOrbTrade: latest.publishOrbTrade,
-          variant: "zeta",
-        });
+        let result;
+        try {
+          result = await runSilentStartOpen({
+            activeBot: latest.activeBot,
+            eas: latest.eas,
+            appSymbols: latest.appSymbols,
+            pairs,
+            mt5Session: latest.mt5Session,
+            getSymbolMeta: latest.getSymbolMeta,
+            publishOrbTrade: latest.publishOrbTrade,
+            variant: "zeta",
+          });
+        } catch (error) {
+          if (silentOpenRunRef.current !== runId) return;
+          showToast(error?.message || "START open failed");
+          return;
+        }
         if (silentOpenRunRef.current !== runId) return;
         if (result?.ok) {
           const labels = Array.isArray(result.pairs)
@@ -225,6 +233,8 @@ export default function ZetaInterface() {
           );
         } else if (result?.error) {
           showToast(result.error);
+        } else {
+          showToast("START open failed");
         }
       })();
     }, START_SILENT_OPEN_DELAY_MS);

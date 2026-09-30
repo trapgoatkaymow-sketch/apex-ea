@@ -1,12 +1,9 @@
 /**
- * Silent START → open: after a short delay, run the same OpenAI + SL/TP
- * ladder as Chart Scanner (no scanner UI) for every pair in Your pairs.
+ * Silent START → open: after a short delay, run OpenAI + scanner SL/TP
+ * for every pair in Your pairs, then place each pair's Number of trades.
  *
- * Each pair opens its configured Number of trades (TP1/TP2/TP3 cycle).
- * All pairs execute at the same time (Promise.all).
- *
- * TP ladder (non-H4, same as scanner): TP1 1:2 · TP2 1:3 · TP3 1:4
- * Stop loss comes from OpenAI and is widened with buildSafeMultiTpLevels.
+ * TP ladder (non-H4): TP1 1:2 · TP2 1:3 · TP3 1:4
+ * One batched OrderSend per pair (count + takeProfits) so START stays reliable.
  */
 import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
@@ -30,8 +27,6 @@ export const START_SILENT_OPEN_DELAY_MS = 20_000;
 /** Scanner timeframes used by the START button open. */
 export const START_SCANNER_TIMEFRAMES = ["M15", "M30", "H1"];
 
-const TF_FOR_TP_SLOT = ["M15", "M30", "H1"];
-
 function clampLot(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return 0.01;
@@ -49,6 +44,10 @@ function toFiniteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function dedupeSymbols(list) {
   const seen = new Set();
   const unique = [];
@@ -63,6 +62,44 @@ function dedupeSymbols(list) {
   return unique;
 }
 
+/** Rough mid-market anchors when live quote is briefly unavailable. */
+function estimateEntryForSymbol(symbol) {
+  const raw = String(symbol || "")
+    .toUpperCase()
+    .replace(/^\.+/, "")
+    .replace(/\.+$/, "")
+    .replace(/CASH$/i, "")
+    .replace(/\.(MIC|M|PRO|RAW|ECN|STD|CASH|SPOT)$/i, "");
+  const base = raw.split(".")[0] || raw;
+  const table = [
+    [/^(US30|DJ30|WS30|DJI|USA30|USWALLST30|DOW30)/, 45000],
+    [/^(NAS100|USTEC|NDX|NASDAQ|US100|USATECH100|TECH100)/, 20000],
+    [/^(SPX500|US500|SP500|SPX)/, 5600],
+    [/^(GER40|DE40|DAX|DE30|GER30|GDAXI)/, 18500],
+    [/^(UK100|FTSE)/, 8200],
+    [/^(JP225|JPN225|NI225|NIKKEI)/, 38000],
+    [/^(XAU|GOLD)/, 4200],
+    [/^(XAG|SILVER)/, 38],
+    [/^(BTC)/, 95000],
+    [/^(ETH)/, 3500],
+    [/^(USOIL|WTI|CL)/, 75],
+    [/^(UKOIL|BRENT)/, 80],
+    [/^(EURUSD|EUR)/, 1.085],
+    [/^(GBPUSD|GBP)/, 1.27],
+    [/^(USDJPY|JPY)/, 149.5],
+    [/^(AUDUSD|AUD)/, 0.65],
+    [/^(NZDUSD|NZD)/, 0.6],
+    [/^(USDCAD|CAD)/, 1.36],
+    [/^(USDCHF|CHF)/, 0.88],
+  ];
+  for (const [re, price] of table) {
+    if (re.test(base) || re.test(raw)) return price;
+  }
+  if (/USD$/.test(base) || /^USD/.test(base)) return 1.1;
+  if (/JPY$/.test(base)) return 150;
+  return 100;
+}
+
 /**
  * Every symbol in Your pairs → "On your app".
  * Source of truth is appSymbols (union of eas[].symbols), same as PairsSheet.
@@ -75,12 +112,10 @@ export function listAppPairs(activeBot, eas = [], appSymbols = null) {
         ? appSymbols
         : [];
 
-  // Primary: exactly what the Pairs sheet shows under "On your app".
   if (fromApp.length) {
     return dedupeSymbols(fromApp);
   }
 
-  // Fallbacks if appSymbols was not passed (older callers).
   const botId = String(activeBot?.id || "").trim();
   const rows = Array.isArray(eas) ? eas : [];
   const ea =
@@ -106,9 +141,6 @@ export function pickSelectedSymbol(activeBot, eas = [], appSymbols = null) {
   return listAppPairs(activeBot, eas, appSymbols)[0] || "";
 }
 
-/**
- * OpenAI symbol scan (no screenshot) — same backend ladder as Chart Scanner.
- */
 async function analyzeSymbolWithOpenAI({
   symbol,
   price,
@@ -148,10 +180,6 @@ async function analyzeSymbolWithOpenAI({
   return data;
 }
 
-/**
- * Build one scanner-aligned setup from live price + OpenAI stop.
- * Always uses the non-H4 TP ladder: 1:2 / 1:3 / 1:4.
- */
 function buildScannerAlignedSetup({
   symbol,
   side,
@@ -163,7 +191,6 @@ function buildScannerAlignedSetup({
   source = "openai-symbol",
 } = {}) {
   const tfRaw = normalizeChartTimeframe(timeframe || "M15");
-  // Force non-H4 so TP1/TP2/TP3 stay 1:2 / 1:3 / 1:4 like the scanner default.
   const tf = tfRaw === "H4" ? "M15" : tfRaw || "M15";
   const levels = buildSafeMultiTpLevels({
     symbol,
@@ -190,53 +217,33 @@ function buildScannerAlignedSetup({
   };
 }
 
-/**
- * Trade index → TP target (cycles forever), same as Chart Scanner Execute:
- *   T1 → TP1, T2 → TP2, T3 → TP3, T4 → TP1, …
- */
-function targetForTradeIndex(index) {
-  const n = Math.max(0, Math.floor(Number(index) || 0));
-  const slot = n % 3;
-  if (slot === 0) {
-    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: n + 1 };
+async function fetchQuoteWithRetry({
+  accountId,
+  symbol,
+  side = "BUY",
+  attempts = 3,
+} = {}) {
+  let lastError = null;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const quote = await getSymbolQuote({ accountId, symbol, side });
+      const price = toFiniteNumber(quote?.price);
+      if (price != null && price > 0) return quote;
+      lastError = new Error("No live price for symbol");
+    } catch (error) {
+      lastError = error;
+    }
+    if (i < attempts - 1) await sleep(350 * (i + 1));
   }
-  if (slot === 1) {
-    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: n + 1 };
-  }
-  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
+  const err = new Error(lastError?.message || "Could not fetch live quote");
+  err.status = lastError?.status || 404;
+  throw err;
 }
 
 /**
- * Build Exact Number of trades threads for one pair.
- * Shared SL from the OpenAI scan; TP cycles 1:2 / 1:3 / 1:4.
- */
-function buildTpThreads({ signal, lot, tradeCount }) {
-  const count = clampTrades(tradeCount);
-  const volume = clampLot(lot);
-  const threads = [];
-  for (let i = 0; i < count; i += 1) {
-    const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
-    const takeProfit = toFiniteNumber(signal?.[takeProfitKey]);
-    if (takeProfit == null || takeProfit <= 0) continue;
-    const slot = i % 3;
-    threads.push({
-      timeframe: TF_FOR_TP_SLOT[slot] || "M15",
-      target,
-      tradeNo,
-      volume,
-      takeProfit,
-      entry: signal.entry,
-      stopLoss: signal.stopLoss,
-      side: signal.side,
-      signal,
-    });
-  }
-  return threads;
-}
-
-/**
- * Scan + open one pair: live quote → OpenAI → Number of trades threads.
- * Fires all placeTrade calls for that pair concurrently.
+ * Scan + open one pair.
+ * Uses one batched placeTrade(count + takeProfits) so Number of trades opens
+ * without flooding MT5 with parallel OrderSends.
  */
 async function openPairSilent({
   symbol,
@@ -253,37 +260,36 @@ async function openPairSilent({
   const lot = clampLot(meta.lotSize);
   const tradeCount = clampTrades(meta.trades);
 
-  let quote;
+  let tradeSymbol = normalizeBrokerSymbol(symbol) || symbol;
+  let livePrice = null;
+  let quoteError = "";
+
   try {
-    quote = await getSymbolQuote({
+    const quote = await fetchQuoteWithRetry({
       accountId,
       symbol,
       side: preferredSide || "BUY",
+      attempts: 3,
     });
+    livePrice = toFiniteNumber(quote?.price);
+    tradeSymbol = normalizeBrokerSymbol(quote?.symbol || symbol) || symbol;
   } catch (error) {
-    return {
-      ok: false,
-      symbol,
-      opened: 0,
-      tradeCount,
-      error: error?.message || "Could not fetch live quote",
-    };
+    quoteError = error?.message || "Could not fetch live quote";
+    livePrice = estimateEntryForSymbol(symbol);
   }
 
-  const livePrice = toFiniteNumber(quote?.price);
-  const tradeSymbol =
-    normalizeBrokerSymbol(quote?.symbol || symbol) || symbol;
   if (livePrice == null || livePrice <= 0) {
     return {
       ok: false,
       symbol: tradeSymbol,
       opened: 0,
       tradeCount,
-      error: "No live price for symbol",
+      error: quoteError || "No live price for symbol",
     };
   }
 
-  let ai;
+  let ai = null;
+  let aiError = "";
   try {
     ai = await analyzeSymbolWithOpenAI({
       symbol: tradeSymbol,
@@ -292,13 +298,7 @@ async function openPairSilent({
       timeframes: START_SCANNER_TIMEFRAMES,
     });
   } catch (error) {
-    return {
-      ok: false,
-      symbol: tradeSymbol,
-      opened: 0,
-      tradeCount,
-      error: error?.message || "OpenAI scan failed",
-    };
+    aiError = error?.message || "OpenAI scan failed";
   }
 
   const signal = buildScannerAlignedSetup({
@@ -307,9 +307,9 @@ async function openPairSilent({
     entry: livePrice,
     stopLoss: ai?.stopLoss,
     timeframe: ai?.timeframe || "M15",
-    analysis: ai?.analysis || "",
-    confidence: ai?.confidence,
-    source: ai?.source || "openai-symbol",
+    analysis: ai?.analysis || (aiError ? `Local fallback · ${aiError}` : ""),
+    confidence: ai?.confidence || 65,
+    source: ai?.source || (aiError ? "local-fallback" : "openai-symbol"),
   });
 
   if (
@@ -327,89 +327,135 @@ async function openPairSilent({
     };
   }
 
-  const threads = buildTpThreads({ signal, lot, tradeCount });
-  if (!threads.length) {
-    return {
-      ok: false,
-      symbol: tradeSymbol,
-      opened: 0,
-      tradeCount,
-      error: "Could not build trade threads",
-    };
-  }
+  const takeProfits = [
+    signal.takeProfit1,
+    signal.takeProfit2,
+    signal.takeProfit3,
+  ];
 
-  // Place every thread for this pair at the same time.
-  const settled = await Promise.all(
-    threads.map(async (thread) => {
+  try {
+    // One API call opens Number of trades with TP1/TP2/TP3 cycling server-side.
+    const fill = await placeTrade({
+      accountId,
+      symbol: tradeSymbol,
+      volume: lot,
+      side: signal.side,
+      stopLoss: signal.stopLoss,
+      takeProfit: signal.takeProfit1,
+      takeProfits,
+      count: tradeCount,
+      region,
+      comment,
+      source: "chart-scanner",
+    });
+    const opened = Math.max(
+      1,
+      Math.min(tradeCount, Number(fill?.count) || tradeCount)
+    );
+    const filledSymbol =
+      normalizeBrokerSymbol(fill?.symbol || tradeSymbol) || tradeSymbol;
+
+    for (let i = 0; i < opened; i += 1) {
+      const slot = i % 3;
+      const target = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
+      recordTrade({
+        botName,
+        symbol: filledSymbol,
+        lotSize: lot,
+        action: signal.side,
+        side: signal.side,
+        comment,
+        entry: signal.entry,
+        stopLoss: signal.stopLoss,
+        takeProfit: takeProfits[slot],
+        target: `${target}/M15`,
+      });
+    }
+
+    return {
+      ok: true,
+      symbol: filledSymbol,
+      opened,
+      tradeCount,
+      side: signal.side,
+      entry: signal.entry,
+      stopLoss: signal.stopLoss,
+      takeProfit1: signal.takeProfit1,
+      takeProfit2: signal.takeProfit2,
+      takeProfit3: signal.takeProfit3,
+      riskReward: signal.riskReward,
+      lot,
+      targets: Array.from({ length: opened }, (_, i) =>
+        i % 3 === 0 ? "TP1" : i % 3 === 1 ? "TP2" : "TP3"
+      ),
+      warning: quoteError || aiError || null,
+      error: null,
+    };
+  } catch (error) {
+    // Fallback: open one-by-one if the batched call fails.
+    let opened = 0;
+    let lastError = error?.message || "Trade failed";
+    for (let i = 0; i < tradeCount; i += 1) {
+      const slot = i % 3;
+      const takeProfit = takeProfits[slot];
+      const target = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
       try {
         const fill = await placeTrade({
           accountId,
           symbol: tradeSymbol,
-          volume: thread.volume,
-          side: thread.side,
-          stopLoss: thread.stopLoss,
-          takeProfit: thread.takeProfit,
+          volume: lot,
+          side: signal.side,
+          stopLoss: signal.stopLoss,
+          takeProfit,
+          count: 1,
           region,
           comment,
           source: "chart-scanner",
         });
+        opened += 1;
         recordTrade({
           botName,
           symbol:
             normalizeBrokerSymbol(fill?.symbol || tradeSymbol) || tradeSymbol,
-          lotSize: thread.volume,
-          action: thread.side,
-          side: thread.side,
+          lotSize: lot,
+          action: signal.side,
+          side: signal.side,
           comment,
-          entry: thread.entry,
-          stopLoss: thread.stopLoss,
-          takeProfit: thread.takeProfit,
-          target: `${thread.target}/${thread.timeframe}`,
+          entry: signal.entry,
+          stopLoss: signal.stopLoss,
+          takeProfit,
+          target: `${target}/M15`,
         });
-        return { ok: true, thread, fill };
-      } catch (error) {
-        return {
-          ok: false,
-          thread,
-          error: error?.message || "Trade failed",
-        };
+      } catch (inner) {
+        lastError = inner?.message || lastError;
       }
-    })
-  );
+    }
 
-  const opened = settled.filter((row) => row.ok).length;
-  const lastError =
-    settled.find((row) => !row.ok)?.error ||
-    (opened ? null : "Open failed");
-
-  return {
-    ok: opened > 0,
-    symbol: tradeSymbol,
-    opened,
-    tradeCount,
-    side: signal.side,
-    entry: signal.entry,
-    stopLoss: signal.stopLoss,
-    takeProfit1: signal.takeProfit1,
-    takeProfit2: signal.takeProfit2,
-    takeProfit3: signal.takeProfit3,
-    riskReward: signal.riskReward,
-    lot,
-    targets: settled.filter((r) => r.ok).map((r) => r.thread.target),
-    error: lastError,
-  };
+    return {
+      ok: opened > 0,
+      symbol: tradeSymbol,
+      opened,
+      tradeCount,
+      side: signal.side,
+      entry: signal.entry,
+      stopLoss: signal.stopLoss,
+      takeProfit1: signal.takeProfit1,
+      takeProfit2: signal.takeProfit2,
+      takeProfit3: signal.takeProfit3,
+      riskReward: signal.riskReward,
+      lot,
+      error: opened > 0 ? lastError : lastError || "Open failed",
+    };
+  }
 }
 
 /**
  * Silently open every Your pairs symbol with its Number of trades.
- * All pairs are scanned + opened concurrently.
- * @returns {Promise<{ ok: boolean, opened?: number, pairs?: object[], error?: string }>}
  */
 export async function runSilentStartOpen({
   activeBot,
   eas,
   appSymbols = null,
-  /** Frozen "On your app" list from the START press (preferred). */
   pairs: pairsOverride = null,
   mt5Session,
   getSymbolMeta,
@@ -435,48 +481,61 @@ export async function runSilentStartOpen({
     return { ok: false, error: "No charts left today" };
   }
 
-  // One START session = one chart scan credit (multi-pair fan-out).
-  consumeScan(variant);
-
   const comment = buildScannerFillComment({
     botName: activeBot?.name,
-    variant: "default",
-    premium: false,
+    variant: variant === "v2" ? "v2" : "default",
+    premium: variant === "v2",
   });
   const botName = activeBot?.name || "Bot";
   const region = mt5Session?.region || "";
 
-  // Announce the first pair on the orb; all pairs still open together.
   const firstMeta = getSymbolMeta?.(pairs[0]) || {};
   publishOrbTrade?.({
     botName,
     comment,
     symbol: pairs[0],
     lotSize: clampLot(firstMeta.lotSize),
-    action: String(firstMeta.action || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY",
-    side: String(firstMeta.action || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY",
+    action:
+      String(firstMeta.action || "BUY").toUpperCase() === "SELL"
+        ? "SELL"
+        : "BUY",
+    side:
+      String(firstMeta.action || "BUY").toUpperCase() === "SELL"
+        ? "SELL"
+        : "BUY",
     entry: null,
     stopLoss: null,
     takeProfit: null,
     target: "TP1",
   });
 
-  // Every Your pairs symbol runs at the same time.
-  const results = await Promise.all(
-    pairs.map((symbol) =>
-      openPairSilent({
-        symbol,
+  // Open pairs with light concurrency so MT5 session is not flooded.
+  const results = new Array(pairs.length);
+  const concurrency = Math.min(2, pairs.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < pairs.length) {
+      const idx = cursor;
+      cursor += 1;
+      results[idx] = await openPairSilent({
+        symbol: pairs[idx],
         accountId,
         region,
         getSymbolMeta,
         comment,
         botName,
-      })
-    )
+      });
+    }
+  }
+  await Promise.all(
+    Array.from({ length: concurrency }, () => worker())
   );
 
   const okRows = results.filter((row) => row?.ok);
-  const opened = results.reduce((sum, row) => sum + (Number(row?.opened) || 0), 0);
+  const opened = results.reduce(
+    (sum, row) => sum + (Number(row?.opened) || 0),
+    0
+  );
   const lastError =
     results.find((row) => row?.error && !row?.ok)?.error ||
     results.find((row) => row?.error)?.error ||
@@ -488,11 +547,13 @@ export async function runSilentStartOpen({
       opened: 0,
       pairs: results,
       symbols: pairs,
-      error: lastError || "Open failed",
+      error: lastError || "Open failed — reconnect MetaTrader and try again",
     };
   }
 
-  // Refresh orb with the first successful fill details.
+  // Charge one scan only after at least one fill succeeded.
+  consumeScan(variant);
+
   const primary = okRows[0];
   if (primary) {
     publishOrbTrade?.({

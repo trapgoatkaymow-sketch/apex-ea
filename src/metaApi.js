@@ -159,11 +159,16 @@ export async function placeTrade({
   side = "BUY",
   stopLoss,
   takeProfit,
+  takeProfits,
+  count = 1,
   comment = "bot~APEXEA",
   region = "",
   source = "chart-scanner",
   signal,
 } = {}) {
+  const tpList = Array.isArray(takeProfits)
+    ? takeProfits.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0)
+    : [];
   return apiFetch("/trade", {
     method: "POST",
     signal,
@@ -174,6 +179,8 @@ export async function placeTrade({
       side,
       stopLoss,
       takeProfit,
+      ...(tpList.length ? { takeProfits: tpList } : {}),
+      count: Math.max(1, Math.min(20, Math.floor(Number(count) || 1))),
       comment,
       region,
       source,

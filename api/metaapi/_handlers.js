@@ -213,6 +213,9 @@ export async function handleTrade(req, res) {
       err.status = 403;
       throw err;
     }
+    const tpList = Array.isArray(body.takeProfits)
+      ? body.takeProfits.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0)
+      : [];
     const result = await mt5PlaceMarketTrade({
       accountId: body.accountId,
       symbol: body.symbol,
@@ -220,6 +223,8 @@ export async function handleTrade(req, res) {
       side: body.side || body.action || "BUY",
       stopLoss: body.stopLoss,
       takeProfit: body.takeProfit,
+      takeProfits: tpList.length ? tpList : undefined,
+      count: body.count ?? body.trades ?? body.times ?? 1,
       comment: body.comment || "bot~APEXEA",
     });
     sendJson(res, 200, result);
