@@ -162,7 +162,7 @@
       "usedAt": null,
       "deviceId": null,
       "boundAt": null,
-      "updatedAt": 1790771065987,
+      "updatedAt": 1790771072333,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -175,7 +175,7 @@
       "purchaseCaptureId": "0784523202632845W",
       "purchaseOrderId": "45C70989237021430",
       "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": null,
+      "emailSentAt": 1790771072333,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -501,10 +501,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -936,7 +933,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1025,6 +1024,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
+          "US30",
+          "GBPUSD",
           "XAUUSDM"
         ]
       }
@@ -1155,7 +1156,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "GOLDMICRO"
         ]
       }
     },
@@ -1201,11 +1203,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "USDJPY"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1729,7 +1727,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -2926,8 +2926,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "BTCUSD",
-          "XAUUSDM"
+          "BTCUSD"
         ]
       }
     },
@@ -3399,7 +3398,8 @@
         "symbols": [
           "EURUSD",
           "XAUUSD",
-          "GBPUSD"
+          "GBPUSD",
+          "XAAUSD.MIC"
         ]
       }
     },
@@ -3871,9 +3871,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "XAUUSD",
-          "NAS100"
+          "USDJPY"
         ]
       }
     },
@@ -4924,9 +4922,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6015,9 +6011,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -7180,7 +7174,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "EURUSD"
+        ]
       }
     },
     {
@@ -9758,9 +9756,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSDM",
-          "USDJPY",
-          "USDJPYM"
+          "XAUUSDM"
         ]
       }
     },
@@ -28056,7 +28052,20 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "US30",
+          "XAUUSD",
+          "BTCAUDM",
+          "BTCUSD",
+          "BTCUSDM",
+          "USOILM",
+          "USOIL",
+          "NZDUSD",
+          "USDJPY",
+          "GBPJPY",
+          "ETHUSD",
+          "EURJPY"
+        ]
       }
     },
     {
