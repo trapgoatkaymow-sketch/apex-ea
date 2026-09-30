@@ -16,19 +16,34 @@ export default function PairsSheet() {
   const [query, setQuery] = useState("");
   const [custom, setCustom] = useState("");
 
-  // Mentor-authored symbols for this robot (from the license / EA), not the
-  // global default forex catalog.
+  // Mentor-authored symbols ONLY — never the global catalog / client-typed pairs.
+  // Prefer a stamped mentorSymbols list, then license.bot.symbols (server).
+  // Do NOT fall back to activeBot.symbols (that list gets client additions).
   const mentorSymbols = useMemo(() => {
     const botId = String(activeBot?.id || "").trim();
-    const license =
-      (Array.isArray(licenseKeys) ? licenseKeys : []).find(
-        (row) => String(row?.botId || row?.bot?.id || "").trim() === botId
-      ) || null;
-    const fromLicense = Array.isArray(license?.bot?.symbols)
-      ? license.bot.symbols
+    const cover = String(activeBot?.licenseKey || "").trim().toUpperCase();
+    const rows = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
+      (row) => String(row?.botId || row?.bot?.id || "").trim() === botId
+    );
+    // Prefer the license this phone activated with, then any row that still
+    // has mentor symbols stamped on the bot.
+    const ranked = [...rows].sort((a, b) => {
+      const aKey = String(a?.key || "").trim().toUpperCase();
+      const bKey = String(b?.key || "").trim().toUpperCase();
+      const aMine = cover && aKey === cover ? 1 : 0;
+      const bMine = cover && bKey === cover ? 1 : 0;
+      if (aMine !== bMine) return bMine - aMine;
+      const aLen = Array.isArray(a?.bot?.symbols) ? a.bot.symbols.length : 0;
+      const bLen = Array.isArray(b?.bot?.symbols) ? b.bot.symbols.length : 0;
+      return bLen - aLen;
+    });
+    const fromStamp = Array.isArray(activeBot?.mentorSymbols)
+      ? activeBot.mentorSymbols
       : [];
-    const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
-    const raw = fromLicense.length ? fromLicense : fromBot;
+    const fromLicense = ranked.flatMap((row) =>
+      Array.isArray(row?.bot?.symbols) ? row.bot.symbols : []
+    );
+    const raw = fromStamp.length ? fromStamp : fromLicense;
     const out = [];
     const seen = new Set();
     for (const rawSym of raw) {

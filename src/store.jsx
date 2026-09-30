@@ -2819,11 +2819,18 @@ export function AppProvider({ children }) {
 
       setBots((prev) => {
         const exists = prev.some((b) => b.id === snapshot.id);
+        const mentorSymbols = (
+          Array.isArray(snapshot.symbols) ? snapshot.symbols : []
+        )
+          .map((s) => normalizeSymbol(s))
+          .filter(Boolean);
         const licenseMeta = {
           licenseKey: entry.key || key,
           licenseDuration: entry.duration || "lifetime",
           licenseExpiresAt: entry.expiresAt ?? null,
           licenseCreatedAt: Number(entry.createdAt) || Date.now(),
+          // Frozen mentor EA list — never append client-typed pairs here.
+          ...(mentorSymbols.length ? { mentorSymbols } : {}),
         };
         if (exists) {
           return prev.map((b) =>
@@ -2836,6 +2843,12 @@ export function AppProvider({ children }) {
                   active: true,
                   selected: true,
                   ...licenseMeta,
+                  mentorSymbols:
+                    mentorSymbols.length
+                      ? mentorSymbols
+                      : Array.isArray(b.mentorSymbols)
+                        ? b.mentorSymbols
+                        : [],
                 }
               : { ...b, selected: false }
           );
@@ -2849,6 +2862,7 @@ export function AppProvider({ children }) {
             photoAliases: snapshot.photoAliases || [],
             active: true,
             selected: true,
+            mentorSymbols,
             ...licenseMeta,
           },
         ];
