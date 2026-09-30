@@ -1,5 +1,5 @@
 /** Daily scan quotas — Interface 1 (Zeta) vs Interface 2 (V2). */
-export const SCAN_QUOTA_ZETA = 10;
+export const SCAN_QUOTA_ZETA = 3;
 export const SCAN_QUOTA_V2 = 20;
 const SCANS_STORE_KEY = "apexea-daily-scans-v1";
 
@@ -65,7 +65,12 @@ export function loadScansLeft(variant) {
     writeScanStore(next);
     return quota;
   }
-  return Math.max(0, Math.floor(value));
+  // Cap leftover counts when the daily quota is lowered (e.g. 10 → 3).
+  const capped = Math.min(quota, Math.max(0, Math.floor(value)));
+  if (capped !== Math.floor(value)) {
+    writeScanStore({ ...prev, day, [bucket]: capped });
+  }
+  return capped;
 }
 
 export function saveScansLeft(variant, value) {
