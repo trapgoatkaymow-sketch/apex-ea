@@ -1485,7 +1485,10 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSD.M"
+          "XAUUSD.M",
+          "USDJPY",
+          "USDJPY.M",
+          "BTCUSD"
         ]
       }
     },
@@ -1726,7 +1729,8 @@
           "USDJPY",
           "GBPJPY",
           "ETHUSD",
-          "EURJPY"
+          "EURJPY",
+          "BTCJPYM"
         ]
       }
     },
@@ -1917,7 +1921,8 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM"
+          "XAUUSDM",
+          "USDJPYM"
         ]
       }
     },
@@ -19902,7 +19907,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "AUDCAD"
+        ]
       }
     },
     {
