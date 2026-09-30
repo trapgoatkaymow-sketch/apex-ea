@@ -552,9 +552,10 @@
           "XAUUSD",
           "EURUSD",
           "US30",
-          "USDJPY",
           "GOLD",
-          "XXAXAUXAUUXAUUSD"
+          "XXAXAUXAUUXAUUSD",
+          "VOL80",
+          "BTCUSD"
         ]
       }
     },
@@ -746,7 +747,8 @@
           "XAUUDM",
           "NAS100",
           "VOLATILITY75INDEX",
-          "BTCUSD"
+          "BTCUSD",
+          "BTCUSDM"
         ]
       }
     },
@@ -2095,7 +2097,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "GOLD"
+          "GOLD",
+          "EURUSD",
+          "US30CASH"
         ]
       }
     },
@@ -2231,7 +2235,8 @@
           "BTCUSD.M",
           "XAUSSD.M",
           "EURUSD.M",
-          "XAUUSD.M"
+          "XAUUSD.M",
+          "GBPUSD.M"
         ]
       }
     },
