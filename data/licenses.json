@@ -1252,6 +1252,47 @@
       }
     },
     {
+      "key": "APEX-SQY9-3YVW",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "shozijunior9@gmail.com",
+      "clientName": "S'bongiseni Lushozi",
+      "mainText": "S'bongiseni Lushozi",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "invite_migrate_bypass",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789539543798,
+      "usedAt": 1789988498113,
+      "deviceId": "49e205a8-d9f2-4a5e-a837-19aca6d9a049",
+      "boundAt": 1790766456307,
+      "updatedAt": 1790773131803,
+      "scanReset": null,
+      "robotAccountId": "e08659ab-6bcb-4181-be01-c3e34097cea1",
+      "robotLogin": "8808270",
+      "robotServer": "VaultMarkets-Live",
+      "robotCompany": "VaultMarkets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790770979163,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": []
+      }
+    },
+    {
       "key": "APEX-UH63-579W",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1735,7 +1776,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "XAUUSD",
+          "US30",
+          "XAUUSF"
+        ]
       }
     },
     {
@@ -7817,47 +7863,6 @@
       }
     },
     {
-      "key": "APEX-SQY9-3YVW",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "shozijunior9@gmail.com",
-      "clientName": "S'bongiseni Lushozi",
-      "mainText": "S'bongiseni Lushozi",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "invite_migrate_bypass",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789539543798,
-      "usedAt": 1789988498113,
-      "deviceId": "49e205a8-d9f2-4a5e-a837-19aca6d9a049",
-      "boundAt": 1790766456307,
-      "updatedAt": 1790770984127,
-      "scanReset": null,
-      "robotAccountId": "e08659ab-6bcb-4181-be01-c3e34097cea1",
-      "robotLogin": "8808270",
-      "robotServer": "VaultMarkets-Live",
-      "robotCompany": "VaultMarkets (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790770979163,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": []
-      }
-    },
-    {
       "key": "APEX-5CPK-GNU7",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -8748,8 +8753,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "BTCUSD",
-          "XAUUSDM"
+          "BTCUSD"
         ]
       }
     },
