@@ -1,66 +1,42 @@
 /**
- * Silent START → open: after a short delay, build a setup for the selected
- * symbol and place TP threads on MetaTrader without showing Chart Scanner UI.
+ * Silent START → open: after a short delay, run the same OpenAI + SL/TP
+ * ladder as Chart Scanner (no scanner UI), then place TP1/TP2/TP3 threads.
+ *
+ * TP ladder (non-H4, same as scanner): TP1 1:2 · TP2 1:3 · TP3 1:4
+ * Stop loss comes from OpenAI and is widened with buildSafeMultiTpLevels.
  */
+import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import {
   buildScannerFillComment,
+  getSymbolQuote,
   placeTrade,
 } from "./metaApi.js";
 import { consumeScan, loadScansLeft } from "./scanQuota.js";
 import {
   buildSafeMultiTpLevels,
+  normalizeChartTimeframe,
   normalizeTradeSide,
+  tpRiskRewardLabel,
 } from "./tradeLevels.js";
 
-/** Delay after START before the silent open runs. */
+/** Delay after START before the silent OpenAI scan + open runs. */
 export const START_SILENT_OPEN_DELAY_MS = 20_000;
 
 /** Scanner timeframes used by the START button open. */
 export const START_SCANNER_TIMEFRAMES = ["M15", "M30", "H1"];
 
-function estimateEntryForSymbol(symbol) {
-  const raw = String(symbol || "")
-    .toUpperCase()
-    .replace(/^\.+/, "")
-    .replace(/\.+$/, "")
-    .replace(/CASH$/i, "")
-    .replace(/\.(MIC|M|PRO|RAW|ECN|STD|CASH|SPOT)$/i, "");
-  const base = raw.split(".")[0] || raw;
-  const table = [
-    [/^(US30|DJ30|WS30|DJI|USA30|USWALLST30|DOW30)/, 45000],
-    [/^(NAS100|USTEC|NDX|NASDAQ|US100|USATECH100|TECH100)/, 20000],
-    [/^(SPX500|US500|SP500|SPX)/, 5600],
-    [/^(GER40|DE40|DAX|DE30|GER30|GDAXI)/, 18500],
-    [/^(UK100|FTSE)/, 8200],
-    [/^(JP225|JPN225|NI225|NIKKEI)/, 38000],
-    [/^(XAU|GOLD)/, 2650],
-    [/^(XAG|SILVER)/, 31],
-    [/^(BTC)/, 95000],
-    [/^(ETH)/, 3500],
-    [/^(USOIL|WTI|CL)/, 75],
-    [/^(UKOIL|BRENT)/, 80],
-    [/^(EURUSD|EUR)/, 1.085],
-    [/^(GBPUSD|GBP)/, 1.27],
-    [/^(USDJPY|JPY)/, 149.5],
-    [/^(AUDUSD|AUD)/, 0.65],
-    [/^(NZDUSD|NZD)/, 0.6],
-    [/^(USDCAD|CAD)/, 1.36],
-    [/^(USDCHF|CHF)/, 0.88],
-  ];
-  for (const [re, price] of table) {
-    if (re.test(base) || re.test(raw)) return price;
-  }
-  if (/USD$/.test(base) || /^USD/.test(base)) return 1.1;
-  if (/JPY$/.test(base)) return 150;
-  return 100;
-}
-
 function clampLot(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return 0.01;
   return Number(Math.min(1000, n).toFixed(4));
+}
+
+function toFiniteNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const n = Number(String(value ?? "").replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -104,41 +80,120 @@ export function pickSelectedSymbol(activeBot, eas = [], appSymbols = null) {
   return unique[0] || "";
 }
 
-/** Build a scanner-style setup for one START timeframe (M15 / M30 / H1). */
-function buildSetup(symbol, preferredSide = "BUY", timeframe = "M15") {
-  const side = normalizeTradeSide(preferredSide, { trustSide: true });
-  const entry = estimateEntryForSymbol(symbol);
+/**
+ * OpenAI symbol scan (no screenshot) — same backend ladder as Chart Scanner.
+ */
+async function analyzeSymbolWithOpenAI({
+  symbol,
+  price,
+  preferredSide = "",
+  timeframes = START_SCANNER_TIMEFRAMES,
+} = {}) {
+  const response = await fetch(apiUrl("/api/chart/analyze-symbol"), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      symbol,
+      price,
+      timeframes,
+      side: preferredSide || undefined,
+    }),
+    cache: "no-store",
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { error: text };
+  }
+  if (!response.ok) {
+    const message =
+      (data && (data.error || data.message)) ||
+      `Symbol analysis failed (${response.status})`;
+    const err = new Error(message);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+/**
+ * Build one scanner-aligned setup from live price + OpenAI stop.
+ * Always uses the non-H4 TP ladder: 1:2 / 1:3 / 1:4.
+ */
+function buildScannerAlignedSetup({
+  symbol,
+  side,
+  entry,
+  stopLoss,
+  timeframe = "M15",
+  analysis = "",
+  confidence = 70,
+  source = "openai-symbol",
+} = {}) {
+  const tfRaw = normalizeChartTimeframe(timeframe || "M15");
+  // Force non-H4 so TP1/TP2/TP3 stay 1:2 / 1:3 / 1:4 like the scanner default.
+  const tf = tfRaw === "H4" ? "M15" : tfRaw || "M15";
   const levels = buildSafeMultiTpLevels({
     symbol,
-    side,
+    side: normalizeTradeSide(side, { entry, stopLoss, trustSide: true }),
     entry,
-    timeframe,
+    stopLoss,
+    timeframe: tf,
   });
   return {
     symbol,
     detectedSymbol: symbol,
-    side,
-    timeframe,
-    ...levels,
-    source: "silent-start",
+    side: levels.side,
+    entry: levels.entry,
+    stopLoss: levels.stopLoss,
+    takeProfit1: levels.takeProfit1,
+    takeProfit2: levels.takeProfit2,
+    takeProfit3: levels.takeProfit3,
+    takeProfit: levels.takeProfit3,
+    riskReward: levels.riskReward || tpRiskRewardLabel(tf),
+    timeframe: tf,
+    analysis: String(analysis || "").trim(),
+    confidence,
+    source,
   };
 }
 
 /**
- * One open thread per scanner timeframe: M15 → TP1, M30 → TP2, H1 → TP3.
- * Matches Chart Scanner thread mapping while covering the three START TFs.
+ * One open thread per TP target — same map as Chart Scanner Execute.
+ * Trade 1 → TP1 (1:2), Trade 2 → TP2 (1:3), Trade 3 → TP3 (1:4).
+ * Shared SL from the OpenAI scan (widened to instrument floors).
  */
-function buildTimeframeThreads({ symbol, side, lot }) {
+function buildTpThreads({ signal, lot }) {
   const map = [
-    { timeframe: "M15", target: "TP1", takeProfitKey: "takeProfit1", tradeNo: 1 },
-    { timeframe: "M30", target: "TP2", takeProfitKey: "takeProfit2", tradeNo: 2 },
-    { timeframe: "H1", target: "TP3", takeProfitKey: "takeProfit3", tradeNo: 3 },
+    {
+      timeframe: "M15",
+      target: "TP1",
+      takeProfitKey: "takeProfit1",
+      tradeNo: 1,
+    },
+    {
+      timeframe: "M30",
+      target: "TP2",
+      takeProfitKey: "takeProfit2",
+      tradeNo: 2,
+    },
+    {
+      timeframe: "H1",
+      target: "TP3",
+      takeProfitKey: "takeProfit3",
+      tradeNo: 3,
+    },
   ];
   const threads = [];
   for (const row of map) {
-    const signal = buildSetup(symbol, side, row.timeframe);
-    const takeProfit = Number(signal?.[row.takeProfitKey]);
-    if (!Number.isFinite(takeProfit) || takeProfit <= 0) continue;
+    const takeProfit = toFiniteNumber(signal?.[row.takeProfitKey]);
+    if (takeProfit == null || takeProfit <= 0) continue;
     threads.push({
       timeframe: row.timeframe,
       target: row.target,
@@ -156,6 +211,7 @@ function buildTimeframeThreads({ symbol, side, lot }) {
 
 /**
  * Silently open TP threads for the selected symbol (no Chart Scanner UI).
+ * Flow matches scanner: live quote → OpenAI side/SL → 1:2/1:3/1:4 TPs → place.
  * @returns {Promise<{ ok: boolean, symbol?: string, opened?: number, error?: string }>}
  */
 export async function runSilentStartOpen({
@@ -184,13 +240,81 @@ export async function runSilentStartOpen({
 
   const meta = getSymbolMeta?.(symbol) || {};
   const actionRaw = String(meta.action || "BOTH").toUpperCase();
-  const side =
-    actionRaw === "SELL" ? "SELL" : actionRaw === "BUY" ? "BUY" : "BUY";
+  const preferredSide =
+    actionRaw === "SELL" ? "SELL" : actionRaw === "BUY" ? "BUY" : "";
   const lot = clampLot(meta.lotSize);
-  // START always uses scanner M15 + M30 + H1 (not a single hardcoded TF).
-  const threads = buildTimeframeThreads({ symbol, side, lot });
+
+  // 1) Live broker quote — never use hardcoded estimate prices for SL/TP.
+  let quote;
+  try {
+    quote = await getSymbolQuote({
+      accountId,
+      symbol,
+      side: preferredSide || "BUY",
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      symbol,
+      error: error?.message || "Could not fetch live quote",
+    };
+  }
+  const livePrice = toFiniteNumber(quote?.price);
+  const tradeSymbol =
+    normalizeBrokerSymbol(quote?.symbol || symbol) || symbol;
+  if (livePrice == null || livePrice <= 0) {
+    return { ok: false, symbol: tradeSymbol, error: "No live price for symbol" };
+  }
+
+  // 2) OpenAI scan — same engine as Chart Scanner (side + protective stop).
+  let ai;
+  try {
+    ai = await analyzeSymbolWithOpenAI({
+      symbol: tradeSymbol,
+      price: livePrice,
+      preferredSide,
+      timeframes: START_SCANNER_TIMEFRAMES,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      symbol: tradeSymbol,
+      error: error?.message || "OpenAI scan failed",
+    };
+  }
+
+  // Prefer live ask/bid over AI entry; keep AI stop + side.
+  const signal = buildScannerAlignedSetup({
+    symbol: tradeSymbol,
+    side: ai?.side || preferredSide || "BUY",
+    entry: livePrice,
+    stopLoss: ai?.stopLoss,
+    timeframe: ai?.timeframe || "M15",
+    analysis: ai?.analysis || "",
+    confidence: ai?.confidence,
+    source: ai?.source || "openai-symbol",
+  });
+
+  if (
+    toFiniteNumber(signal.stopLoss) == null ||
+    toFiniteNumber(signal.takeProfit1) == null ||
+    toFiniteNumber(signal.takeProfit2) == null ||
+    toFiniteNumber(signal.takeProfit3) == null
+  ) {
+    return {
+      ok: false,
+      symbol: tradeSymbol,
+      error: "Could not build scanner SL/TP1/TP2/TP3",
+    };
+  }
+
+  const threads = buildTpThreads({ signal, lot });
   if (!threads.length) {
-    return { ok: false, error: "Could not build M15/M30/H1 scanner threads" };
+    return {
+      ok: false,
+      symbol: tradeSymbol,
+      error: "Could not build M15/M30/H1 scanner threads",
+    };
   }
 
   consumeScan(variant);
@@ -201,28 +325,28 @@ export async function runSilentStartOpen({
     premium: false,
   });
 
-  const primary = threads[0];
   publishOrbTrade?.({
     botName: activeBot?.name || "Bot",
     comment,
-    symbol,
+    symbol: tradeSymbol,
     lotSize: lot,
-    action: primary.side,
-    side: primary.side,
-    entry: primary.entry,
-    stopLoss: primary.stopLoss,
-    takeProfit: primary.takeProfit,
-    target: primary.target,
+    action: signal.side,
+    side: signal.side,
+    entry: signal.entry,
+    stopLoss: signal.stopLoss,
+    takeProfit: signal.takeProfit1,
+    target: "TP1",
   });
 
   let opened = 0;
   let lastError = "";
   const openedTfs = [];
+  const openedTargets = [];
   for (const thread of threads) {
     try {
       const fill = await placeTrade({
         accountId,
-        symbol,
+        symbol: tradeSymbol,
         volume: thread.volume,
         side: thread.side,
         stopLoss: thread.stopLoss,
@@ -233,9 +357,10 @@ export async function runSilentStartOpen({
       });
       opened += 1;
       openedTfs.push(thread.timeframe);
+      openedTargets.push(thread.target);
       recordTrade({
         botName: activeBot?.name || "Bot",
-        symbol: normalizeBrokerSymbol(fill?.symbol || symbol) || symbol,
+        symbol: normalizeBrokerSymbol(fill?.symbol || tradeSymbol) || tradeSymbol,
         lotSize: thread.volume,
         action: thread.side,
         side: thread.side,
@@ -251,14 +376,26 @@ export async function runSilentStartOpen({
   }
 
   if (!opened) {
-    return { ok: false, symbol, opened: 0, error: lastError || "Open failed" };
+    return {
+      ok: false,
+      symbol: tradeSymbol,
+      opened: 0,
+      error: lastError || "Open failed",
+    };
   }
   return {
     ok: true,
-    symbol,
+    symbol: tradeSymbol,
     opened,
-    side: primary.side,
+    side: signal.side,
+    entry: signal.entry,
+    stopLoss: signal.stopLoss,
+    takeProfit1: signal.takeProfit1,
+    takeProfit2: signal.takeProfit2,
+    takeProfit3: signal.takeProfit3,
+    riskReward: signal.riskReward,
     timeframes: openedTfs,
+    targets: openedTargets,
     error: lastError || null,
   };
 }

@@ -193,14 +193,15 @@ export default function ZetaInterface() {
         });
         if (silentOpenRunRef.current !== runId) return;
         if (result?.ok) {
-          const tfs = Array.isArray(result.timeframes) && result.timeframes.length
-            ? result.timeframes.join("/")
-            : "M15/M30/H1";
+          const ladder =
+            result.riskReward ||
+            (result.takeProfit1 != null
+              ? "TP 1:2 · 1:3 · 1:4"
+              : "M15/M30/H1");
           showToast(
-            `Opened ${result.side || ""} ${result.symbol} · ${tfs}`.replace(
-              /\s+/g,
-              " "
-            ).trim()
+            `Opened ${result.side || ""} ${result.symbol} · SL ${result.stopLoss} · ${ladder}`
+              .replace(/\s+/g, " ")
+              .trim()
           );
         } else if (result?.error) {
           showToast(result.error);

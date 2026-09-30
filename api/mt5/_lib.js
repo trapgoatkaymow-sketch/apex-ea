@@ -1489,3 +1489,81 @@ async function resolveTradeSymbol(accountId, requested) {
   const { symbol } = await resolveTradeSymbolDetailed(accountId, requested);
   return symbol;
 }
+
+/**
+ * Live bid/ask/mid for a connected account symbol (used by silent START scanner).
+ */
+export async function getSymbolQuote(
+  accountId,
+  symbol,
+  { side = "BUY" } = {}
+) {
+  const id = String(accountId || "").trim();
+  const requested = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
+  if (!id || !requested) {
+    const err = new Error("accountId and symbol are required");
+    err.status = 400;
+    throw err;
+  }
+
+  const action =
+    String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
+  const { symbol: resolvedSym, accountSymbols } =
+    await resolveTradeSymbolDetailed(id, requested);
+  const probeSymbols = buildTradeSymbolProbe({
+    requested,
+    resolved: resolvedSym,
+    accountSymbols,
+  });
+
+  async function subscribeSymbol(symbolName) {
+    const name = String(symbolName || "").trim();
+    if (!name) return;
+    try {
+      await mt5Fetch(
+        `/Subscribe?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&interval=0`,
+        { timeoutMs: 8000 }
+      );
+    } catch {
+      // optional
+    }
+  }
+
+  for (const alt of probeSymbols.slice(0, 40)) {
+    try {
+      await subscribeSymbol(alt);
+      const quote = await mt5Fetch(
+        `/GetQuote?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(alt)}`,
+        { timeoutMs: 12000 }
+      );
+      const bid = Number(quote?.bid ?? quote?.Bid ?? quote?.bidPrice);
+      const ask = Number(quote?.ask ?? quote?.Ask ?? quote?.askPrice);
+      const mid = Number(quote?.price ?? quote?.last ?? quote?.Last);
+      let price = null;
+      if (action === "Buy" && Number.isFinite(ask) && ask > 0) price = ask;
+      else if (action === "Sell" && Number.isFinite(bid) && bid > 0) price = bid;
+      else if (Number.isFinite(mid) && mid > 0) price = mid;
+      else if (Number.isFinite(bid) && bid > 0 && Number.isFinite(ask) && ask > 0) {
+        price = (bid + ask) / 2;
+      }
+      if (Number.isFinite(price) && price > 0) {
+        return {
+          ok: true,
+          accountId: id,
+          symbol: alt,
+          requestedSymbol: requested,
+          bid: Number.isFinite(bid) && bid > 0 ? bid : null,
+          ask: Number.isFinite(ask) && ask > 0 ? ask : null,
+          price,
+          side: action === "Sell" ? "SELL" : "BUY",
+        };
+      }
+    } catch {
+      // try next spelling
+    }
+  }
+
+  const err = new Error(`No live quote for ${requested}`);
+  err.status = 404;
+  throw err;
+}

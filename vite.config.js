@@ -8,6 +8,7 @@ import {
   handleDisconnect,
   handleHealth,
   handleMentorTrade,
+  handleQuote,
   handleStatus,
   handleTrade,
 } from './api/metaapi/_handlers.js'
@@ -20,6 +21,7 @@ import tradeEventsHandler from './api/trade-events/index.js'
 import calendarHandler from './api/calendar/index.js'
 import chartSymbolHandler from './api/chart/symbol.js'
 import chartAnalyzeHandler from './api/chart/analyze.js'
+import chartAnalyzeSymbolHandler from './api/chart/analyze-symbol.js'
 import paypalConfigHandler from './api/paypal/config.js'
 import paypalCreateOrderHandler from './api/paypal/create-order.js'
 import paypalCaptureOrderHandler from './api/paypal/capture-order.js'
@@ -138,6 +140,14 @@ function metaApiDevPlugin() {
             return chartAnalyzeHandler(req, res)
           }
 
+          if (
+            url.pathname === '/api/chart/analyze-symbol' ||
+            url.pathname === '/api/chart/analyze-symbol/'
+          ) {
+            req.url = `${url.pathname}${url.search}`
+            return chartAnalyzeSymbolHandler(req, res)
+          }
+
           if (url.pathname === '/api/paypal/config' || url.pathname === '/api/paypal/config/') {
             req.url = `${url.pathname}${url.search}`
             return paypalConfigHandler(req, res)
@@ -178,6 +188,12 @@ function metaApiDevPlugin() {
           }
           if (req.method === 'POST' && url.pathname === '/api/metaapi/trade') {
             return handleTrade(req, res)
+          }
+          if (
+            (req.method === 'GET' || req.method === 'POST') &&
+            url.pathname === '/api/metaapi/quote'
+          ) {
+            return handleQuote(req, res)
           }
           if (
             (req.method === 'POST' ||

@@ -134,6 +134,24 @@ export async function closeAllPositions(accountId, { signal } = {}) {
   });
 }
 
+/** Live bid/ask/mid for a connected account symbol. */
+export async function getSymbolQuote({
+  accountId,
+  symbol,
+  side = "BUY",
+  signal,
+} = {}) {
+  return apiFetch("/quote", {
+    method: "POST",
+    signal,
+    body: {
+      accountId: String(accountId || "").trim(),
+      symbol: String(symbol || "").trim(),
+      side: String(side || "BUY").toUpperCase() === "SELL" ? "SELL" : "BUY",
+    },
+  });
+}
+
 export async function placeTrade({
   accountId,
   symbol,

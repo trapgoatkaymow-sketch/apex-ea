@@ -19,6 +19,7 @@ import {
   disconnectAccount as mt5DisconnectAccount,
   getAccountStatus as mt5GetAccountStatus,
   pingBrokerApi,
+  getSymbolQuote as mt5GetSymbolQuote,
   placeMarketTrade as mt5PlaceMarketTrade,
   readJsonBody,
   searchBrokers as mt5SearchBrokers,
@@ -225,6 +226,33 @@ export async function handleTrade(req, res) {
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Trade failed",
+      details: error.data || null,
+    });
+  }
+}
+
+/** Live quote for silent START / scanner-aligned opens. */
+export async function handleQuote(req, res) {
+  if (req.method === "OPTIONS") {
+    endOptions(res);
+    return;
+  }
+  if (req.method !== "GET" && req.method !== "POST") {
+    sendJson(res, 405, { error: "Method not allowed" });
+    return;
+  }
+  try {
+    const body =
+      req.method === "POST"
+        ? await readJsonBody(req)
+        : Object.fromEntries(new URL(req.url, "http://local").searchParams);
+    const result = await mt5GetSymbolQuote(body.accountId, body.symbol, {
+      side: body.side || body.action || "BUY",
+    });
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendJson(res, error.status || 500, {
+      error: error.message || "Quote failed",
       details: error.data || null,
     });
   }
