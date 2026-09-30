@@ -530,11 +530,12 @@ function clearAppStoragePressure({
   }
   try {
     // Drop known heavy keys that are not required for EA / MT5 save.
-    // Do NOT clear apexea-daily-scans-v1 — quotas must persist through the day.
+    // Do NOT clear daily scan/start quotas — they must persist through the day.
     const keep = new Set([
       STORAGE_KEY,
       ...(dropBackup ? [] : [BACKUP_KEY, "apexea-app-v1-backup"]),
       "apexea-daily-scans-v1",
+      "apexea-daily-starts-v1",
       "apexea-device-id",
       "apexea-device-access-v1",
       "apexea-build-id-v1",
