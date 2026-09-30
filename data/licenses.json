@@ -400,7 +400,10 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790769956229,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "XAUUSD",
+        "GOLD"
+      ],
       "clientSymbolsUpdatedAt": 1790784810649,
       "purchaseCaptureId": "5VL95140FE708463J",
       "purchaseOrderId": "0EL752261F5918804",
@@ -490,7 +493,10 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790718536480,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "XAUUSD",
+        "GOLD"
+      ],
       "clientSymbolsUpdatedAt": 1790784790873,
       "purchaseCaptureId": "1U957727M1634892S",
       "purchaseOrderId": "9W414358PS6882907",
@@ -3719,9 +3725,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -4113,8 +4117,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "CHFJPY"
+          "XAUUSD"
         ]
       }
     },
@@ -6226,10 +6229,7 @@
         "strategy": "scalper",
         "symbols": [
           "GBPUSD",
-          "EURUSD",
-          "XAUUSD",
-          "USDJPY",
-          "GOLD"
+          "EURUSD"
         ]
       }
     },
@@ -21465,7 +21465,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "BTCUSD"
+        ]
       }
     },
     {
