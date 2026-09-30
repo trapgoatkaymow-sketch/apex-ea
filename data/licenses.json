@@ -119,7 +119,7 @@
       "usedAt": 1790745261106,
       "deviceId": "ffba9b75-e043-454c-ba67-fa649d492a73",
       "boundAt": 1790745261106,
-      "updatedAt": 1790745452701,
+      "updatedAt": 1790745464756,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -130,7 +130,7 @@
       "clientSymbols": [
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790745452701,
+      "clientSymbolsUpdatedAt": 1790745464756,
       "purchaseCaptureId": "9UW48999DY148614E",
       "purchaseOrderId": "2CY9034869988720W",
       "purchaseSource": "paypal-giveaway",
@@ -164,7 +164,7 @@
       "usedAt": 1790702913049,
       "deviceId": "0e579b77-2c3d-469b-8a49-f3353f6ecb4b",
       "boundAt": 1790702913049,
-      "updatedAt": 1790745442857,
+      "updatedAt": 1790745446586,
       "scanReset": null,
       "robotAccountId": "5e193557-843b-49bb-9e10-3c24ddd82dd1",
       "robotLogin": "4009541",
@@ -176,7 +176,7 @@
         "XAUUSD",
         "XAUUSDM"
       ],
-      "clientSymbolsUpdatedAt": 1790745442857,
+      "clientSymbolsUpdatedAt": 1790745446586,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -186,7 +186,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -603,9 +606,7 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSD",
-          "GOLD",
-          "XAUUSDM"
+          "XAUUSD"
         ]
       }
     },
@@ -776,8 +777,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "NAS100"
+          "XAUUSD"
         ]
       }
     },
@@ -1254,9 +1254,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
