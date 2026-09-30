@@ -353,14 +353,14 @@
       "usedAt": 1789818465914,
       "deviceId": "efd68f20-18b6-40d3-a9a7-f507e7017e07",
       "boundAt": 1790575758232,
-      "updatedAt": 1790810407300,
+      "updatedAt": 1790810407503,
       "scanReset": null,
-      "robotAccountId": "aa673ed3-3b63-4b70-96d1-a5863d821075",
+      "robotAccountId": "68a45c12-7b90-4e5d-ad0c-9ff663058ddf",
       "robotLogin": "113654805",
       "robotServer": "XMGlobal-MT5 2",
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790798022169,
+      "robotConnectedAt": 1790798128263,
       "clientSymbols": [
         "XAUUSD",
         "GOLD",
@@ -5203,7 +5203,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -6305,7 +6309,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -7123,7 +7131,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -7647,7 +7659,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAAUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
