@@ -19,18 +19,20 @@
       "usedAt": 1790509490342,
       "deviceId": "df82a855-c008-4696-a10f-9b126937be3c",
       "boundAt": 1790793211237,
-      "updatedAt": 1790793354678,
+      "updatedAt": 1790793362908,
       "scanReset": null,
-      "robotAccountId": "8cd50fa6-a851-466d-9668-68376ba7722c",
-      "robotLogin": "140618389",
-      "robotServer": "DerivBVI-Server-03",
-      "robotCompany": "Deriv (BVI) Ltd.",
+      "robotAccountId": "51281217-70b9-4c02-99c7-2918993fc462",
+      "robotLogin": "101362168",
+      "robotServer": "DerivSVG-Server-02",
+      "robotCompany": "Deriv (SVG) LLC",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790788193994,
+      "robotConnectedAt": 1790791862745,
       "clientSymbols": [
-        "US30"
+        "US30",
+        "XAUUSD",
+        "NAS100"
       ],
-      "clientSymbolsUpdatedAt": 1790793354678,
+      "clientSymbolsUpdatedAt": 1790793362908,
       "purchaseCaptureId": "26755822B0201874X",
       "purchaseOrderId": "1AC66980TM811505Y",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -41,7 +43,58 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "US30"
+          "US30",
+          "XAUUSD",
+          "NAS100"
+        ]
+      }
+    },
+    {
+      "key": "APEX-QJW9-QD3B",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "thatobonolo16@gmail.com",
+      "clientName": "Thato",
+      "mainText": "Thato",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790535629413,
+      "usedAt": 1790537069574,
+      "deviceId": "3d88164d-b5af-4c56-be39-6c083d9e3b03",
+      "boundAt": 1790537069574,
+      "updatedAt": 1790793354501,
+      "scanReset": null,
+      "robotAccountId": "3dbda5ec-3730-40bd-b933-f1293be49244",
+      "robotLogin": "1816525",
+      "robotServer": "RCGMarkets-Demo",
+      "robotCompany": "RCG Markets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790791123479,
+      "clientSymbols": [
+        "XAUUSD",
+        "US30",
+        "GOLD"
+      ],
+      "clientSymbolsUpdatedAt": 1790793354501,
+      "purchaseCaptureId": "5JK50466ME793082K",
+      "purchaseOrderId": "1C4623513W136013E",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790695531405,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "GOLD"
         ]
       }
     },
@@ -86,55 +139,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": []
-      }
-    },
-    {
-      "key": "APEX-QJW9-QD3B",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "thatobonolo16@gmail.com",
-      "clientName": "Thato",
-      "mainText": "Thato",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790535629413,
-      "usedAt": 1790537069574,
-      "deviceId": "3d88164d-b5af-4c56-be39-6c083d9e3b03",
-      "boundAt": 1790537069574,
-      "updatedAt": 1790793348768,
-      "scanReset": null,
-      "robotAccountId": "3dbda5ec-3730-40bd-b933-f1293be49244",
-      "robotLogin": "1816525",
-      "robotServer": "RCGMarkets-Demo",
-      "robotCompany": "RCG Markets (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790791123479,
-      "clientSymbols": [
-        "XAUUSD",
-        "US30",
-        "GOLD"
-      ],
-      "clientSymbolsUpdatedAt": 1790792147223,
-      "purchaseCaptureId": "5JK50466ME793082K",
-      "purchaseOrderId": "1C4623513W136013E",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790695531405,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "GOLD"
-        ]
       }
     },
     {
@@ -463,7 +467,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
+          "XAUUSDM",
           "GOLD"
         ]
       }
@@ -554,9 +558,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -650,7 +652,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "EURUSD"
+        ]
       }
     },
     {
@@ -701,7 +705,12 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD"
+          "EURUSD",
+          "0.01",
+          "US3",
+          "US5",
+          "US1",
+          "US2"
         ]
       }
     },
@@ -792,7 +801,8 @@
         "symbols": [
           "XAUUSD",
           "XAUUSDM",
-          "USDJPY"
+          "USDJPY",
+          "USDJPYM"
         ]
       }
     },
@@ -848,7 +858,8 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM"
+          "XAUUSDM",
+          "USDJPYM"
         ]
       }
     },
@@ -997,7 +1008,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD"
+          "EURUSD",
+          "AUDCHF"
         ]
       }
     },
@@ -1053,7 +1065,8 @@
           "XAUUDM",
           "NAS100",
           "VOLATILITY75INDEX",
-          "BTCUSD"
+          "BTCUSD",
+          "BTCUSDM"
         ]
       }
     },
@@ -1447,7 +1460,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY"
+          "XAUUSD"
         ]
       }
     },
@@ -1685,7 +1698,8 @@
         "strategy": "scalper",
         "symbols": [
           "EURGBP",
-          "XXAXAUXAUUXAUUSXAUUSD"
+          "XXAXAUXAUUXAUUSXAUUSD",
+          "XAUUSD"
         ]
       }
     },
@@ -1915,10 +1929,13 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSD",
+          "GOLD",
           "EURUSD",
           "USDJPY",
-          "GBPUSD",
+          "AUDUSD",
           "NZDUSD",
+          "GBPUSD",
           "WALLSTREET30"
         ]
       }
@@ -2824,12 +2841,19 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
+          "EURUSD",
+          "GBPUSD",
+          "XAUUSD",
+          "NAS100",
+          "US30",
+          "BTCUSD",
+          "USDCAD",
           "XAUUSDM",
           "US30M",
-          "USTECM",
-          "BTCUSD",
-          "BTCUSDM",
-          "EURUSDM"
+          "EURUSDM",
+          "USDJPY",
+          "USTEC",
+          "USTECM"
         ]
       }
     },
@@ -4459,10 +4483,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
