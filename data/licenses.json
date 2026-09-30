@@ -19,14 +19,14 @@
       "usedAt": 1790059835917,
       "deviceId": "0168918f-fdde-4b4e-9ac7-ea8307e71bc4",
       "boundAt": 1790786544754,
-      "updatedAt": 1790790368883,
+      "updatedAt": 1790790369830,
       "scanReset": null,
-      "robotAccountId": "774affe7-575e-4613-8a9c-bd9e24b84189",
+      "robotAccountId": "f66797d8-5402-472b-8f5c-dcd89f73c4d7",
       "robotLogin": "101792854",
       "robotServer": "DerivSVG-Server-02",
       "robotCompany": "Deriv (SVG) LLC",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790765156536,
+      "robotConnectedAt": 1790790297983,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790785955287,
       "purchaseCaptureId": null,
@@ -101,7 +101,7 @@
       "usedAt": 1790745841619,
       "deviceId": "c899f0ca-a795-4f99-8035-fd3ab1a6b20d",
       "boundAt": 1790745962408,
-      "updatedAt": 1790790350843,
+      "updatedAt": 1790790350964,
       "scanReset": null,
       "robotAccountId": "fcbd946e-8caf-4b05-bc35-b25c6f62b78c",
       "robotLogin": "112332604",
@@ -142,7 +142,7 @@
       "usedAt": 1790751423188,
       "deviceId": "a1d2836b-eaee-41d7-9bd5-4851e2ac3520",
       "boundAt": 1790753081240,
-      "updatedAt": 1790790346272,
+      "updatedAt": 1790790347318,
       "scanReset": null,
       "robotAccountId": "06a95d1c-8ea5-46d3-ace0-f35b67b7b140",
       "robotLogin": "134630186",
@@ -191,7 +191,7 @@
       "usedAt": 1790710587869,
       "deviceId": "63820fb8-9eff-499e-ae89-e869cf6df823",
       "boundAt": 1790751388559,
-      "updatedAt": 1790790345916,
+      "updatedAt": 1790790347318,
       "scanReset": null,
       "robotAccountId": "06a95d1c-8ea5-46d3-ace0-f35b67b7b140",
       "robotLogin": "134630186",
@@ -1162,7 +1162,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "GOLD",
+          "EURUSD"
+        ]
       }
     },
     {
