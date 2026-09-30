@@ -32,14 +32,14 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
+      "emailSentAt": null,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      },
-      "emailSentAt": null
+      }
     },
     {
       "key": "APEX-20D9-F217",
@@ -2434,7 +2434,9 @@
         "strategy": "scalper",
         "symbols": [
           "NAS100",
-          "XAUSD"
+          "XAUSD",
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
@@ -22083,7 +22085,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD247",
-          "NAS100"
+          "NAS100",
+          "USA100"
         ]
       }
     },
