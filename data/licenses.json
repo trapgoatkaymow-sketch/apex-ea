@@ -588,7 +588,7 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "GOLDM"
+          "XAUUSD"
         ]
       }
     },
@@ -865,7 +865,8 @@
         "strategy": "scalper",
         "symbols": [
           "US30",
-          "XAUUSD"
+          "XAUUSD",
+          "XAUUSDM"
         ]
       }
     },
@@ -1296,7 +1297,8 @@
           "NAS100",
           "NASDAQ",
           "DJ39",
-          "VOL80"
+          "VOL80",
+          "XAUUSD.S"
         ]
       }
     },
@@ -1853,7 +1855,14 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAAUSD",
+          "GOLDMIC",
+          "XAUUSDMIC",
+          "GOLDMICRO",
+          "US30"
+        ]
       }
     },
     {
@@ -2746,7 +2755,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "EURUSD",
+          "VOLATILITY80SYNTHETICINDEX"
+        ]
       }
     },
     {
@@ -3120,8 +3133,7 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "XAUUSD",
-          "US30CASH"
+          "XAUUSD"
         ]
       }
     },
@@ -3166,7 +3178,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSD.M"
+        ]
       }
     },
     {
@@ -3251,10 +3266,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -3430,7 +3442,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH."
+          "USTECH.",
+          ".USTECH."
         ]
       }
     },
@@ -3948,10 +3961,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "NAS100"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5696,7 +5706,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -5804,7 +5816,8 @@
           "USTECH",
           "XAAUSD",
           "BOOM",
-          "STEP"
+          "STEP",
+          "BOOM900"
         ]
       }
     },
@@ -5942,10 +5955,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6669,7 +6679,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30"
         ]
       }
     },
@@ -7120,7 +7131,11 @@
           "NAS100",
           "US100",
           "NASDAQ100INDEX",
-          "NASDAQ100"
+          "NASDAQ100",
+          "US30",
+          "US30.STD",
+          "XAUUSD",
+          "XAUUSD.M"
         ]
       }
     },
@@ -14969,8 +14984,7 @@
           "NAS100",
           "GOLD",
           "XAUUUSD",
-          "XAUUSD.MIC",
-          "GOLDVSUSDOLLAR"
+          "XAUUSD.MIC"
         ]
       }
     },
@@ -31847,9 +31861,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
