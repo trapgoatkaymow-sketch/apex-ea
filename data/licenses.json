@@ -63,10 +63,10 @@
       "duration": "1m10d",
       "expiresAt": 1794217233682,
       "createdAt": 1790761233682,
-      "usedAt": 1790761812525,
+      "usedAt": 1790761815294,
       "deviceId": "be96458e-6cdc-49f4-a018-4f6f54d964e4",
-      "boundAt": 1790761812525,
-      "updatedAt": 1790761812525,
+      "boundAt": 1790761815294,
+      "updatedAt": 1790761815294,
       "scanReset": null,
       "robotAccountId": "",
       "robotLogin": "",
@@ -208,7 +208,7 @@
       "usedAt": 1790714147523,
       "deviceId": "1d90b9e3-90f6-4635-be3a-bbbea08b020f",
       "boundAt": 1790752439409,
-      "updatedAt": 1790761804217,
+      "updatedAt": 1790761806286,
       "scanReset": null,
       "robotAccountId": "5d885ca4-0c81-41d8-bebc-8fcc362f0ca4",
       "robotLogin": "296430962",
@@ -249,7 +249,7 @@
       "usedAt": 1790713955446,
       "deviceId": "1d90b9e3-90f6-4635-be3a-bbbea08b020f",
       "boundAt": 1790752405937,
-      "updatedAt": 1790761804217,
+      "updatedAt": 1790761806286,
       "scanReset": null,
       "robotAccountId": "5d885ca4-0c81-41d8-bebc-8fcc362f0ca4",
       "robotLogin": "296430962",
@@ -290,7 +290,7 @@
       "usedAt": 1790713879562,
       "deviceId": "1d90b9e3-90f6-4635-be3a-bbbea08b020f",
       "boundAt": 1790752289419,
-      "updatedAt": 1790761804217,
+      "updatedAt": 1790761806286,
       "scanReset": null,
       "robotAccountId": "5d885ca4-0c81-41d8-bebc-8fcc362f0ca4",
       "robotLogin": "296430962",
@@ -331,7 +331,7 @@
       "usedAt": 1790714250443,
       "deviceId": "965ddb44-7bae-4035-a222-b4d4fe4e3147",
       "boundAt": 1790714552202,
-      "updatedAt": 1790761804217,
+      "updatedAt": 1790761806286,
       "scanReset": null,
       "robotAccountId": "5d885ca4-0c81-41d8-bebc-8fcc362f0ca4",
       "robotLogin": "296430962",
@@ -1530,7 +1530,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD"
+        ]
       }
     },
     {
@@ -1573,7 +1575,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
@@ -1617,7 +1621,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "EURUSD"
         ]
       }
     },
@@ -2548,9 +2552,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "GOLD",
-          "XAUUSD",
-          "USDJPY"
+          "GOLD"
         ]
       }
     },
@@ -15286,9 +15288,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
