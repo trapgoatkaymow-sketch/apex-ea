@@ -111,7 +111,7 @@
       "usedAt": 1790233374474,
       "deviceId": "bccf93db-c9e0-4a7a-a153-ab8f7d452980",
       "boundAt": 1790233374474,
-      "updatedAt": 1790761059460,
+      "updatedAt": 1790761060417,
       "scanReset": null,
       "robotAccountId": "9bce1953-545a-4879-b958-3257dbb86e1c",
       "robotLogin": "352479148",
@@ -134,6 +134,51 @@
           "XAUUSD",
           "US30",
           ".US30."
+        ]
+      }
+    },
+    {
+      "key": "APEX-T245-H6R4",
+      "botId": "vector-x-pro-ea-mul8lgik",
+      "botName": "VECTOR X PRO EA",
+      "clientEmail": "direkopano5@gmail.com",
+      "clientName": "Kopano",
+      "mainText": "Kopano",
+      "mentorEmail": "direkopano5@gmail.com",
+      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
+      "mentorName": "kopanofx",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790599464144,
+      "usedAt": 1790599888590,
+      "deviceId": "cfe92f4e-0de4-4942-9197-0b627aeeca1b",
+      "boundAt": 1790755896884,
+      "updatedAt": 1790761056175,
+      "scanReset": null,
+      "robotAccountId": "26b9cc26-8ae3-4375-8aee-9e431df9bce6",
+      "robotLogin": "1200526388",
+      "robotServer": "JustMarkets-Demo3",
+      "robotCompany": "Just Global Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790761055373,
+      "clientSymbols": [
+        "XAUUSD"
+      ],
+      "clientSymbolsUpdatedAt": 1790756012747,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "vector-x-pro-ea-mul8lgik",
+        "name": "VECTOR X PRO EA",
+        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
         ]
       }
     },
@@ -370,8 +415,7 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM",
-          "USDJPYM"
+          "XAUUSDM"
         ]
       }
     },
@@ -535,51 +579,6 @@
           "DJ39",
           "VOL80",
           "XAUUSD.S"
-        ]
-      }
-    },
-    {
-      "key": "APEX-T245-H6R4",
-      "botId": "vector-x-pro-ea-mul8lgik",
-      "botName": "VECTOR X PRO EA",
-      "clientEmail": "direkopano5@gmail.com",
-      "clientName": "Kopano",
-      "mainText": "Kopano",
-      "mentorEmail": "direkopano5@gmail.com",
-      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
-      "mentorName": "kopanofx",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790599464144,
-      "usedAt": 1790599888590,
-      "deviceId": "cfe92f4e-0de4-4942-9197-0b627aeeca1b",
-      "boundAt": 1790755896884,
-      "updatedAt": 1790761036073,
-      "scanReset": null,
-      "robotAccountId": "6c3b24a2-5dc4-4e3a-a64d-6f30aa04d8c0",
-      "robotLogin": "482020625",
-      "robotServer": "ExnessKE-MT5Real10",
-      "robotCompany": "Exness (KE) Limited",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790754605561,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
-      "clientSymbolsUpdatedAt": 1790756012747,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "vector-x-pro-ea-mul8lgik",
-        "name": "VECTOR X PRO EA",
-        "photo": "/api/licenses/photo?botId=vector-x-pro-ea-mul8lgik&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
         ]
       }
     },
@@ -1507,7 +1506,8 @@
         "strategy": "scalper",
         "symbols": [
           "GOLD",
-          "XAUSD"
+          "US30",
+          "BITCOIN"
         ]
       }
     },
@@ -1906,7 +1906,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "USTECH."
+          "USTECH.",
+          ".USTECH."
         ]
       }
     },
