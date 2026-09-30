@@ -602,7 +602,11 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790745323589,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "GOLD",
+        "XAUUSD",
+        "US30CASH"
+      ],
       "clientSymbolsUpdatedAt": 1790755552961,
       "purchaseCaptureId": "5JK50466ME793082K",
       "purchaseOrderId": "1C4623513W136013E",
@@ -783,10 +787,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSD.M"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6933,7 +6934,7 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "WTI"
+          "XAUUSD"
         ]
       }
     },
