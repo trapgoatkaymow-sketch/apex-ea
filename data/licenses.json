@@ -215,8 +215,7 @@
           "AUDCAD",
           "USDCAD",
           "AUDJPY",
-          "USDCHF",
-          "XAUSD"
+          "USDCHF"
         ]
       }
     },
@@ -1501,10 +1500,10 @@
       "robotConnectedAt": 1790790192296,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
+      "purchaseCaptureId": "9L4436750Y226480W",
+      "purchaseOrderId": "06B401361H168104V",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": 1790696039073,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -1542,10 +1541,10 @@
       "robotConnectedAt": 1790771024913,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790795042913,
+      "purchaseCaptureId": "0GT69286LA716894U",
+      "purchaseOrderId": "6RF34080TK839813U",
+      "purchaseSource": "paypal-giveaway",
+      "emailSentAt": 1790695608627,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -1685,9 +1684,9 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
+      "purchaseCaptureId": "0RP10527VD234042J",
+      "purchaseOrderId": "4CF21803XU7280434",
+      "purchaseSource": "paypal-giveaway-webhook",
       "emailSentAt": 1790795030334,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
@@ -5635,12 +5634,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "XAUUSDM",
-          "USDJPY",
-          "USDJPYM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -7531,7 +7525,9 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD"
+        ]
       }
     },
     {
