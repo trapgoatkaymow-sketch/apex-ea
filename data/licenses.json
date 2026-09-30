@@ -381,7 +381,8 @@
           "BTCUSD",
           "NAS100",
           "USDJPY",
-          ".US30."
+          ".US30.",
+          "GBPUSD"
         ]
       }
     },
@@ -613,7 +614,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GOLD",
+          "BTCUSD",
+          "US30CASH",
+          "USDJPY"
+        ]
       }
     },
     {
@@ -1025,9 +1031,7 @@
         "strategy": "scalper",
         "symbols": [
           "GBPUSD",
-          "EURUSD",
-          "XAUUSD",
-          "USDJPY"
+          "EURUSD"
         ]
       }
     },
