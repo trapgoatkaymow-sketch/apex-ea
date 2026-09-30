@@ -19,7 +19,7 @@
       "usedAt": 1790723915643,
       "deviceId": "444d3252-2c36-42fa-878b-05a254f60f8b",
       "boundAt": 1790723915643,
-      "updatedAt": 1790809119498,
+      "updatedAt": 1790809122742,
       "scanReset": null,
       "robotAccountId": "064b51b7-720f-47f5-8ebb-20e29cf85bb9",
       "robotLogin": "296388644",
@@ -35,7 +35,7 @@
         "EURUSDM",
         "US30"
       ],
-      "clientSymbolsUpdatedAt": 1790809119498,
+      "clientSymbolsUpdatedAt": 1790809122742,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "7KN64177MB473773K",
       "purchaseOrderId": "5MJ06787FR457504K",
@@ -45,6 +45,56 @@
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
+      }
+    },
+    {
+      "key": "APEX-6Q3G-HG4U",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "nkululekotoka@gmail.com",
+      "clientName": "Nkulukeko Nkosi",
+      "mainText": "Nkulukeko Nkosi",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": true,
+      "commissionReason": "first_paid_access",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789672029611,
+      "usedAt": 1789939758085,
+      "deviceId": "448f9f48-ccad-41fb-ad4e-309861ab791b",
+      "boundAt": 1790807097776,
+      "updatedAt": 1790809119465,
+      "scanReset": null,
+      "robotAccountId": "437d802e-15cb-4d75-8683-edcc4431318d",
+      "robotLogin": "115842",
+      "robotServer": "SpaceMarkets-Live",
+      "robotCompany": "Space Markets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790717298205,
+      "clientSymbols": [
+        "XAUUSD",
+        "US30",
+        ".US30."
+      ],
+      "clientSymbolsUpdatedAt": 1790807149683,
+      "mentorSymbolsSyncedAt": 1790807945234,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
@@ -4317,56 +4367,6 @@
         "EURUSD"
       ],
       "clientSymbolsUpdatedAt": 1790807185899,
-      "mentorSymbolsSyncedAt": 1790807945234,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-6Q3G-HG4U",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "nkululekotoka@gmail.com",
-      "clientName": "Nkulukeko Nkosi",
-      "mainText": "Nkulukeko Nkosi",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": true,
-      "commissionReason": "first_paid_access",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789672029611,
-      "usedAt": 1789939758085,
-      "deviceId": "448f9f48-ccad-41fb-ad4e-309861ab791b",
-      "boundAt": 1790807097776,
-      "updatedAt": 1790807945234,
-      "scanReset": null,
-      "robotAccountId": "437d802e-15cb-4d75-8683-edcc4431318d",
-      "robotLogin": "115842",
-      "robotServer": "SpaceMarkets-Live",
-      "robotCompany": "Space Markets (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790717298205,
-      "clientSymbols": [
-        "XAUUSD",
-        "US30",
-        ".US30."
-      ],
-      "clientSymbolsUpdatedAt": 1790807149683,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -15011,7 +15011,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
