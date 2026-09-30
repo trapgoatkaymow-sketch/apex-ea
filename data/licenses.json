@@ -1,6 +1,59 @@
 {
   "licenses": [
     {
+      "key": "APEX-T4GM-XGW6",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "trapgoatkaymow@gmail.com",
+      "clientName": "Trapgoat",
+      "mainText": "Trapgoat",
+      "mentorEmail": "trapgoatkaymow22@icloud.com",
+      "mentorId": "super-admin",
+      "mentorName": "APEX EA",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1789465097387,
+      "usedAt": 1790444151767,
+      "deviceId": "cec6485b-58d1-4e16-9ad0-30b1a474c7de",
+      "boundAt": 1790798502461,
+      "updatedAt": 1790798502461,
+      "scanReset": {
+        "day": "2026-09-30",
+        "resetAt": 1790790404917,
+        "grantedBy": "trapgoatkaymow@gmail.com"
+      },
+      "robotAccountId": "14c95cc7-1232-447e-8670-758dcea42faf",
+      "robotLogin": "8869643",
+      "robotServer": "VaultMarkets-Live",
+      "robotCompany": "VaultMarkets (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790792058329,
+      "clientSymbols": [
+        "EURUSD",
+        "GBPUSD",
+        "USDCHF",
+        ".US30.",
+        "GBPJPY"
+      ],
+      "clientSymbolsUpdatedAt": 1790787763123,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-RSW4-V8RK",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -623,59 +676,6 @@
       }
     },
     {
-      "key": "APEX-T4GM-XGW6",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "trapgoatkaymow@gmail.com",
-      "clientName": "Trapgoat",
-      "mainText": "Trapgoat",
-      "mentorEmail": "trapgoatkaymow22@icloud.com",
-      "mentorId": "super-admin",
-      "mentorName": "APEX EA",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1789465097387,
-      "usedAt": 1790444151767,
-      "deviceId": "82278db3-07bc-4b1f-9525-4e34616f6744",
-      "boundAt": 1790798221758,
-      "updatedAt": 1790798221758,
-      "scanReset": {
-        "day": "2026-09-30",
-        "resetAt": 1790790404917,
-        "grantedBy": "trapgoatkaymow@gmail.com"
-      },
-      "robotAccountId": "14c95cc7-1232-447e-8670-758dcea42faf",
-      "robotLogin": "8869643",
-      "robotServer": "VaultMarkets-Live",
-      "robotCompany": "VaultMarkets (Pty) Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790792058329,
-      "clientSymbols": [
-        "EURUSD",
-        "GBPUSD",
-        "USDCHF",
-        ".US30.",
-        "GBPJPY"
-      ],
-      "clientSymbolsUpdatedAt": 1790787763123,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
-      }
-    },
-    {
       "key": "APEX-6YMV-BF68",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1038,19 +1038,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD",
-          "GBPUSD",
-          "XAUUSD",
-          "NAS100",
-          "US30",
-          "BTCUSD",
-          "USDCAD",
           "XAUUSDM",
           "US30M",
-          "EURUSDM",
-          "USDJPY",
-          "USTEC",
-          "USTECM"
+          "USTECM",
+          "BTCUSDM",
+          "DE30M"
         ]
       }
     },
@@ -1432,9 +1424,7 @@
         "symbols": [
           "XAUUSD.B",
           "US30",
-          "XAUUSD",
-          "GOLDMAN",
-          "GOLDMANSACHSGROUP"
+          "XAUUSD"
         ]
       }
     },
