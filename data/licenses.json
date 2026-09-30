@@ -38,7 +38,7 @@
         "EURUSD",
         "BTCXAU"
       ],
-      "clientSymbolsUpdatedAt": 1790763882228,
+      "clientSymbolsUpdatedAt": 1790786381071,
       "purchaseCaptureId": "0TB17401CS3337806",
       "purchaseOrderId": "6X0868472E165713M",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -288,7 +288,9 @@
         "symbols": [
           "US100CASH",
           "GOLD",
-          "US30CASH"
+          "US30CASH",
+          "XAUUSD.MIC",
+          ".US30.MIC"
         ]
       }
     },
@@ -526,9 +528,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1685,7 +1685,12 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790762598181,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "GOLD",
+        "BTCUSD",
+        "US30CASH",
+        "USDJPY"
+      ],
       "clientSymbolsUpdatedAt": 1790786114060,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -2066,8 +2071,7 @@
           "US30",
           "XAUUSD",
           "US30CASH",
-          "GOLD",
-          "NDAQ.OQ"
+          "GOLD"
         ]
       }
     },
