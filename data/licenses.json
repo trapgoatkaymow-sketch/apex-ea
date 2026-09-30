@@ -1,6 +1,63 @@
 {
   "licenses": [
     {
+      "key": "APEX-48YQ-SKW4",
+      "botId": "stealth-plus-mubfzzda",
+      "botName": "Stealth Plus",
+      "clientEmail": "stealthtradersacadamy@gmail.com",
+      "clientName": "Stealth",
+      "mainText": "Stealth",
+      "mentorEmail": "stealthtradersacadamy@gmail.com",
+      "mentorId": "bd9fe48b-60e4-458e-bcd9-98d20f62e552",
+      "mentorName": "CLD BOI",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "invite_migrate_bypass",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790007117602,
+      "usedAt": 1790007174642,
+      "deviceId": "5c0db841-1f82-4d25-8677-71f0b535765a",
+      "boundAt": 1790007174642,
+      "updatedAt": 1790727631470,
+      "scanReset": null,
+      "robotAccountId": "94a05fdf-49b8-4107-a6ef-9497cb87da23",
+      "robotLogin": "503793",
+      "robotServer": "RCGMarkets-Real",
+      "robotCompany": "RCG Markets (Pty) Ltd",
+      "robotPlatform": "MT4",
+      "robotConnectedAt": 1790586531695,
+      "clientSymbols": [
+        "XAUUSD",
+        "BTCUSD",
+        "US30",
+        "NAS100",
+        "GBPUSD",
+        "EURUSD",
+        "USDJPY"
+      ],
+      "clientSymbolsUpdatedAt": 1790727631470,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "bot": {
+        "id": "stealth-plus-mubfzzda",
+        "name": "Stealth Plus",
+        "photo": "/api/licenses/photo?botId=stealth-plus-mubfzzda&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "BTCUSD",
+          "US30",
+          "NAS100",
+          "GBPUSD",
+          "EURUSD",
+          "USDJPY"
+        ]
+      },
+      "emailSentAt": null
+    },
+    {
       "key": "APEX-X2SJ-B5AZ",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -268,7 +325,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY"
+          "USDJPY",
+          "XAUUSD",
+          "EURUSD"
         ]
       }
     },
@@ -410,8 +469,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "GBPUSD",
-          "XAUUSDM"
+          "GBPUSD"
         ]
       }
     },
@@ -8971,11 +9029,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD",
-          "US30"
-        ]
+        "symbols": []
       }
     },
     {
@@ -47661,6 +47715,7 @@
         "photo": "/api/licenses/photo?botId=equity-sniper-pro-mulhvsa9&v=full",
         "strategy": "scalper",
         "symbols": [
+          "XAUUSD",
           "EURUSD",
           "GBPUSD",
           "USDJPY",
@@ -49247,9 +49302,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -62658,55 +62711,6 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": []
-      },
-      "emailSentAt": null
-    },
-    {
-      "key": "APEX-48YQ-SKW4",
-      "botId": "stealth-plus-mubfzzda",
-      "botName": "Stealth Plus",
-      "clientEmail": "stealthtradersacadamy@gmail.com",
-      "clientName": "Stealth",
-      "mainText": "Stealth",
-      "mentorEmail": "stealthtradersacadamy@gmail.com",
-      "mentorId": "bd9fe48b-60e4-458e-bcd9-98d20f62e552",
-      "mentorName": "CLD BOI",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "invite_migrate_bypass",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790007117602,
-      "usedAt": 1790007174642,
-      "deviceId": "5c0db841-1f82-4d25-8677-71f0b535765a",
-      "boundAt": 1790007174642,
-      "updatedAt": 1790586533634,
-      "scanReset": null,
-      "robotAccountId": "94a05fdf-49b8-4107-a6ef-9497cb87da23",
-      "robotLogin": "503793",
-      "robotServer": "RCGMarkets-Real",
-      "robotCompany": "RCG Markets (Pty) Ltd",
-      "robotPlatform": "MT4",
-      "robotConnectedAt": 1790586531695,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "bot": {
-        "id": "stealth-plus-mubfzzda",
-        "name": "Stealth Plus",
-        "photo": "/api/licenses/photo?botId=stealth-plus-mubfzzda&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "BTCUSD",
-          "US30",
-          "NAS100",
-          "GBPUSD",
-          "EURUSD",
-          "USDJPY"
-        ]
       },
       "emailSentAt": null
     },
