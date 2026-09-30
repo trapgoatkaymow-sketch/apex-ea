@@ -10,9 +10,37 @@ export default function PairsSheet() {
     addAppSymbol,
     openSymbolSetup,
     normalizeSymbol,
+    activeBot,
+    licenseKeys,
   } = useApp();
   const [query, setQuery] = useState("");
   const [custom, setCustom] = useState("");
+
+  // Mentor-authored symbols for this robot (from the license / EA), not the
+  // global default forex catalog.
+  const mentorSymbols = useMemo(() => {
+    const botId = String(activeBot?.id || "").trim();
+    const license =
+      (Array.isArray(licenseKeys) ? licenseKeys : []).find(
+        (row) => String(row?.botId || row?.bot?.id || "").trim() === botId
+      ) || null;
+    const fromLicense = Array.isArray(license?.bot?.symbols)
+      ? license.bot.symbols
+      : [];
+    const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
+    const raw = fromLicense.length ? fromLicense : fromBot;
+    const out = [];
+    const seen = new Set();
+    for (const rawSym of raw) {
+      const clean = normalizeSymbol?.(rawSym) || String(rawSym || "").trim();
+      if (!clean) continue;
+      const key = clean.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(clean);
+    }
+    return out;
+  }, [activeBot, licenseKeys, normalizeSymbol]);
 
   // Include typed custom broker symbols even if catalog state lags behind.
   const selected = useMemo(() => {
@@ -30,12 +58,16 @@ export default function PairsSheet() {
     const q = String(query || "")
       .trim()
       .toLowerCase();
-    return catalog.filter((s) => {
-      if (appSymbols.has(s)) return false;
+    const selectedKeys = new Set(
+      Array.from(appSymbols).map((s) => String(s).toLowerCase())
+    );
+    return mentorSymbols.filter((s) => {
+      const key = String(s).toLowerCase();
+      if (selectedKeys.has(key)) return false;
       if (!q) return true;
-      return String(s).toLowerCase().includes(q);
+      return key.includes(q);
     });
-  }, [catalog, appSymbols, query]);
+  }, [mentorSymbols, appSymbols, query]);
 
   if (!pairsOpen) return null;
 
@@ -116,7 +148,7 @@ export default function PairsSheet() {
           {selected.length === 0 ? (
             <div className="pairs-empty-card">
               <strong>No pairs yet</strong>
-              <p>Add from the list below, or type a custom symbol above.</p>
+              <p>Add from your mentor’s list below, or type a custom symbol above.</p>
             </div>
           ) : (
             <div className="symbol-list">
@@ -140,28 +172,30 @@ export default function PairsSheet() {
 
         <section className="pairs-section">
           <div className="pairs-section-head">
-            <h3>Browse & add</h3>
+            <h3>Mentor symbols</h3>
             <span>{available.length}</span>
           </div>
           <label className="pairs-search">
-            <span className="sr-only">Search pairs</span>
+            <span className="sr-only">Search mentor symbols</span>
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search catalog…"
+              placeholder="Search mentor symbols…"
               autoCorrect="off"
               spellCheck={false}
             />
           </label>
           <p className="pairs-note">
-            Tap any symbol to add it — you will set lot size next.
+            Only symbols your mentor added to this EA. Tap one to add it — then set lot size.
           </p>
           {available.length === 0 ? (
             <p className="pairs-empty">
               {query.trim()
-                ? `No catalog match for “${query.trim()}” — type it above to add.`
-                : "Every catalog pair is already on your app."}
+                ? `No mentor symbol match for “${query.trim()}” — type your broker symbol above to add.`
+                : mentorSymbols.length === 0
+                  ? "Your mentor hasn’t added symbols to this EA yet — type your broker symbol above."
+                  : "Every mentor symbol is already on your app."}
             </p>
           ) : (
             <div className="symbol-list is-catalog">
