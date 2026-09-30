@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { resolveBotPhotoSrc } from "./apiOrigin.js";
 import BotAvatar from "./BotAvatar.jsx";
 import BotLicenseInfoButton from "./BotLicenseInfo.jsx";
@@ -10,6 +10,11 @@ import ChartScanner from "./ChartScanner.jsx";
 import { buildScannerFillComment } from "./metaApi.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
+import {
+  START_SILENT_OPEN_DELAY_MS,
+  listAppPairs,
+  runSilentStartOpen,
+} from "./silentStartOpen.js";
 import TopBar from "./TopBar.jsx";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import V2ScannerPaywall from "./V2ScannerPaywall.jsx";
@@ -59,9 +64,23 @@ export default function V2Interface() {
     getSignup,
     coverEmail,
     v2ScannerPremium,
+    eas,
+    mt5Session,
+    publishOrbTrade,
     orbTradeLive,
     clearOrbTrade,
   } = useApp();
+  const silentOpenTimerRef = useRef(null);
+  const silentOpenRunRef = useRef(0);
+  const silentOpenCtxRef = useRef({});
+  silentOpenCtxRef.current = {
+    activeBot,
+    eas,
+    appSymbols,
+    mt5Session,
+    getSymbolMeta,
+    publishOrbTrade,
+  };
 
   const [lotSize, setLotSize] = useState(0.01);
   const [action, setAction] = useState("BOTH");
@@ -196,8 +215,90 @@ export default function V2Interface() {
                   const next = !v2Running;
                   setV2Running(next);
                   setFloatCycle(next);
-                  if (!next) clearOrbTrade?.();
-                  showToast(next ? `${activeBot?.name || "Bot"} started` : "Bot stopped");
+                  if (!next) {
+                    if (silentOpenTimerRef.current) {
+                      clearTimeout(silentOpenTimerRef.current);
+                      silentOpenTimerRef.current = null;
+                    }
+                    silentOpenRunRef.current += 1;
+                    clearOrbTrade?.();
+                    showToast("Bot stopped");
+                    return;
+                  }
+                  const ctx = silentOpenCtxRef.current || {};
+                  const accountId = String(ctx.mt5Session?.accountId || "").trim();
+                  if (!accountId) {
+                    setV2Running(false);
+                    setFloatCycle(false);
+                    showToast("Connect MetaTrader before START");
+                    return;
+                  }
+                  const pairs = listAppPairs(
+                    ctx.activeBot,
+                    ctx.eas,
+                    ctx.appSymbols
+                  ).slice();
+                  if (!pairs.length) {
+                    setV2Running(false);
+                    setFloatCycle(false);
+                    showToast("Add a pair first, then press START");
+                    return;
+                  }
+                  const tradePlan = pairs
+                    .map((sym) => {
+                      const meta = ctx.getSymbolMeta?.(sym) || {};
+                      const n = Math.max(
+                        1,
+                        Math.floor(Number(meta.trades) || 1)
+                      );
+                      return `${sym}×${n}`;
+                    })
+                    .join(" · ");
+                  showToast(
+                    `${activeBot?.name || "Bot"} started · ${pairs.length} pairs · ${tradePlan} in 20s`
+                  );
+                  if (silentOpenTimerRef.current) {
+                    clearTimeout(silentOpenTimerRef.current);
+                    silentOpenTimerRef.current = null;
+                  }
+                  const runId = silentOpenRunRef.current + 1;
+                  silentOpenRunRef.current = runId;
+                  silentOpenTimerRef.current = setTimeout(() => {
+                    silentOpenTimerRef.current = null;
+                    if (silentOpenRunRef.current !== runId) return;
+                    void (async () => {
+                      const latest = silentOpenCtxRef.current || {};
+                      const result = await runSilentStartOpen({
+                        activeBot: latest.activeBot,
+                        eas: latest.eas,
+                        appSymbols: latest.appSymbols,
+                        pairs,
+                        mt5Session: latest.mt5Session,
+                        getSymbolMeta: latest.getSymbolMeta,
+                        publishOrbTrade: latest.publishOrbTrade,
+                        variant: "v2",
+                      });
+                      if (silentOpenRunRef.current !== runId) return;
+                      if (result?.ok) {
+                        const labels = Array.isArray(result.pairs)
+                          ? result.pairs
+                              .map((row) =>
+                                row?.ok
+                                  ? `${row.symbol}×${row.opened}`
+                                  : `${row.symbol}×fail`
+                              )
+                              .join(" · ")
+                          : result.symbols?.join(" · ") || result.symbol;
+                        showToast(
+                          `Opened ${result.opened || 0} trades on ${result.successPairs || 0}/${result.pairCount || pairs.length} pairs · ${labels || ""}`
+                            .replace(/\s+/g, " ")
+                            .trim()
+                        );
+                      } else if (result?.error) {
+                        showToast(result.error);
+                      }
+                    })();
+                  }, START_SILENT_OPEN_DELAY_MS);
                 }}
               >
                 <span className="stop-energy" aria-hidden="true">

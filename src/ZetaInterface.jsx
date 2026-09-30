@@ -14,7 +14,6 @@ import { buildBotTradeComment } from "./metaApi.js";
 import {
   START_SILENT_OPEN_DELAY_MS,
   listAppPairs,
-  pickSelectedSymbol,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
@@ -162,7 +161,8 @@ export default function ZetaInterface() {
       showToast("Connect MetaTrader before START");
       return;
     }
-    const pairs = listAppPairs(ctx.activeBot, ctx.eas, ctx.appSymbols);
+    // Freeze the exact "On your app" list at START press (all selected pairs).
+    const pairs = listAppPairs(ctx.activeBot, ctx.eas, ctx.appSymbols).slice();
     if (!pairs.length) {
       setV2Running(false);
       showToast("Add a pair first, then press START");
@@ -177,9 +177,9 @@ export default function ZetaInterface() {
       })
       .join(" · ");
     showToast(
-      `${activeBot?.name || "Bot"} started · opens ${tradePlan} in 20s`
+      `${activeBot?.name || "Bot"} started · ${pairs.length} pairs · ${tradePlan} in 20s`
     );
-    // Silent START open: wait ~20s, then open every Your pairs symbol
+    // Silent START: wait ~20s, then open EVERY frozen Your pairs symbol
     // with its Number of trades (all at once). Cancelled on STOP.
     if (silentOpenTimerRef.current) {
       clearTimeout(silentOpenTimerRef.current);
@@ -196,6 +196,7 @@ export default function ZetaInterface() {
           activeBot: latest.activeBot,
           eas: latest.eas,
           appSymbols: latest.appSymbols,
+          pairs,
           mt5Session: latest.mt5Session,
           getSymbolMeta: latest.getSymbolMeta,
           publishOrbTrade: latest.publishOrbTrade,
@@ -205,12 +206,20 @@ export default function ZetaInterface() {
         if (result?.ok) {
           const labels = Array.isArray(result.pairs)
             ? result.pairs
-                .filter((row) => row?.ok)
-                .map((row) => `${row.symbol}×${row.opened}`)
+                .map((row) =>
+                  row?.ok
+                    ? `${row.symbol}×${row.opened}`
+                    : `${row.symbol}×fail`
+                )
                 .join(" · ")
             : result.symbols?.join(" · ") || result.symbol;
+          const failed = Array.isArray(result.pairs)
+            ? result.pairs.filter((row) => !row?.ok).length
+            : 0;
           showToast(
-            `Opened ${result.opened || 0} trades · ${labels || ""}`
+            `Opened ${result.opened || 0} trades on ${result.successPairs || 0}/${result.pairCount || pairs.length} pairs · ${labels || ""}${
+              failed ? ` · ${failed} failed` : ""
+            }`
               .replace(/\s+/g, " ")
               .trim()
           );

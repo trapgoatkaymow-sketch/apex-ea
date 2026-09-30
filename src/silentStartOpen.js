@@ -49,44 +49,56 @@ function toFiniteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-/**
- * All pairs from Your pairs / active EA symbols (de-duped, stable order).
- * Prefers the same lists the Pairs sheet writes (eas[].symbols / appSymbols).
- */
-export function listAppPairs(activeBot, eas = [], appSymbols = null) {
-  const botId = String(activeBot?.id || "").trim();
-  const rows = Array.isArray(eas) ? eas : [];
-  const ea =
-    (botId && rows.find((row) => String(row?.id || "").trim() === botId)) ||
-    rows[0] ||
-    null;
-
-  const fromEa = Array.isArray(ea?.symbols) ? ea.symbols : [];
-  const fromAllEas = rows.flatMap((row) =>
-    Array.isArray(row?.symbols) ? row.symbols : []
-  );
-  const fromApp =
-    appSymbols instanceof Set
-      ? Array.from(appSymbols)
-      : Array.isArray(appSymbols)
-        ? appSymbols
-        : [];
-  const fromClient = Array.isArray(ea?.clientSymbols) ? ea.clientSymbols : [];
-  const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
-
-  // Prefer active EA order first (Your pairs), then the rest.
-  const list = [...fromEa, ...fromApp, ...fromAllEas, ...fromClient, ...fromBot]
-    .map((s) => normalizeBrokerSymbol(s))
-    .filter(Boolean);
+function dedupeSymbols(list) {
   const seen = new Set();
   const unique = [];
-  for (const s of list) {
+  for (const raw of list || []) {
+    const s = normalizeBrokerSymbol(raw);
+    if (!s) continue;
     const key = s.toUpperCase();
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(s);
   }
   return unique;
+}
+
+/**
+ * Every symbol in Your pairs → "On your app".
+ * Source of truth is appSymbols (union of eas[].symbols), same as PairsSheet.
+ */
+export function listAppPairs(activeBot, eas = [], appSymbols = null) {
+  const fromApp =
+    appSymbols instanceof Set
+      ? Array.from(appSymbols)
+      : Array.isArray(appSymbols)
+        ? appSymbols
+        : [];
+
+  // Primary: exactly what the Pairs sheet shows under "On your app".
+  if (fromApp.length) {
+    return dedupeSymbols(fromApp);
+  }
+
+  // Fallbacks if appSymbols was not passed (older callers).
+  const botId = String(activeBot?.id || "").trim();
+  const rows = Array.isArray(eas) ? eas : [];
+  const ea =
+    (botId && rows.find((row) => String(row?.id || "").trim() === botId)) ||
+    rows[0] ||
+    null;
+  const fromEa = Array.isArray(ea?.symbols) ? ea.symbols : [];
+  const fromAllEas = rows.flatMap((row) =>
+    Array.isArray(row?.symbols) ? row.symbols : []
+  );
+  const fromClient = Array.isArray(ea?.clientSymbols) ? ea.clientSymbols : [];
+  const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
+  return dedupeSymbols([
+    ...fromEa,
+    ...fromAllEas,
+    ...fromClient,
+    ...fromBot,
+  ]);
 }
 
 /** First pair — kept for callers that only need a quick presence check. */
@@ -397,6 +409,8 @@ export async function runSilentStartOpen({
   activeBot,
   eas,
   appSymbols = null,
+  /** Frozen "On your app" list from the START press (preferred). */
+  pairs: pairsOverride = null,
   mt5Session,
   getSymbolMeta,
   publishOrbTrade,
@@ -407,7 +421,11 @@ export async function runSilentStartOpen({
     return { ok: false, error: "Connect MetaTrader before START open" };
   }
 
-  const pairs = listAppPairs(activeBot, eas, appSymbols);
+  const pairs = dedupeSymbols(
+    Array.isArray(pairsOverride) && pairsOverride.length
+      ? pairsOverride
+      : listAppPairs(activeBot, eas, appSymbols)
+  );
   if (!pairs.length) {
     return { ok: false, error: "Add a pair first (selected symbol required)" };
   }
