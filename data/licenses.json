@@ -150,7 +150,12 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD"
+          "EURUSD",
+          "0.01",
+          "US3",
+          "US5",
+          "US1",
+          "US2"
         ]
       }
     },
@@ -355,7 +360,8 @@
           "US30",
           "US30.STD",
           "XAUUSD",
-          "XAUUSD.M"
+          "XAUUSD.M",
+          "US100.STD"
         ]
       }
     },
@@ -599,9 +605,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1025,7 +1029,8 @@
           "USDJPY",
           "GBPUSD",
           "NZDUSD",
-          "WALLSTREET30"
+          "WALLSTREET30",
+          "GOLD"
         ]
       }
     },
@@ -1072,7 +1077,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM",
+          "USDJPY",
+          "USDJPYM"
+        ]
       }
     },
     {
@@ -1127,7 +1137,8 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM"
+          "XAUUSDM",
+          "USDJPYM"
         ]
       }
     },
@@ -3399,7 +3410,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "NAS100"
         ]
       }
     },
@@ -26286,17 +26298,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "GBPUSD",
-          "EURUSD",
-          "NZDUSD",
-          "GBPUSDM",
-          "USDJPY",
-          "USDJPYM",
-          "XAUUSD",
-          ".USTECH.",
-          "USDCAD"
-        ]
+        "symbols": []
       }
     },
     {
