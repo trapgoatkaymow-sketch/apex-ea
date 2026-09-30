@@ -132,6 +132,28 @@ export async function sendBrevoEmail({
   }
 }
 
+/** Trapgoatkaymow client WhatsApp group — included on automatic license emails. */
+const DEFAULT_TRAPGOAT_WHATSAPP_URL =
+  "https://chat.whatsapp.com/BCN6WV2rhiE0PVG07v2Ymm?mode=gi_t";
+const TRAPGOAT_MENTOR_EMAIL = "trapgoatkaymow@gmail.com";
+
+function trapgoatWhatsappUrl() {
+  return (
+    env("TRAPGOAT_WHATSAPP_GROUP_URL", DEFAULT_TRAPGOAT_WHATSAPP_URL) ||
+    DEFAULT_TRAPGOAT_WHATSAPP_URL
+  );
+}
+
+function shouldIncludeTrapgoatWhatsapp(license = {}) {
+  const mentor = String(license.mentorEmail || license.ownerEmail || "")
+    .trim()
+    .toLowerCase();
+  if (mentor === TRAPGOAT_MENTOR_EMAIL) return true;
+  // Giveaway checkout fulfills under Trapgoatkaymow even if mentor field lags.
+  const source = String(license.purchaseSource || "").toLowerCase();
+  return source.includes("giveaway");
+}
+
 /** Build + send the license key email for one client. */
 export async function sendLicenseKeyEmail(license = {}) {
   const toEmail = String(license.clientEmail || license.email || "")
@@ -154,6 +176,8 @@ export async function sendLicenseKeyEmail(license = {}) {
   const appUrl = env("PUBLIC_APP_URL", "https://www.apex-ea.com").replace(/\/+$/, "");
   const downloadUrl = "https://apex-ea.tech";
   const copyKeyUrl = `${appUrl}/copy-key.html?key=${encodeURIComponent(key)}`;
+  const includeWhatsapp = shouldIncludeTrapgoatWhatsapp(license);
+  const whatsappUrl = includeWhatsapp ? trapgoatWhatsappUrl() : "";
 
   const subject = `Your ${botName} license key — ApexEA`;
   const textContent = [
@@ -171,11 +195,32 @@ export async function sendLicenseKeyEmail(license = {}) {
     `1. Download the app: ${downloadUrl}`,
     "2. Sign in with this email",
     `3. Enter your license key: ${key}`,
+    ...(whatsappUrl
+      ? [
+          "",
+          "Join the Trapgoatkaymow ApexEA WhatsApp group for updates and support:",
+          whatsappUrl,
+        ]
+      : []),
     "",
     "Keep this email — you will need the key if you reinstall.",
     "",
     "— ApexEA",
   ].join("\n");
+
+  const whatsappHtml = whatsappUrl
+    ? `<div style="margin:0 0 20px;padding:16px 18px;background:#0f1a14;border:1px solid #1f6b3a;border-radius:12px;">
+            <p style="margin:0 0 10px;font-size:14px;line-height:1.5;color:#c8c8d0;">
+              Join the <strong style="color:#fff;">Trapgoatkaymow ApexEA WhatsApp group</strong> for updates and support.
+            </p>
+            <p style="margin:0;text-align:center;">
+              <a href="${escapeHtml(whatsappUrl)}" style="display:inline-block;padding:12px 18px;border-radius:999px;background:#25D366;color:#06210f;font-size:14px;font-weight:700;text-decoration:none;">Join WhatsApp group</a>
+            </p>
+            <p style="margin:10px 0 0;font-size:12px;line-height:1.45;color:#9a9aaa;word-break:break-all;">
+              <a href="${escapeHtml(whatsappUrl)}" style="color:#25D366;">${escapeHtml(whatsappUrl)}</a>
+            </p>
+          </div>`
+    : "";
 
   const htmlContent = `<!DOCTYPE html>
 <html>
@@ -207,6 +252,7 @@ export async function sendLicenseKeyEmail(license = {}) {
               ? `<p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#ffd28a;"><strong style="color:#fff;">Duration:</strong> ${escapeHtml(durationNotice)}</p>`
               : ""
           }
+          ${whatsappHtml}
           <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#c8c8d0;">
             <a href="${escapeHtml(downloadUrl)}" style="color:#ff7ab5;">Download the app</a>,
             sign in with <strong style="color:#fff;">${escapeHtml(toEmail)}</strong>, then enter this key to unlock.
@@ -225,7 +271,7 @@ export async function sendLicenseKeyEmail(license = {}) {
     subject,
     htmlContent,
     textContent,
-    tags: ["license-key"],
+    tags: whatsappUrl ? ["license-key", "whatsapp-group-invite"] : ["license-key"],
   });
 }
 
