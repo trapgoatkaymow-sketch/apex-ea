@@ -1603,7 +1603,8 @@
           "XAUUSD",
           "NAS100",
           "US30",
-          "GOLD"
+          "XAUUSDM",
+          "US30M"
         ]
       }
     },
@@ -1659,8 +1660,7 @@
           "USDJPY",
           "XAUAUDM",
           "US30",
-          "XAUUSDM",
-          "USDJPYM"
+          "XAUUSDM"
         ]
       }
     },
@@ -1728,7 +1728,8 @@
           "USDJPY",
           "GBPJPY",
           "ETHUSD",
-          "EURJPY"
+          "EURJPY",
+          "BTCJPYM"
         ]
       }
     },
@@ -2202,7 +2203,12 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "XAUSD",
+          "XAUUSD",
+          "GOLD"
+        ]
       }
     },
     {
@@ -2556,8 +2562,7 @@
         "symbols": [
           "XAUUSD",
           "XAUUSDM",
-          "XAUUSD.M",
-          "GBPUSD"
+          "XAUUSD.M"
         ]
       }
     },
@@ -2767,7 +2772,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSDM"
+          "XAUUSDM",
+          "BTCUSD",
+          "BTCUSDM"
         ]
       }
     },
@@ -3094,10 +3101,7 @@
         "symbols": [
           "XAUUSD",
           "EURUSD",
-          "US30",
-          "USDJPY",
-          "GOLD",
-          "XXAXAUXAUUXAUUSD"
+          "US30"
         ]
       }
     },
@@ -7391,9 +7395,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -20211,10 +20213,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GOLD"
-        ]
+        "symbols": []
       }
     },
     {
