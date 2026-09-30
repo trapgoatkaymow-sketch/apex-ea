@@ -1,6 +1,53 @@
 {
   "licenses": [
     {
+      "key": "APEX-4QP7-G8JP",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "tristan.loriston@gmail.com",
+      "clientName": "Tristan Loriston",
+      "mainText": "Tristan Loriston",
+      "mentorEmail": "trapgoatkaymow@gmail.com",
+      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
+      "mentorName": "Trapgoatkaymow",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790539379454,
+      "usedAt": 1790705021059,
+      "deviceId": "665aab0d-2654-4325-bfa0-78be908dc5ff",
+      "boundAt": 1790705021059,
+      "updatedAt": 1790757845564,
+      "scanReset": null,
+      "robotAccountId": "35cc0432-100d-4409-8615-110ab99fbcc7",
+      "robotLogin": "223442971",
+      "robotServer": "Exness-MT5Real30",
+      "robotCompany": "Exness Technologies Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790740852263,
+      "clientSymbols": [
+        "EURUSDM",
+        "GBPUSDM"
+      ],
+      "clientSymbolsUpdatedAt": 1790757845564,
+      "purchaseCaptureId": "8HR07620917589051",
+      "purchaseOrderId": "8E789276JS7992416",
+      "purchaseSource": "paypal-giveaway-webhook",
+      "emailSentAt": 1790695531405,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
+        "strategy": "scalper",
+        "symbols": [
+          "EURUSDM",
+          "GBPUSDM"
+        ]
+      }
+    },
+    {
       "key": "APEX-YGVW-GV47",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -751,7 +798,7 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "XAUUSDM"
+          "XAUUSD"
         ]
       }
     },
@@ -885,7 +932,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
+          "XAUUSDM",
           "XAUUSD.M"
         ]
       }
@@ -1655,53 +1702,6 @@
           "NASDAQ",
           "DJ39",
           "VOL80"
-        ]
-      }
-    },
-    {
-      "key": "APEX-4QP7-G8JP",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "tristan.loriston@gmail.com",
-      "clientName": "Tristan Loriston",
-      "mainText": "Tristan Loriston",
-      "mentorEmail": "trapgoatkaymow@gmail.com",
-      "mentorId": "eae67eca-96dd-4cb0-b5bd-67922d4a9892",
-      "mentorName": "Trapgoatkaymow",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790539379454,
-      "usedAt": 1790705021059,
-      "deviceId": "665aab0d-2654-4325-bfa0-78be908dc5ff",
-      "boundAt": 1790705021059,
-      "updatedAt": 1790757372700,
-      "scanReset": null,
-      "robotAccountId": "35cc0432-100d-4409-8615-110ab99fbcc7",
-      "robotLogin": "223442971",
-      "robotServer": "Exness-MT5Real30",
-      "robotCompany": "Exness Technologies Ltd",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790740852263,
-      "clientSymbols": [
-        "EURUSDM",
-        "GBPUSDM"
-      ],
-      "clientSymbolsUpdatedAt": 1790757372700,
-      "purchaseCaptureId": "8HR07620917589051",
-      "purchaseOrderId": "8E789276JS7992416",
-      "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790695531405,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
-        "strategy": "scalper",
-        "symbols": [
-          "EURUSDM",
-          "GBPUSDM"
         ]
       }
     },
@@ -4536,12 +4536,7 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "WTI",
-          "EURUSD",
-          "XAUUSD",
-          "AUDCAD",
-          "US30",
-          "BTCUSD"
+          "WTI"
         ]
       }
     },
