@@ -140,23 +140,35 @@ export function filterOutDeletedLicenses(list = []) {
 }
 
 export const LICENSE_DURATIONS = [
-  { id: "1m", label: "1 month", months: 1 },
+  { id: "1m10d", label: "1 month 10 days", months: 1, days: 10 },
   { id: "3m", label: "3 months", months: 3 },
   { id: "2y", label: "2 years", months: 24 },
   { id: "lifetime", label: "Lifetime", months: null },
 ];
 
+/** Legacy ids kept for already-issued keys (not shown in mentor dropdown). */
+const LEGACY_DURATION_MONTHS = { "1m": 1 };
+
 export function resolveLicenseExpiry(durationId, from = Date.now()) {
   const id = String(durationId || "lifetime")
     .trim()
     .toLowerCase();
-  const preset = LICENSE_DURATIONS.find((item) => item.id === id);
-  if (!preset || preset.months == null) {
-    return { duration: "lifetime", expiresAt: null };
-  }
   const start = new Date(Number(from) || Date.now());
-  start.setMonth(start.getMonth() + preset.months);
-  return { duration: preset.id, expiresAt: start.getTime() };
+  const preset = LICENSE_DURATIONS.find((item) => item.id === id);
+  if (preset) {
+    if (preset.months == null && !preset.days) {
+      return { duration: "lifetime", expiresAt: null };
+    }
+    if (preset.months) start.setMonth(start.getMonth() + Number(preset.months));
+    if (preset.days) start.setDate(start.getDate() + Number(preset.days));
+    return { duration: preset.id, expiresAt: start.getTime() };
+  }
+  const legacyMonths = LEGACY_DURATION_MONTHS[id];
+  if (legacyMonths != null) {
+    start.setMonth(start.getMonth() + legacyMonths);
+    return { duration: id, expiresAt: start.getTime() };
+  }
+  return { duration: "lifetime", expiresAt: null };
 }
 
 export function isLicenseExpired(row, now = Date.now()) {

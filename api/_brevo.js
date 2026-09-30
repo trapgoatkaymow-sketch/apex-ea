@@ -26,19 +26,28 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+const DURATION_LABELS = {
+  "1m10d": "1 month 10 days",
+  "1m": "1 month",
+  "3m": "3 months",
+  "2y": "2 years",
+  lifetime: "Lifetime",
+};
+
 function formatDurationLabel(duration, expiresAt) {
   const id = String(duration || "lifetime").toLowerCase();
+  const nice = DURATION_LABELS[id] || id;
   if (id === "lifetime" || !expiresAt) return "Lifetime";
   try {
     const d = new Date(Number(expiresAt));
-    if (!Number.isFinite(d.getTime())) return id;
-    return `${id} · expires ${d.toLocaleDateString("en-GB", {
+    if (!Number.isFinite(d.getTime())) return nice;
+    return `${nice} · expires ${d.toLocaleDateString("en-GB", {
       day: "numeric",
       month: "short",
       year: "numeric",
     })}`;
   } catch {
-    return id;
+    return nice;
   }
 }
 
@@ -136,7 +145,12 @@ export async function sendLicenseKeyEmail(license = {}) {
 
   const botName = String(license.botName || license.bot?.name || "Bot").trim() || "Bot";
   const mentorName = String(license.mentorName || "").trim() || "your mentor";
+  const durationId = String(license.duration || "lifetime").toLowerCase();
   const duration = formatDurationLabel(license.duration, license.expiresAt);
+  const isOneMonthTenDays = durationId === "1m10d";
+  const durationNotice = isOneMonthTenDays
+    ? "This license key is for 1 month 10 days — it is not a lifetime key."
+    : "";
   const appUrl = env("PUBLIC_APP_URL", "https://www.apex-ea.com").replace(/\/+$/, "");
   const downloadUrl = "https://apex-ea.tech";
   const copyKeyUrl = `${appUrl}/copy-key.html?key=${encodeURIComponent(key)}`;
@@ -151,6 +165,7 @@ export async function sendLicenseKeyEmail(license = {}) {
     `License key: ${key}`,
     `Copy key: ${copyKeyUrl}`,
     `Access: ${duration}`,
+    ...(durationNotice ? ["", durationNotice] : []),
     "",
     "How to activate:",
     `1. Download the app: ${downloadUrl}`,
@@ -187,6 +202,11 @@ export async function sendLicenseKeyEmail(license = {}) {
             <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.06em;color:#ff2d7a;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">${escapeHtml(key)}</p>
           </div>
           <p style="margin:0 0 8px;font-size:14px;color:#c8c8d0;"><strong style="color:#fff;">Access:</strong> ${escapeHtml(duration)}</p>
+          ${
+            durationNotice
+              ? `<p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#ffd28a;"><strong style="color:#fff;">Duration:</strong> ${escapeHtml(durationNotice)}</p>`
+              : ""
+          }
           <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#c8c8d0;">
             <a href="${escapeHtml(downloadUrl)}" style="color:#ff7ab5;">Download the app</a>,
             sign in with <strong style="color:#fff;">${escapeHtml(toEmail)}</strong>, then enter this key to unlock.

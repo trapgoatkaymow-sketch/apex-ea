@@ -778,6 +778,11 @@ export async function fulfillRobotPurchase({
   }
 
   const key = randomLicenseKey(existingKeys);
+  const isGiveawayPurchase = String(source || "")
+    .toLowerCase()
+    .includes("giveaway");
+  // Giveaway keys are timed (1 month + 10 days). Full robot NCP stays lifetime.
+  const licenseDuration = isGiveawayPurchase ? "1m10d" : "lifetime";
   let license;
   let createError = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -792,7 +797,7 @@ export async function fulfillRobotPurchase({
         mentorEmail: mentor.mentorEmail,
         mentorId: mentor.mentorId,
         mentorName: mentor.mentorName,
-        duration: "lifetime",
+        duration: licenseDuration,
         sendEmail: true,
         skipQuota: true,
         purchaseCaptureId: captureKey || null,

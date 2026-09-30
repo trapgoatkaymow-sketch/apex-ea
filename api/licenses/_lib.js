@@ -414,10 +414,17 @@ function resolveLicenseExpiry(durationId, from = Date.now()) {
   const id = String(durationId || "lifetime")
     .trim()
     .toLowerCase();
+  if (id === "lifetime") return { duration: "lifetime", expiresAt: null };
+  const start = new Date(Number(from) || Date.now());
+  // Mentor / giveaway default timed plan: 1 calendar month + 10 days.
+  if (id === "1m10d") {
+    start.setMonth(start.getMonth() + 1);
+    start.setDate(start.getDate() + 10);
+    return { duration: id, expiresAt: start.getTime() };
+  }
   const months =
     id === "1m" ? 1 : id === "3m" ? 3 : id === "2y" ? 24 : null;
   if (months == null) return { duration: "lifetime", expiresAt: null };
-  const start = new Date(Number(from) || Date.now());
   start.setMonth(start.getMonth() + months);
   return { duration: id, expiresAt: start.getTime() };
 }

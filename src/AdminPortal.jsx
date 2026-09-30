@@ -289,7 +289,7 @@ export default function AdminPortal() {
   const [licenseBotId, setLicenseBotId] = useState("");
   const [licenseClientName, setLicenseClientName] = useState("");
   const [licenseClientEmail, setLicenseClientEmail] = useState("");
-  const [licenseDuration, setLicenseDuration] = useState("1m");
+  const [licenseDuration, setLicenseDuration] = useState("1m10d");
   const [licenseSearch, setLicenseSearch] = useState("");
   const [keysCalendarOpen, setKeysCalendarOpen] = useState(false);
   const [keysCalendarMonth, setKeysCalendarMonth] = useState(() => {
