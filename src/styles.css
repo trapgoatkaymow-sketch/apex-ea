@@ -6693,6 +6693,34 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   font-size: 0.82rem;
 }
 
+.trade-script-chances {
+  margin: -2px 0 0;
+  align-self: flex-end;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.trade-script-chances strong {
+  color: #fff;
+  font-weight: 800;
+}
+
+.trade-script-chances.is-empty,
+.trade-script-chances.is-empty strong {
+  color: rgba(255, 120, 140, 0.95);
+}
+
+.trade-script-panel > .trade-script-chances {
+  margin-left: auto;
+  margin-right: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+
 .trade-script-note,
 .v2-script-note {
   margin: 0;

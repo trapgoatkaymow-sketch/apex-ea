@@ -74,6 +74,8 @@ export default function TradeScriptOrb({
   tradeLive = null,
   storageKey = "apexea-float-pos",
   showToast,
+  startsLeft = null,
+  startQuota = 10,
 }) {
   const [floatPos, setFloatPos] = useState(() => loadFloatPos(storageKey));
   const [scriptOpen, setScriptOpen] = useState(false);
@@ -502,6 +504,19 @@ export default function TradeScriptOrb({
                 </button>
               </div>
             </header>
+            {startsLeft != null ? (
+              <p
+                className={`trade-script-chances${
+                  Number(startsLeft) <= 0 ? " is-empty" : ""
+                }`}
+                aria-label={`${Math.max(0, Number(startsLeft) || 0)} of ${startQuota} daily START chances left`}
+              >
+                Daily chances{" "}
+                <strong>
+                  {Math.max(0, Number(startsLeft) || 0)}/{startQuota}
+                </strong>
+              </p>
+            ) : null}
             {historyOpen ? (
               <p className="trade-script-note">Saved on this device · does not reset overnight.</p>
             ) : isOpening ? (

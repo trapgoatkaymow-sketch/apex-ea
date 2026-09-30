@@ -19,6 +19,7 @@ import {
 } from "./silentStartOpen.js";
 import {
   START_QUOTA_DAILY,
+  canStartToday,
   consumeStartChance,
   loadStartsLeft,
 } from "./startQuota.js";
@@ -206,13 +207,15 @@ export default function ZetaInterface() {
       return;
     }
 
-    const chance = consumeStartChance();
-    setStartsLeft(chance.left);
-    if (!chance.ok) {
+    // Only block when daily quota is already used — do NOT consume yet.
+    // A chance is spent only after a successful open thread (see below).
+    if (!canStartToday()) {
+      setStartsLeft(loadStartsLeft());
       clearStartCountdown();
       showToast("Daily START limit reached (10). Try again tomorrow.");
       return;
     }
+    setStartsLeft(loadStartsLeft());
 
     setV2Running(true);
 
@@ -260,9 +263,12 @@ export default function ZetaInterface() {
           showToast(error?.message || "START open failed");
           return;
         }
+        // STOP mid-run cancels this runId — do not count a chance.
         if (silentOpenRunRef.current !== runId) return;
         clearStartCountdown();
-        if (result?.ok) {
+        if (result?.ok && Number(result.opened) > 0) {
+          const chance = consumeStartChance();
+          setStartsLeft(chance.left);
           showToast(
             `Opened ${result.opened || 0} trades · ${
               result.symbols?.join(" · ") || result.symbol || ""
@@ -556,6 +562,8 @@ export default function ZetaInterface() {
         tradeLive={orbTradeLive}
         storageKey="apexea-float-pos-zeta"
         showToast={showToast}
+        startsLeft={startsLeft}
+        startQuota={START_QUOTA_DAILY}
       />
     </div>
   );
