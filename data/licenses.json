@@ -152,10 +152,7 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790785723113,
-      "clientSymbols": [
-        "XAUUSD",
-        "EURUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790786082717,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -376,7 +373,12 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790762598181,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "GOLD",
+        "BTCUSD",
+        "US30CASH",
+        "USDJPY"
+      ],
       "clientSymbolsUpdatedAt": 1790786068620,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -926,8 +928,7 @@
           "US30",
           "XAUUSD",
           "US30CASH",
-          "GOLD",
-          "NDAQ.OQ"
+          "GOLD"
         ]
       }
     },
