@@ -3154,6 +3154,19 @@ export function AppProvider({ children }) {
         );
         return nextEas;
       });
+      // Keep active bot.symbols in sync with Your pairs (START reads either).
+      setBots((prev) => {
+        const activeId = String(activeBot?.id || "").trim();
+        if (!activeId) return prev;
+        return prev.map((bot) => {
+          if (String(bot.id || "") !== activeId) return bot;
+          const has = (bot.symbols || []).some(
+            (s) => String(s).toLowerCase() === clean.toLowerCase()
+          );
+          if (has) return bot;
+          return { ...bot, symbols: [...(bot.symbols || []), clean] };
+        });
+      });
       void syncClientEaSymbols(nextEas);
       if (!quiet) showToast(`${clean} added`);
       return true;
