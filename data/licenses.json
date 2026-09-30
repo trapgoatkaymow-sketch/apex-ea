@@ -60,14 +60,14 @@
       "usedAt": 1790609523424,
       "deviceId": "3f22d0a3-ecd7-478e-9f2c-bcb6b0958fb1",
       "boundAt": 1790616548303,
-      "updatedAt": 1790787776219,
+      "updatedAt": 1790787776823,
       "scanReset": null,
-      "robotAccountId": "73ea83ea-ac28-4db2-a875-8c5230eb0555",
+      "robotAccountId": "f31c19be-85ce-4844-9c76-10718e94dce6",
       "robotLogin": "113385368",
       "robotServer": "MetaQuotes-Demo",
       "robotCompany": "MetaQuotes Ltd.",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790757058204,
+      "robotConnectedAt": 1790787742674,
       "clientSymbols": [
         "XAUUSD"
       ],
@@ -669,7 +669,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "AITEMPORARYOFFLINE",
+          "NAS100"
         ]
       }
     },
@@ -3247,9 +3249,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "AI",
-          "GOLD"
+          "XAUUSD"
         ]
       }
     },
@@ -5028,7 +5028,8 @@
           "US30",
           "XAUUSD",
           "US30CASH",
-          "GOLD"
+          "GOLD",
+          "NDAQ.OQ"
         ]
       }
     },
