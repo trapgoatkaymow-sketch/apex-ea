@@ -65,7 +65,14 @@ export function loadScansLeft(variant) {
     writeScanStore(next);
     return quota;
   }
-  return Math.max(0, Math.floor(value));
+  // Cap leftover from an older higher quota so a lowered daily limit applies today.
+  const left = Math.max(0, Math.floor(value));
+  if (left > quota) {
+    const next = { ...prev, day, [bucket]: quota };
+    writeScanStore(next);
+    return quota;
+  }
+  return left;
 }
 
 export function saveScansLeft(variant, value) {
