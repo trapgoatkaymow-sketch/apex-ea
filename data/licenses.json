@@ -359,7 +359,7 @@
       "usedAt": 1790059835917,
       "deviceId": "0168918f-fdde-4b4e-9ac7-ea8307e71bc4",
       "boundAt": 1790786544754,
-      "updatedAt": 1790790767944,
+      "updatedAt": 1790790770193,
       "scanReset": null,
       "robotAccountId": "14c95cc7-1232-447e-8670-758dcea42faf",
       "robotLogin": "8869643",
@@ -657,6 +657,7 @@
           "NAS100",
           "US30",
           "BTCUSD",
+          "USDCAD",
           "XAUUSDM",
           "US30M",
           "EURUSDM",
@@ -1350,9 +1351,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "EURUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1591,7 +1590,7 @@
       "usedAt": 1790779250966,
       "deviceId": "8cbcb683-ccc2-4d96-82f2-d59a1d72bc2d",
       "boundAt": 1790779250966,
-      "updatedAt": 1790790584511,
+      "updatedAt": 1790790585359,
       "scanReset": null,
       "robotAccountId": "9b697bfb-a530-4bef-835d-ddc884e8636a",
       "robotLogin": "17525285",
@@ -1660,9 +1659,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "US30",
-          "UT100",
-          "XAUUSD"
+          "US30"
         ]
       }
     },
@@ -1885,9 +1882,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1983,7 +1978,8 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "XAUUSDM"
         ]
       }
     },
@@ -15200,9 +15196,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "NAS100",
-          "GOLD",
-          "US30"
+          "NZDUSD",
+          "US30",
+          "USDJPY",
+          "XAUUSD",
+          "GOLD"
         ]
       }
     },
