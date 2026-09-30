@@ -363,9 +363,19 @@ export default function V2Interface() {
               </button>
             </div>
 
-            <p className="v2-powered-by" aria-label="Powered by apexEA">
-              Powered by <span>apexEA</span>
-            </p>
+            {v2Running && startStatus ? (
+              <p className="start-countdown" aria-live="polite">
+                {startStatus === "scanning"
+                  ? "Scanning…"
+                  : startStatus.startsWith("opening")
+                    ? startStatus.replace(/^opening/, "Opening")
+                    : formatStartCountdown(startCountdownMs ?? 0)}
+              </p>
+            ) : (
+              <p className="v2-powered-by" aria-label="Powered by apexEA">
+                Powered by <span>apexEA</span>
+              </p>
+            )}
 
             <section className="v2-robots">
               <h2 className="v2-robots-title">ROBOT LIST:</h2>
