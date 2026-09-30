@@ -19,14 +19,14 @@
       "usedAt": 1790599052971,
       "deviceId": "0cff7dec-9148-451b-a261-1ab06954dc20",
       "boundAt": 1790781983778,
-      "updatedAt": 1790782701892,
+      "updatedAt": 1790782711061,
       "scanReset": null,
-      "robotAccountId": "3609effc-fed0-469d-9d78-1dca77dbb292",
-      "robotLogin": "318777331",
-      "robotServer": "XMGlobal-MT5 7",
+      "robotAccountId": "f6bc7d66-4e9f-4909-abaf-de6afe81dc81",
+      "robotLogin": "336965323",
+      "robotServer": "XMGlobal-MT5 9",
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790753282082,
+      "robotConnectedAt": 1790782660539,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790782669233,
       "purchaseCaptureId": "10P621414C1432747",
@@ -60,14 +60,14 @@
       "usedAt": 1790599052568,
       "deviceId": "c8945178-4357-4417-b0e2-14b87b42b5e6",
       "boundAt": 1790701678486,
-      "updatedAt": 1790782701892,
+      "updatedAt": 1790782711061,
       "scanReset": null,
-      "robotAccountId": "3609effc-fed0-469d-9d78-1dca77dbb292",
-      "robotLogin": "318777331",
-      "robotServer": "XMGlobal-MT5 7",
+      "robotAccountId": "f6bc7d66-4e9f-4909-abaf-de6afe81dc81",
+      "robotLogin": "336965323",
+      "robotServer": "XMGlobal-MT5 9",
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790753282082,
+      "robotConnectedAt": 1790782660539,
       "clientSymbols": [
         "EURUSD"
       ],
@@ -2002,9 +2002,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -2048,7 +2046,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "XAUUSDM"
+        ]
       }
     },
     {
@@ -2281,7 +2282,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "GBPUSD",
+          "EURUSD"
+        ]
       }
     },
     {
@@ -2326,8 +2330,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "GOLD"
+          "GOLD",
+          "US30",
+          "BITCOIN"
         ]
       }
     },
@@ -2876,9 +2881,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          "XAUSSD",
-          "GOLD"
+          "US30"
         ]
       }
     },
@@ -5244,12 +5247,7 @@
         "strategy": "scalper",
         "symbols": [
           "USDJPY",
-          "WTI",
-          "EURUSD",
-          "XAUUSD",
-          "AUDCAD",
-          "US30",
-          "BTCUSD"
+          "WTI"
         ]
       }
     },
@@ -5334,7 +5332,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "NAS100",
+          "GOLD",
+          "US30"
+        ]
       }
     },
     {
@@ -6271,9 +6273,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -6530,7 +6530,8 @@
         "photo": "/api/licenses/photo?botId=vector-x-pro-2-0-muljiz22&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "GER40CASH"
         ]
       }
     },
@@ -29653,7 +29654,8 @@
         "symbols": [
           "XAUDUSD247C",
           "XAUUSD247C",
-          "XAUUSD"
+          "XAUUSD",
+          "GBPAUD"
         ]
       }
     },
