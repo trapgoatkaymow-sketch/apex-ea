@@ -472,7 +472,7 @@
       "usedAt": 1790516234540,
       "deviceId": "9ed2a21a-4a18-41ea-acbb-c2a83061f147",
       "boundAt": 1790533460436,
-      "updatedAt": 1790753591022,
+      "updatedAt": 1790753594914,
       "scanReset": null,
       "robotAccountId": "f38fed7b-c596-40e8-855d-54b5861662f9",
       "robotLogin": "16732198",
@@ -488,7 +488,7 @@
         "XAUUSD",
         "DE30"
       ],
-      "clientSymbolsUpdatedAt": 1790753591022,
+      "clientSymbolsUpdatedAt": 1790753594914,
       "purchaseCaptureId": "56Y31587817789342",
       "purchaseOrderId": "5F027988G3335201V",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -638,7 +638,7 @@
       "purchaseCaptureId": "5LG20373J40017046",
       "purchaseOrderId": "6RE793262G860920T",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790753095975,
+      "emailSentAt": 1790753118101,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -687,9 +687,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -783,13 +781,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "NASDAQ",
-          "NAS100",
-          "T100.IFXM",
-          "XAUUSD",
-          "T100IFXM"
-        ]
+        "symbols": []
       }
     },
     {
@@ -1293,9 +1285,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
@@ -5300,7 +5290,10 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "NAS100"
+        ]
       }
     },
     {
