@@ -614,8 +614,8 @@ html:has(.phone[data-interface="v2"]) body {
 
 .stop-btn {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   /* Keep overflow visible so the theme edge glow is not clipped;
      particles are clipped by .stop-energy instead. */
@@ -624,7 +624,7 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 4px;
   color: var(--pink);
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.42), transparent 36%),
@@ -934,7 +934,7 @@ html:has(.phone[data-interface="v2"]) body {
 
 .stop-core-glow {
   position: absolute;
-  inset: 6px;
+  inset: 10px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
@@ -998,9 +998,9 @@ html:has(.phone[data-interface="v2"]) body {
   position: relative;
   z-index: 2;
   color: #fff;
-  font-size: 0.62rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   line-height: 1;
   text-shadow:
     0 0 8px rgba(0, 0, 0, 0.65),
@@ -1010,9 +1010,9 @@ html:has(.phone[data-interface="v2"]) body {
 .stop-quota {
   position: relative;
   z-index: 2;
-  margin-top: 1px;
+  margin-top: 2px;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 0.48rem;
+  font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
@@ -6092,12 +6092,12 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   position: relative;
   isolation: isolate;
   overflow: visible;
-  width: 56px;
-  height: 56px;
-  min-height: 56px;
-  margin: -6px 2px;
+  width: 72px;
+  height: 72px;
+  min-height: 72px;
+  margin: -10px 2px;
   padding: 0;
-  gap: 0;
+  gap: 2px;
   border-radius: 50%;
   color: #ffffff;
   background:
@@ -6141,14 +6141,14 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 
 #v2-trade-btn .v2-pill-label {
   color: #ffffff;
-  font-size: 0.5rem;
-  letter-spacing: 0.05em;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 #v2-trade-btn .stop-quota {
   margin-top: 0;
-  font-size: 0.42rem;
+  font-size: 0.5rem;
 }
 
 .v2-pill-btn.is-running .v2-pill-icon.is-trade,
