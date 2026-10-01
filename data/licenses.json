@@ -70,6 +70,7 @@
       "boundAt": 1790539481252,
       "updatedAt": 1790873055271,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "473c8c84-fd4c-4b8e-bb96-7c1aad6cfd5f",
       "robotLogin": "4118667",
       "robotServer": "RazorMarkets-Live",
@@ -99,8 +100,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-CND5-276M",
@@ -175,6 +175,7 @@
       "boundAt": 1790850522910,
       "updatedAt": 1790873052046,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "f96b74ef-4568-4f75-80a3-d1781f7e8190",
       "robotLogin": "450102468",
       "robotServer": "XMGlobal-MT5 20",
@@ -204,8 +205,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-7MSD-78EY",
@@ -278,6 +278,7 @@
       "boundAt": 1790524150784,
       "updatedAt": 1790873044594,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "2099fe48-4521-4cde-838a-250e5b52e491",
       "robotLogin": "17627786",
       "robotServer": "Headway-Real",
@@ -301,8 +302,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-A6UD-GK8S",
@@ -325,6 +325,7 @@
       "boundAt": 1790523098620,
       "updatedAt": 1790873044594,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "2099fe48-4521-4cde-838a-250e5b52e491",
       "robotLogin": "17627786",
       "robotServer": "Headway-Real",
@@ -354,8 +355,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-78T7-VB2D",
@@ -378,6 +378,7 @@
       "boundAt": 1790793686647,
       "updatedAt": 1790873034042,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "448466a4-24de-47a3-80cc-db3476777027",
       "robotLogin": "224049909",
       "robotServer": "Exness-MT5Real30",
@@ -401,8 +402,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-WDH5-8NHN",
@@ -525,6 +525,7 @@
       "boundAt": 1790541987474,
       "updatedAt": 1790873016603,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "fdbf6093-cf79-47c6-b59b-8c3bbac6a126",
       "robotLogin": "55055801",
       "robotServer": "HFMarketsKE-Live2",
@@ -550,8 +551,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-A9DV-E6Q6",
@@ -673,6 +673,7 @@
       "boundAt": 1790849032812,
       "updatedAt": 1790873012295,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "6c8dc827-4735-496f-b79f-08da92941654",
       "robotLogin": "4110677",
       "robotServer": "RazorMarkets-Live",
@@ -696,8 +697,7 @@
         "symbols": [
           "XAUUSD"
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-YEY4-Z595",
@@ -720,6 +720,7 @@
       "boundAt": 1790859404292,
       "updatedAt": 1790873012274,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "a3641da6-d1a4-47d1-a044-afed7408c331",
       "robotLogin": "336678532",
       "robotServer": "XMGlobal-MT5 9",
@@ -747,8 +748,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-E5VA-NXUP",
@@ -1797,10 +1797,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "XAUUSD"
         ]
       }
     },
@@ -3948,7 +3945,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -4048,9 +4047,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -4255,9 +4252,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -4840,7 +4835,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -5034,9 +5031,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -5129,9 +5124,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       },
       "startReset": null
