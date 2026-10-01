@@ -851,8 +851,19 @@
       "robotCompany": "Exness Technologies Ltd",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790799995793,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
+      "clientSymbols": [
+        "EURUSD",
+        "XAUUSD",
+        "XAUUS",
+        "XAUUSDM",
+        "US30",
+        "GPUSDM",
+        "U",
+        "GBPUSD",
+        "GBPUSDM",
+        "USDCAD"
+      ],
+      "clientSymbolsUpdatedAt": 1790837991737,
       "mentorSymbolsSyncedAt": 1790837309835,
       "purchaseCaptureId": "8K3006038F7762221",
       "purchaseOrderId": "23M76451YE226594A",
@@ -3356,7 +3367,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSDM"
+          "US30",
+          ".US30."
         ]
       }
     },
