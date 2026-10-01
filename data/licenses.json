@@ -21,6 +21,7 @@
       "boundAt": 1790747904753,
       "updatedAt": 1790878831754,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "88e1dc72-0b11-4b52-b7ef-81db64a993b1",
       "robotLogin": "134722971",
       "robotServer": "ExnessMU-MT5Real9",
@@ -48,8 +49,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-8E33-ENPX",
@@ -72,6 +72,7 @@
       "boundAt": 1790500511874,
       "updatedAt": 1790878828984,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "0ccb4068-f5ab-4b48-9777-c00bf644ec5e",
       "robotLogin": "54985262",
       "robotServer": "HFMarketsSA-Live2",
@@ -96,8 +97,7 @@
           "XAUUSD",
           "USDJPY"
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-X4K9-4RH4",
@@ -5099,8 +5099,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -5829,7 +5830,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -7009,7 +7012,7 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
-      "emailSentAt": 1790877282782,
+      "emailSentAt": 1790877161359,
       "bot": {
         "id": "zar-charts-v6--mumkvo31",
         "name": "ZAR CHARTS V6+",
@@ -7156,8 +7159,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -8144,7 +8148,7 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
-      "emailSentAt": 1790876633052,
+      "emailSentAt": 1790876797619,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
