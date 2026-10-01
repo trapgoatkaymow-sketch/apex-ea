@@ -388,6 +388,26 @@ export default async function handler(req, res) {
         const license = await grantScanReset(body.key, {
           adminEmail: body.adminEmail || body.email || "",
         });
+        const persistGrants = license?._persistQuotaGrants;
+        if (typeof persistGrants === "function") {
+          delete license._persistQuotaGrants;
+          try {
+            waitUntil(
+              Promise.resolve()
+                .then(() => persistGrants())
+                .catch((err) => {
+                  console.warn(
+                    "quota grants durable mirror failed",
+                    err?.message || err
+                  );
+                })
+            );
+          } catch {
+            void Promise.resolve()
+              .then(() => persistGrants())
+              .catch(() => {});
+          }
+        }
         sendJson(res, 200, {
           license,
           scanReset: license?.scanReset || null,
