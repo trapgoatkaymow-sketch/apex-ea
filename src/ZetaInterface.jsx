@@ -269,10 +269,14 @@ export default function ZetaInterface() {
         if (result?.ok && Number(result.opened) > 0) {
           const chance = consumeStartChance();
           setStartsLeft(chance.left);
+          const safeNote =
+            result.mode === "safe-scalper"
+              ? " · Safe Scalper (AI offline, half lot)"
+              : "";
           showToast(
             `Opened ${result.opened || 0} trades · ${
               result.symbols?.join(" · ") || result.symbol || ""
-            }`
+            }${safeNote}`
               .replace(/\s+/g, " ")
               .trim()
           );
