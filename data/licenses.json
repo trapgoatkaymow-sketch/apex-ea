@@ -1020,6 +1020,7 @@
       "boundAt": 1789977265760,
       "updatedAt": 1790879570990,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "defec20d-20ed-4fe2-88e6-f73d361b040d",
       "robotLogin": "4003817",
       "robotServer": "RazorMarkets-Live",
@@ -1050,8 +1051,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-S3T6-RXE9",
@@ -1885,6 +1885,7 @@
       "boundAt": null,
       "updatedAt": 1790879557139,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "",
       "robotLogin": "",
       "robotServer": "",
@@ -1909,8 +1910,7 @@
           "XAUUSD",
           "USDJPY"
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-JH9T-TJYS",
@@ -5850,8 +5850,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -5903,9 +5904,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "BTCUSD",
-          "SILVER",
           "XAUUSD",
+          "US30",
+          "GOLDMICRO",
+          "US100CASH",
           "USDJPY"
         ]
       }
@@ -6005,9 +6007,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -6055,9 +6056,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -6507,8 +6506,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -6704,8 +6704,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
