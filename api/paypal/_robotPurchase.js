@@ -134,7 +134,12 @@ function windowFromStart(
   const displayEndMs = Number.isFinite(countdownEndsAtMs)
     ? countdownEndsAtMs
     : purchaseEndMs;
-  const remainingMs = Math.max(0, displayEndMs - nowMs);
+  // Live countdown prefers the hard special end when it is still ahead.
+  const liveCountdownEndMs =
+    Number.isFinite(purchasesEndAtMs) && purchasesEndAtMs > nowMs
+      ? purchasesEndAtMs
+      : displayEndMs;
+  const remainingMs = Math.max(0, liveCountdownEndMs - nowMs);
   const notStarted = nowMs < startMs;
   const countdownExpired = nowMs >= displayEndMs;
   const purchasesExpired = nowMs >= purchaseEndMs;
