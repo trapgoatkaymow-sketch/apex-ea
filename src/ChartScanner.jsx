@@ -35,10 +35,12 @@ import {
   pickLatestStartGrant,
 } from "./startQuota.js";
 import {
+  buildTpThreads,
+  clampTradeThreadCount,
   describeManagementPlan,
   loadTradeManagement,
 } from "./tradeManagement.js";
-import { tpRewardMultiples, tpRiskRewardLabel } from "./tradeLevels.js";
+import { symbolCoreName, tpRewardMultiples, tpRiskRewardLabel } from "./tradeLevels.js";
 
 /** Android WebView: keep motion close to web, with a lighter particle count. */
 const SCANNER_PARTICLE_COUNT = isNativeApp() ? 12 : 18;
@@ -48,51 +50,22 @@ const SCAN_STEP_GAP_MS = isNativeApp() ? 36 : 70;
 const SCAN_SETTLE_MS = isNativeApp() ? 220 : 500;
 const TRADE_SETTLE_MS = isNativeApp() ? 320 : 700;
 
-/**
- * Trade index → TP target (cycles forever):
- *   T1 → TP1, T2 → TP2, T3 → TP3, T4 → TP1, T5 → TP2, ...
- * Never dump T4+ onto TP3 — that made 15-trade fills look like T3..T15 all TP3.
- */
-function targetForTradeIndex(index) {
-  const n = Math.max(0, Math.floor(Number(index) || 0));
-  const slot = n % 3;
-  if (slot === 0) {
-    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: n + 1 };
-  }
-  if (slot === 1) {
-    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: n + 1 };
-  }
-  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
-}
-
-/**
- * Build the exact open order for each thread.
- * Thread 1 always TP1, thread 2 always TP2, thread 3 always TP3, then repeat.
- * Skip a thread only when its mapped TP price is missing.
- */
-function buildTpThreads({ tradeCount, lot, signal }) {
-  const count = clampTrades(tradeCount);
-  const volume = clampLot(lot);
-  const threads = [];
-  for (let i = 0; i < count; i += 1) {
-    const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
-    const takeProfit = Number(signal?.[takeProfitKey]);
-    if (!Number.isFinite(takeProfit) || takeProfit <= 0) continue;
-    threads.push({
-      index: i,
-      tradeNo,
-      target,
-      takeProfitKey,
-      takeProfit,
-      volume,
-    });
-  }
-  return threads;
-}
-
+/** Cap "Number of trades" at 3 (TP1/TP2/TP3) — lot is TOTAL, not per thread. */
 function clampTrades(value) {
-  const n = Math.floor(Number(value) || 1);
-  return Math.min(20, Math.max(1, n));
+  return clampTradeThreadCount(value);
+}
+
+function samePairOpen(positions, symbol) {
+  const want = symbolCoreName(symbol);
+  if (!want) return false;
+  return (Array.isArray(positions) ? positions : []).some((row) => {
+    const core = symbolCoreName(row?.symbol);
+    if (!core) return false;
+    if (core === want) return true;
+    // Gold family
+    if (/^XAUUSD|^GOLD/i.test(want) && /^XAUUSD|^GOLD/i.test(core)) return true;
+    return false;
+  });
 }
 
 /** Normalize lot only when saving / trading — not while the user is typing. */
@@ -603,6 +576,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
         );
         return;
       }
+      // Don't stack another full START/Execute while this pair is already open.
+      if (samePairOpen(dir?.positions, tradeSymbol)) {
+        showToast(
+          `Close your open ${tradeSymbol} trades first before opening more`
+        );
+        return;
+      }
     } catch {
       // Soft-fail — server still blocks opposite direction on placeTrade.
     }
@@ -611,6 +591,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     const orbComment = isPremiumScanner
       ? `${tradeComment}|premium`.slice(0, 31)
       : tradeComment;
+    // `lot` is TOTAL size — buildTpThreads splits it across TP threads.
     const threads = buildTpThreads({
       tradeCount,
       lot,
@@ -1208,7 +1189,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <input
                 type="number"
                 min="1"
-                max="20"
+                max="3"
                 value={trades}
                 disabled={busy}
                 onChange={(e) => setTrades(clampTrades(e.target.value))}
@@ -1217,7 +1198,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <button
                 type="button"
                 aria-label="More trades"
-                disabled={busy || trades >= 20}
+                disabled={busy || trades >= 3}
                 onClick={() => {
                   const next = clampTrades(trades + 1);
                   setTrades(next);

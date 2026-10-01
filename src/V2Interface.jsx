@@ -554,7 +554,7 @@ export default function V2Interface() {
                   lotSize: Number(lotSize) || 0.01,
                   action,
                   platform,
-                  trades: Math.max(1, Math.floor(Number(trades) || 1)),
+                  trades: Math.max(1, Math.min(3, Math.floor(Number(trades) || 1))),
                 });
                 setV2View("quotes");
               }}
@@ -596,11 +596,12 @@ export default function V2Interface() {
                 </select>
               </label>
               <label className="v2-field">
-                <span>Number of Trades</span>
+                <span>Number of Trades (max 3 · lot is total)</span>
                 <input
                   className="v2-input"
                   type="number"
                   min="1"
+                  max="3"
                   value={trades}
                   onChange={(e) => setTrades(e.target.value)}
                 />

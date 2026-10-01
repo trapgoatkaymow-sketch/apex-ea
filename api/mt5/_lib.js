@@ -1082,7 +1082,8 @@ export async function placeMarketTrade({
   const requested = normalizeBrokerSymbol(symbol);
   const lots = Number(volume);
   const action = String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
-  const times = Math.max(1, Math.min(20, Math.floor(Number(count) || 1)));
+  // Cap at 3 — clients open TP threads one-by-one with count=1; never multiply lot.
+  const times = Math.max(1, Math.min(3, Math.floor(Number(count) || 1)));
 
   if (!id) {
     const err = new Error("accountId is required");

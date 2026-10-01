@@ -233,7 +233,7 @@ export async function placeTrade({
       stopLoss,
       takeProfit,
       ...(tpList.length ? { takeProfits: tpList } : {}),
-      count: Math.max(1, Math.min(20, Math.floor(Number(count) || 1))),
+      count: Math.max(1, Math.min(3, Math.floor(Number(count) || 1))),
       comment,
       region,
       source,

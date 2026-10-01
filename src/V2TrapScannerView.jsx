@@ -366,7 +366,7 @@ export default function V2TrapScannerView({
             <input
               type="number"
               min="1"
-              max="20"
+              max="3"
               value={trades}
               disabled={busy}
               onChange={(e) => {

@@ -90,6 +90,108 @@ function roundLot(value, minLot = 0.01) {
   return rounded;
 }
 
+/** Max TP threads per Execute / START open (TP1 → TP2 → TP3). */
+export const MAX_TP_THREADS = 3;
+
+/** Clamp the "Number of trades" stepper to 1..3. */
+export function clampTradeThreadCount(value) {
+  const n = Math.floor(Number(value) || 1);
+  return Math.min(MAX_TP_THREADS, Math.max(1, n));
+}
+
+function targetForTradeIndex(index) {
+  const n = Math.max(0, Math.floor(Number(index) || 0));
+  const slot = n % 3;
+  if (slot === 0) {
+    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: n + 1 };
+  }
+  if (slot === 1) {
+    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: n + 1 };
+  }
+  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
+}
+
+/**
+ * Split TOTAL lot across N threads. Never multiplies risk by thread count.
+ * If total is too small for N×minLot, collapse to a single ticket.
+ */
+export function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.01) {
+  const floor = Math.max(0.01, Number(minLot) || 0.01);
+  const total = roundLot(Math.max(floor, Number(totalVolume) || floor), floor);
+  const n = Math.max(1, Math.min(MAX_TP_THREADS, Math.floor(Number(threadCount) || 1)));
+  if (n === 1 || total < floor * n) {
+    return [total];
+  }
+  const vols = [];
+  let allocated = 0;
+  for (let i = 0; i < n; i += 1) {
+    const isLast = i === n - 1;
+    let volume = isLast
+      ? roundLot(total - allocated, floor)
+      : roundLot(total / n, floor);
+    if (!isLast && allocated + volume > total) {
+      volume = roundLot(Math.max(0, total - allocated), floor);
+    }
+    if (volume > 0) {
+      vols.push(volume);
+      allocated = Math.round((allocated + volume) * 100) / 100;
+    }
+  }
+  if (!vols.length) return [total];
+  const sum = vols.reduce((acc, v) => acc + v, 0);
+  const drift = Math.round((total - sum) * 100) / 100;
+  if (drift !== 0) {
+    vols[vols.length - 1] = roundLot(
+      Math.max(floor, vols[vols.length - 1] + drift),
+      floor
+    );
+  }
+  return vols;
+}
+
+/**
+ * Build Execute/START threads from a multi-TP signal.
+ * `lot` is the TOTAL size for the whole open — split across threads.
+ */
+export function buildTpThreads({ tradeCount = 1, lot = 0.01, signal = {} } = {}) {
+  const count = clampTradeThreadCount(tradeCount);
+  const pending = [];
+  for (let i = 0; i < count; i += 1) {
+    const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
+    const takeProfit = Number(signal?.[takeProfitKey]);
+    if (!Number.isFinite(takeProfit) || takeProfit <= 0) continue;
+    pending.push({
+      index: i,
+      tradeNo,
+      target,
+      takeProfitKey,
+      takeProfit,
+      timeframe: target === "TP1" ? "M30" : target === "TP2" ? "H1" : "H4",
+      entry: signal.entry,
+      stopLoss: signal.stopLoss,
+      side: signal.side,
+    });
+  }
+  if (!pending.length) return [];
+  const volumes = splitTotalLotAcrossThreads(lot, pending.length);
+  // If lot was too small to split, keep a single TP1 thread with full size.
+  if (volumes.length === 1 && pending.length > 1) {
+    return [
+      {
+        ...pending[0],
+        target: "TP1",
+        takeProfitKey: "takeProfit1",
+        takeProfit: Number(signal?.takeProfit1) || pending[0].takeProfit,
+        volume: volumes[0],
+      },
+    ];
+  }
+  return pending.map((row, i) => ({
+    ...row,
+    volume: volumes[i] ?? volumes[volumes.length - 1],
+  }));
+}
+
 /**
  * Split total lot across TP1/TP2/TP3 using configured percentages.
  * Returns up to 3 legs: { target: "TP1"|"TP2"|"TP3", volume, takeProfitKey }

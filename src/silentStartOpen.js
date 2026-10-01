@@ -24,8 +24,13 @@ import {
   defaultStopDistance,
   normalizeChartTimeframe,
   normalizeTradeSide,
+  symbolCoreName,
   tpRiskRewardLabel,
 } from "./tradeLevels.js";
+import {
+  buildTpThreads,
+  clampTradeThreadCount,
+} from "./tradeManagement.js";
 
 /** Built-in START strategy when OpenAI credits/API fail. */
 export const START_OFFLINE_STRATEGY = "safe-scalper";
@@ -38,8 +43,6 @@ export const START_SILENT_OPEN_DELAY_MS = 15_000;
 
 /** Scanner timeframes used by the START button (like EA Chart). */
 export const START_SCANNER_TIMEFRAMES = ["M30", "H1", "H4"];
-
-const TF_FOR_TP_SLOT = ["M30", "H1", "H4"];
 
 /** Seconds left for the START “Analysing the chart” countdown. */
 export function formatStartCountdownSeconds(ms) {
@@ -58,8 +61,19 @@ function clampLot(value) {
 }
 
 function clampTrades(value) {
-  const n = Math.floor(Number(value) || 1);
-  return Math.min(20, Math.max(1, n));
+  return clampTradeThreadCount(value);
+}
+
+function samePairOpen(positions, symbol) {
+  const want = symbolCoreName(symbol);
+  if (!want) return false;
+  return (Array.isArray(positions) ? positions : []).some((row) => {
+    const core = symbolCoreName(row?.symbol);
+    if (!core) return false;
+    if (core === want) return true;
+    if (/^XAUUSD|^GOLD/i.test(want) && /^XAUUSD|^GOLD/i.test(core)) return true;
+    return false;
+  });
 }
 
 function toFiniteNumber(value) {
@@ -377,41 +391,6 @@ function buildScannerAlignedSetup({
   };
 }
 
-function targetForTradeIndex(index) {
-  const n = Math.max(0, Math.floor(Number(index) || 0));
-  const slot = n % 3;
-  if (slot === 0) {
-    return { target: "TP1", takeProfitKey: "takeProfit1", tradeNo: n + 1 };
-  }
-  if (slot === 1) {
-    return { target: "TP2", takeProfitKey: "takeProfit2", tradeNo: n + 1 };
-  }
-  return { target: "TP3", takeProfitKey: "takeProfit3", tradeNo: n + 1 };
-}
-
-function buildTpThreads({ signal, lot, tradeCount }) {
-  const count = clampTrades(tradeCount);
-  const volume = clampLot(lot);
-  const threads = [];
-  for (let i = 0; i < count; i += 1) {
-    const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
-    const takeProfit = toFiniteNumber(signal?.[takeProfitKey]);
-    if (takeProfit == null || takeProfit <= 0) continue;
-    const slot = i % 3;
-    threads.push({
-      timeframe: TF_FOR_TP_SLOT[slot] || "M30",
-      target,
-      tradeNo,
-      volume,
-      takeProfit,
-      entry: signal.entry,
-      stopLoss: signal.stopLoss,
-      side: signal.side,
-    });
-  }
-  return threads;
-}
-
 /**
  * Chart-Scanner-style open for one pair.
  * Quote is best-effort (never blocks the open); placeTrade re-anchors to live.
@@ -535,6 +514,7 @@ async function openPairSilent({
     });
   }
 
+  // `lot` is TOTAL size — split across TP1/TP2/TP3 threads (never × tradeCount).
   const threads = buildTpThreads({ signal, lot, tradeCount });
   if (!threads.length) {
     return {
@@ -547,7 +527,7 @@ async function openPairSilent({
     };
   }
 
-  // Don't flip BUY↔SELL on the same pair while the other side is still open.
+  // Don't flip BUY↔SELL / stack more size while this pair still has open trades.
   try {
     const dir = await checkTradeDirection({
       accountId,
@@ -569,8 +549,20 @@ async function openPairSilent({
         code: dir.code || "OPPOSITE_DIRECTION",
       };
     }
+    if (samePairOpen(dir?.positions, tradeSymbol)) {
+      return {
+        ok: false,
+        symbol: tradeSymbol,
+        opened: 0,
+        tradeCount,
+        side: signal.side,
+        mode,
+        error: `Close your open ${tradeSymbol} trades first before opening more`,
+        code: "PAIR_ALREADY_OPEN",
+      };
+    }
   } catch {
-    // Soft-fail — placeTrade still enforces the same rule server-side.
+    // Soft-fail — placeTrade still enforces opposite-direction server-side.
   }
 
   let opened = 0;
