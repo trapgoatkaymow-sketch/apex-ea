@@ -367,6 +367,7 @@
       "boundAt": 1790851257998,
       "updatedAt": 1790874906101,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "b61c65cd-c401-463b-8375-b41b61a434ca",
       "robotLogin": "126036608",
       "robotServer": "TradeQuo-Server",
@@ -392,8 +393,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-8GP7-MXQA",
@@ -416,6 +416,7 @@
       "boundAt": 1790542522624,
       "updatedAt": 1790874905003,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "33ad7d8f-9c42-4903-a721-7d26581b3ca4",
       "robotLogin": "987850913",
       "robotServer": "Trade245Global-Live",
@@ -443,8 +444,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-3SUA-4J9X",
@@ -467,6 +467,7 @@
       "boundAt": 1790858427329,
       "updatedAt": 1790874905003,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "33ad7d8f-9c42-4903-a721-7d26581b3ca4",
       "robotLogin": "987850913",
       "robotServer": "Trade245Global-Live",
@@ -496,8 +497,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-TRV2-SA4A",
@@ -572,6 +572,7 @@
       "boundAt": 1790849209359,
       "updatedAt": 1790874899992,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "a81ce872-6c68-4ae5-8372-8c1c0dae69a5",
       "robotLogin": "5666530",
       "robotServer": "Headway-Demo",
@@ -599,8 +600,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-VP9J-U33X",
@@ -715,6 +715,7 @@
       "boundAt": 1790845322652,
       "updatedAt": 1790874897049,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "21c49d87-fe42-4c07-b64e-a26ac0266e33",
       "robotLogin": "1200534361",
       "robotServer": "JustMarkets-Demo3",
@@ -741,8 +742,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-SU98-6M34",
@@ -1277,7 +1277,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -1302,6 +1304,7 @@
       "boundAt": 1790509255029,
       "updatedAt": 1790874886614,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "3adc489f-5bae-48cc-aa5f-c87e480d115f",
       "robotLogin": "322216088",
       "robotServer": "XMGlobal-MT5 8",
@@ -1332,8 +1335,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-SY8Z-7HN8",
@@ -3472,6 +3474,7 @@
       "boundAt": 1790861381064,
       "updatedAt": 1790874799948,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "6b50b3db-59d8-4cc8-9639-3d446042ef54",
       "robotLogin": "55046550",
       "robotServer": "HFMarketsSA-Live2",
@@ -3497,8 +3500,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-GV32-26G3",
@@ -4662,6 +4664,7 @@
       "boundAt": null,
       "updatedAt": 1790874758508,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "",
       "robotLogin": "",
       "robotServer": "",
@@ -4685,8 +4688,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-QBGH-VG9Z",
@@ -41181,7 +41183,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       },
       "startReset": null
     },
