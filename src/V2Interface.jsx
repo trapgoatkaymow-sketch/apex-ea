@@ -294,7 +294,7 @@ export default function V2Interface() {
                   setFloatCycle(true);
                   countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
                   setStartCountdownMs(START_SILENT_OPEN_DELAY_MS);
-                  setStartStatus("opening");
+                  setStartStatus("analysing");
                   if (silentOpenTimerRef.current) {
                     clearTimeout(silentOpenTimerRef.current);
                     silentOpenTimerRef.current = null;
@@ -402,17 +402,17 @@ export default function V2Interface() {
             </div>
             {v2Running && startStatus ? (
               <p className="start-countdown" aria-live="polite">
-                {startStatus === "scanning"
-                  ? "Scanning with OpenAI…"
+                {startStatus === "analysing" || startStatus === "opening"
+                  ? `Analysing the chart · ${formatStartCountdownSeconds(
+                      startCountdownMs ?? 0
+                    )}s`
                   : startStatus.startsWith("placing")
                     ? `Opening positions${
                         startStatus.length > 8
                           ? ` · ${startStatus.slice(8).trim()}`
                           : ""
                       }…`
-                    : `Opening positions · ${formatStartCountdownSeconds(
-                        startCountdownMs ?? 0
-                      )}s`}
+                    : "Opening positions…"}
               </p>
             ) : (
               <p className="v2-powered-by" aria-label="Powered by apexEA">

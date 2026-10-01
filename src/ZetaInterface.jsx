@@ -151,7 +151,7 @@ export default function ZetaInterface() {
     };
   }, []);
 
-  // Live 15s “Opening positions” countdown under START.
+  // Live 15s “Analysing the chart” countdown under START.
   useEffect(() => {
     if (!running || !countdownEndsAtRef.current) {
       setStartCountdownMs(null);
@@ -219,10 +219,10 @@ export default function ZetaInterface() {
 
     setV2Running(true);
 
-    // Show “Opening positions · 15” countdown — no big timer / pair-list toast.
+    // Countdown = analysing; after it ends we show “Opening positions”.
     countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
     setStartCountdownMs(START_SILENT_OPEN_DELAY_MS);
-    setStartStatus("opening");
+    setStartStatus("analysing");
 
     if (silentOpenTimerRef.current) {
       clearTimeout(silentOpenTimerRef.current);
@@ -363,17 +363,17 @@ export default function ZetaInterface() {
               </div>
               {running && startStatus ? (
                 <p className="start-countdown" aria-live="polite">
-                  {startStatus === "scanning"
-                    ? "Scanning with OpenAI…"
+                  {startStatus === "analysing" || startStatus === "opening"
+                    ? `Analysing the chart · ${formatStartCountdownSeconds(
+                        startCountdownMs ?? 0
+                      )}s`
                     : startStatus.startsWith("placing")
                       ? `Opening positions${
                           startStatus.length > 8
                             ? ` · ${startStatus.slice(8).trim()}`
                             : ""
                         }…`
-                      : `Opening positions · ${formatStartCountdownSeconds(
-                          startCountdownMs ?? 0
-                        )}s`}
+                      : "Opening positions…"}
                 </p>
               ) : (
                 <p className="powered-badge">

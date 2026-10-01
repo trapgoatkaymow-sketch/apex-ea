@@ -14,7 +14,12 @@ import {
 } from "./chartScanner.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { BrokerMark } from "./ConnectedBrokerBadge.jsx";
-import { buildBotTradeComment, buildScannerFillComment, placeTrade } from "./metaApi.js";
+import {
+  buildBotTradeComment,
+  buildScannerFillComment,
+  checkTradeDirection,
+  placeTrade,
+} from "./metaApi.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import { fetchLicensesByEmail } from "./licensesApi.js";
@@ -562,6 +567,23 @@ export default function ChartScanner({ variant = "default", active = true }) {
     // a locked pair preference (that was blowing accounts with wrong bias).
     const side =
       String(signal.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
+
+    try {
+      const dir = await checkTradeDirection({
+        accountId: mt5Session.accountId,
+        symbol: tradeSymbol,
+        side,
+      });
+      if (dir && dir.ok === false) {
+        showToast(
+          dir.error ||
+            "Close open trades in the other direction first"
+        );
+        return;
+      }
+    } catch {
+      // Soft-fail — server still blocks opposite direction on placeTrade.
+    }
 
     const tradeComment = buildBotTradeComment(activeBot?.name);
     const orbComment = isPremiumScanner

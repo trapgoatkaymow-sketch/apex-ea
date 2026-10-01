@@ -1,6 +1,6 @@
 /**
  * Silent START → Chart Scanner style open (no scanner UI):
- *   15s “Opening positions” countdown → OpenAI scan (M30/H1/H4) → open
+ *   15s “Analysing the chart” countdown → OpenAI scan (M30/H1/H4) → open
  *   Number of trades for every pair in Your pairs.
  *
  * START always uses the scanner non-H4 ladder:
@@ -14,6 +14,7 @@ import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import {
   buildScannerFillComment,
+  checkTradeDirection,
   getPriceHistory,
   getSymbolQuote,
   placeTrade,
@@ -40,7 +41,7 @@ export const START_SCANNER_TIMEFRAMES = ["M30", "H1", "H4"];
 
 const TF_FOR_TP_SLOT = ["M30", "H1", "H4"];
 
-/** Seconds left for the START “Opening positions” countdown. */
+/** Seconds left for the START “Analysing the chart” countdown. */
 export function formatStartCountdownSeconds(ms) {
   return String(Math.max(0, Math.ceil(Number(ms) / 1000)));
 }
@@ -546,6 +547,32 @@ async function openPairSilent({
     };
   }
 
+  // Don't flip BUY↔SELL on the same pair while the other side is still open.
+  try {
+    const dir = await checkTradeDirection({
+      accountId,
+      symbol: tradeSymbol,
+      side: signal.side,
+      signal: abortSignalAfter(12_000),
+    });
+    if (dir && dir.ok === false) {
+      return {
+        ok: false,
+        symbol: tradeSymbol,
+        opened: 0,
+        tradeCount,
+        side: signal.side,
+        mode,
+        error:
+          dir.error ||
+          "Close open trades in the other direction first",
+        code: dir.code || "OPPOSITE_DIRECTION",
+      };
+    }
+  } catch {
+    // Soft-fail — placeTrade still enforces the same rule server-side.
+  }
+
   let opened = 0;
   let lastError = "";
   const openedTargets = [];
@@ -584,6 +611,15 @@ async function openPairSilent({
       lastError = error?.message || "Trade failed";
       // If session died, stop burning time on more threads for this pair.
       if (/session expired|reconnect|not connect/i.test(lastError)) break;
+      // Opposite-direction block applies to every thread — stop this pair.
+      if (
+        error?.code === "OPPOSITE_DIRECTION" ||
+        /close your (buy|sell)|other direction|while (buy|sell) trades/i.test(
+          lastError
+        )
+      ) {
+        break;
+      }
     }
   }
 

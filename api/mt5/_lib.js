@@ -4,6 +4,7 @@ import {
   normalizeBrokerSymbol,
   pickBestSymbolFromList,
   sameInstrumentFamily,
+  symbolCore,
 } from "../_symbolResolve.js";
 import { normalizeProtectiveLevels } from "../_tradeLevels.js";
 
@@ -355,6 +356,123 @@ function isPendingOrderRow(row) {
     /pending|limit|stop|stopimit|buystop|sellstop|buylimit|selllimit/.test(kind) ||
     /limit|stop/.test(type)
   );
+}
+
+/**
+ * Market position side from an MT5API OpenedOrders row.
+ * Returns "BUY" | "SELL" | null (pending / unknown).
+ */
+function orderMarketSide(row) {
+  if (!row || typeof row !== "object" || isPendingOrderRow(row)) return null;
+  const candidates = [
+    row.side,
+    row.Side,
+    row.action,
+    row.Action,
+    row.operation,
+    row.Operation,
+    row.type,
+    row.Type,
+    row.orderType,
+    row.OrderType,
+    row.cmd,
+    row.Cmd,
+    row.dealType,
+    row.DealType,
+  ];
+  for (const raw of candidates) {
+    if (raw == null || raw === "") continue;
+    if (typeof raw === "number" || /^\d+$/.test(String(raw).trim())) {
+      const n = Number(raw);
+      // Classic MT4/MT5 market: 0 = buy, 1 = sell.
+      if (n === 0) return "BUY";
+      if (n === 1) return "SELL";
+      continue;
+    }
+    const s = String(raw).trim().toUpperCase().replace(/\s+/g, "_");
+    if (/^(BUY|OP_BUY|BUY_BY_MARKET|BUY_MARKET)$/.test(s)) return "BUY";
+    if (/^(SELL|OP_SELL|SELL_BY_MARKET|SELL_MARKET)$/.test(s)) return "SELL";
+    // "Buy" / "Sell" / "buy deal" — not BuyLimit / SellStop.
+    if (/^BUY(?!_?(STOP|LIMIT|STOPLIMIT))/.test(s)) return "BUY";
+    if (/^SELL(?!_?(STOP|LIMIT|STOPLIMIT))/.test(s)) return "SELL";
+  }
+  return null;
+}
+
+function orderSymbol(row) {
+  return normalizeBrokerSymbol(
+    row?.symbol || row?.Symbol || row?.instrument || row?.Instrument || ""
+  );
+}
+
+/** Open market positions for an account (no pendings). */
+export async function listOpenMarketPositions(
+  accountId,
+  { timeoutMs = 12000 } = {}
+) {
+  const list = await listOpenedOrders(accountId, { timeoutMs });
+  const out = [];
+  for (const row of list) {
+    const side = orderMarketSide(row);
+    if (!side) continue;
+    const symbol = orderSymbol(row);
+    if (!symbol) continue;
+    out.push({
+      ticket: orderTicket(row),
+      symbol,
+      side,
+      lots: orderLots(row),
+      profit: pickNumber(row.profit, row.Profit),
+    });
+  }
+  return out;
+}
+
+/**
+ * Block opening the opposite side on the same instrument while positions are open.
+ * Same-direction adds are allowed; different pairs are allowed.
+ */
+export async function assertNoOppositeDirection(
+  accountId,
+  symbol,
+  side,
+  { timeoutMs = 12000 } = {}
+) {
+  const wantSide =
+    String(side || "BUY").trim().toUpperCase() === "SELL" ? "SELL" : "BUY";
+  const wantSymbol = normalizeBrokerSymbol(symbol);
+  if (!wantSymbol) return null;
+
+  let positions = [];
+  try {
+    positions = await listOpenMarketPositions(accountId, { timeoutMs });
+  } catch {
+    // If we cannot read opens, do not block the trade — broker may still reject.
+    return null;
+  }
+
+  const opposite = wantSide === "BUY" ? "SELL" : "BUY";
+  const blockers = positions.filter(
+    (row) =>
+      row.side === opposite && sameInstrumentFamily(wantSymbol, row.symbol)
+  );
+  if (!blockers.length) return null;
+
+  const held = blockers[0].symbol || wantSymbol;
+  const label = symbolCore(held) || held;
+  const heldWord = opposite === "BUY" ? "buy" : "sell";
+  const err = new Error(
+    `Close your ${opposite} ${label} trades first — can't open ${wantSide} while ${heldWord} trades are open`
+  );
+  err.status = 409;
+  err.code = "OPPOSITE_DIRECTION";
+  err.data = {
+    symbol: held,
+    heldSide: opposite,
+    requestedSide: wantSide,
+    openCount: blockers.length,
+  };
+  throw err;
 }
 
 function orderTicket(row) {
@@ -981,6 +1099,9 @@ export async function placeMarketTrade({
     err.status = 400;
     throw err;
   }
+
+  // Same instrument cannot flip BUY↔SELL while the other side is still open.
+  await assertNoOppositeDirection(id, requested, action === "Sell" ? "SELL" : "BUY");
 
   // Ensure the MT5API session is still alive before trading.
   try {
