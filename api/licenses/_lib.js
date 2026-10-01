@@ -109,7 +109,11 @@ export async function resendPurchaseLicenseEmails({
   concurrency = 6,
   onlyMissing = true,
   sourcesPrefix = "paypal",
+  allowReblast = false,
 } = {}) {
+  // Safety: re-blasting already-emailed purchase keys floods inboxes with
+  // duplicate / wrong keys. Require an explicit allowReblast flag.
+  const missingOnly = allowReblast ? Boolean(onlyMissing) : true;
   const licenses = await listLicenses({ preferFresh: true });
   const prefix = String(sourcesPrefix || "paypal").toLowerCase();
   const paid = (Array.isArray(licenses) ? licenses : []).filter((row) => {
@@ -117,7 +121,7 @@ export async function resendPurchaseLicenseEmails({
     if (!src.startsWith(prefix)) return false;
     if (!String(row?.clientEmail || "").includes("@")) return false;
     if (!String(row?.key || "").trim()) return false;
-    if (onlyMissing && Number(row?.emailSentAt)) return false;
+    if (missingOnly && Number(row?.emailSentAt)) return false;
     return true;
   });
 
