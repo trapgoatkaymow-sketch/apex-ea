@@ -2050,6 +2050,50 @@
       }
     },
     {
+      "key": "APEX-ZMQR-9Q3A",
+      "botId": "alpha-prime-ai-v2-mucqrgdm",
+      "botName": "ALPHA PRIME AI V2",
+      "clientEmail": "moropaneleago012@gmail.com",
+      "clientName": "Leago",
+      "mainText": "Leago",
+      "mentorEmail": "moropaneleago012@gmail.com",
+      "mentorId": "f369d358-b175-40e1-a55f-5ad982c1bab4",
+      "mentorName": "Nas Mafia",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "invite_migrate_bypass",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790085737495,
+      "usedAt": 1790085769269,
+      "deviceId": "6247c664-97a7-486c-958b-756f24d3385f",
+      "boundAt": 1790085769269,
+      "updatedAt": 1790839466161,
+      "scanReset": null,
+      "robotAccountId": "80d03831-bfa7-431f-9c17-e1dbf63389d0",
+      "robotLogin": "1550084699",
+      "robotServer": "JustMarkets-LIVE7",
+      "robotCompany": "Just Global Markets Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790837809447,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790836079413,
+      "bot": {
+        "id": "alpha-prime-ai-v2-mucqrgdm",
+        "name": "ALPHA PRIME AI V2",
+        "photo": "/api/licenses/photo?botId=alpha-prime-ai-v2-mugy8zr2&v=1790340070650",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD.S"
+        ]
+      }
+    },
+    {
       "key": "APEX-D5DC-26SP",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -2099,50 +2143,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-ZMQR-9Q3A",
-      "botId": "alpha-prime-ai-v2-mucqrgdm",
-      "botName": "ALPHA PRIME AI V2",
-      "clientEmail": "moropaneleago012@gmail.com",
-      "clientName": "Leago",
-      "mainText": "Leago",
-      "mentorEmail": "moropaneleago012@gmail.com",
-      "mentorId": "f369d358-b175-40e1-a55f-5ad982c1bab4",
-      "mentorName": "Nas Mafia",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "invite_migrate_bypass",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790085737495,
-      "usedAt": 1790085769269,
-      "deviceId": "6247c664-97a7-486c-958b-756f24d3385f",
-      "boundAt": 1790085769269,
-      "updatedAt": 1790839454900,
-      "scanReset": null,
-      "robotAccountId": "80d03831-bfa7-431f-9c17-e1dbf63389d0",
-      "robotLogin": "1550084699",
-      "robotServer": "JustMarkets-LIVE7",
-      "robotCompany": "Just Global Markets Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790837809447,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790836079413,
-      "bot": {
-        "id": "alpha-prime-ai-v2-mucqrgdm",
-        "name": "ALPHA PRIME AI V2",
-        "photo": "/api/licenses/photo?botId=alpha-prime-ai-v2-mugy8zr2&v=1790340070650",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD.S"
         ]
       }
     },
@@ -5119,7 +5119,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
