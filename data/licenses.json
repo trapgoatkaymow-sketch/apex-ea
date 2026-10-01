@@ -1157,6 +1157,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": null,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -1174,8 +1175,7 @@
           "BITCOIN",
           "VOL80"
         ]
-      },
-      "mentorSymbolsSyncedAt": null
+      }
     },
     {
       "key": "APEX-PRTJ-63VP",
@@ -4496,7 +4496,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -19807,9 +19811,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "GOLD",
-          "EURUSD",
-          "US30CASH"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -21546,7 +21550,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
