@@ -99,8 +99,9 @@ export async function analyzeSymbolSetupWithOpenAI({
             '{"side":"BUY"|"SELL","confidence":0-100,"timeframe":"M30"|"H1"|"H4",' +
             '"stopLoss":number,"analysis":string}. ' +
             "Choose BUY or SELL for the symbol at the live price using typical M30/H1/H4 structure bias. " +
-            "Do NOT default to BUY. stopLoss must be a realistic protective stop FAR enough from entry for the instrument " +
-            "(XAUUSD ≥ ~$3–$8, FX ≥ ~15 pips, US30/NAS100 ≥ ~25 points). " +
+            "Do NOT default to BUY. Prefer SELL after a sharp drop / bearish impulse; never BUY into a dump. " +
+            "stopLoss must be a realistic protective stop FAR enough from entry for the instrument " +
+            "(XAUUSD ≥ ~$12–$18, FX ≥ ~15 pips, US30/NAS100 ≥ ~25 points). " +
             "BUY: stopLoss < entry. SELL: stopLoss > entry. " +
             "timeframe must be one of M30, H1, H4. analysis: one short sentence why.",
         },
@@ -110,9 +111,10 @@ export async function analyzeSymbolSetupWithOpenAI({
             `Symbol: ${sym}. Live price: ${live}. ` +
             `Allowed timeframes: ${tfs.join(", ")}. ` +
             (preferredSide
-              ? `Client pair preference (soft): ${preferredSide}. Prefer chart logic over preference. `
+              ? `Client pair preference (soft): ${preferredSide}. Prefer chart logic over preference — skip if preference fights the tape. `
               : "") +
-            "Return side, stopLoss, timeframe (M30/H1/H4), confidence, analysis — same quality as Chart Scanner.",
+            "Return side, stopLoss, timeframe (M30/H1/H4), confidence, analysis — same quality as Chart Scanner. " +
+            "If the tape looks like a sell-off, choose SELL (or lower confidence) — do not buy the dip blindly.",
         },
       ],
     }),

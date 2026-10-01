@@ -223,18 +223,31 @@ function emaLast(values, period) {
 
 /**
  * Offline Safe Scalper bias from M30 OHLC (no OpenAI).
- * EMA9 vs EMA21 + last 3 candle body majority.
+ * Strict filters so we do not BUY into dumps (main SL-hit cause on gold):
+ *  - EMA9 vs EMA21 trend + price on the right side of EMA9
+ *  - EMA9 slope over the last ~3 bars (must rise for BUY / fall for SELL)
+ *  - Last 3 candles need a clear body majority (2+)
+ *  - Reject when the last candle is a strong opposing impulse
+ *  - Optional H1 EMA confirm when h1Bars are provided
+ * No soft “slightly above EMA” fallback — that was buying into sell-offs.
  */
-export function inferSafeScalperSideFromBars(bars = []) {
+export function inferSafeScalperSideFromBars(bars = [], h1Bars = null) {
   const rows = Array.isArray(bars) ? bars : [];
   const closes = rows
     .map((b) => toFiniteNumber(b?.close ?? b?.closePrice))
     .filter((n) => n != null && n > 0);
-  if (closes.length < 8) return null;
+  if (closes.length < 12) return null;
 
   const emaFast = emaLast(closes, 9);
   const emaSlow = emaLast(closes, 21);
   if (emaFast == null || emaSlow == null) return null;
+
+  // Slope: compare current EMA9 to EMA9 as of 3 bars ago.
+  const emaFastPrev = emaLast(closes.slice(0, -3), 9);
+  const slopeUp =
+    emaFastPrev != null && emaFast > emaFastPrev * 1.00015;
+  const slopeDown =
+    emaFastPrev != null && emaFast < emaFastPrev * 0.99985;
 
   const recent = rows.slice(-3);
   let bullBodies = 0;
@@ -248,15 +261,51 @@ export function inferSafeScalperSideFromBars(bars = []) {
   }
 
   const last = closes[closes.length - 1];
-  const bullTrend = emaFast > emaSlow && last >= emaFast;
-  const bearTrend = emaFast < emaSlow && last <= emaFast;
+  const lastBar = rows[rows.length - 1] || {};
+  const lastOpen = toFiniteNumber(lastBar?.open ?? lastBar?.openPrice);
+  const lastClose = toFiniteNumber(lastBar?.close ?? lastBar?.closePrice);
+  const lastHigh = toFiniteNumber(lastBar?.high ?? lastBar?.highPrice) ?? lastClose;
+  const lastLow = toFiniteNumber(lastBar?.low ?? lastBar?.lowPrice) ?? lastClose;
+  const lastBody =
+    lastOpen != null && lastClose != null ? Math.abs(lastClose - lastOpen) : 0;
+  const lastRange =
+    lastHigh != null && lastLow != null ? Math.max(0, lastHigh - lastLow) : 0;
+  // Strong opposing impulse on the last M30 bar → skip that side.
+  const dumpCandle =
+    lastOpen != null &&
+    lastClose != null &&
+    lastClose < lastOpen &&
+    lastBody >= Math.max(lastRange * 0.55, Math.abs(last) * 0.0012);
+  const rallyCandle =
+    lastOpen != null &&
+    lastClose != null &&
+    lastClose > lastOpen &&
+    lastBody >= Math.max(lastRange * 0.55, Math.abs(last) * 0.0012);
 
-  if (bullTrend && bullBodies >= bearBodies) return "BUY";
-  if (bearTrend && bearBodies >= bullBodies) return "SELL";
-  // Soft fallback: follow EMA slope when candles are mixed.
-  if (emaFast > emaSlow * 1.00005) return "BUY";
-  if (emaFast < emaSlow * 0.99995) return "SELL";
-  return null;
+  const bullTrend =
+    emaFast > emaSlow && last >= emaFast && slopeUp && bullBodies >= 2;
+  const bearTrend =
+    emaFast < emaSlow && last <= emaFast && slopeDown && bearBodies >= 2;
+
+  let side = null;
+  if (bullTrend && !dumpCandle) side = "BUY";
+  else if (bearTrend && !rallyCandle) side = "SELL";
+  if (!side) return null;
+
+  // Higher-TF confirm when available — blocks M30 noise against H1 trend.
+  if (Array.isArray(h1Bars) && h1Bars.length >= 12) {
+    const h1Closes = h1Bars
+      .map((b) => toFiniteNumber(b?.close ?? b?.closePrice))
+      .filter((n) => n != null && n > 0);
+    const h1Fast = emaLast(h1Closes, 9);
+    const h1Slow = emaLast(h1Closes, 21);
+    if (h1Fast != null && h1Slow != null) {
+      if (side === "BUY" && h1Fast < h1Slow) return null;
+      if (side === "SELL" && h1Fast > h1Slow) return null;
+    }
+  }
+
+  return side;
 }
 
 /**
@@ -301,8 +350,17 @@ export function buildStartSafeScalperPlan({
     ? String(strategySide).trim().toUpperCase()
     : "";
 
-  // Mentor Action wins when set; otherwise use M30 EMA bias — never blind BUY.
-  const side = mentorSide || barSide;
+  // Mentor Action is a soft preference — never force BUY into a clear SELL dump
+  // (that was the main “keeps hitting SL” pattern on gold).
+  let side = "";
+  if (mentorSide && barSide && mentorSide !== barSide) {
+    return {
+      skip: true,
+      source: START_OFFLINE_STRATEGY,
+      error: `Safe Scalper: mentor ${mentorSide} conflicts with M30 ${barSide} — skipped to avoid SL`,
+    };
+  }
+  side = barSide || mentorSide;
   if (!side) {
     return {
       skip: true,
@@ -317,9 +375,9 @@ export function buildStartSafeScalperPlan({
   const stopLoss = side === "BUY" ? entry - risk : entry + risk;
   const safeLot = clampLot(Math.max(0.01, clampLot(lot) * 0.5));
   const threads = clampTrades(tradeCount);
-  const biasLabel = mentorSide
-    ? `mentor ${mentorSide}`
-    : `M30 EMA ${side}`;
+  const biasLabel = barSide
+    ? `M30/H1 EMA ${side}`
+    : `mentor ${mentorSide}`;
 
   return {
     skip: false,
@@ -330,8 +388,8 @@ export function buildStartSafeScalperPlan({
     lot: safeLot,
     tradeCount: threads,
     timeframe: "M30",
-    confidence: mentorSide ? 58 : 62,
-    analysis: `Safe Scalper: ${biasLabel}, half lot, ${threads} trade(s), tight SL.`,
+    confidence: barSide ? 64 : 55,
+    analysis: `Safe Scalper: ${biasLabel}, half lot, ${threads} trade(s), filtered SL.`,
   };
 }
 
@@ -453,6 +511,39 @@ async function openPairSilent({
     // keep estimate — AI path can still open; Safe Scalper will skip
   }
 
+  // Always load M30 + H1 structure before opening — gates both AI and Safe Scalper
+  // so START does not BUY into a dump (screenshot: gold BUY then immediate SL).
+  let strategySide = "";
+  let m30Bars = null;
+  let h1Bars = null;
+  try {
+    const [histM30, histH1] = await Promise.all([
+      getPriceHistory({
+        accountId,
+        symbol: tradeSymbol,
+        timeFrame: SAFE_SCALPER_HISTORY_TF,
+        fast: true,
+        signal: abortSignalAfter(12_000),
+      }).catch(() => null),
+      getPriceHistory({
+        accountId,
+        symbol: tradeSymbol,
+        timeFrame: 60,
+        fast: true,
+        signal: abortSignalAfter(12_000),
+      }).catch(() => null),
+    ]);
+    m30Bars = histM30?.bars || null;
+    h1Bars = histH1?.bars || null;
+    strategySide =
+      inferSafeScalperSideFromBars(m30Bars, h1Bars) || "";
+    if (histM30?.symbol) {
+      tradeSymbol = normalizeBrokerSymbol(histM30.symbol) || tradeSymbol;
+    }
+  } catch {
+    // mentor Action or skip below
+  }
+
   let ai = null;
   try {
     ai = await analyzeSymbolWithOpenAI({
@@ -468,10 +559,23 @@ async function openPairSilent({
   let signal;
   let mode = "openai";
 
-  if (ai?.side) {
+  const aiSide = ["BUY", "SELL"].includes(
+    String(ai?.side || "")
+      .trim()
+      .toUpperCase()
+  )
+    ? String(ai.side).trim().toUpperCase()
+    : "";
+
+  // If AI side fights the M30/H1 filter, drop AI and use Safe Scalper / skip.
+  // Blind AI BUY with no OHLC was a top cause of gold SL spam.
+  const aiAllowed =
+    Boolean(aiSide) && (!strategySide || aiSide === strategySide);
+
+  if (aiAllowed) {
     signal = buildScannerAlignedSetup({
       symbol: tradeSymbol,
-      side: ai.side,
+      side: aiSide,
       entry: livePrice,
       stopLoss: ai.stopLoss,
       timeframe: ai.timeframe || "M30",
@@ -481,23 +585,6 @@ async function openPairSilent({
     });
   } else {
     mode = START_OFFLINE_STRATEGY;
-    let strategySide = "";
-    try {
-      const hist = await getPriceHistory({
-        accountId,
-        symbol: tradeSymbol,
-        timeFrame: SAFE_SCALPER_HISTORY_TF,
-        fast: true,
-        signal: abortSignalAfter(12_000),
-      });
-      strategySide = inferSafeScalperSideFromBars(hist?.bars) || "";
-      if (hist?.symbol) {
-        tradeSymbol = normalizeBrokerSymbol(hist.symbol) || tradeSymbol;
-      }
-    } catch {
-      // mentor Action or skip below
-    }
-
     const plan = buildStartSafeScalperPlan({
       symbol: tradeSymbol,
       livePrice,

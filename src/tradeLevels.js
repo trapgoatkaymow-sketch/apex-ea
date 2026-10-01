@@ -88,7 +88,8 @@ export function defaultStopDistance(symbol, entryPrice) {
   const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
   const min = minStopDistance(symbol, e);
 
-  if (/^(XAU|GOLD)/.test(core)) return Math.max(min, Math.min(10, e * 0.0022));
+  // Gold M30 noise routinely swings ~10–14 pts — tighter defaults were SL spam.
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(min, Math.min(14, e * 0.0032));
   if (/^(XAG|SILVER)/.test(core)) return Math.max(min, Math.min(0.25, e * 0.006));
   if (/^BTC/.test(core)) return Math.max(min, Math.min(400, e * 0.004));
   if (/^ETH/.test(core)) return Math.max(min, Math.min(40, e * 0.005));
@@ -117,7 +118,7 @@ export function maxStopDistance(symbol, entryPrice) {
   const min = minStopDistance(symbol, e);
   const def = defaultStopDistance(symbol, e);
 
-  if (/^(XAU|GOLD)/.test(core)) return Math.max(def, Math.min(18, e * 0.004));
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(def, Math.min(22, e * 0.005));
   if (/^(XAG|SILVER)/.test(core)) return Math.max(def, Math.min(0.6, e * 0.012));
   if (/^BTC/.test(core)) return Math.max(def, Math.min(900, e * 0.01));
   if (/^ETH/.test(core)) return Math.max(def, Math.min(90, e * 0.012));
