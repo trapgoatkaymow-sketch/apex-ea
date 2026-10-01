@@ -19,7 +19,7 @@
       "usedAt": 1790510665518,
       "deviceId": "59f6a45b-e5c4-494a-b5de-e7d76caa006b",
       "boundAt": 1790704549825,
-      "updatedAt": 1790820358362,
+      "updatedAt": 1790820373355,
       "scanReset": null,
       "robotAccountId": "0f5495e8-883c-445b-84ee-36b5bc69e86a",
       "robotLogin": "633943",
@@ -32,7 +32,7 @@
         "US30",
         "US100"
       ],
-      "clientSymbolsUpdatedAt": 1790820358362,
+      "clientSymbolsUpdatedAt": 1790820373355,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "26H61241FX423674E",
       "purchaseOrderId": "4ES901761L025683S",
@@ -367,8 +367,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "GOLD"
         ]
       }
     },
@@ -5155,7 +5154,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -8790,7 +8790,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "BTCUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -15791,7 +15793,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -16677,11 +16683,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -16869,10 +16871,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSD.M",
-          "USDJPY",
-          "USDJPY.M",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
