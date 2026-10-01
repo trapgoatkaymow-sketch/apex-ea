@@ -2452,67 +2452,43 @@ export function AppProvider({ children }) {
       const createdAt = Date.now();
       const timing = resolveLicenseExpiry(duration, createdAt);
 
+      // Soft local quota hint only (no mentors list fetch — that delayed Generate).
+      // Server still enforces the real allowance on createLicense.
       if (ownerEmail && ownerEmail !== String(SUPER_ADMIN_EMAIL).toLowerCase()) {
-        let allowance = DEFAULT_MENTOR_LICENSE_KEYS;
-        try {
-          const mentors = await fetchMentors();
-          const mentor = (Array.isArray(mentors) ? mentors : []).find(
-            (m) => normalizeEmail(m.email) === ownerEmail
+        const used = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
+          (row) => normalizeEmail(row.mentorEmail) === ownerEmail
+        ).length;
+        if (used >= DEFAULT_MENTOR_LICENSE_KEYS) {
+          showToast(
+            `License key limit reached (${used}/${DEFAULT_MENTOR_LICENSE_KEYS}). Ask super admin to add more keys.`
           );
-          if (mentor && String(mentor.role || "").toLowerCase() === "superadmin") {
-            allowance = null;
-          } else if (mentor?.licenseKeysAllowed != null) {
-            allowance = Number(mentor.licenseKeysAllowed);
-          }
-        } catch {
-          allowance = DEFAULT_MENTOR_LICENSE_KEYS;
-        }
-        if (allowance != null && Number.isFinite(allowance)) {
-          const used = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
-            (row) => normalizeEmail(row.mentorEmail) === ownerEmail
-          ).length;
-          if (used >= allowance) {
-            showToast(
-              `License key limit reached (${used}/${allowance}). Ask super admin to add more keys.`
-            );
-            return null;
-          }
+          return null;
         }
       }
 
-      // Prefer the versioned API photo path so every activation gets the latest
-      // picture. Fall back to an embedded data URL only when upload cannot sync.
+      // Prefer the versioned API photo path. Skip HEAD/GET probes — they add
+      // seconds to every Generate click while the EA photo is usually already live.
       let photo = String(bot.photo || ea?.photo || "/logo.png").trim() || "/logo.png";
       const originalPhoto = photo;
       if (photo.startsWith("data:image/")) {
         try {
           const uploaded = await uploadBotPhotoRemote(bot.id, photo);
           const uploadedPhoto = String(uploaded || "").trim();
-          if (uploadedPhoto.startsWith("/api/licenses/photo")) {
-            try {
-              const check = await fetch(mediaUrl(uploadedPhoto), { method: "GET", cache: "no-store" });
-              photo = check.ok ? uploadedPhoto : originalPhoto;
-            } catch {
-              photo = originalPhoto;
-            }
-          } else if (uploadedPhoto.startsWith("data:image/")) {
-            photo = uploadedPhoto;
-          } else if (isRealProfilePhoto(uploadedPhoto)) {
+          if (
+            uploadedPhoto.startsWith("/api/licenses/photo") ||
+            uploadedPhoto.startsWith("data:image/") ||
+            isRealProfilePhoto(uploadedPhoto)
+          ) {
             photo = uploadedPhoto;
           }
         } catch {
-          // Keep the local data URL — createLicenseRemote will embed it.
           photo = originalPhoto;
         }
-      } else if (photo.startsWith("/api/licenses/photo")) {
-        // Verify the synced path still serves; otherwise fall back to logo later.
-        try {
-          const check = await fetch(mediaUrl(photo), { method: "GET", cache: "no-store" });
-          if (!check.ok) photo = await materializePhotoForLicense(originalPhoto);
-        } catch {
-          photo = await materializePhotoForLicense(originalPhoto);
-        }
-      } else {
+      } else if (
+        !photo.startsWith("/api/licenses/photo") &&
+        !/^https?:\/\//i.test(photo) &&
+        photo !== "/logo.png"
+      ) {
         photo = await materializePhotoForLicense(photo);
       }
 
@@ -2543,19 +2519,8 @@ export function AppProvider({ children }) {
         },
       };
 
-      // Keep signup list in sync — license email is approved for activation.
-      try {
-        await submitSignup(email);
-        await updateSignupStatus(email, "approved");
-        setSignups((prev) =>
-          mergeSignups(prev, [{ email, status: "approved", createdAt: Date.now() }])
-        );
-      } catch {
-        // license create still proceeds
-      }
-
       let lastError = null;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
           const remote = await createLicenseRemote({
             ...entry,
@@ -2567,9 +2532,7 @@ export function AppProvider({ children }) {
           if (!remote?.key) {
             throw new Error("Server did not return a license key");
           }
-          // Confirm the key is readable from the shared store (not just this response).
-          const verified = await fetchLicense(remote.key);
-          const saved = verified || remote;
+          const saved = remote;
           setLicenseKeys((prev) => mergeLicenses(prev, [saved]));
           const syncedPhoto = saved.bot?.photo;
           if (syncedPhoto && syncedPhoto !== "/logo.png") {
@@ -2584,8 +2547,24 @@ export function AppProvider({ children }) {
               )
             );
           }
+          // Signup approval in background — do not block Generate.
+          void (async () => {
+            try {
+              await submitSignup(email);
+              await updateSignupStatus(email, "approved");
+              setSignups((prev) =>
+                mergeSignups(prev, [
+                  { email, status: "approved", createdAt: Date.now() },
+                ])
+              );
+            } catch {
+              // non-blocking
+            }
+          })();
           const mail = remote?._email || null;
-          if (mail?.ok && !mail?.skipped) {
+          if (mail?.reason === "queued") {
+            showToast(`License ready for ${name} · emailing ${email}`);
+          } else if (mail?.ok && !mail?.skipped) {
             showToast(`License ready for ${name} · emailed ${email}`);
           } else if (mail?.ok && mail?.reason === "already-sent") {
             showToast(`License ready for ${name} · already emailed ${email}`);
@@ -2609,7 +2588,7 @@ export function AppProvider({ children }) {
           return saved.key;
         } catch (error) {
           lastError = error;
-          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
         }
       }
 

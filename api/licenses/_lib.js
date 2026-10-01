@@ -671,7 +671,7 @@ async function githubPhotoExists(botId) {
  * Prefer a durable API path when GitHub has the file; otherwise embed a data URL
  * on the license so clients are not stuck with a 404 `/api/licenses/photo` link.
  */
-export async function resolveEmbeddablePhoto(botId, photo) {
+export async function resolveEmbeddablePhoto(botId, photo, { fast = false } = {}) {
   const value = String(photo || "").trim();
   if (!value) return "/logo.png";
   if (value === "/logo.png") return value;
@@ -682,6 +682,9 @@ export async function resolveEmbeddablePhoto(botId, photo) {
   }
 
   if (value.startsWith("/api/licenses/photo")) {
+    // Mentor key mint: trust the existing API path — GitHub HEAD checks add
+    // seconds to every Generate click.
+    if (fast) return value;
     if (await githubPhotoExists(botId)) return value;
     const local = await readBotPhoto(botId);
     const embedded = shrinkDataUrl(dataUrlFromPhoto(local));
@@ -1660,7 +1663,10 @@ export async function createLicense(payload = {}) {
 
   const rawPhoto = String(payload.bot?.photo || payload.photo || "/logo.png").trim();
   // Prefer an embeddable photo (data URL) when GitHub file storage is down.
-  const photo = await resolveEmbeddablePhoto(botId, rawPhoto);
+  // `fastPhoto` skips GitHub existence checks (mentor Generate latency).
+  const photo = await resolveEmbeddablePhoto(botId, rawPhoto, {
+    fast: Boolean(payload.fastPhoto),
+  });
 
   const bot = {
     id: botId,

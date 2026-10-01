@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { endOptions } from "../_cors.js";
 import {
   claimLicenseViaInvite,
@@ -16,6 +17,7 @@ import {
   mirrorLicensesToDurableStores,
   readJsonBody,
   resendPurchaseLicenseEmails,
+  sendLicenseKeyEmailOnce,
   sendJson,
   setLicenseClientSymbols,
   syncMentorBotSymbols,
@@ -238,11 +240,41 @@ export default async function handler(req, res) {
         sendJson(res, 200, result);
         return;
       }
-      const license = await createLicense(body);
-      const email = license?._email || null;
+      // Mentor Generate must feel instant — save the key, respond, email Brevo
+      // in the background. Paid PayPal fulfillments still wait for email.
+      const isPaidPurchase = Boolean(
+        body?.purchaseCaptureId || body?.purchaseSource
+      );
+      const forceSyncEmail =
+        body?.sendEmail === true ||
+        String(body?.sendEmail || "").toLowerCase() === "true" ||
+        body?.asyncEmail === false ||
+        String(body?.asyncEmail || "").toLowerCase() === "false";
+      const deferEmail = !isPaidPurchase && !forceSyncEmail;
+
+      const license = await createLicense({
+        ...body,
+        // Skip GitHub photo existence round-trip on every mentor key mint.
+        fastPhoto: body?.fastPhoto !== false && !isPaidPurchase,
+        sendEmail: deferEmail ? false : body?.sendEmail,
+      });
+      let email = license?._email || null;
       if (license && Object.prototype.hasOwnProperty.call(license, "_email")) {
         delete license._email;
       }
+
+      if (deferEmail && license?.key) {
+        waitUntil(
+          sendLicenseKeyEmailOnce(license, { force: false }).catch(() => null)
+        );
+        email = {
+          ok: true,
+          skipped: true,
+          reason: "queued",
+          message: "Email sending in background",
+        };
+      }
+
       sendJson(res, 200, { license, email });
       return;
     }
