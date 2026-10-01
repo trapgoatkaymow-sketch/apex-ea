@@ -566,6 +566,8 @@ export default function AdminPortal() {
         .filter((m) => {
           const status = String(m.status || "").toLowerCase();
           const role = String(m.role || "").toLowerCase();
+          // Auto-deactivated portals belong under Deactivated, not Approved.
+          if (Number(m.deactivatedAt) && role !== "superadmin") return false;
           return status === "approved" || role === "superadmin";
         })
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
@@ -1746,9 +1748,9 @@ export default function AdminPortal() {
       });
       if (!silent) {
         if (status === "approved" && updated?.approvalEmailSent) {
-          showToast("Mentor approved — email sent");
+          showToast("Mentor reactivated — email sent");
         } else if (status === "approved") {
-          showToast("Mentor approved");
+          showToast("Mentor reactivated — portal access restored");
         } else {
           showToast(`Mentor ${status}`);
         }
@@ -5592,13 +5594,16 @@ export default function AdminPortal() {
                   Top Mentors
                 </button>
                 <button
-                  className={`admin-btn admin-btn-outline admin-btn-sm${
-                    deactivatedMentorsOpen ? " is-active" : ""
-                  }`}
+                  className="admin-btn admin-btn-outline admin-btn-sm"
                   type="button"
                   onClick={() => {
                     setBypassOpen(false);
-                    setDeactivatedMentorsOpen((open) => !open);
+                    setDeactivatedMentorsOpen(true);
+                    requestAnimationFrame(() => {
+                      document
+                        .getElementById("admin-deactivated-mentors")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
                   }}
                 >
                   {`Deactivated${
@@ -5611,7 +5616,6 @@ export default function AdminPortal() {
                   className="admin-btn admin-btn-outline admin-btn-sm"
                   type="button"
                   onClick={() => {
-                    setDeactivatedMentorsOpen(false);
                     setBypassOpen((open) => !open);
                   }}
                 >
@@ -5656,109 +5660,6 @@ export default function AdminPortal() {
                 </AdminBusyLabel>
               </button>
             </div>
-
-            {deactivatedMentorsOpen ? (
-              <div className="admin-card admin-deactivated-mentors-card">
-                <div className="admin-card-title-row">
-                  <h3 className="admin-card-title">Deactivated mentors</h3>
-                  <span className="admin-badge is-declined">
-                    {mentorMgmtQuery
-                      ? `${filteredDeactivatedMentors.length}/${deactivatedMentors.length}`
-                      : deactivatedMentors.length}
-                  </span>
-                  <button
-                    className="admin-btn admin-btn-ghost admin-btn-sm"
-                    type="button"
-                    onClick={() => setDeactivatedMentorsOpen(false)}
-                  >
-                    Close
-                  </button>
-                </div>
-                <p className="admin-card-meta">
-                  Portals auto-deactivated after a week with no new app unlock from
-                  their keys. Reactivate to restore access.
-                </p>
-                <button
-                  className={`admin-btn admin-btn-sm${
-                    refreshBusy === "mentors" ? " is-loading" : ""
-                  }`}
-                  type="button"
-                  style={{ marginBottom: 10 }}
-                  disabled={refreshBusy === "mentors"}
-                  onClick={refreshMentorsList}
-                >
-                  <AdminBusyLabel
-                    busy={refreshBusy === "mentors"}
-                    busyText="Refreshing…"
-                  >
-                    Refresh list
-                  </AdminBusyLabel>
-                </button>
-                {deactivatedMentors.length === 0 ? (
-                  <p className="admin-empty">No deactivated mentors</p>
-                ) : filteredDeactivatedMentors.length === 0 ? (
-                  <p className="admin-empty">
-                    No deactivated mentors match “{mentorMgmtSearch.trim()}”.{" "}
-                    <button
-                      className="admin-link-btn"
-                      type="button"
-                      onClick={() => setMentorMgmtSearch("")}
-                    >
-                      Clear search
-                    </button>
-                  </p>
-                ) : (
-                  filteredDeactivatedMentors.map((mentor) => (
-                    <div
-                      className="admin-table-row has-actions"
-                      key={mentor.id || mentor.email}
-                    >
-                      <div>
-                        <strong>{mentor.username}</strong>
-                        <p className="admin-card-meta">{mentor.email}</p>
-                        <p className="admin-card-meta">
-                          {mentor.contact || "—"}
-                        </p>
-                        <p className="admin-card-meta">
-                          {mentor.deactivatedReason ||
-                            "Portal deactivated — no key used for a new app access in over a week"}
-                          {Number(mentor.deactivatedAt)
-                            ? ` · ${new Date(
-                                Number(mentor.deactivatedAt)
-                              ).toLocaleString()}`
-                            : ""}
-                        </p>
-                      </div>
-                      <div className="admin-row-actions">
-                        <button
-                          className={`admin-btn admin-btn-solid admin-btn-sm${
-                            mentorActionBusy ===
-                            `${normalizeAdminEmail(mentor.email)}:approved`
-                              ? " is-loading"
-                              : ""
-                          }`}
-                          type="button"
-                          disabled={Boolean(mentorActionBusy)}
-                          onClick={() =>
-                            changeMentorStatus(mentor.email, "approved")
-                          }
-                        >
-                          <AdminBusyLabel
-                            busy={
-                              mentorActionBusy ===
-                              `${normalizeAdminEmail(mentor.email)}:approved`
-                            }
-                            busyText="Reactivating…"
-                          >
-                            Reactivate
-                          </AdminBusyLabel>
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            ) : null}
 
             {bypassOpen ? (
               <div className="admin-card admin-bypass-card">
@@ -5990,6 +5891,30 @@ export default function AdminPortal() {
                             </div>
                           ) : null}
                           <button
+                            className={`admin-btn admin-btn-solid admin-btn-sm${
+                              mentorActionBusy ===
+                              `${normalizeAdminEmail(mentor.email)}:approved`
+                                ? " is-loading"
+                                : ""
+                            }`}
+                            type="button"
+                            disabled={Boolean(mentorActionBusy)}
+                            title="Reset the weekly activity clock so this mentor can sign in again"
+                            onClick={() =>
+                              changeMentorStatus(mentor.email, "approved")
+                            }
+                          >
+                            <AdminBusyLabel
+                              busy={
+                                mentorActionBusy ===
+                                `${normalizeAdminEmail(mentor.email)}:approved`
+                              }
+                              busyText="Reactivating…"
+                            >
+                              Reactivate
+                            </AdminBusyLabel>
+                          </button>
+                          <button
                             className={`admin-btn admin-btn-danger admin-btn-sm${
                               mentorActionBusy ===
                               `${normalizeAdminEmail(mentor.email)}:declined`
@@ -6027,7 +5952,7 @@ export default function AdminPortal() {
                 </span>
               </div>
               <p className="admin-card-meta" style={{ marginBottom: 10 }}>
-                Manual declines only. Auto-deactivated portals are under Deactivated.
+                Manual declines only. Auto-deactivated portals are under Deactivated below.
               </p>
               {declinedMentors.length === 0 ? (
                 <p className="admin-empty">No declined mentors</p>
@@ -6063,6 +5988,105 @@ export default function AdminPortal() {
                           busyText="Approving…"
                         >
                           Approve
+                        </AdminBusyLabel>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div
+              className="admin-card admin-deactivated-mentors-card"
+              id="admin-deactivated-mentors"
+              style={{ marginTop: 14 }}
+            >
+              <div className="admin-card-title-row">
+                <h3 className="admin-card-title">Deactivated</h3>
+                <span className="admin-badge is-declined">
+                  {mentorMgmtQuery
+                    ? `${filteredDeactivatedMentors.length}/${deactivatedMentors.length}`
+                    : deactivatedMentors.length}
+                </span>
+              </div>
+              <p className="admin-card-meta" style={{ marginBottom: 10 }}>
+                Portals auto-deactivated after a week with no new app unlock from
+                their keys. Tap Reactivate to restore login and give them a fresh week.
+              </p>
+              <button
+                className={`admin-btn admin-btn-sm${
+                  refreshBusy === "mentors" ? " is-loading" : ""
+                }`}
+                type="button"
+                style={{ marginBottom: 10 }}
+                disabled={refreshBusy === "mentors"}
+                onClick={refreshMentorsList}
+              >
+                <AdminBusyLabel
+                  busy={refreshBusy === "mentors"}
+                  busyText="Refreshing…"
+                >
+                  Refresh list
+                </AdminBusyLabel>
+              </button>
+              {deactivatedMentors.length === 0 ? (
+                <p className="admin-empty">No deactivated mentors</p>
+              ) : filteredDeactivatedMentors.length === 0 ? (
+                <p className="admin-empty">
+                  No deactivated mentors match “{mentorMgmtSearch.trim()}”.{" "}
+                  <button
+                    className="admin-link-btn"
+                    type="button"
+                    onClick={() => setMentorMgmtSearch("")}
+                  >
+                    Clear search
+                  </button>
+                </p>
+              ) : (
+                filteredDeactivatedMentors.map((mentor) => (
+                  <div
+                    className="admin-table-row has-actions"
+                    key={mentor.id || mentor.email}
+                  >
+                    <div>
+                      <strong>{mentor.username}</strong>
+                      <p className="admin-card-meta">{mentor.email}</p>
+                      <p className="admin-card-meta">
+                        {mentor.contact || "—"}
+                      </p>
+                      <p className="admin-card-meta">
+                        {mentor.deactivatedReason ||
+                          "Portal deactivated — no key used for a new app access in over a week"}
+                        {Number(mentor.deactivatedAt)
+                          ? ` · ${new Date(
+                              Number(mentor.deactivatedAt)
+                            ).toLocaleString()}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="admin-row-actions">
+                      <span className="admin-badge is-declined">deactivated</span>
+                      <button
+                        className={`admin-btn admin-btn-solid admin-btn-sm${
+                          mentorActionBusy ===
+                          `${normalizeAdminEmail(mentor.email)}:approved`
+                            ? " is-loading"
+                            : ""
+                        }`}
+                        type="button"
+                        disabled={Boolean(mentorActionBusy)}
+                        onClick={() =>
+                          changeMentorStatus(mentor.email, "approved")
+                        }
+                      >
+                        <AdminBusyLabel
+                          busy={
+                            mentorActionBusy ===
+                            `${normalizeAdminEmail(mentor.email)}:approved`
+                          }
+                          busyText="Reactivating…"
+                        >
+                          Reactivate
                         </AdminBusyLabel>
                       </button>
                     </div>

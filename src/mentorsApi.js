@@ -643,7 +643,13 @@ export async function updateMentorStatus(email, status) {
       ...mentors[idx],
       status: nextStatus,
       ...(nextStatus === "approved"
-        ? { deactivatedAt: null, deactivatedReason: "" }
+        ? {
+            deactivatedAt: null,
+            deactivatedReason: "",
+            activityGraceStartedAt: null,
+            activityResetAt: Date.now(),
+            statusUpdatedAt: Date.now(),
+          }
         : {}),
     };
     writeLocalMentors(mentors);

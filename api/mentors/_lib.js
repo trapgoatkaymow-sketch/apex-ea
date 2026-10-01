@@ -443,6 +443,7 @@ function decodeMentorsJson(raw, sha = null) {
             passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
             passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
             activityGraceStartedAt: Number(m.activityGraceStartedAt) || null,
+            activityResetAt: Number(m.activityResetAt) || null,
             deactivatedAt: Number(m.deactivatedAt) || null,
             deactivatedReason: String(m.deactivatedReason || ""),
           };
@@ -821,6 +822,7 @@ async function writeStore(mentors, sha, message) {
           passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
           passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
           activityGraceStartedAt: Number(m.activityGraceStartedAt) || null,
+          activityResetAt: Number(m.activityResetAt) || null,
           deactivatedAt: Number(m.deactivatedAt) || null,
           deactivatedReason: String(m.deactivatedReason || ""),
         };
@@ -1021,12 +1023,13 @@ export async function findMentorLastQualifyingAt(email) {
 }
 
 function activityAnchorMs(mentor, lastQualifyingAt) {
-  if (lastQualifyingAt) return Number(lastQualifyingAt);
-  return (
-    Number(mentor?.statusUpdatedAt) ||
-    Number(mentor?.createdAt) ||
-    Date.now()
-  );
+  // Super-admin Reactivate stamps statusUpdatedAt / activityResetAt so the
+  // mentor gets a fresh week even when their last paid unlock is old.
+  const qualifyAt = Number(lastQualifyingAt) || 0;
+  const resetAt = Number(mentor?.activityResetAt) || 0;
+  const statusAt = Number(mentor?.statusUpdatedAt) || 0;
+  const createdAt = Number(mentor?.createdAt) || 0;
+  return Math.max(qualifyAt, resetAt, statusAt, createdAt) || Date.now();
 }
 
 /**
@@ -1523,6 +1526,7 @@ export async function setMentorStatus(email, status) {
       ...(normalizedStatus === "approved"
         ? {
             activityGraceStartedAt: null,
+            activityResetAt: Date.now(),
             deactivatedAt: null,
             deactivatedReason: "",
           }
