@@ -1061,10 +1061,48 @@ export async function disconnectAccount(accountId) {
   };
 }
 
+/** Split TOTAL lot across N OrderSends — never multiply risk by thread count. */
+function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.01) {
+  const floor = Math.max(0.01, Number(minLot) || 0.01);
+  const total = Number(totalVolume);
+  const n = Math.max(1, Math.min(3, Math.floor(Number(threadCount) || 1)));
+  if (!Number.isFinite(total) || total <= 0) return [floor];
+  const round = (v) => {
+    const r = Math.round(Math.max(0, v) * 100) / 100;
+    return r > 0 && r < floor ? floor : r;
+  };
+  const sized = round(Math.max(floor, total));
+  if (n === 1 || sized < floor * n) return [sized];
+  const vols = [];
+  let allocated = 0;
+  for (let i = 0; i < n; i += 1) {
+    const isLast = i === n - 1;
+    let volume = isLast
+      ? round(sized - allocated)
+      : round(sized / n);
+    if (!isLast && allocated + volume > sized) {
+      volume = round(Math.max(0, sized - allocated));
+    }
+    if (volume > 0) {
+      vols.push(volume);
+      allocated = Math.round((allocated + volume) * 100) / 100;
+    }
+  }
+  if (!vols.length) return [sized];
+  const sum = vols.reduce((a, b) => a + b, 0);
+  const drift = Math.round((sized - sum) * 100) / 100;
+  if (drift !== 0) {
+    vols[vols.length - 1] = round(
+      Math.max(floor, vols[vols.length - 1] + drift)
+    );
+  }
+  return vols;
+}
+
 /**
  * Market order via GET /OrderSend
  * operation: Buy | Sell
- * Optional `count` opens multiple market orders (same size each).
+ * Optional `count` opens up to 3 market orders that SPLIT `volume` (total lot).
  * Optional `takeProfits` maps thread 1→TP1, 2→TP2, 3+→TP3.
  */
 export async function placeMarketTrade({
@@ -1082,8 +1120,10 @@ export async function placeMarketTrade({
   const requested = normalizeBrokerSymbol(symbol);
   const lots = Number(volume);
   const action = String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
-  // Cap at 3 — clients open TP threads one-by-one with count=1; never multiply lot.
-  const times = Math.max(1, Math.min(3, Math.floor(Number(count) || 1)));
+  // Cap at 3 TP threads; volume below is TOTAL size split across them.
+  const requestedTimes = Math.max(1, Math.min(3, Math.floor(Number(count) || 1)));
+  const threadVolumes = splitTotalLotAcrossThreads(lots, requestedTimes);
+  const times = threadVolumes.length;
 
   if (!id) {
     const err = new Error("accountId is required");
@@ -1321,7 +1361,7 @@ export async function placeMarketTrade({
 
   const fills = [];
   for (let i = 0; i < times; i += 1) {
-    // Cycle TP1 → TP2 → TP3 for every thread (T1=TP1, T2=TP2, T3=TP3, T4=TP1, …).
+    // Cycle TP1 → TP2 → TP3 for every thread (T1=TP1, T2=TP2, T3=TP3).
     let tpForThread = null;
     const slot = i % 3;
     if (tpList.length) {
@@ -1345,6 +1385,7 @@ export async function placeMarketTrade({
     }
 
     const threadLabel = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
+    const threadLots = threadVolumes[i] ?? threadVolumes[threadVolumes.length - 1] ?? lots;
     // Keep |premium for Interface 2; never append |TP1/TP2/TP3.
     const threadComment = String(comment || "bot~APEXEA")
       .replace(/\|TP[123]\b/gi, "")
@@ -1363,7 +1404,7 @@ export async function placeMarketTrade({
         id,
         symbol: symbolName,
         operation: action,
-        volume: String(lots),
+        volume: String(threadLots),
         slippage: "100",
         comment: threadComment,
       });
