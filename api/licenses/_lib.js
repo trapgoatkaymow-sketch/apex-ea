@@ -2911,23 +2911,38 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   const scanReset = { ...grant };
   const startReset = { ...grant };
 
-  // Confirm the key exists (fresh read) before granting.
-  const store = await readStore({ preferFresh: true });
-  const idx = store.licenses.findIndex(rowMatches);
-  if (idx < 0) {
+  // Prefer warm/local roster so admin reset never waits on a fresh 3MB pull.
+  let row = null;
+  try {
+    if (Array.isArray(memoryLicenses)) {
+      row = memoryLicenses.find(rowMatches) || null;
+    }
+    if (!row) {
+      const local = readLocalStore();
+      row = local.licenses.find(rowMatches) || null;
+    }
+  } catch {
+    row = null;
+  }
+  if (!row) {
+    const store = await readStore({ preferFresh: false });
+    row = store.licenses.find(rowMatches) || null;
+  }
+  if (!row) {
     const err = new Error("Invalid license key");
     err.status = 404;
     throw err;
   }
-  const key = normalizeLicenseKey(store.licenses[idx].key);
+  const key = normalizeLicenseKey(row.key);
   const result = {
-    ...store.licenses[idx],
+    ...row,
     scanReset,
     startReset,
     updatedAt: now,
   };
 
-  // Fast path: small grants document (Firebase/Blob only — no GitHub).
+  // Fast path only: small grants document (Firebase/Blob — no licenses.json /
+  // GitHub mirror). listLicenses + findLicense overlay these grants for clients.
   const grants = { ...(await readQuotaGrants()) };
   grants[key] = {
     scanReset,
@@ -2963,25 +2978,6 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   } catch {
     // best-effort local cache
   }
-
-  // Background: also stamp the full licenses store (slow GitHub mirror).
-  result._persistFullStore = async () => {
-    try {
-      await mutateStore((licenses) => {
-        const i = licenses.findIndex(rowMatches);
-        if (i < 0) return licenses;
-        licenses[i] = {
-          ...licenses[i],
-          scanReset,
-          startReset,
-          updatedAt: now,
-        };
-        return licenses;
-      }, `scan+start reset granted: ${formattedKey}`);
-    } catch {
-      // grants file already durable — clients can still apply
-    }
-  };
 
   return result;
 }
