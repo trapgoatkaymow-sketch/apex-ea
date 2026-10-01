@@ -1061,18 +1061,25 @@ export async function disconnectAccount(accountId) {
   };
 }
 
+const MAX_MARKET_THREADS = 100;
+
 /** Split TOTAL lot across N OrderSends — never multiply risk by thread count. */
 function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.01) {
   const floor = Math.max(0.01, Number(minLot) || 0.01);
   const total = Number(totalVolume);
-  const n = Math.max(1, Math.min(3, Math.floor(Number(threadCount) || 1)));
+  let n = Math.max(
+    1,
+    Math.min(MAX_MARKET_THREADS, Math.floor(Number(threadCount) || 1))
+  );
   if (!Number.isFinite(total) || total <= 0) return [floor];
   const round = (v) => {
     const r = Math.round(Math.max(0, v) * 100) / 100;
     return r > 0 && r < floor ? floor : r;
   };
   const sized = round(Math.max(floor, total));
-  if (n === 1 || sized < floor * n) return [sized];
+  const maxByLot = Math.max(1, Math.floor((sized + 1e-9) / floor));
+  n = Math.min(n, maxByLot);
+  if (n === 1) return [sized];
   const vols = [];
   let allocated = 0;
   for (let i = 0; i < n; i += 1) {
@@ -1102,7 +1109,7 @@ function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.01) {
 /**
  * Market order via GET /OrderSend
  * operation: Buy | Sell
- * Optional `count` opens up to 3 market orders that SPLIT `volume` (total lot).
+ * Optional `count` opens up to MAX_MARKET_THREADS orders that SPLIT `volume` (total lot).
  * Optional `takeProfits` maps thread 1→TP1, 2→TP2, 3+→TP3.
  */
 export async function placeMarketTrade({
@@ -1120,8 +1127,11 @@ export async function placeMarketTrade({
   const requested = normalizeBrokerSymbol(symbol);
   const lots = Number(volume);
   const action = String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
-  // Cap at 3 TP threads; volume below is TOTAL size split across them.
-  const requestedTimes = Math.max(1, Math.min(3, Math.floor(Number(count) || 1)));
+  // Volume is TOTAL size — split across up to 100 threads (never × count).
+  const requestedTimes = Math.max(
+    1,
+    Math.min(MAX_MARKET_THREADS, Math.floor(Number(count) || 1))
+  );
   const threadVolumes = splitTotalLotAcrossThreads(lots, requestedTimes);
   const times = threadVolumes.length;
 

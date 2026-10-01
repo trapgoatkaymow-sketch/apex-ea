@@ -68,10 +68,11 @@
  * Gen 110 — Interface 2 tabbar Live Chart (between EA Chart and MetaTrader).
  * Gen 111 — Live Chart pulls MT5 account history (range) + Buy/Sell execute.
  * Gen 112 — Analyze Market returns BUY/SELL on Live Chart (no scanner jump).
+ * Gen 113 — Number of Trades uncapped (up to 100); lot still total, split.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 112;
+export const UI_SHELL_GENERATION = 113;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";

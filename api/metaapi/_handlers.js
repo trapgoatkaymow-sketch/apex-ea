@@ -1052,11 +1052,11 @@ export async function handleMentorTrade(req, res) {
     ]
       .map((v) => Number(v))
       .filter((n) => Number.isFinite(n) && n > 0);
-    // Max 3 TP threads; lot on the job is TOTAL size (server splits it).
+    // Lot on the job is TOTAL size (server splits across N threads).
     const tradesCount = Math.max(
       1,
       Math.min(
-        3,
+        100,
         Math.floor(Number(body.tradesCount ?? body.count ?? body.trades ?? 1) || 1)
       )
     );

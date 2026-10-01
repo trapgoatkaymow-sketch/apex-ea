@@ -1,7 +1,8 @@
 /**
  * Silent START → Chart Scanner style open (no scanner UI):
  *   15s “Analysing the chart” countdown → OpenAI scan (M30/H1/H4) → open
- *   Always opens 3 threads: TP1@M30 · TP2@H1 · TP3@H4 (lot is TOTAL, split).
+ *   Opens the pair's saved Number of Trades (lot is TOTAL, split across them).
+ *   TP targets cycle TP1@M30 · TP2@H1 · TP3@H4.
  *
  * START always uses the scanner non-H4 ladder:
  *   TP1 1:2 · TP2 1:3 · TP3 1:4
@@ -44,7 +45,7 @@ export const START_SILENT_OPEN_DELAY_MS = 15_000;
 /** Scanner timeframes used by the START button (like EA Chart). */
 export const START_SCANNER_TIMEFRAMES = ["M30", "H1", "H4"];
 
-/** START always opens one thread per START timeframe (M30 → H1 → H4). */
+/** Default trades when a pair has no saved count (still analyses M30/H1/H4). */
 export const START_THREAD_COUNT = START_SCANNER_TIMEFRAMES.length;
 
 /** Seconds left for the START “Analysing the chart” countdown. */
@@ -283,7 +284,7 @@ export function inferSafeScalperSideFromBars(bars = []) {
  *  1. Live quote required — never trade on a table estimate
  *  2. Side from M30 EMA scalper (or mentor BUY/SELL if set)
  *  3. Half lot — cut size vs full AI open
- *  4. Always 3 threads (M30 / H1 / H4) — same as AI START
+ *  4. Honor pair Number of Trades (lot split across threads)
  *  5. Tight scalper SL from defaultStopDistance
  */
 export function buildStartSafeScalperPlan({
@@ -335,8 +336,7 @@ export function buildStartSafeScalperPlan({
   const risk = defaultStopDistance(sym, entry);
   const stopLoss = side === "BUY" ? entry - risk : entry + risk;
   const safeLot = clampLot(Math.max(0.01, clampLot(lot) * 0.5));
-  // START always uses M30 + H1 + H4 threads (ignore pair trade stepper).
-  const threads = START_THREAD_COUNT;
+  const threads = clampTrades(tradeCount);
   const biasLabel = barSide
     ? `M30 EMA ${side}`
     : `mentor ${side}`;
@@ -351,7 +351,7 @@ export function buildStartSafeScalperPlan({
     tradeCount: threads,
     timeframe: "M30",
     confidence: mentorSide ? 58 : 62,
-    analysis: `Safe Scalper: ${biasLabel}, half lot, M30/H1/H4 threads, tight SL.`,
+    analysis: `Safe Scalper: ${biasLabel}, half lot, ${threads} trade(s), M30/H1/H4 TPs, tight SL.`,
   };
 }
 
@@ -416,8 +416,8 @@ async function openPairSilent({
   const preferredSide =
     actionRaw === "SELL" ? "SELL" : actionRaw === "BUY" ? "BUY" : "";
   let lot = clampLot(meta.lotSize);
-  // START always opens M30 + H1 + H4 (pair "Number of trades" is for Scanner only).
-  let tradeCount = START_THREAD_COUNT;
+  // Honor saved Number of Trades (lot is TOTAL — split across that many opens).
+  let tradeCount = clampTrades(meta.trades || START_THREAD_COUNT);
 
   let tradeSymbol = normalizeBrokerSymbol(symbol) || symbol;
   let livePrice = estimateEntryForSymbol(symbol);
@@ -509,7 +509,7 @@ async function openPairSilent({
       };
     }
     lot = plan.lot;
-    tradeCount = START_THREAD_COUNT;
+    tradeCount = clampTrades(plan.tradeCount || tradeCount);
     signal = buildScannerAlignedSetup({
       symbol: tradeSymbol,
       side: plan.side,
@@ -522,8 +522,7 @@ async function openPairSilent({
     });
   }
 
-  // Always 3 threads: TP1@M30 · TP2@H1 · TP3@H4 — lot is TOTAL, split.
-  tradeCount = START_THREAD_COUNT;
+  // TP1@M30 · TP2@H1 · TP3@H4 cycling for N saved trades — lot is TOTAL, split.
   const threads = buildTpThreads({ signal, lot, tradeCount });
   if (!threads.length) {
     return {

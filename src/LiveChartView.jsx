@@ -949,7 +949,7 @@ export default function LiveChartView({ active = true } = {}) {
           <input
             type="number"
             min="1"
-            max="3"
+            max="100"
             value={tradeCount}
             disabled={trading || !connected}
             onChange={(e) =>

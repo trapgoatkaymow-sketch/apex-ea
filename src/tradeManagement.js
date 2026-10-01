@@ -90,10 +90,13 @@ function roundLot(value, minLot = 0.01) {
   return rounded;
 }
 
-/** Max TP threads per Execute / START open (TP1 → TP2 → TP3). */
-export const MAX_TP_THREADS = 3;
+/**
+ * Soft ceiling for Number of Trades (lot is TOTAL, split across N).
+ * High enough to feel unlimited for normal use; blocks absurd typos.
+ */
+export const MAX_TP_THREADS = 100;
 
-/** Clamp the "Number of trades" stepper to 1..3. */
+/** Clamp the "Number of trades" field to 1..MAX_TP_THREADS. */
 export function clampTradeThreadCount(value) {
   const n = Math.floor(Number(value) || 1);
   return Math.min(MAX_TP_THREADS, Math.max(1, n));
@@ -113,13 +116,17 @@ function targetForTradeIndex(index) {
 
 /**
  * Split TOTAL lot across N threads. Never multiplies risk by thread count.
- * If total is too small for N×minLot, collapse to a single ticket.
+ * If total is too small for N×minLot, open as many min-lot tickets as fit
+ * (remainder on the last), instead of silently collapsing to 1.
  */
 export function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.01) {
   const floor = Math.max(0.01, Number(minLot) || 0.01);
   const total = roundLot(Math.max(floor, Number(totalVolume) || floor), floor);
-  const n = Math.max(1, Math.min(MAX_TP_THREADS, Math.floor(Number(threadCount) || 1)));
-  if (n === 1 || total < floor * n) {
+  let n = Math.max(1, Math.min(MAX_TP_THREADS, Math.floor(Number(threadCount) || 1)));
+  // e.g. 0.01 lot × 5 trades → only one 0.01 ticket can fit.
+  const maxByLot = Math.max(1, Math.floor((total + 1e-9) / floor));
+  n = Math.min(n, maxByLot);
+  if (n === 1) {
     return [total];
   }
   const vols = [];
@@ -182,21 +189,11 @@ export function buildTpThreads({ tradeCount = 1, lot = 0.01, signal = {} } = {})
   }
   if (!pending.length) return [];
   const volumes = splitTotalLotAcrossThreads(lot, pending.length);
-  // If lot was too small to split, keep a single TP1 thread with full size.
-  if (volumes.length === 1 && pending.length > 1) {
-    return [
-      {
-        ...pending[0],
-        target: "TP1",
-        takeProfitKey: "takeProfit1",
-        takeProfit: Number(signal?.takeProfit1) || pending[0].takeProfit,
-        volume: volumes[0],
-      },
-    ];
-  }
-  return pending.map((row, i) => ({
+  // Lot may only fit fewer min-lot tickets than requested trades.
+  const openCount = Math.min(pending.length, volumes.length);
+  return pending.slice(0, openCount).map((row, i) => ({
     ...row,
-    volume: volumes[i] ?? volumes[volumes.length - 1],
+    volume: volumes[i],
   }));
 }
 

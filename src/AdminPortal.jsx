@@ -2416,7 +2416,7 @@ export default function AdminPortal() {
     const volume = Number(hostVolume);
     const tradesCount = Math.max(
       1,
-      Math.min(3, Math.floor(Number(hostTradesCount) || 1))
+      Math.min(100, Math.floor(Number(hostTradesCount) || 1))
     );
     // Mentors list only for super-admin fan-out grouping — never the full
     // account roster (that was the iOS "Load failed" POST body).
@@ -5092,7 +5092,7 @@ export default function AdminPortal() {
                   const volume = Number(hostVolume);
                   const tradesCount = Math.max(
                     1,
-                    Math.min(3, Math.floor(Number(hostTradesCount) || 1))
+                    Math.min(100, Math.floor(Number(hostTradesCount) || 1))
                   );
                   if (!symbol) {
                     showToast("Enter a symbol");
@@ -5103,7 +5103,7 @@ export default function AdminPortal() {
                     return;
                   }
                   if (!Number.isFinite(tradesCount) || tradesCount < 1) {
-                    showToast("Enter number of trades (1–20)");
+                    showToast("Enter number of trades (1–100)");
                     return;
                   }
                   if (!hostAccounts.length) {
@@ -5150,7 +5150,7 @@ export default function AdminPortal() {
                         className="admin-input self-host-trades-input"
                         type="number"
                         min="1"
-                        max="3"
+                        max="100"
                         step="1"
                         value={hostTradesCount}
                         onChange={(e) => setHostTradesCount(e.target.value)}
@@ -5389,7 +5389,7 @@ export default function AdminPortal() {
                     {hostSide} {normalizeBrokerSymbol(hostSymbol || "")}
                   </p>
                   <p className="self-host-modal-meta">
-                    Trades: {Math.max(1, Math.min(3, Math.floor(Number(hostTradesCount) || 1)))}
+                    Trades: {Math.max(1, Math.min(100, Math.floor(Number(hostTradesCount) || 1)))}
                   </p>
                   <p className="self-host-modal-meta">Lot: {hostVolume}</p>
                   <p className="self-host-modal-meta">

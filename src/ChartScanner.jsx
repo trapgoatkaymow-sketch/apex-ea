@@ -50,7 +50,7 @@ const SCAN_STEP_GAP_MS = isNativeApp() ? 36 : 70;
 const SCAN_SETTLE_MS = isNativeApp() ? 220 : 500;
 const TRADE_SETTLE_MS = isNativeApp() ? 320 : 700;
 
-/** Cap "Number of trades" at 3 (TP1/TP2/TP3) — lot is TOTAL, not per thread. */
+/** Number of trades — lot is TOTAL, split across N opens (soft cap via clampTradeThreadCount). */
 function clampTrades(value) {
   return clampTradeThreadCount(value);
 }
@@ -1189,7 +1189,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <input
                 type="number"
                 min="1"
-                max="3"
+                max="100"
                 value={trades}
                 disabled={busy}
                 onChange={(e) => setTrades(clampTrades(e.target.value))}
@@ -1198,7 +1198,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <button
                 type="button"
                 aria-label="More trades"
-                disabled={busy || trades >= 3}
+                disabled={busy || trades >= 100}
                 onClick={() => {
                   const next = clampTrades(trades + 1);
                   setTrades(next);
