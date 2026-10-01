@@ -19,7 +19,7 @@
       "usedAt": 1790807037607,
       "deviceId": "507efbc8-63e0-4b5b-abc4-3760bb6b185e",
       "boundAt": 1790807037607,
-      "updatedAt": 1790832301450,
+      "updatedAt": 1790832305795,
       "scanReset": null,
       "robotAccountId": "71e2ec66-d70a-4a50-b320-337465406139",
       "robotLogin": "296390586",
@@ -31,7 +31,7 @@
         "XAUUSD",
         "US30"
       ],
-      "clientSymbolsUpdatedAt": 1790832301450,
+      "clientSymbolsUpdatedAt": 1790832305795,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "2UP38327NK006913L",
       "purchaseOrderId": "9TP35122TY270731D",
@@ -2049,9 +2049,7 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790827497301,
-      "clientSymbols": [
-        "XAUUSD"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790831943490,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": null,
@@ -2475,7 +2473,12 @@
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790752096227,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "XAUUSD",
+        "NAS100",
+        "US30",
+        "EURGBP"
+      ],
       "clientSymbolsUpdatedAt": 1790831728975,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "2A631048XJ125473B",
@@ -5399,11 +5402,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -8239,7 +8238,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -11150,8 +11151,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "GOLD",
+          "EURUSD"
         ]
       }
     },
