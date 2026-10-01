@@ -492,12 +492,14 @@
 
       function formatEndLocal(ms) {
         try {
-          return new Date(ms).toLocaleString(undefined, {
+          return new Date(ms).toLocaleString("en-ZA", {
+            timeZone: "Africa/Johannesburg",
             weekday: "short",
-            month: "short",
             day: "numeric",
+            month: "short",
             hour: "2-digit",
             minute: "2-digit",
+            hour12: false,
           });
         } catch {
           return new Date(ms).toISOString();
