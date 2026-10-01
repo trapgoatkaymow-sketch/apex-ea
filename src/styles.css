@@ -13949,9 +13949,16 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
 
 .lc-trade-bar {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.1fr 1.1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   align-items: end;
+}
+
+.lc-symbols-empty {
+  margin: 0;
+  padding: 8px 4px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .lc-lot {
@@ -13979,38 +13986,6 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
   font-weight: 700;
 }
 
-.lc-buy,
-.lc-sell {
-  border: 0;
-  border-radius: 12px;
-  padding: 12px 8px;
-  font-size: 0.88rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #041016;
-}
-
-.lc-buy {
-  background: linear-gradient(180deg, #4ade80, #16a34a);
-  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.28);
-}
-
-.lc-sell {
-  background: linear-gradient(180deg, #f87171, #dc2626);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.28);
-  color: #fff;
-}
-
-.lc-buy.is-suggested,
-.lc-sell.is-suggested {
-  outline: 2px solid rgba(255, 255, 255, 0.85);
-  outline-offset: 1px;
-  transform: scale(1.02);
-}
-
-.lc-buy:disabled,
-.lc-sell:disabled,
 .lc-analyze:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -14059,7 +14034,7 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
   }
 
   .lc-trade-bar {
-    grid-template-columns: 120px 100px 1fr 1fr;
+    grid-template-columns: 140px 140px;
   }
 
   .lc-title {

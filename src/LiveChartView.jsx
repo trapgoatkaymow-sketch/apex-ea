@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiUrl } from "./apiOrigin.js";
-import {
-  buildBotTradeComment,
-  checkTradeDirection,
-  getPriceHistory,
-  getSymbolQuote,
-  placeTrade,
-} from "./metaApi.js";
+import { getPriceHistory, getSymbolQuote } from "./metaApi.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
-import { recordTrade } from "./dailyTradeHistory.js";
+import { normalizeLicenseKey } from "./licensesApi.js";
 import {
   inferSafeScalperSideFromBars,
   START_SCANNER_TIMEFRAMES,
@@ -18,11 +12,9 @@ import { useApp } from "./store.jsx";
 import {
   buildSafeMultiTpLevels,
   defaultStopDistance,
-  symbolCoreName,
 } from "./tradeLevels.js";
-import { buildTpThreads, clampTradeThreadCount } from "./tradeManagement.js";
+import { clampTradeThreadCount } from "./tradeManagement.js";
 
-const DEFAULT_SYMBOLS = ["XAUUSD", "EURUSD", "NAS100", "US30"];
 const TIMEFRAMES = [
   { id: "M1", minutes: 1 },
   { id: "M15", minutes: 15 },
@@ -100,79 +92,142 @@ function normalizeBars(rows) {
     .filter(Boolean);
 }
 
-function samePairOpen(positions, symbol) {
-  const want = symbolCoreName(symbol);
-  if (!want) return false;
-  return (Array.isArray(positions) ? positions : []).some((row) => {
-    const core = symbolCoreName(row?.symbol);
-    if (!core) return false;
-    if (core === want) return true;
-    if (/^XAUUSD|^GOLD/i.test(want) && /^XAUUSD|^GOLD/i.test(core)) return true;
-    return false;
-  });
-}
-
 function clampLot(value) {
   const n = Number(String(value ?? "").replace(",", "."));
   if (!Number.isFinite(n) || n <= 0) return 0.01;
   return Number(Math.min(1000, n).toFixed(4));
 }
 
+/** Mentor portal pairs for this EA — never a hardcoded global catalog. */
+function resolveMentorPairs({
+  activeBot,
+  eas = [],
+  licenseKeys = [],
+  normalizeSymbol,
+} = {}) {
+  const botId = String(activeBot?.id || "").trim();
+  const cover = normalizeLicenseKey(activeBot?.licenseKey);
+  const fromStamp = Array.isArray(activeBot?.mentorSymbols)
+    ? activeBot.mentorSymbols
+    : [];
+
+  let fromLicense = [];
+  const rows = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
+    (row) => String(row?.botId || row?.bot?.id || "").trim() === botId
+  );
+  const mine =
+    (cover && rows.find((row) => normalizeLicenseKey(row?.key) === cover)) ||
+    null;
+  if (mine && Array.isArray(mine?.bot?.symbols) && mine.bot.symbols.length) {
+    fromLicense = mine.bot.symbols;
+  } else {
+    const ranked = [...rows].sort((a, b) => {
+      const aSync = Number(a?.mentorSymbolsSyncedAt) || 0;
+      const bSync = Number(b?.mentorSymbolsSyncedAt) || 0;
+      if (aSync !== bSync) return bSync - aSync;
+      return (
+        Number(b?.updatedAt || b?.createdAt || 0) -
+        Number(a?.updatedAt || a?.createdAt || 0)
+      );
+    });
+    const best = ranked.find(
+      (row) => Array.isArray(row?.bot?.symbols) && row.bot.symbols.length
+    );
+    fromLicense = best?.bot?.symbols || [];
+  }
+
+  const ea = (Array.isArray(eas) ? eas : []).find(
+    (item) => String(item?.id || "").trim() === botId
+  );
+  const fromEa = Array.isArray(ea?.symbols) ? ea.symbols : [];
+  const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
+
+  let raw = fromStamp;
+  if (
+    fromLicense.length &&
+    (!fromStamp.length ||
+      (fromStamp.length > fromLicense.length && fromLicense.length <= 40))
+  ) {
+    raw = fromLicense;
+  }
+  if (!raw.length) raw = fromLicense;
+  if (!raw.length) raw = fromEa;
+  if (!raw.length) raw = fromBot;
+
+  const out = [];
+  const seen = new Set();
+  for (const rawSym of raw) {
+    const clean =
+      normalizeSymbol?.(rawSym) ||
+      normalizeBrokerSymbol(rawSym) ||
+      String(rawSym || "").trim().toUpperCase();
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+  }
+  return out;
+}
+
 export default function LiveChartView({ active = true } = {}) {
   const {
     mt5Session,
-    appSymbols = [],
     showToast,
     setV2View,
     activeBot,
+    eas = [],
+    licenseKeys = [],
+    normalizeSymbol,
     getSymbolMeta,
     saveSymbolMeta,
-    publishOrbTrade,
   } = useApp();
   const accountId = String(mt5Session?.accountId || "").trim();
   const connected = Boolean(accountId);
   const tradeSymbolRef = useRef("");
 
-  const symbols = useMemo(() => {
-    const merged = [];
-    const seen = new Set();
-    for (const raw of [...DEFAULT_SYMBOLS, ...(appSymbols || [])]) {
-      const s = normalizeBrokerSymbol(raw) || String(raw || "").trim().toUpperCase();
-      if (!s || seen.has(s)) continue;
-      seen.add(s);
-      merged.push(s);
-      if (merged.length >= 8) break;
-    }
-    return merged.length ? merged : [...DEFAULT_SYMBOLS];
-  }, [appSymbols]);
+  const symbols = useMemo(
+    () =>
+      resolveMentorPairs({
+        activeBot,
+        eas,
+        licenseKeys,
+        normalizeSymbol,
+      }),
+    [activeBot, eas, licenseKeys, normalizeSymbol]
+  );
 
-  const [symbol, setSymbol] = useState(symbols[0] || "XAUUSD");
+  const [symbol, setSymbol] = useState(symbols[0] || "");
   const [tfId, setTfId] = useState("M30");
   const [chartType, setChartType] = useState("Candle");
   const [bars, setBars] = useState([]);
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [trading, setTrading] = useState(false);
   const [error, setError] = useState("");
   const [visibleCount, setVisibleCount] = useState(70);
   const [pan, setPan] = useState(0);
   const [showMa, setShowMa] = useState(true);
   const [lotSize, setLotSize] = useState(() => {
-    const meta = getSymbolMeta?.(symbols[0] || "XAUUSD") || {};
+    const meta = getSymbolMeta?.(symbols[0] || "") || {};
     return clampLot(meta.lotSize);
   });
   const [tradeCount, setTradeCount] = useState(() => {
-    const meta = getSymbolMeta?.(symbols[0] || "XAUUSD") || {};
+    const meta = getSymbolMeta?.(symbols[0] || "") || {};
     return clampTradeThreadCount(meta.trades || 3);
   });
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState(null);
 
   useEffect(() => {
-    if (!symbols.includes(symbol) && symbols[0]) setSymbol(symbols[0]);
+    if (!symbols.length) {
+      if (symbol) setSymbol("");
+      return;
+    }
+    if (!symbols.includes(symbol)) setSymbol(symbols[0]);
   }, [symbols, symbol]);
 
   useEffect(() => {
+    if (!symbol) return;
     const meta = getSymbolMeta?.(symbol) || {};
     setLotSize(clampLot(meta.lotSize));
     setTradeCount(clampTradeThreadCount(meta.trades || 3));
@@ -180,11 +235,24 @@ export default function LiveChartView({ active = true } = {}) {
     setAnalysis(null);
   }, [symbol, getSymbolMeta]);
 
+  function persistTradeSettings(nextLot = lotSize, nextTrades = tradeCount) {
+    if (!symbol) return;
+    const lot = clampLot(nextLot);
+    const trades = clampTradeThreadCount(nextTrades);
+    setLotSize(lot);
+    setTradeCount(trades);
+    saveSymbolMeta?.(symbol, {
+      ...(getSymbolMeta?.(symbol) || {}),
+      lotSize: lot,
+      trades,
+    });
+  }
+
   const tfMinutes =
     TIMEFRAMES.find((t) => t.id === tfId)?.minutes || 30;
 
   useEffect(() => {
-    if (!active || !connected) return undefined;
+    if (!active || !connected || !symbol) return undefined;
     let cancelled = false;
 
     async function load({ quiet = false } = {}) {
@@ -425,158 +493,6 @@ export default function LiveChartView({ active = true } = {}) {
       .finally(() => setBusy(false));
   }
 
-  async function executeSide(sideRaw) {
-    const side = String(sideRaw || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
-    if (!connected) {
-      showToast?.("Connect MetaTrader to execute trades");
-      setV2View("metatrader");
-      return;
-    }
-    const tradeSymbol =
-      normalizeBrokerSymbol(tradeSymbolRef.current || symbol) || symbol;
-    const lot = clampLot(lotSize);
-    const threadsN = clampTradeThreadCount(tradeCount);
-    const entry = toNum(quote?.price) ?? last?.close;
-    if (entry == null || entry <= 0) {
-      showToast?.("Wait for a live price from the connected account");
-      return;
-    }
-
-    // Prefer the latest Analyze Market setup when the side matches.
-    const useAnalysis =
-      analysis &&
-      analysis.side === side &&
-      normalizeBrokerSymbol(analysis.symbol) ===
-        normalizeBrokerSymbol(tradeSymbol);
-    const levels = useAnalysis
-      ? buildSafeMultiTpLevels({
-          symbol: tradeSymbol,
-          side,
-          entry,
-          stopLoss: analysis.stopLoss,
-          timeframe: analysis.timeframe === "H4" ? "H4" : "M30",
-          rewardMultiples: START_TP_REWARD_MULTIPLES,
-          trustSide: true,
-        })
-      : buildSafeMultiTpLevels({
-          symbol: tradeSymbol,
-          side,
-          entry,
-          stopLoss:
-            side === "BUY"
-              ? entry - defaultStopDistance(tradeSymbol, entry)
-              : entry + defaultStopDistance(tradeSymbol, entry),
-          timeframe: tfId === "H4" ? "H4" : "M30",
-          rewardMultiples: START_TP_REWARD_MULTIPLES,
-          trustSide: true,
-        });
-    const threads = buildTpThreads({
-      tradeCount: threadsN,
-      lot,
-      signal: levels,
-    });
-    if (!threads.length) {
-      showToast?.("Could not build trade levels");
-      return;
-    }
-
-    try {
-      const dir = await checkTradeDirection({
-        accountId,
-        symbol: tradeSymbol,
-        side,
-      });
-      if (dir && dir.ok === false) {
-        showToast?.(
-          dir.error || "Close open trades in the other direction first"
-        );
-        return;
-      }
-      if (samePairOpen(dir?.positions, tradeSymbol)) {
-        showToast?.(
-          `Close your open ${tradeSymbol} trades first before opening more`
-        );
-        return;
-      }
-    } catch (err) {
-      showToast?.(err?.message || "Could not verify open trades");
-      return;
-    }
-
-    saveSymbolMeta?.(tradeSymbol, {
-      ...(getSymbolMeta?.(tradeSymbol) || {}),
-      lotSize: lot,
-      trades: threadsN,
-    });
-
-    const comment = buildBotTradeComment(activeBot?.name || "Bot");
-    setTrading(true);
-    publishOrbTrade?.({
-      botName: activeBot?.name || "Bot",
-      comment,
-      symbol: tradeSymbol,
-      lotSize: lot,
-      action: side,
-      side,
-      entry: levels.entry,
-      stopLoss: levels.stopLoss,
-      takeProfit: levels.takeProfit1,
-      target: "TP1",
-    });
-
-    let opened = 0;
-    let lastError = "";
-    try {
-      for (const thread of threads) {
-        try {
-          const fill = await placeTrade({
-            accountId,
-            symbol: tradeSymbol,
-            volume: thread.volume,
-            side,
-            stopLoss: levels.stopLoss,
-            takeProfit: thread.takeProfit,
-            count: 1,
-            region: mt5Session?.region || "",
-            comment,
-            source: "chart-scanner",
-          });
-          opened += 1;
-          recordTrade({
-            botName: activeBot?.name || "Bot",
-            symbol:
-              normalizeBrokerSymbol(fill?.symbol || tradeSymbol) || tradeSymbol,
-            lotSize: thread.volume,
-            action: side,
-            side,
-            comment,
-            entry: levels.entry,
-            stopLoss: levels.stopLoss,
-            takeProfit: thread.takeProfit,
-            target: thread.target,
-          });
-        } catch (err) {
-          lastError = err?.message || "Trade failed";
-          if (
-            err?.code === "OPPOSITE_DIRECTION" ||
-            /session expired|reconnect|other direction/i.test(lastError)
-          ) {
-            break;
-          }
-        }
-      }
-      if (opened > 0) {
-        showToast?.(
-          `Opened ${opened} ${side} ${tradeSymbol} on connected account`
-        );
-      } else {
-        showToast?.(lastError || "Trade failed");
-      }
-    } finally {
-      setTrading(false);
-    }
-  }
-
   return (
     <section className="lc-view" aria-label="Live Chart">
       <header className="lc-header">
@@ -639,19 +555,25 @@ export default function LiveChartView({ active = true } = {}) {
         </div>
       </div>
 
-      <div className="lc-symbols" role="tablist" aria-label="Symbols">
-        {symbols.map((s) => (
-          <button
-            key={s}
-            type="button"
-            role="tab"
-            aria-selected={s === symbol}
-            className={s === symbol ? "is-active" : ""}
-            onClick={() => setSymbol(s)}
-          >
-            {s}
-          </button>
-        ))}
+      <div className="lc-symbols" role="tablist" aria-label="Mentor pairs">
+        {symbols.length ? (
+          symbols.map((s) => (
+            <button
+              key={s}
+              type="button"
+              role="tab"
+              aria-selected={s === symbol}
+              className={s === symbol ? "is-active" : ""}
+              onClick={() => setSymbol(s)}
+            >
+              {s}
+            </button>
+          ))
+        ) : (
+          <p className="lc-symbols-empty">
+            No mentor pairs yet — your mentor adds them in the portal.
+          </p>
+        )}
       </div>
 
       <div className="lc-chart-card">
@@ -937,11 +859,11 @@ export default function LiveChartView({ active = true } = {}) {
             type="text"
             inputMode="decimal"
             value={lotSize}
-            disabled={trading || !connected}
+            disabled={!symbol || analyzing}
             onChange={(e) =>
               setLotSize(e.target.value.replace(/[^\d.,]/g, ""))
             }
-            onBlur={() => setLotSize(clampLot(lotSize))}
+            onBlur={() => persistTradeSettings(lotSize, tradeCount)}
           />
         </label>
         <label className="lc-lot">
@@ -951,44 +873,34 @@ export default function LiveChartView({ active = true } = {}) {
             min="1"
             max="100"
             value={tradeCount}
-            disabled={trading || !connected}
+            disabled={!symbol || analyzing}
             onChange={(e) =>
               setTradeCount(clampTradeThreadCount(e.target.value))
             }
+            onBlur={() => persistTradeSettings(lotSize, tradeCount)}
           />
         </label>
-        <button
-          type="button"
-          className={`lc-buy${analysis?.side === "BUY" ? " is-suggested" : ""}`}
-          disabled={trading || !connected || busy || analyzing}
-          onClick={() => executeSide("BUY")}
-        >
-          {trading ? "…" : "Buy"}
-        </button>
-        <button
-          type="button"
-          className={`lc-sell${analysis?.side === "SELL" ? " is-suggested" : ""}`}
-          disabled={trading || !connected || busy || analyzing}
-          onClick={() => executeSide("SELL")}
-        >
-          {trading ? "…" : "Sell"}
-        </button>
       </div>
 
       <button
         type="button"
         className="lc-analyze"
         onClick={handleAnalyze}
-        disabled={trading || analyzing || !connected}
+        disabled={analyzing || !connected || !symbol}
       >
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
           <path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z" />
         </svg>
         {analyzing ? "Analysing market…" : "Analyze Market"}
       </button>
+      {!symbols.length ? (
+        <p className="lc-hint">
+          Live Chart lists only pairs your mentor added for this EA in the portal.
+        </p>
+      ) : null}
       {!connected && (
         <p className="lc-hint">
-          Connect MetaTrader on this device — the chart and trades use that account.
+          Connect MetaTrader on this device — the chart uses that account.
         </p>
       )}
       {connected && error ? <p className="lc-hint is-err">{error}</p> : null}
