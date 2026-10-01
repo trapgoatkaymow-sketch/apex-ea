@@ -499,13 +499,24 @@
           }
         }
         if (!result) throw lastError || new Error("Could not finish payment");
+        const licenseKey =
+          result.licenseKey || result.license?.key || result.key || "";
         setMsg(
           result.reused
             ? "Already paid — your license key is below (also emailed)."
-            : "Paid! License created and emailed to " + (result.email || email) + ".",
+            : result.emailSent
+              ? "Paid! License key is below and emailed to " +
+                (result.email || email) +
+                "."
+              : "Paid! Your license key is below — copy it now. Email is also on the way to " +
+                (result.email || email) +
+                ".",
           "ok"
         );
-        showKey(result.licenseKey);
+        showKey(licenseKey, {
+          emailSent: Boolean(result.emailSent),
+          email: result.email || email,
+        });
         hidePayUi();
         return result;
       }

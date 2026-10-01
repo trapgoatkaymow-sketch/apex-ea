@@ -792,7 +792,9 @@ export async function fulfillRobotPurchase({
         mentorId: mentor.mentorId,
         mentorName: mentor.mentorName,
         duration: "lifetime",
+        // Paid buyers must get Brevo synchronously here (not deferred).
         sendEmail: true,
+        asyncEmail: false,
         skipQuota: true,
         purchaseCaptureId: captureKey || null,
         purchaseOrderId: orderKey || null,
