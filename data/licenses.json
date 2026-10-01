@@ -178,8 +178,13 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790802013946,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
+      "clientSymbols": [
+        "GOLD",
+        "XAUUSD",
+        "GBPUSD",
+        "GOLDMICRO"
+      ],
+      "clientSymbolsUpdatedAt": 1790844027597,
       "mentorSymbolsSyncedAt": 1790843939438,
       "purchaseCaptureId": "59X38357ET1672214",
       "purchaseOrderId": "7Y123589X78247409",
@@ -1268,9 +1273,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -17497,7 +17501,7 @@
       "purchaseCaptureId": "5P656300EA792331J",
       "purchaseOrderId": "6EG565460X975272J",
       "purchaseSource": "paypal-giveaway-webhook",
-      "emailSentAt": 1790842791788,
+      "emailSentAt": 1790842688330,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -72484,12 +72488,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
-        ]
+        "symbols": []
       }
     },
     {
