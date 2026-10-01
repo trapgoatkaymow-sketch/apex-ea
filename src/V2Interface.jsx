@@ -7,6 +7,7 @@ import {
   resolveCachedBotPhoto,
 } from "./botPhotoCache.js";
 import ChartScanner from "./ChartScanner.jsx";
+import LiveChartView from "./LiveChartView.jsx";
 import { buildScannerFillComment } from "./metaApi.js";
 import { isNativeApp, useApp } from "./store.jsx";
 import MetaTraderPanel from "./MetaTraderPanel.jsx";
@@ -209,7 +210,7 @@ export default function V2Interface() {
   return (
     <div className="iface-layer is-active" data-iface="v2">
       <main className="v2-stage">
-        {v2View !== "scanner" ? <TopBar /> : null}
+        {v2View !== "scanner" && v2View !== "live-chart" ? <TopBar /> : null}
         {v2View === "home" && (
           <section className="v2-view is-active v2-view-home">
             <div className="v2-hero">
@@ -621,6 +622,15 @@ export default function V2Interface() {
           </section>
         ) : null}
 
+        {v2View === "live-chart" && (
+          <section className="v2-view is-active v2-view-live-chart">
+            <LiveChartView
+              active={v2View === "live-chart"}
+              onAnalyze={() => setV2View("scanner")}
+            />
+          </section>
+        )}
+
         {v2View === "metatrader" && (
           <section className="v2-view is-active v2-view-metatrader">
             <MetaTraderPanel variant="v2" />
@@ -628,7 +638,7 @@ export default function V2Interface() {
         )}
       </main>
 
-      <nav className="v2-tabbar" aria-label="V2 primary">
+      <nav className="v2-tabbar v2-tabbar--4" aria-label="V2 primary">
         <button
           className={`v2-tab${v2View === "home" || v2View === "quotes" || v2View === "symbol-edit" ? " is-active" : ""}`}
           type="button"
@@ -658,6 +668,20 @@ export default function V2Interface() {
             </svg>
           </span>
           <span className="v2-tab-label">EA Chart</span>
+        </button>
+        <button
+          className={`v2-tab${v2View === "live-chart" ? " is-active" : ""}`}
+          type="button"
+          onClick={() => setV2View("live-chart")}
+        >
+          <span className="v2-tab-icon" aria-hidden="true">
+            <V2TabParticles />
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4.5 17.2V8.4h2.3v8.8H4.5zm4.8 0V5.2h2.3v12H9.3zm4.8 0v-6.2h2.3v6.2h-2.3zm4.8 0V7h2.3v10.2h-2.3z" />
+              <path d="M3.6 19.2h16.8v1.5H3.6z" opacity="0.5" />
+            </svg>
+          </span>
+          <span className="v2-tab-label">Live Chart</span>
         </button>
         <button
           className={`v2-tab${v2View === "metatrader" ? " is-active" : ""}`}

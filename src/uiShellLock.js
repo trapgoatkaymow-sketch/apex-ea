@@ -65,10 +65,11 @@
  *           block stacking another open while the pair still has positions.
  * Gen 108 — START always uses M30 + H1 + H4 threads (not pair trade count).
  * Gen 109 — Keep AI BUY/SELL; repair wrong-side SL (stop BUY→SELL flip).
+ * Gen 110 — Interface 2 tabbar Live Chart (between EA Chart and MetaTrader).
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 109;
+export const UI_SHELL_GENERATION = 110;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
