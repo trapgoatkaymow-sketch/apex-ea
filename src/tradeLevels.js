@@ -196,8 +196,13 @@ export function buildSafeMultiTpLevels({
   timeframe = "M15",
   /** Optional explicit R:R ladder, e.g. [2,3,4] for START. */
   rewardMultiples = null,
+  /**
+   * When true, keep the labeled BUY/SELL and repair SL on the correct side.
+   * When false (default), stop geometry may flip a conflicting label.
+   */
+  trustSide = false,
 } = {}) {
-  const dir = normalizeTradeSide(side, { entry, stopLoss });
+  const dir = normalizeTradeSide(side, { entry, stopLoss, trustSide });
   let e = toFiniteNumber(entry);
   let sl = toFiniteNumber(stopLoss);
   if (e == null || e <= 0) e = 1;
@@ -206,6 +211,8 @@ export function buildSafeMultiTpLevels({
   const maxDist = maxStopDistance(symbol, e);
   const fallbackRisk = Math.max(minDist, defaultStopDistance(symbol, e));
 
+  // Always put SL on the correct side of entry for `dir` (never flip BUY→SELL
+  // just because the model parked the stop on the wrong side).
   if (dir === "BUY") {
     if (sl == null || !(sl < e)) sl = e - fallbackRisk;
   } else if (sl == null || !(sl > e)) {

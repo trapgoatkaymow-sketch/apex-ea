@@ -100,9 +100,10 @@ export async function analyzeSymbolSetupWithOpenAI({
             '"stopLoss":number,"analysis":string}. ' +
             "START always trades M30 + H1 + H4 together. Decide BUY or SELL from confluence across ALL three " +
             "(M30, H1, and H4 structure / bias) — not a single lower timeframe alone. " +
-            "Do NOT default to BUY. stopLoss must be a realistic protective stop FAR enough from entry for the instrument " +
+            "Do NOT default to BUY or SELL — pick the side the three timeframes support. " +
+            "stopLoss must be a realistic protective stop FAR enough from entry for the instrument " +
             "(XAUUSD ≥ ~$3–$8, FX ≥ ~15 pips, US30/NAS100 ≥ ~25 points). " +
-            "BUY: stopLoss < entry. SELL: stopLoss > entry. " +
+            "BUY: stopLoss MUST be below entry. SELL: stopLoss MUST be above entry. " +
             "timeframe = the strongest of M30/H1/H4 that supports the side. analysis: one short sentence citing M30/H1/H4.",
         },
         {
@@ -149,12 +150,14 @@ export async function analyzeSymbolSetupWithOpenAI({
   const timeframe = normalizeChartTimeframe(parsed?.timeframe || "M30");
   const tf = ["M30", "H1", "H4"].includes(timeframe) ? timeframe : "M30";
   // Chart Scanner ladder: H4 → 1:1/1:2/1:3 · M30/H1 → 1:2/1:3/1:4
+  // trustSide keeps AI BUY/SELL; wrong-side SL is repaired (not flipped to SELL).
   const levels = buildSafeMultiTpLevels({
     symbol: sym,
     side,
     entry: live,
     stopLoss: parsed?.stopLoss,
     timeframe: tf,
+    trustSide: true,
   });
 
   return {

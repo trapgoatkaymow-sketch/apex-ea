@@ -320,8 +320,8 @@ export function buildStartSafeScalperPlan({
     ? String(strategySide).trim().toUpperCase()
     : "";
 
-  // Mentor Action wins when set; otherwise use M30 EMA bias — never blind BUY.
-  const side = mentorSide || barSide;
+  // Chart/EMA bias wins; pair Action is fallback only (never lock START to SELL).
+  const side = barSide || mentorSide;
   if (!side) {
     return {
       skip: true,
@@ -337,9 +337,9 @@ export function buildStartSafeScalperPlan({
   const safeLot = clampLot(Math.max(0.01, clampLot(lot) * 0.5));
   // START always uses M30 + H1 + H4 threads (ignore pair trade stepper).
   const threads = START_THREAD_COUNT;
-  const biasLabel = mentorSide
-    ? `mentor ${mentorSide}`
-    : `M30 EMA ${side}`;
+  const biasLabel = barSide
+    ? `M30 EMA ${side}`
+    : `mentor ${side}`;
 
   return {
     skip: false,
@@ -368,6 +368,8 @@ function buildScannerAlignedSetup({
   const tfRaw = normalizeChartTimeframe(timeframe || "M30");
   const tf = ["M30", "H1", "H4"].includes(tfRaw) ? tfRaw : "M30";
   // Always TP1 1:2 · TP2 1:3 · TP3 1:4 — even when AI labels the chart H4.
+  // trustSide: keep AI/scalper BUY|SELL; repair a wrong-side SL instead of
+  // flipping BUY→SELL (that made START look "sell-only").
   const levels = buildSafeMultiTpLevels({
     symbol,
     side: normalizeTradeSide(side, { entry, stopLoss, trustSide: true }),
@@ -375,6 +377,7 @@ function buildScannerAlignedSetup({
     stopLoss,
     timeframe: tf,
     rewardMultiples: START_TP_REWARD_MULTIPLES,
+    trustSide: true,
   });
   return {
     symbol,
@@ -567,8 +570,21 @@ async function openPairSilent({
         code: "PAIR_ALREADY_OPEN",
       };
     }
-  } catch {
-    // Soft-fail — placeTrade still enforces opposite-direction server-side.
+  } catch (error) {
+    // Do not open blind — a failed check previously let same-direction SELL
+    // stack while BUY was blocked server-side by opposite-direction.
+    return {
+      ok: false,
+      symbol: tradeSymbol,
+      opened: 0,
+      tradeCount,
+      side: signal.side,
+      mode,
+      error:
+        error?.message ||
+        "Could not verify open trades — try START again",
+      code: "POSITION_CHECK_FAILED",
+    };
   }
 
   let opened = 0;
