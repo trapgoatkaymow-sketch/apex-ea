@@ -516,12 +516,19 @@
         tS.textContent = pad2(s);
       }
 
+      let purchasesEndAtMs = null;
+
       function showCountdownEndedUi() {
         // Display-only — keep checkout / PayPal working after the timer hits 0.
         timerEl.classList.add("is-expired");
         paintDigits(0);
         timerLabel.textContent = "Offer ending soon";
-        timerEnds.textContent = "Still open — complete checkout below";
+        if (Number.isFinite(purchasesEndAtMs) && purchasesEndAtMs > Date.now()) {
+          timerEnds.textContent =
+            "Still open until " + formatEndLocal(purchasesEndAtMs) + " — complete checkout below";
+        } else {
+          timerEnds.textContent = "Still open — complete checkout below";
+        }
         endedBox.classList.add("hidden");
         buyForm.classList.remove("hidden");
         giveawayActive = true;
@@ -887,19 +894,42 @@
           const serverEnd = Date.parse(
             windowInfo.countdownEndsAt || windowInfo.endsAt || ""
           );
+          const serverPurchasesEnd = Date.parse(
+            windowInfo.purchasesEndAt || ""
+          );
+          if (Number.isFinite(serverPurchasesEnd) && serverPurchasesEnd > 0) {
+            purchasesEndAtMs = serverPurchasesEnd;
+          }
           if (Number.isFinite(serverEnd) && serverEnd > 0) {
             // Align local urgency countdown to the shared display end time.
+            // Keep zeros if the display deadline is already past.
             endsAtMs = serverEnd;
             timerSynced = true;
             tickTimer();
           }
-          // Timer hitting zero must NOT hide checkout — payments stay open.
+          // Timer hitting zero must NOT hide checkout — payments stay open
+          // until purchasesEndAt (if set).
           if (windowInfo.notStarted) {
             giveawayActive = false;
             buyForm.classList.add("hidden");
             hidePayUi();
             timerLabel.textContent = "Starts soon";
             setMsg("This giveaway has not started yet. Check back soon.", "err");
+            return;
+          }
+          if (
+            windowInfo.purchaseOpen === false ||
+            windowInfo.purchasesExpired === true
+          ) {
+            giveawayActive = false;
+            buyForm.classList.add("hidden");
+            hidePayUi();
+            timerEl.classList.add("is-expired");
+            paintDigits(0);
+            timerLabel.textContent = "Offer ended";
+            timerEnds.textContent = "This special has closed";
+            endedBox.classList.remove("hidden");
+            setMsg("This giveaway special has ended.", "err");
             return;
           }
           giveawayActive = windowInfo.purchaseOpen !== false;
