@@ -76,9 +76,7 @@ export default function TradeScriptOrb({
   showToast,
   startsLeft = null,
   startQuota = 10,
-  /** Parent bump (History glass btn) → open panel on history only, no execute. */
-  historyFocus = 0,
-  /** Start trading from the panel without needing the home START circle. */
+  /** Start trading from the welcome panel (never from History view). */
   onStartTrading = null,
   /** True while robot is already running / opening. */
   isRunning = false,
@@ -301,14 +299,6 @@ export default function TradeScriptOrb({
     }
     wasOpeningRef.current = isOpening;
   }, [isOpening, visible]);
-
-  // Home History button — view taken trades without executing.
-  useEffect(() => {
-    if (!historyFocus) return;
-    setTradeHistory(loadTradeHistory());
-    setHistoryOpen(true);
-    setScriptOpen(true);
-  }, [historyFocus]);
 
   useEffect(() => {
     if (!scriptOpen) return undefined;
@@ -568,7 +558,7 @@ export default function TradeScriptOrb({
               </p>
             ) : (
               <p className="trade-script-note">
-                Tap History anytime — use Start trading only when you want orders.
+                Tap the robot bubble for history. Use Start trading only to open orders.
               </p>
             )}
             {historyOpen ? (
@@ -635,13 +625,20 @@ export default function TradeScriptOrb({
                 <span className="trade-script-caret" aria-hidden="true" />
               </pre>
             )}
-            <div className="trade-script-actions">
-              {isOpening || historyOpen ? (
+            {historyOpen ? (
+              <div className="trade-script-actions">
                 <button className="trade-script-copy" type="button" onClick={copyScript}>
-                  {historyOpen ? "Copy history" : "Copy script"}
+                  Copy history
                 </button>
-              ) : null}
-              {!isOpening && !isRunning && typeof onStartTrading === "function" ? (
+              </div>
+            ) : isOpening ? (
+              <div className="trade-script-actions">
+                <button className="trade-script-copy" type="button" onClick={copyScript}>
+                  Copy script
+                </button>
+              </div>
+            ) : !isRunning && typeof onStartTrading === "function" ? (
+              <div className="trade-script-actions">
                 <button
                   className="trade-script-start"
                   type="button"
@@ -650,8 +647,8 @@ export default function TradeScriptOrb({
                 >
                   Start trading
                 </button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

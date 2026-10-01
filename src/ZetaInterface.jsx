@@ -78,8 +78,6 @@ export default function ZetaInterface() {
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
   const [startsLeft, setStartsLeft] = useState(() => loadStartsLeft());
-  /** Bump to open History panel without starting trades. */
-  const [historyFocus, setHistoryFocus] = useState(0);
 
   useEffect(() => {
     if (zetaView !== "symbol-edit" || !editingSymbol) return;
@@ -367,16 +365,6 @@ export default function ZetaInterface() {
                   <span>Remove bot</span>
                 </button>
               </div>
-              <div className="action-row action-row-secondary">
-                <button
-                  className="glass-btn glass-btn-wide"
-                  type="button"
-                  onClick={() => setHistoryFocus((n) => n + 1)}
-                  aria-label="View taken trades history"
-                >
-                  <span>History</span>
-                </button>
-              </div>
               {running && startStatus ? (
                 <p className="start-countdown" aria-live="polite">
                   {startStatus === "scanning"
@@ -584,7 +572,6 @@ export default function ZetaInterface() {
         showToast={showToast}
         startsLeft={startsLeft}
         startQuota={START_QUOTA_DAILY}
-        historyFocus={historyFocus}
         isRunning={running}
         onStartTrading={() => {
           if (!running) toggleRun();

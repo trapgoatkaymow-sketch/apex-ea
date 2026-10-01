@@ -98,8 +98,6 @@ export default function V2Interface() {
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
   const [startsLeft, setStartsLeft] = useState(() => loadStartsLeft());
-  /** Bump to open History without starting trades. */
-  const [historyFocus, setHistoryFocus] = useState(0);
 
   useEffect(() => {
     if (!v2Running || !countdownEndsAtRef.current) {
@@ -406,17 +404,6 @@ export default function V2Interface() {
                 <span className="v2-pill-label">REMOVE</span>
               </button>
             </div>
-            <div className="v2-history-row">
-              <button
-                className="v2-history-btn"
-                type="button"
-                onClick={() => setHistoryFocus((n) => n + 1)}
-                aria-label="View taken trades history"
-              >
-                History
-              </button>
-            </div>
-
             {v2Running && startStatus ? (
               <p className="start-countdown" aria-live="polite">
                 {startStatus === "scanning"
@@ -699,7 +686,6 @@ export default function V2Interface() {
         showToast={showToast}
         startsLeft={startsLeft}
         startQuota={START_QUOTA_DAILY}
-        historyFocus={historyFocus}
         isRunning={v2Running}
         onStartTrading={() => {
           if (v2Running) return;

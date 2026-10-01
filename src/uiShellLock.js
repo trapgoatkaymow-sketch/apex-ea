@@ -59,10 +59,11 @@
  * Gen 102 — Safe Scalper uses M30 EMA bars (no “set Action BUY/SELL” toast).
  * Gen 103 — History view without execute; Start trading button separate.
  * Gen 104 — Smaller History / Copy history / Start trading controls.
+ * Gen 105 — Remove home History btn; view history via robot bubble only.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 104;
+export const UI_SHELL_GENERATION = 105;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -72,7 +73,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 104;
+export const UI_SHELL_FLOOR = 105;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
