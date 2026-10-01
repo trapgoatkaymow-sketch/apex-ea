@@ -699,33 +699,56 @@ async function ensurePurchaseEmail(license, { force = false } = {}) {
       emailSentAt: Number(license.emailSentAt),
     };
   }
+
+  // Capture-level guard: one PayPal payment → one email (primary key only).
+  const captureKey = String(license.purchaseCaptureId || "").trim();
+  if (!force && captureKey) {
+    try {
+      const all = await listLicenses({ preferFresh: true });
+      const siblings = (all || []).filter(
+        (row) => String(row?.purchaseCaptureId || "").trim() === captureKey
+      );
+      const already = siblings.find((row) => Number(row?.emailSentAt));
+      if (already?.key) {
+        if (already.key !== license.key) {
+          try {
+            const { markLicenseEmailSent } = await import("../licenses/_lib.js");
+            await markLicenseEmailSent(
+              license.key,
+              Number(already.emailSentAt) || Date.now()
+            );
+          } catch {
+            // non-fatal
+          }
+        }
+        return {
+          ok: true,
+          skipped: true,
+          reason: "already-sent-capture",
+          emailSentAt: Number(already.emailSentAt) || Date.now(),
+          primaryKey: already.key,
+        };
+      }
+      // Prefer oldest key for this capture — never email a duplicate mint.
+      const primary = siblings.sort(
+        (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+      )[0];
+      if (primary?.key && primary.key !== license.key) {
+        return ensurePurchaseEmail(primary, { force: false });
+      }
+    } catch {
+      // continue with this license
+    }
+  }
+
   const mailLicense = purchaseMailPayload(license);
   let last = null;
-  // Paid buyers must get the key + WhatsApp link — retry Brevo hard.
+  // Paid buyers must get the key + WhatsApp link — retry without re-blasting.
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      last = await sendLicenseKeyEmailOnce(mailLicense, {
-        force: force || attempt > 0,
-      });
-      if (last?.ok || Number(last?.emailSentAt)) return last;
-    } catch (error) {
-      last = { ok: false, error: error?.message || "Email send failed" };
-    }
-    // Fallback: call Brevo directly (bypass claim races) then stamp.
-    try {
-      const { sendLicenseKeyEmail } = await import("../_brevo.js");
-      const direct = await sendLicenseKeyEmail(mailLicense);
-      if (direct?.ok) {
-        try {
-          const { markLicenseEmailSent } = await import("../licenses/_lib.js");
-          const stamp = Date.now();
-          await markLicenseEmailSent(mailLicense.key, stamp);
-          return { ...direct, emailSentAt: stamp };
-        } catch {
-          return { ...direct, emailSentAt: Date.now() };
-        }
-      }
-      last = direct || last;
+      // Never force on retries — force was re-sending the same key many times.
+      last = await sendLicenseKeyEmailOnce(mailLicense, { force: false });
+      if (last?.ok || Number(last?.emailSentAt) || last?.skipped) return last;
     } catch (error) {
       last = { ok: false, error: error?.message || "Email send failed" };
     }
@@ -772,10 +795,8 @@ export async function fulfillRobotPurchase({
       orderKey,
     });
     if (existing?.key) {
-      let emailResult = await ensurePurchaseEmail(existing);
-      if (!(emailResult?.ok || Number(emailResult?.emailSentAt) || Number(existing.emailSentAt))) {
-        emailResult = await ensurePurchaseEmail(existing, { force: true });
-      }
+      // Never force-resend here — capture+webhook both calling force was inbox spam.
+      const emailResult = await ensurePurchaseEmail(existing, { force: false });
       const license = Number(emailResult?.emailSentAt)
         ? { ...existing, emailSentAt: emailResult.emailSentAt }
         : existing;
@@ -902,12 +923,11 @@ export async function fulfillRobotPurchase({
   }
 
   let emailResult = license?._email || null;
-  if (!Number(license?.emailSentAt) && !(emailResult?.ok || Number(emailResult?.emailSentAt))) {
-    emailResult = await ensurePurchaseEmail(license);
-  }
-  // createLicense may have returned a soft email failure — force more passes.
-  if (!Number(license?.emailSentAt) && !(emailResult?.ok || Number(emailResult?.emailSentAt))) {
-    emailResult = await ensurePurchaseEmail(license, { force: true });
+  if (
+    !Number(license?.emailSentAt) &&
+    !(emailResult?.ok || Number(emailResult?.emailSentAt) || emailResult?.skipped)
+  ) {
+    emailResult = await ensurePurchaseEmail(license, { force: false });
   }
   if (emailResult?.emailSentAt) {
     license = { ...license, emailSentAt: emailResult.emailSentAt };

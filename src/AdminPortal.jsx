@@ -6556,16 +6556,22 @@ export default function AdminPortal() {
                 const actionKey = `email:${latestKey}`;
                 setLicenseActionBusy(actionKey);
                 try {
-                  const data = await resendLicenseEmailRemote({
-                    key: latestKey,
-                    clientEmail: latestLicenseMeta?.email,
-                    clientName: latestLicenseMeta?.name,
-                    botName: latestLicenseMeta?.botName,
-                    mentorName: latestLicenseMeta?.mentorName,
-                    mentorEmail: latestLicenseMeta?.mentorEmail,
-                    duration: latestLicenseMeta?.durationId || latestLicenseMeta?.duration,
-                    expiresAt: latestLicenseMeta?.expiresAt,
-                  });
+                  const data = await resendLicenseEmailRemote(
+                    {
+                      key: latestKey,
+                      clientEmail: latestLicenseMeta?.email,
+                      clientName: latestLicenseMeta?.name,
+                      botName: latestLicenseMeta?.botName,
+                      mentorName: latestLicenseMeta?.mentorName,
+                      mentorEmail: latestLicenseMeta?.mentorEmail,
+                      duration:
+                        latestLicenseMeta?.durationId ||
+                        latestLicenseMeta?.duration,
+                      expiresAt: latestLicenseMeta?.expiresAt,
+                    },
+                    // Explicit single-key Resend may re-deliver; Send-all cannot.
+                    { force: true }
+                  );
                   if (data?.ok || data?.email?.ok) {
                     showToast(`License emailed to ${latestLicenseMeta?.email}`);
                   } else if (data?.email?.skipped) {

@@ -1531,12 +1531,15 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
   };
 }
 
-async function mutateStore(mutator, message) {
+async function mutateStore(mutator, message, { preferFresh = false } = {}) {
   let lastError;
   let lastWrite = null;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
-      const store = await readStore();
+      // Paid capture races need a fresh durable read or two instances mint two keys.
+      const store = await readStore({
+        preferFresh: preferFresh || attempt > 0,
+      });
       const deletedKeys = { ...normalizeDeletedKeys(store.deletedKeys) };
       const api = {
         deletedKeys,
@@ -1722,7 +1725,8 @@ export async function createLicense(payload = {}) {
 
   let result = null;
   let createdNew = false;
-  const write = await mutateStore((licenses, api) => {
+  const write = await mutateStore(
+    (licenses, api) => {
     if (api?.isDeleted?.(key)) {
       const err = new Error("This license key was permanently deleted");
       err.status = 410;
@@ -1730,12 +1734,16 @@ export async function createLicense(payload = {}) {
     }
 
     // Idempotent PayPal fulfill: same capture must not mint a second key
-    // (capture-order + webhook race).
+    // (capture-order + webhook race). Prefer the oldest row for that capture.
     if (purchaseCaptureId) {
-      const byCapture = licenses.find(
-        (row) =>
-          String(row?.purchaseCaptureId || "").trim() === purchaseCaptureId
-      );
+      const byCapture = licenses
+        .filter(
+          (row) =>
+            String(row?.purchaseCaptureId || "").trim() === purchaseCaptureId
+        )
+        .sort(
+          (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+        )[0];
       if (byCapture?.key) {
         createdNew = false;
         const idx = licenses.findIndex((row) => row.key === byCapture.key);
@@ -1758,12 +1766,16 @@ export async function createLicense(payload = {}) {
     }
     // Same buyer + bot + PayPal order (capture id not visible yet on one side).
     if (purchaseOrderId) {
-      const byOrder = licenses.find(
-        (row) =>
-          normalizeEmail(row?.clientEmail) === clientEmail &&
-          String(row?.botId || "").trim() === botId &&
-          String(row?.purchaseOrderId || "").trim() === purchaseOrderId
-      );
+      const byOrder = licenses
+        .filter(
+          (row) =>
+            normalizeEmail(row?.clientEmail) === clientEmail &&
+            String(row?.botId || "").trim() === botId &&
+            String(row?.purchaseOrderId || "").trim() === purchaseOrderId
+        )
+        .sort(
+          (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+        )[0];
       if (byOrder?.key) {
         createdNew = false;
         const idx = licenses.findIndex((row) => row.key === byOrder.key);
@@ -1776,6 +1788,42 @@ export async function createLicense(payload = {}) {
           purchaseSource:
             String(byOrder.purchaseSource || "").trim() || purchaseSource,
           emailSentAt: byOrder.emailSentAt || null,
+          updatedAt: Date.now(),
+        };
+        if (idx >= 0) licenses[idx] = result;
+        return licenses;
+      }
+    }
+    // Soft idempotency: same buyer+bot paid row created in the last 15 minutes
+    // (covers webhook/capture races where one side lacked captureId briefly).
+    if (clientEmail && botId && (purchaseCaptureId || purchaseSource)) {
+      const recentPaid = licenses
+        .filter((row) => {
+          if (normalizeEmail(row?.clientEmail) !== clientEmail) return false;
+          if (String(row?.botId || "").trim() !== botId) return false;
+          const src = String(row?.purchaseSource || "").toLowerCase();
+          if (!src.includes("paypal") && !src.includes("giveaway") && !src.includes("robot")) {
+            return false;
+          }
+          const age = Date.now() - (Number(row?.createdAt) || 0);
+          return age >= 0 && age < 15 * 60 * 1000;
+        })
+        .sort(
+          (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+        )[0];
+      if (recentPaid?.key) {
+        createdNew = false;
+        const idx = licenses.findIndex((row) => row.key === recentPaid.key);
+        result = {
+          ...recentPaid,
+          purchaseCaptureId:
+            String(recentPaid.purchaseCaptureId || "").trim() ||
+            purchaseCaptureId,
+          purchaseOrderId:
+            String(recentPaid.purchaseOrderId || "").trim() || purchaseOrderId,
+          purchaseSource:
+            String(recentPaid.purchaseSource || "").trim() || purchaseSource,
+          emailSentAt: recentPaid.emailSentAt || null,
           updatedAt: Date.now(),
         };
         if (idx >= 0) licenses[idx] = result;
@@ -1870,7 +1918,11 @@ export async function createLicense(payload = {}) {
       bot,
     };
     return [result, ...licenses];
-  }, `license: ${key} · ${clientEmail}`);
+  },
+    `license: ${key} · ${clientEmail}`,
+    // Fresh read on paid mints so capture+webhook cannot both invent keys.
+    { preferFresh: Boolean(purchaseCaptureId || purchaseOrderId || purchaseSource) }
+  );
 
   // Never hand out a key that only landed in ephemeral /tmp memory — cold
   // serverless instances will not see it and clients get "Invalid license key".
@@ -1895,13 +1947,82 @@ export async function createLicense(payload = {}) {
   if (!skipEmail) {
     const alreadySent = Number(result?.emailSentAt);
     const keyAgeMs = Date.now() - (Number(result?.createdAt) || Date.now());
-    if (alreadySent) {
+    // Capture-level dedupe: if any sibling key for this PayPal capture already
+    // emailed, do not send another (stops multi-key spam to the same buyer).
+    let captureAlreadyEmailed = null;
+    if (!alreadySent && purchaseCaptureId) {
+      try {
+        const fresh = await listLicenses({ preferFresh: true });
+        const siblings = (fresh || []).filter(
+          (row) =>
+            String(row?.purchaseCaptureId || "").trim() === purchaseCaptureId
+        );
+        const emailed = siblings
+          .filter((row) => Number(row?.emailSentAt))
+          .sort(
+            (a, b) => (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0)
+          )[0];
+        if (emailed?.key && emailed.key !== result?.key) {
+          captureAlreadyEmailed = emailed;
+        }
+        // If we are a duplicate mint, prefer the oldest primary and never email us.
+        const primary = siblings.sort(
+          (a, b) => (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0)
+        )[0];
+        if (
+          primary?.key &&
+          result?.key &&
+          primary.key !== result.key &&
+          createdNew
+        ) {
+          createdNew = false;
+          result = {
+            ...primary,
+            purchaseCaptureId,
+            purchaseOrderId:
+              String(primary.purchaseOrderId || "").trim() || purchaseOrderId,
+            purchaseSource:
+              String(primary.purchaseSource || "").trim() || purchaseSource,
+          };
+          if (Number(primary.emailSentAt)) {
+            email = {
+              ok: true,
+              skipped: true,
+              reason: "already-sent-capture",
+              emailSentAt: Number(primary.emailSentAt),
+            };
+          }
+        }
+      } catch {
+        // non-fatal
+      }
+    }
+    if (email?.reason === "already-sent-capture") {
+      // already set above
+    } else if (alreadySent || Number(result?.emailSentAt)) {
       email = {
         ok: true,
         skipped: true,
         reason: "already-sent",
-        emailSentAt: alreadySent,
+        emailSentAt: Number(result?.emailSentAt) || alreadySent,
       };
+    } else if (captureAlreadyEmailed) {
+      // Stamp this duplicate quietly so future retries do not blast Brevo again.
+      try {
+        await markLicenseEmailSent(
+          result.key,
+          Number(captureAlreadyEmailed.emailSentAt) || Date.now()
+        );
+      } catch {
+        // non-fatal
+      }
+      email = {
+        ok: true,
+        skipped: true,
+        reason: "already-sent-capture",
+        emailSentAt: Number(captureAlreadyEmailed.emailSentAt) || Date.now(),
+      };
+      result = { ...result, emailSentAt: email.emailSentAt };
     } else if (createdNew || isPaidPurchase || keyAgeMs < 3 * 60 * 1000) {
       try {
         email = await sendLicenseKeyEmailOnce(result, { force: false });

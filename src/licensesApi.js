@@ -518,7 +518,7 @@ export async function createLicensesBulkRemote(payload) {
 }
 
 /** Resend the license key email via Brevo. */
-export async function resendLicenseEmailRemote(keyOrLicense) {
+export async function resendLicenseEmailRemote(keyOrLicense, { force = false } = {}) {
   const key =
     typeof keyOrLicense === "string"
       ? keyOrLicense
@@ -528,6 +528,8 @@ export async function resendLicenseEmailRemote(keyOrLicense) {
     body: {
       action: "resend-email",
       key,
+      // Bulk "Send all" must stay once-only; single-key Resend can force.
+      force: Boolean(force),
       license: typeof keyOrLicense === "object" ? keyOrLicense : undefined,
     },
   });

@@ -147,41 +147,29 @@ export default async function handler(req, res) {
           includeWhatsapp: true,
           forceWhatsapp: true,
         };
-        waitUntil(
-          (async () => {
-            let ok = emailSent;
-            for (let attempt = 0; attempt < 4 && !ok; attempt += 1) {
-              try {
-                const again = await sendLicenseKeyEmailOnce(mailLicense, {
-                  force: true,
-                });
-                ok = Boolean(again?.ok || Number(again?.emailSentAt));
-                if (ok) break;
-              } catch {
-                // retry
-              }
-              try {
-                const { sendLicenseKeyEmail } = await import("../_brevo.js");
-                const direct = await sendLicenseKeyEmail(mailLicense);
-                if (direct?.ok) {
-                  try {
-                    const { markLicenseEmailSent } = await import(
-                      "../licenses/_lib.js"
-                    );
-                    await markLicenseEmailSent(mailLicense.key, Date.now());
-                  } catch {
-                    // non-fatal
-                  }
-                  ok = true;
-                  break;
+        // Only background-retry when the key was NOT emailed yet.
+        // force:true + direct Brevo was spam-sending duplicate keys to buyers.
+        if (!emailSent) {
+          waitUntil(
+            (async () => {
+              let ok = false;
+              for (let attempt = 0; attempt < 4 && !ok; attempt += 1) {
+                try {
+                  const again = await sendLicenseKeyEmailOnce(mailLicense, {
+                    force: false,
+                  });
+                  ok = Boolean(
+                    again?.ok || Number(again?.emailSentAt) || again?.skipped
+                  );
+                  if (ok) break;
+                } catch {
+                  // retry
                 }
-              } catch {
-                // retry
+                await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
               }
-              await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
-            }
-          })()
-        );
+            })()
+          );
+        }
       }
 
       sendJson(res, 200, {

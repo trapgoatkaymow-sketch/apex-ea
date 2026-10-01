@@ -191,15 +191,16 @@ export default async function handler(req, res) {
           sendJson(res, 404, { error: "License not found" });
           return;
         }
+        // Explicit force only when portal asks — default is once-per-key so
+        // "Send all" / double-clicks cannot spam the same inbox with many keys.
+        const forceResend =
+          body.force === true ||
+          String(body.force || "").toLowerCase() === "true";
         // Return immediately — Brevo send continues in the background.
         waitUntil(
           (async () => {
             try {
-              const { sendLicenseKeyEmail } = await import("../_brevo.js");
-              const email = await sendLicenseKeyEmail(license);
-              if (email?.ok) {
-                await markLicenseEmailSent(license.key).catch(() => null);
-              }
+              await sendLicenseKeyEmailOnce(license, { force: forceResend });
             } catch {
               // background
             }
@@ -237,6 +238,8 @@ export default async function handler(req, res) {
           });
           return;
         }
+        // Hard default: only email purchases that never got a stamp.
+        // onlyMissing:false caused mass re-blasts of old keys.
         const result = await resendPurchaseLicenseEmails({
           limit: body.limit,
           concurrency: body.concurrency,
