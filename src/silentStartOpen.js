@@ -1,6 +1,6 @@
 /**
  * Silent START → Chart Scanner style open (no scanner UI):
- *   15s “Opening positions” countdown → OpenAI scan (M30/H1/H4) → open
+ *   15s “Analysing the chart” countdown → OpenAI scan (M30/H1/H4) → open
  *   Number of trades for every pair in Your pairs.
  *
  * START always uses the scanner non-H4 ladder:
@@ -41,7 +41,7 @@ export const START_SCANNER_TIMEFRAMES = ["M30", "H1", "H4"];
 
 const TF_FOR_TP_SLOT = ["M30", "H1", "H4"];
 
-/** Seconds left for the START “Opening positions” countdown. */
+/** Seconds left for the START “Analysing the chart” countdown. */
 export function formatStartCountdownSeconds(ms) {
   return String(Math.max(0, Math.ceil(Number(ms) / 1000)));
 }
