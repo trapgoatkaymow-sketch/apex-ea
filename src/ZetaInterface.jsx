@@ -78,6 +78,8 @@ export default function ZetaInterface() {
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
   const [startsLeft, setStartsLeft] = useState(() => loadStartsLeft());
+  /** Bump to open History panel without starting trades. */
+  const [historyFocus, setHistoryFocus] = useState(0);
 
   useEffect(() => {
     if (zetaView !== "symbol-edit" || !editingSymbol) return;
@@ -340,8 +342,8 @@ export default function ZetaInterface() {
                     running
                       ? "STOP"
                       : startsLeft <= 0
-                        ? "START locked — 0 chances left today"
-                        : `START · ${startsLeft} of ${START_QUOTA_DAILY} left today`
+                        ? "Start trading locked — 0 chances left today"
+                        : `Start trading · ${startsLeft} of ${START_QUOTA_DAILY} left today`
                   }
                 >
                   <span className="stop-energy" aria-hidden="true">
@@ -350,7 +352,11 @@ export default function ZetaInterface() {
                     ))}
                   </span>
                   <span className="stop-core-glow" aria-hidden="true" />
-                  <span className="stop-label">{running ? "STOP" : "START"}</span>
+                  <span
+                    className={`stop-label${running ? "" : " is-start-trading"}`}
+                  >
+                    {running ? "STOP" : "Start trading"}
+                  </span>
                   {!running ? (
                     <span className="stop-quota" aria-hidden="true">
                       {startsLeft}/{START_QUOTA_DAILY}
@@ -359,6 +365,16 @@ export default function ZetaInterface() {
                 </button>
                 <button className="glass-btn" type="button" onClick={removeActiveBot}>
                   <span>Remove bot</span>
+                </button>
+              </div>
+              <div className="action-row action-row-secondary">
+                <button
+                  className="glass-btn glass-btn-wide"
+                  type="button"
+                  onClick={() => setHistoryFocus((n) => n + 1)}
+                  aria-label="View taken trades history"
+                >
+                  <span>History</span>
                 </button>
               </div>
               {running && startStatus ? (
@@ -555,7 +571,7 @@ export default function ZetaInterface() {
       </nav>
 
       <TradeScriptOrb
-        visible={(running || Boolean(orbTradeLive)) && zetaView === "home"}
+        visible={Boolean(activeBot) && zetaView === "home"}
         photoSrc={floatSrc}
         botId={activeBot?.id || ""}
         bot={activeBot}
@@ -568,6 +584,11 @@ export default function ZetaInterface() {
         showToast={showToast}
         startsLeft={startsLeft}
         startQuota={START_QUOTA_DAILY}
+        historyFocus={historyFocus}
+        isRunning={running}
+        onStartTrading={() => {
+          if (!running) toggleRun();
+        }}
       />
     </div>
   );

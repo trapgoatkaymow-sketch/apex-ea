@@ -76,6 +76,12 @@ export default function TradeScriptOrb({
   showToast,
   startsLeft = null,
   startQuota = 10,
+  /** Parent bump (History glass btn) → open panel on history only, no execute. */
+  historyFocus = 0,
+  /** Start trading from the panel without needing the home START circle. */
+  onStartTrading = null,
+  /** True while robot is already running / opening. */
+  isRunning = false,
 }) {
   const [floatPos, setFloatPos] = useState(() => loadFloatPos(storageKey));
   const [scriptOpen, setScriptOpen] = useState(false);
@@ -290,10 +296,19 @@ export default function TradeScriptOrb({
   // When the robot starts opening trades, open the panel and type the trade script.
   useEffect(() => {
     if (isOpening && !wasOpeningRef.current && visible) {
+      setHistoryOpen(false);
       setScriptOpen(true);
     }
     wasOpeningRef.current = isOpening;
   }, [isOpening, visible]);
+
+  // Home History button — view taken trades without executing.
+  useEffect(() => {
+    if (!historyFocus) return;
+    setTradeHistory(loadTradeHistory());
+    setHistoryOpen(true);
+    setScriptOpen(true);
+  }, [historyFocus]);
 
   useEffect(() => {
     if (!scriptOpen) return undefined;
@@ -366,6 +381,13 @@ export default function TradeScriptOrb({
       saveFloatPos(storageKey, next);
       return;
     }
+    // Idle tap → history only (never starts trading).
+    if (!isOpening) {
+      setTradeHistory(loadTradeHistory());
+      setHistoryOpen(true);
+    } else {
+      setHistoryOpen(false);
+    }
     setScriptOpen(true);
   }
 
@@ -402,6 +424,17 @@ export default function TradeScriptOrb({
     showToast?.("Trade history cleared");
   }
 
+  function handleStartTrading() {
+    if (typeof onStartTrading !== "function") return;
+    if (isRunning || isOpening) return;
+    if (startsLeft != null && Number(startsLeft) <= 0) {
+      showToast?.("Daily START limit reached (10). Try again tomorrow.");
+      return;
+    }
+    setHistoryOpen(false);
+    onStartTrading();
+  }
+
   if (!visible && !scriptOpen) return null;
 
   return (
@@ -413,8 +446,16 @@ export default function TradeScriptOrb({
             isOpening ? " is-trading" : ""
           }`}
           type="button"
-          aria-label={isOpening ? `${displayName} opening trades` : `${displayName} welcome`}
-          title={isOpening ? "Drag to move · tap for trade script" : "Drag to move · tap to open"}
+          aria-label={
+            isOpening
+              ? `${displayName} opening trades`
+              : `${displayName} — tap for trade history`
+          }
+          title={
+            isOpening
+              ? "Drag to move · tap for trade script"
+              : "Drag to move · tap to view history (does not start trading)"
+          }
           style={
             floatPos
               ? { left: `${floatPos.x}px`, top: `${floatPos.y}px`, right: "auto", bottom: "auto" }
@@ -518,13 +559,17 @@ export default function TradeScriptOrb({
               </p>
             ) : null}
             {historyOpen ? (
-              <p className="trade-script-note">Saved on this device · does not reset overnight.</p>
+              <p className="trade-script-note">
+                View only · does not start trading · saved on this device.
+              </p>
             ) : isOpening ? (
               <p className="trade-script-note">
                 Comment tag <strong>{tradeComment}</strong>
               </p>
             ) : (
-              <p className="trade-script-note">Your robot is standing by.</p>
+              <p className="trade-script-note">
+                Tap History anytime — use Start trading only when you want orders.
+              </p>
             )}
             {historyOpen ? (
               <div className="trade-history-list" role="list">
@@ -590,13 +635,23 @@ export default function TradeScriptOrb({
                 <span className="trade-script-caret" aria-hidden="true" />
               </pre>
             )}
-            {isOpening || historyOpen ? (
-              <div className="trade-script-actions">
+            <div className="trade-script-actions">
+              {isOpening || historyOpen ? (
                 <button className="trade-script-copy" type="button" onClick={copyScript}>
                   {historyOpen ? "Copy history" : "Copy script"}
                 </button>
-              </div>
-            ) : null}
+              ) : null}
+              {!isOpening && !isRunning && typeof onStartTrading === "function" ? (
+                <button
+                  className="trade-script-start"
+                  type="button"
+                  onClick={handleStartTrading}
+                  disabled={startsLeft != null && Number(startsLeft) <= 0}
+                >
+                  Start trading
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

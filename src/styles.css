@@ -1007,6 +1007,25 @@ html:has(.phone[data-interface="v2"]) body {
     0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
+.stop-label.is-start-trading {
+  font-size: 0.56rem;
+  letter-spacing: 0.03em;
+  line-height: 1.12;
+  max-width: 4.6rem;
+  text-align: center;
+  white-space: normal;
+  text-transform: none;
+}
+
+.action-row-secondary {
+  margin-top: 8px;
+  justify-content: center;
+}
+
+.glass-btn-wide {
+  min-width: min(220px, 72vw);
+}
+
 .stop-quota {
   position: relative;
   z-index: 2;
@@ -6944,6 +6963,7 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .trade-script-copy,
+.trade-script-start,
 .v2-script-copy {
   flex: 1;
   border: 0;
@@ -6955,6 +6975,37 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   color: #fff;
   background: linear-gradient(180deg, var(--pink-soft) 0%, var(--pink-deep) 100%);
   box-shadow: 0 10px 22px rgba(var(--pink-hot-rgb), 0.35);
+}
+
+.trade-script-start {
+  letter-spacing: 0.03em;
+  text-transform: none;
+  font-size: 0.95rem;
+}
+
+.trade-script-start:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+.v2-history-row {
+  display: flex;
+  justify-content: center;
+  margin: 8px 18px 0;
+}
+
+.v2-history-btn {
+  min-width: min(220px, 72vw);
+  border: 1px solid rgba(var(--pink-rgb), 0.35);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(12, 4, 10, 0.72);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
 }
 
 

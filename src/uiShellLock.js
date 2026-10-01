@@ -57,10 +57,11 @@
  * Gen 100 — Tighter scalper SL/TP; fix null SL→0 blowing stops far out.
  * Gen 101 — START Safe Scalper when OpenAI credits/API fail (no blind BUY).
  * Gen 102 — Safe Scalper uses M30 EMA bars (no “set Action BUY/SELL” toast).
+ * Gen 103 — History view without execute; Start trading button separate.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 102;
+export const UI_SHELL_GENERATION = 103;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -70,7 +71,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 102;
+export const UI_SHELL_FLOOR = 103;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

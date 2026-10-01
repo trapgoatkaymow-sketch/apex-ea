@@ -98,6 +98,8 @@ export default function V2Interface() {
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
   const [startsLeft, setStartsLeft] = useState(() => loadStartsLeft());
+  /** Bump to open History without starting trades. */
+  const [historyFocus, setHistoryFocus] = useState(0);
 
   useEffect(() => {
     if (!v2Running || !countdownEndsAtRef.current) {
@@ -248,8 +250,8 @@ export default function V2Interface() {
                   v2Running
                     ? "STOP"
                     : startsLeft <= 0
-                      ? "TRADE locked — 0 chances left today"
-                      : `TRADE · ${startsLeft} of ${START_QUOTA_DAILY} left today`
+                      ? "Start trading locked — 0 chances left today"
+                      : `Start trading · ${startsLeft} of ${START_QUOTA_DAILY} left today`
                 }
                 onClick={() => {
                   if (v2Running) {
@@ -384,7 +386,9 @@ export default function V2Interface() {
                     </svg>
                   )}
                 </span>
-                <span className="v2-pill-label">{v2Running ? "STOP" : "TRADE"}</span>
+                <span className="v2-pill-label">
+                  {v2Running ? "STOP" : "START"}
+                </span>
                 {!v2Running ? (
                   <span className="stop-quota" aria-hidden="true">
                     {startsLeft}/{START_QUOTA_DAILY}
@@ -400,6 +404,16 @@ export default function V2Interface() {
                   </svg>
                 </span>
                 <span className="v2-pill-label">REMOVE</span>
+              </button>
+            </div>
+            <div className="v2-history-row">
+              <button
+                className="v2-history-btn"
+                type="button"
+                onClick={() => setHistoryFocus((n) => n + 1)}
+                aria-label="View taken trades history"
+              >
+                History
               </button>
             </div>
 
@@ -672,7 +686,7 @@ export default function V2Interface() {
       </nav>
 
       <TradeScriptOrb
-        visible={(floatCycle || v2Running || Boolean(orbTradeLive)) && v2View === "home"}
+        visible={Boolean(activeBot) && v2View === "home"}
         photoSrc={floatSrc}
         botId={activeBot?.id || ""}
         bot={activeBot}
@@ -685,6 +699,12 @@ export default function V2Interface() {
         showToast={showToast}
         startsLeft={startsLeft}
         startQuota={START_QUOTA_DAILY}
+        historyFocus={historyFocus}
+        isRunning={v2Running}
+        onStartTrading={() => {
+          if (v2Running) return;
+          document.getElementById("v2-trade-btn")?.click();
+        }}
       />
     </div>
   );
