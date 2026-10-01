@@ -372,7 +372,13 @@
       "robotCompany": "Deriv (BVI) Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790769792080,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "US30",
+        "NAS100",
+        "XAGUSD",
+        "BTCUSD",
+        "XAUUSD.MICRO"
+      ],
       "clientSymbolsUpdatedAt": 1790830251459,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "26755822B0201874X",
@@ -10576,11 +10582,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -101725,11 +101727,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
