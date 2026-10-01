@@ -668,6 +668,7 @@
       "boundAt": 1790715810212,
       "updatedAt": 1790875164580,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "52d83556-75bc-4b9d-8b4d-1bdbeea1a2f8",
       "robotLogin": "987840315",
       "robotServer": "Trade245Global-Live",
@@ -691,8 +692,7 @@
           "GBPUSD",
           "EURUSD"
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-3NTD-F2ZC",
@@ -1698,6 +1698,56 @@
       }
     },
     {
+      "key": "APEX-NMG8-PKK6",
+      "botId": "phantomx-mupsqlt6",
+      "botName": "PhantomX",
+      "clientEmail": "dripmash6@gmail.com",
+      "clientName": "Thoriso Magagula",
+      "mainText": "Thoriso Magagula",
+      "mentorEmail": "dripmash6@gmail.com",
+      "mentorId": "d0179c03-52d0-43cf-8551-9f023ce9ceef",
+      "mentorName": "dripMASH",
+      "used": false,
+      "commissionEligible": false,
+      "commissionReason": "",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790875110794,
+      "usedAt": null,
+      "deviceId": null,
+      "boundAt": null,
+      "updatedAt": 1790875127723,
+      "scanReset": null,
+      "startReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790875127723,
+      "bot": {
+        "id": "phantomx-mupsqlt6",
+        "name": "PhantomX",
+        "photo": "/api/licenses/photo?botId=phantomx-mupsqlt6&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "BTCUSD",
+          "US30",
+          "USTECH",
+          "XAUUSD",
+          "DE30",
+          "AUDUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-UN8A-T8E8",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -2002,56 +2052,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-NMG8-PKK6",
-      "botId": "phantomx-mupsqlt6",
-      "botName": "PhantomX",
-      "clientEmail": "dripmash6@gmail.com",
-      "clientName": "Thoriso Magagula",
-      "mainText": "Thoriso Magagula",
-      "mentorEmail": "dripmash6@gmail.com",
-      "mentorId": "d0179c03-52d0-43cf-8551-9f023ce9ceef",
-      "mentorName": "dripMASH",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790875110794,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790875112348,
-      "scanReset": null,
-      "startReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "phantomx-mupsqlt6",
-        "name": "PhantomX",
-        "photo": "/api/licenses/photo?botId=phantomx-mupsqlt6&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "BTCUSD",
-          "US30",
-          "USTECH",
-          "XAUUSD",
-          "DE30",
-          "AUDUSD"
         ]
       }
     },
@@ -3332,9 +3332,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
+          "BTCUSD",
+          "SILVER",
           "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY"
         ]
       }
     },
@@ -3745,9 +3746,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -3796,9 +3795,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
+          "BTCUSD",
+          "SILVER",
           "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY"
         ]
       }
     },
@@ -4392,9 +4392,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -4848,10 +4846,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "BTCUSD",
-          "SILVER",
           "XAUUSD",
-          "USDJPY"
+          "US30",
+          ".US30."
         ]
       }
     },
