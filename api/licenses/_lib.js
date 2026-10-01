@@ -1061,6 +1061,25 @@ function newerGrant(a, b) {
   return bAt >= aAt ? b : a;
 }
 
+function readQuotaGrantsLocal() {
+  if (memoryQuotaGrants && typeof memoryQuotaGrants === "object") {
+    return memoryQuotaGrants;
+  }
+  try {
+    if (fs.existsSync(QUOTA_GRANTS_TMP)) {
+      const parsed = JSON.parse(fs.readFileSync(QUOTA_GRANTS_TMP, "utf8") || "{}");
+      const grants =
+        parsed?.grants && typeof parsed.grants === "object" ? parsed.grants : {};
+      memoryQuotaGrants = grants;
+      memoryQuotaGrantsAt = Date.now();
+      return grants;
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
 async function readQuotaGrants() {
   if (
     memoryQuotaGrants &&
@@ -1069,12 +1088,19 @@ async function readQuotaGrants() {
   ) {
     return memoryQuotaGrants;
   }
+  const local = readQuotaGrantsLocal();
+  // Never block admin/client requests on a slow Firebase/Blob read.
   try {
-    const doc = await durableRead({
-      blobPath: QUOTA_GRANTS_BLOB,
-      firebasePath: QUOTA_GRANTS_FIREBASE,
-      localPaths: [QUOTA_GRANTS_TMP],
-    });
+    const doc = await Promise.race([
+      durableRead({
+        blobPath: QUOTA_GRANTS_BLOB,
+        firebasePath: QUOTA_GRANTS_FIREBASE,
+        localPaths: [QUOTA_GRANTS_TMP],
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("quota grants read timeout")), 2500)
+      ),
+    ]);
     let parsed = null;
     if (doc?.raw) {
       try {
@@ -1084,18 +1110,18 @@ async function readQuotaGrants() {
       }
     }
     const grants =
-      parsed?.grants && typeof parsed.grants === "object" ? parsed.grants : {};
+      parsed?.grants && typeof parsed.grants === "object" ? parsed.grants : local;
     memoryQuotaGrants = grants;
     memoryQuotaGrantsAt = Date.now();
     return grants;
   } catch {
-    return memoryQuotaGrants && typeof memoryQuotaGrants === "object"
-      ? memoryQuotaGrants
-      : {};
+    memoryQuotaGrants = local;
+    memoryQuotaGrantsAt = Date.now();
+    return local;
   }
 }
 
-async function writeQuotaGrants(grants, message) {
+function writeQuotaGrantsLocal(grants) {
   const next = grants && typeof grants === "object" ? grants : {};
   memoryQuotaGrants = next;
   memoryQuotaGrantsAt = Date.now();
@@ -1105,27 +1131,42 @@ async function writeQuotaGrants(grants, message) {
       updatedAt: Date.now(),
     }) + "\n";
   try {
-    await durableWrite({
-      raw: payload,
-      blobPath: QUOTA_GRANTS_BLOB,
-      firebasePath: QUOTA_GRANTS_FIREBASE,
-      localPaths: [QUOTA_GRANTS_TMP],
-      githubMode: "never",
-      message: message || "chore: license daily quota grants",
-    });
+    fs.writeFileSync(QUOTA_GRANTS_TMP, payload, "utf8");
+  } catch {
+    // ignore
+  }
+  return payload;
+}
+
+async function persistQuotaGrantsDurable(payload, message) {
+  try {
+    await Promise.race([
+      durableWrite({
+        raw: payload,
+        blobPath: QUOTA_GRANTS_BLOB,
+        firebasePath: QUOTA_GRANTS_FIREBASE,
+        localPaths: [QUOTA_GRANTS_TMP],
+        githubMode: "never",
+        message: message || "chore: license daily quota grants",
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("quota grants write timeout")), 8000)
+      ),
+    ]);
     return { ok: true, durable: true };
   } catch (error) {
-    try {
-      fs.writeFileSync(QUOTA_GRANTS_TMP, payload, "utf8");
-    } catch {
-      // ignore
-    }
     return {
       ok: true,
       durable: false,
       error: error?.message || "quota grants write failed",
     };
   }
+}
+
+async function writeQuotaGrants(grants, message) {
+  const payload = writeQuotaGrantsLocal(grants);
+  // Best-effort durable mirror — caller may also waitUntil this.
+  return persistQuotaGrantsDurable(payload, message);
 }
 
 /** Overlay fast admin grants onto a license row (charts + START). */
@@ -2911,7 +2952,8 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   const scanReset = { ...grant };
   const startReset = { ...grant };
 
-  // Prefer warm/local roster so admin reset never waits on a fresh 3MB pull.
+  // Prefer warm/local roster only — never await the 3MB remote licenses pull
+  // here (that was hanging the admin Reset button for 60s+).
   let row = null;
   try {
     if (Array.isArray(memoryLicenses)) {
@@ -2924,32 +2966,30 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   } catch {
     row = null;
   }
-  if (!row) {
-    const store = await readStore({ preferFresh: false });
-    row = store.licenses.find(rowMatches) || null;
-  }
-  if (!row) {
+  // Admin UI already listed the key; if this instance has no local copy yet,
+  // still grant against the formatted key so Reset never blocks on Firebase.
+  const key = normalizeLicenseKey(row?.key || formattedKey || rawKey);
+  if (!key) {
     const err = new Error("Invalid license key");
     err.status = 404;
     throw err;
   }
-  const key = normalizeLicenseKey(row.key);
   const result = {
-    ...row,
+    ...(row && typeof row === "object" ? row : { key: formattedKey || key }),
+    key: formattedKey || key,
     scanReset,
     startReset,
     updatedAt: now,
   };
 
-  // Fast path only: small grants document (Firebase/Blob — no licenses.json /
-  // GitHub mirror). listLicenses + findLicense overlay these grants for clients.
-  const grants = { ...(await readQuotaGrants()) };
+  // Instant local grant — never await Firebase/Blob before responding.
+  const grants = { ...readQuotaGrantsLocal() };
   grants[key] = {
     scanReset,
     startReset,
     updatedAt: now,
   };
-  await writeQuotaGrants(grants, `quota reset: ${formattedKey}`);
+  const payload = writeQuotaGrantsLocal(grants);
 
   // Keep the warm license cache in sync on this instance.
   try {
@@ -2978,6 +3018,10 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   } catch {
     // best-effort local cache
   }
+
+  // Background durable mirror for other instances / client devices.
+  result._persistQuotaGrants = () =>
+    persistQuotaGrantsDurable(payload, `quota reset: ${formattedKey}`);
 
   return result;
 }
