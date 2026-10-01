@@ -325,7 +325,7 @@ export async function handleQuote(req, res) {
   }
 }
 
-/** OHLC bars for Safe Scalper START when OpenAI is offline. */
+/** OHLC bars from the connected MT5 account (Live Chart + Safe Scalper). */
 export async function handleHistory(req, res) {
   if (req.method === "OPTIONS") {
     endOptions(res);
@@ -343,6 +343,8 @@ export async function handleHistory(req, res) {
     const result = await mt5GetPriceHistoryToday(body.accountId, body.symbol, {
       timeFrame: body.timeFrame ?? body.timeframe ?? 30,
       fast: body.fast === true || body.fast === "1" || body.fast === 1,
+      // Live chart on laptop needs more than "today" for H1/H4.
+      days: body.days ?? body.dayCount ?? 14,
     });
     sendJson(res, 200, result);
   } catch (error) {

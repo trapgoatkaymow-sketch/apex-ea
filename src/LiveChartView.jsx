@@ -1,7 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import { getPriceHistory, getSymbolQuote } from "./metaApi.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  buildBotTradeComment,
+  checkTradeDirection,
+  getPriceHistory,
+  getSymbolQuote,
+  placeTrade,
+} from "./metaApi.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
+import { recordTrade } from "./dailyTradeHistory.js";
 import { useApp } from "./store.jsx";
+import {
+  buildSafeMultiTpLevels,
+  defaultStopDistance,
+  symbolCoreName,
+} from "./tradeLevels.js";
+import { buildTpThreads, clampTradeThreadCount } from "./tradeManagement.js";
 
 const DEFAULT_SYMBOLS = ["XAUUSD", "EURUSD", "NAS100", "US30"];
 const TIMEFRAMES = [
@@ -81,10 +94,38 @@ function normalizeBars(rows) {
     .filter(Boolean);
 }
 
+function samePairOpen(positions, symbol) {
+  const want = symbolCoreName(symbol);
+  if (!want) return false;
+  return (Array.isArray(positions) ? positions : []).some((row) => {
+    const core = symbolCoreName(row?.symbol);
+    if (!core) return false;
+    if (core === want) return true;
+    if (/^XAUUSD|^GOLD/i.test(want) && /^XAUUSD|^GOLD/i.test(core)) return true;
+    return false;
+  });
+}
+
+function clampLot(value) {
+  const n = Number(String(value ?? "").replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return 0.01;
+  return Number(Math.min(1000, n).toFixed(4));
+}
+
 export default function LiveChartView({ active = true, onAnalyze } = {}) {
-  const { mt5Session, appSymbols = [], showToast, setV2View } = useApp();
+  const {
+    mt5Session,
+    appSymbols = [],
+    showToast,
+    setV2View,
+    activeBot,
+    getSymbolMeta,
+    saveSymbolMeta,
+    publishOrbTrade,
+  } = useApp();
   const accountId = String(mt5Session?.accountId || "").trim();
   const connected = Boolean(accountId);
+  const tradeSymbolRef = useRef("");
 
   const symbols = useMemo(() => {
     const merged = [];
@@ -105,14 +146,30 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
   const [bars, setBars] = useState([]);
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [trading, setTrading] = useState(false);
   const [error, setError] = useState("");
   const [visibleCount, setVisibleCount] = useState(70);
   const [pan, setPan] = useState(0);
   const [showMa, setShowMa] = useState(true);
+  const [lotSize, setLotSize] = useState(() => {
+    const meta = getSymbolMeta?.(symbols[0] || "XAUUSD") || {};
+    return clampLot(meta.lotSize);
+  });
+  const [tradeCount, setTradeCount] = useState(() => {
+    const meta = getSymbolMeta?.(symbols[0] || "XAUUSD") || {};
+    return clampTradeThreadCount(meta.trades || 3);
+  });
 
   useEffect(() => {
     if (!symbols.includes(symbol) && symbols[0]) setSymbol(symbols[0]);
   }, [symbols, symbol]);
+
+  useEffect(() => {
+    const meta = getSymbolMeta?.(symbol) || {};
+    setLotSize(clampLot(meta.lotSize));
+    setTradeCount(clampTradeThreadCount(meta.trades || 3));
+    setPan(0);
+  }, [symbol, getSymbolMeta]);
 
   const tfMinutes =
     TIMEFRAMES.find((t) => t.id === tfId)?.minutes || 30;
@@ -121,8 +178,8 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
     if (!active || !connected) return undefined;
     let cancelled = false;
 
-    async function load() {
-      setBusy(true);
+    async function load({ quiet = false } = {}) {
+      if (!quiet) setBusy(true);
       setError("");
       try {
         const [hist, q] = await Promise.all([
@@ -130,6 +187,7 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
             accountId,
             symbol,
             timeFrame: tfMinutes,
+            days: 14,
             fast: true,
           }),
           getSymbolQuote({
@@ -144,21 +202,25 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
         setBars(nextBars);
         if (hist?.symbol) {
           const resolved = normalizeBrokerSymbol(hist.symbol) || hist.symbol;
-          if (resolved && resolved !== symbol) setSymbol(resolved);
+          tradeSymbolRef.current = resolved || symbol;
+        } else {
+          tradeSymbolRef.current = symbol;
         }
         setQuote(q);
-        setPan(0);
+        if (!nextBars.length) {
+          setError("No bars from this MetaTrader account yet — try another TF");
+        }
       } catch (err) {
         if (cancelled) return;
         setBars([]);
-        setError(err?.message || "Could not load chart");
+        setError(err?.message || "Could not load chart from connected account");
       } finally {
-        if (!cancelled) setBusy(false);
+        if (!cancelled && !quiet) setBusy(false);
       }
     }
 
-    load();
-    const id = setInterval(load, 20_000);
+    load({ quiet: false });
+    const id = setInterval(() => load({ quiet: true }), 15_000);
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -208,9 +270,10 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
   const chartGeom = useMemo(() => {
     if (!windowBars.length) return null;
     const padX = 8;
-    const w = 320;
-    const priceH = 168;
-    const rsiH = 56;
+    // Wider canvas reads better on laptop; SVG scales to the card width.
+    const w = 640;
+    const priceH = 220;
+    const rsiH = 72;
     const gap = 10;
     const highs = windowBars.map((b) => b.high);
     const lows = windowBars.map((b) => b.low);
@@ -235,20 +298,159 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
       setV2View("metatrader");
       return;
     }
-    // bump effect by toggling pan noop — force reload via state
     setBusy(true);
     getPriceHistory({
       accountId,
       symbol,
       timeFrame: tfMinutes,
-      fast: true,
+      days: 14,
+      fast: false,
     })
       .then((hist) => {
         setBars(normalizeBars(hist?.bars));
+        if (hist?.symbol) {
+          tradeSymbolRef.current =
+            normalizeBrokerSymbol(hist.symbol) || hist.symbol;
+        }
         setError("");
       })
       .catch((err) => setError(err?.message || "Refresh failed"))
       .finally(() => setBusy(false));
+  }
+
+  async function executeSide(sideRaw) {
+    const side = String(sideRaw || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
+    if (!connected) {
+      showToast?.("Connect MetaTrader to execute trades");
+      setV2View("metatrader");
+      return;
+    }
+    const tradeSymbol =
+      normalizeBrokerSymbol(tradeSymbolRef.current || symbol) || symbol;
+    const lot = clampLot(lotSize);
+    const threadsN = clampTradeThreadCount(tradeCount);
+    const entry = toNum(quote?.price) ?? last?.close;
+    if (entry == null || entry <= 0) {
+      showToast?.("Wait for a live price from the connected account");
+      return;
+    }
+
+    const risk = defaultStopDistance(tradeSymbol, entry);
+    const stopLoss = side === "BUY" ? entry - risk : entry + risk;
+    const levels = buildSafeMultiTpLevels({
+      symbol: tradeSymbol,
+      side,
+      entry,
+      stopLoss,
+      timeframe: tfId === "H4" ? "H4" : "M30",
+      rewardMultiples: [2, 3, 4],
+      trustSide: true,
+    });
+    const threads = buildTpThreads({
+      tradeCount: threadsN,
+      lot,
+      signal: levels,
+    });
+    if (!threads.length) {
+      showToast?.("Could not build trade levels");
+      return;
+    }
+
+    try {
+      const dir = await checkTradeDirection({
+        accountId,
+        symbol: tradeSymbol,
+        side,
+      });
+      if (dir && dir.ok === false) {
+        showToast?.(
+          dir.error || "Close open trades in the other direction first"
+        );
+        return;
+      }
+      if (samePairOpen(dir?.positions, tradeSymbol)) {
+        showToast?.(
+          `Close your open ${tradeSymbol} trades first before opening more`
+        );
+        return;
+      }
+    } catch (err) {
+      showToast?.(err?.message || "Could not verify open trades");
+      return;
+    }
+
+    saveSymbolMeta?.(tradeSymbol, {
+      ...(getSymbolMeta?.(tradeSymbol) || {}),
+      lotSize: lot,
+      trades: threadsN,
+    });
+
+    const comment = buildBotTradeComment(activeBot?.name || "Bot");
+    setTrading(true);
+    publishOrbTrade?.({
+      botName: activeBot?.name || "Bot",
+      comment,
+      symbol: tradeSymbol,
+      lotSize: lot,
+      action: side,
+      side,
+      entry: levels.entry,
+      stopLoss: levels.stopLoss,
+      takeProfit: levels.takeProfit1,
+      target: "TP1",
+    });
+
+    let opened = 0;
+    let lastError = "";
+    try {
+      for (const thread of threads) {
+        try {
+          const fill = await placeTrade({
+            accountId,
+            symbol: tradeSymbol,
+            volume: thread.volume,
+            side,
+            stopLoss: levels.stopLoss,
+            takeProfit: thread.takeProfit,
+            count: 1,
+            region: mt5Session?.region || "",
+            comment,
+            source: "chart-scanner",
+          });
+          opened += 1;
+          recordTrade({
+            botName: activeBot?.name || "Bot",
+            symbol:
+              normalizeBrokerSymbol(fill?.symbol || tradeSymbol) || tradeSymbol,
+            lotSize: thread.volume,
+            action: side,
+            side,
+            comment,
+            entry: levels.entry,
+            stopLoss: levels.stopLoss,
+            takeProfit: thread.takeProfit,
+            target: thread.target,
+          });
+        } catch (err) {
+          lastError = err?.message || "Trade failed";
+          if (
+            err?.code === "OPPOSITE_DIRECTION" ||
+            /session expired|reconnect|other direction/i.test(lastError)
+          ) {
+            break;
+          }
+        }
+      }
+      if (opened > 0) {
+        showToast?.(
+          `Opened ${opened} ${side} ${tradeSymbol} on connected account`
+        );
+      } else {
+        showToast?.(lastError || "Trade failed");
+      }
+    } finally {
+      setTrading(false);
+    }
   }
 
   return (
@@ -582,12 +784,68 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
         ))}
       </div>
 
-      <button type="button" className="lc-analyze" onClick={handleAnalyze}>
+      <div className="lc-trade-bar">
+        <label className="lc-lot">
+          <span>Lot</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={lotSize}
+            disabled={trading || !connected}
+            onChange={(e) =>
+              setLotSize(e.target.value.replace(/[^\d.,]/g, ""))
+            }
+            onBlur={() => setLotSize(clampLot(lotSize))}
+          />
+        </label>
+        <label className="lc-lot">
+          <span>Trades</span>
+          <input
+            type="number"
+            min="1"
+            max="3"
+            value={tradeCount}
+            disabled={trading || !connected}
+            onChange={(e) =>
+              setTradeCount(clampTradeThreadCount(e.target.value))
+            }
+          />
+        </label>
+        <button
+          type="button"
+          className="lc-buy"
+          disabled={trading || !connected || busy}
+          onClick={() => executeSide("BUY")}
+        >
+          {trading ? "…" : "Buy"}
+        </button>
+        <button
+          type="button"
+          className="lc-sell"
+          disabled={trading || !connected || busy}
+          onClick={() => executeSide("SELL")}
+        >
+          {trading ? "…" : "Sell"}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="lc-analyze"
+        onClick={handleAnalyze}
+        disabled={trading}
+      >
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
           <path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z" />
         </svg>
         Analyze Market
       </button>
+      {!connected && (
+        <p className="lc-hint">
+          Connect MetaTrader on this device — the chart and trades use that account.
+        </p>
+      )}
+      {connected && error ? <p className="lc-hint is-err">{error}</p> : null}
     </section>
   );
 }

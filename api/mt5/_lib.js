@@ -1807,14 +1807,43 @@ export async function getSymbolQuote(
   throw err;
 }
 
+function normalizeHistoryBars(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => {
+      const open = Number(row?.openPrice ?? row?.Open ?? row?.open);
+      const high = Number(row?.highPrice ?? row?.High ?? row?.high);
+      const low = Number(row?.lowPrice ?? row?.Low ?? row?.low);
+      const close = Number(row?.closePrice ?? row?.Close ?? row?.close);
+      if (![open, high, low, close].every((n) => Number.isFinite(n) && n > 0)) {
+        return null;
+      }
+      return {
+        time: row?.time || row?.Time || row?.date || row?.Date || null,
+        open,
+        high,
+        low,
+        close,
+      };
+    })
+    .filter(Boolean);
+}
+
+function historyRangeIso(daysBack = 7) {
+  const to = new Date();
+  const from = new Date(to.getTime() - Math.max(1, daysBack) * 24 * 60 * 60 * 1000);
+  const fmt = (d) => d.toISOString().replace(/\.\d{3}Z$/, "");
+  return { from: fmt(from), to: fmt(to), fromMs: from.getTime(), toMs: to.getTime() };
+}
+
 /**
- * Today's OHLC bars for a connected account (MT5 PriceHistoryToday).
+ * OHLC bars for a connected account.
+ * Tries PriceHistoryToday, then multi-day PriceHistory (laptop/live chart).
  * timeFrame is minutes: 30=M30, 60=H1, 240=H4.
  */
 export async function getPriceHistoryToday(
   accountId,
   symbol,
-  { timeFrame = 30, fast = false } = {}
+  { timeFrame = 30, fast = false, days = 10 } = {}
 ) {
   const id = String(accountId || "").trim();
   const requested = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
@@ -1825,42 +1854,46 @@ export async function getPriceHistoryToday(
     throw err;
   }
 
-  const timeoutMs = fast ? 8000 : 20000;
+  const timeoutMs = fast ? 10000 : 25000;
+  const rangeDays = Math.max(2, Math.min(30, Math.floor(Number(days) || 10)));
+  const { from, to, fromMs, toMs } = historyRangeIso(rangeDays);
 
   async function historyOne(symbolName) {
     const name = String(symbolName || "").trim();
     if (!name) return null;
-    // Path has a trailing space in swagger for Today — try both.
+    // Today first; ranged history for laptop charts / higher TFs / thin sessions.
     const paths = [
       `/PriceHistoryToday?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&timeFrame=${tf}`,
       `/PriceHistoryToday%20?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&timeFrame=${tf}`,
+      `/PriceHistory?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&timeFrame=${tf}`,
+      `/PriceHistory?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&dateFrom=${encodeURIComponent(from)}&dateTo=${encodeURIComponent(to)}&timeFrame=${tf}`,
+      `/PriceHistory?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&from=${fromMs}&to=${toMs}&timeFrame=${tf}`,
     ];
     let lastErr = null;
     for (const path of paths) {
       try {
         const data = await mt5Fetch(path, { timeoutMs });
-        const rows = Array.isArray(data) ? data : Array.isArray(data?.bars) ? data.bars : null;
+        const rows = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.bars)
+            ? data.bars
+            : Array.isArray(data?.data)
+              ? data.data
+              : Array.isArray(data?.history)
+                ? data.history
+                : null;
         if (!rows?.length) continue;
-        const bars = rows
-          .map((row) => {
-            const open = Number(row?.openPrice ?? row?.Open ?? row?.open);
-            const high = Number(row?.highPrice ?? row?.High ?? row?.high);
-            const low = Number(row?.lowPrice ?? row?.Low ?? row?.low);
-            const close = Number(row?.closePrice ?? row?.Close ?? row?.close);
-            if (![open, high, low, close].every((n) => Number.isFinite(n) && n > 0)) {
-              return null;
-            }
-            return {
-              time: row?.time || row?.Time || null,
-              open,
-              high,
-              low,
-              close,
-            };
-          })
-          .filter(Boolean);
+        const bars = normalizeHistoryBars(rows);
         if (bars.length) {
-          return { ok: true, accountId: id, symbol: name, requestedSymbol: requested, timeFrame: tf, bars };
+          return {
+            ok: true,
+            accountId: id,
+            symbol: name,
+            requestedSymbol: requested,
+            timeFrame: tf,
+            bars,
+            source: path.includes("Today") ? "today" : "range",
+          };
         }
       } catch (error) {
         lastErr = error;
@@ -1884,7 +1917,7 @@ export async function getPriceHistoryToday(
     resolved: resolvedSym,
     accountSymbols,
   });
-  const maxProbes = fast ? 6 : 20;
+  const maxProbes = fast ? 8 : 24;
   for (const alt of probeSymbols.slice(0, maxProbes)) {
     if (String(alt || "").toLowerCase() === requested.toLowerCase()) continue;
     try {

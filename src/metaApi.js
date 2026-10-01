@@ -185,12 +185,13 @@ export async function getSymbolQuote({
   });
 }
 
-/** Today's OHLC bars (minutes TF) for Safe Scalper when OpenAI is offline. */
+/** OHLC bars from the connected MT5 account (Live Chart + Safe Scalper). */
 export async function getPriceHistory({
   accountId,
   symbol,
   timeFrame = 30,
   fast = true,
+  days = 14,
   signal,
 } = {}) {
   return apiFetch("/history", {
@@ -200,6 +201,7 @@ export async function getPriceHistory({
       accountId: String(accountId || "").trim(),
       symbol: String(symbol || "").trim(),
       timeFrame: Math.max(1, Math.floor(Number(timeFrame) || 30)),
+      days: Math.max(2, Math.min(30, Math.floor(Number(days) || 14))),
       fast: Boolean(fast),
     },
   });
