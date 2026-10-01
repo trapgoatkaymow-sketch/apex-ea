@@ -3,9 +3,8 @@
  *   15s “Opening positions” countdown → OpenAI scan (M30/H1/H4) → open
  *   Number of trades for every pair in Your pairs.
  *
- * Ladder (same as Chart Scanner):
- *   H4 → TP1 1:1 · TP2 1:2 · TP3 1:3
- *   M30/H1 → TP1 1:2 · TP2 1:3 · TP3 1:4
+ * START always uses the scanner non-H4 ladder:
+ *   TP1 1:2 · TP2 1:3 · TP3 1:4
  */
 import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
@@ -194,6 +193,9 @@ async function analyzeSymbolWithOpenAI({
   return data;
 }
 
+/** START button R:R — same as Chart Scanner non-H4 ladder. */
+export const START_TP_REWARD_MULTIPLES = [2, 3, 4];
+
 function buildScannerAlignedSetup({
   symbol,
   side,
@@ -206,12 +208,14 @@ function buildScannerAlignedSetup({
 } = {}) {
   const tfRaw = normalizeChartTimeframe(timeframe || "M30");
   const tf = ["M30", "H1", "H4"].includes(tfRaw) ? tfRaw : "M30";
+  // Always TP1 1:2 · TP2 1:3 · TP3 1:4 — even when AI labels the chart H4.
   const levels = buildSafeMultiTpLevels({
     symbol,
     side: normalizeTradeSide(side, { entry, stopLoss, trustSide: true }),
     entry,
     stopLoss,
     timeframe: tf,
+    rewardMultiples: START_TP_REWARD_MULTIPLES,
   });
   return {
     symbol,
@@ -223,7 +227,9 @@ function buildScannerAlignedSetup({
     takeProfit2: levels.takeProfit2,
     takeProfit3: levels.takeProfit3,
     takeProfit: levels.takeProfit3,
-    riskReward: levels.riskReward || tpRiskRewardLabel(tf),
+    riskReward:
+      levels.riskReward ||
+      tpRiskRewardLabel(tf, START_TP_REWARD_MULTIPLES),
     timeframe: tf,
     analysis: String(analysis || "").trim(),
     confidence,

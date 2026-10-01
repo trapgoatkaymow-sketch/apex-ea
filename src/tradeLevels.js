@@ -142,12 +142,15 @@ export function isH4Timeframe(raw) {
 }
 
 /** TP1/TP2/TP3 reward multiples of stop distance. */
-export function tpRewardMultiples(timeframe) {
+export function tpRewardMultiples(timeframe, overrides = null) {
+  if (Array.isArray(overrides) && overrides.length >= 3) {
+    return overrides.slice(0, 3).map((n) => Math.max(0.1, Number(n) || 1));
+  }
   return isH4Timeframe(timeframe) ? [1, 2, 3] : [2, 3, 4];
 }
 
-export function tpRiskRewardLabel(timeframe) {
-  const [a, b, c] = tpRewardMultiples(timeframe);
+export function tpRiskRewardLabel(timeframe, overrides = null) {
+  const [a, b, c] = tpRewardMultiples(timeframe, overrides);
   return `1:${a} · 1:${b} · 1:${c}`;
 }
 
@@ -157,6 +160,8 @@ export function buildSafeMultiTpLevels({
   entry,
   stopLoss,
   timeframe = "M15",
+  /** Optional explicit R:R ladder, e.g. [2,3,4] for START. */
+  rewardMultiples = null,
 } = {}) {
   const dir = normalizeTradeSide(side, { entry, stopLoss });
   let e = toFiniteNumber(entry);
@@ -189,7 +194,7 @@ export function buildSafeMultiTpLevels({
   const entryOut = formatTradePrice(e);
   const slOut = formatTradePrice(sl);
   const safeRisk = Math.min(Math.max(Math.abs(entryOut - slOut), minDist), maxDist);
-  const [m1, m2, m3] = tpRewardMultiples(timeframe);
+  const [m1, m2, m3] = tpRewardMultiples(timeframe, rewardMultiples);
 
   return {
     side: dir,
@@ -210,7 +215,7 @@ export function buildSafeMultiTpLevels({
     minDist,
     maxDist,
     widened: risk < minDist + 1e-12 || risk >= maxDist - 1e-12,
-    riskReward: tpRiskRewardLabel(timeframe),
+    riskReward: tpRiskRewardLabel(timeframe, rewardMultiples),
     tpMultiples: [m1, m2, m3],
   };
 }
