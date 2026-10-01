@@ -561,6 +561,7 @@ function writeLocalStore(mentors) {
                 passwordResetExpiresAt: Number(m.passwordResetExpiresAt) || null,
                 passwordResetRequestedAt: Number(m.passwordResetRequestedAt) || null,
                 activityGraceStartedAt: Number(m.activityGraceStartedAt) || null,
+                activityResetAt: Number(m.activityResetAt) || null,
                 deactivatedAt: Number(m.deactivatedAt) || null,
                 deactivatedReason: String(m.deactivatedReason || ""),
               };
@@ -1486,6 +1487,18 @@ export async function loginMentor({ email, password }) {
     role: "mentor",
     status: "approved",
     createdAt: existing?.createdAt || Date.now(),
+  };
+}
+
+/**
+ * Super-admin helper: restore a deactivated mentor portal by email.
+ * Always stamps a fresh activity week so login is not auto-blocked again.
+ */
+export async function reactivateMentorPortal(email) {
+  const result = await setMentorStatus(email, "approved");
+  return {
+    ...(result && typeof result === "object" ? result : { mentor: result }),
+    reactivated: true,
   };
 }
 

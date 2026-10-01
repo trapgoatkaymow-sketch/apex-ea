@@ -8,6 +8,7 @@ import {
   registerMentor,
   requestMentorPasswordReset,
   sendJson,
+  reactivateMentorPortal,
   setMentorLicenseKeys,
   setMentorPassword,
   setMentorStatus,
@@ -140,6 +141,23 @@ export default async function handler(req, res) {
         return;
       }
 
+      if (
+        action === "reactivate" ||
+        action === "reactivate-portal" ||
+        action === "restore-portal" ||
+        body.reactivate === true
+      ) {
+        const result = await reactivateMentorPortal(
+          body.email || body.mentorEmail || body.clientEmail
+        );
+        sendJson(res, 200, {
+          mentor: result?.mentor || result,
+          reactivated: true,
+          approvalEmailSent: Boolean(result?.approvalEmailSent),
+        });
+        return;
+      }
+
       sendJson(res, 400, { error: "Unknown action" });
       return;
     }
@@ -147,6 +165,23 @@ export default async function handler(req, res) {
     if (req.method === "PATCH") {
       const body = await readJsonBody(req);
       const action = String(body.action || body.type || "status").toLowerCase();
+
+      if (
+        action === "reactivate" ||
+        action === "reactivate-portal" ||
+        action === "restore-portal" ||
+        body.reactivate === true
+      ) {
+        const result = await reactivateMentorPortal(
+          body.email || body.mentorEmail || body.clientEmail
+        );
+        sendJson(res, 200, {
+          mentor: result?.mentor || result,
+          reactivated: true,
+          approvalEmailSent: Boolean(result?.approvalEmailSent),
+        });
+        return;
+      }
 
       if (action === "banking") {
         const mentor = await updateMentorBanking(body.email, body.banking || body);

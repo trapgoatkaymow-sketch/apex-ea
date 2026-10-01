@@ -12,6 +12,7 @@ import {
   isMentorOperatorEmail,
   setMentorAccountPassword,
   SUPER_ADMIN_EMAIL,
+  reactivateMentorPortal,
   updateMentorBanking,
   updateMentorLicenseKeys,
   updateMentorProfile,
@@ -342,6 +343,9 @@ export default function AdminPortal() {
   const [bypassOpen, setBypassOpen] = useState(false);
   const [bypassEmail, setBypassEmail] = useState("");
   const [bypassBusy, setBypassBusy] = useState(false);
+  const [portalReactivateOpen, setPortalReactivateOpen] = useState(false);
+  const [portalReactivateEmail, setPortalReactivateEmail] = useState("");
+  const [portalReactivateBusy, setPortalReactivateBusy] = useState(false);
   const [deactivatedMentorsOpen, setDeactivatedMentorsOpen] = useState(false);
   const [topMentorEmailsOpen, setTopMentorEmailsOpen] = useState("");
   const [bankingForm, setBankingForm] = useState({
@@ -1720,6 +1724,59 @@ export default function AdminPortal() {
     } finally {
       if (!silent) setSignupActionBusy("");
     }
+  }
+
+  async function reactivatePortalByEmail(email, { clearInput = false } = {}) {
+    const key = String(email || "").trim();
+    if (!key || !key.includes("@")) {
+      showToast("Enter a mentor email address");
+      return false;
+    }
+    if (portalReactivateBusy || mentorActionBusy) return false;
+    const actionKey = `${normalizeAdminEmail(key)}:approved`;
+    setPortalReactivateBusy(true);
+    setMentorActionBusy(actionKey);
+    try {
+      const updated = await reactivateMentorPortal(key);
+      if (updated) {
+        setMentors((prev) => {
+          const next = prev.map((m) =>
+            normalizeAdminEmail(m.email) === normalizeAdminEmail(updated.email)
+              ? updated
+              : m
+          );
+          if (
+            !next.some(
+              (m) =>
+                normalizeAdminEmail(m.email) ===
+                normalizeAdminEmail(updated.email)
+            )
+          ) {
+            next.unshift(updated);
+          }
+          return next;
+        });
+        if (clearInput) setPortalReactivateEmail("");
+        showToast(
+          updated?.approvalEmailSent
+            ? "Portal reactivated — email sent"
+            : `Portal reactivated for ${updated.email || key}`
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      showToast(error?.message || "Could not reactivate mentor portal");
+      return false;
+    } finally {
+      setPortalReactivateBusy(false);
+      setMentorActionBusy("");
+    }
+  }
+
+  async function onReactivateMentorPortalSubmit(event) {
+    event.preventDefault();
+    await reactivatePortalByEmail(portalReactivateEmail, { clearInput: true });
   }
 
   async function changeMentorStatus(email, status, { silent = false } = {}) {
@@ -5598,6 +5655,7 @@ export default function AdminPortal() {
                   type="button"
                   onClick={() => {
                     setBypassOpen(false);
+                    setPortalReactivateOpen(false);
                     setDeactivatedMentorsOpen(true);
                     requestAnimationFrame(() => {
                       document
@@ -5616,6 +5674,18 @@ export default function AdminPortal() {
                   className="admin-btn admin-btn-outline admin-btn-sm"
                   type="button"
                   onClick={() => {
+                    setBypassOpen(false);
+                    setDeactivatedMentorsOpen(false);
+                    setPortalReactivateOpen((open) => !open);
+                  }}
+                >
+                  {portalReactivateOpen ? "Close" : "Reactivate portal"}
+                </button>
+                <button
+                  className="admin-btn admin-btn-outline admin-btn-sm"
+                  type="button"
+                  onClick={() => {
+                    setPortalReactivateOpen(false);
                     setBypassOpen((open) => !open);
                   }}
                 >
@@ -5660,6 +5730,56 @@ export default function AdminPortal() {
                 </AdminBusyLabel>
               </button>
             </div>
+
+            {portalReactivateOpen ? (
+              <div className="admin-card admin-reactivate-card">
+                <div className="admin-card-title-row">
+                  <h3 className="admin-card-title">Reactivate mentor portal</h3>
+                  <button
+                    className="admin-btn admin-btn-ghost admin-btn-sm"
+                    type="button"
+                    onClick={() => setPortalReactivateOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+                <p className="admin-card-meta">
+                  Enter the mentor’s email to restore portal login and give them a
+                  fresh activity week.
+                </p>
+                <form
+                  className="license-form"
+                  onSubmit={onReactivateMentorPortalSubmit}
+                >
+                  <label className="ea-field">
+                    <span>Mentor email *</span>
+                    <input
+                      className="admin-input"
+                      type="email"
+                      value={portalReactivateEmail}
+                      onChange={(e) => setPortalReactivateEmail(e.target.value)}
+                      placeholder="mentor@email.com"
+                      autoComplete="email"
+                      required
+                    />
+                  </label>
+                  <button
+                    className={`admin-btn admin-btn-solid admin-btn-block${
+                      portalReactivateBusy ? " is-loading" : ""
+                    }`}
+                    type="submit"
+                    disabled={portalReactivateBusy || Boolean(mentorActionBusy)}
+                  >
+                    <AdminBusyLabel
+                      busy={portalReactivateBusy}
+                      busyText="Activating…"
+                    >
+                      Activate portal
+                    </AdminBusyLabel>
+                  </button>
+                </form>
+              </div>
+            ) : null}
 
             {bypassOpen ? (
               <div className="admin-card admin-bypass-card">
@@ -6074,10 +6194,8 @@ export default function AdminPortal() {
                             : ""
                         }`}
                         type="button"
-                        disabled={Boolean(mentorActionBusy)}
-                        onClick={() =>
-                          changeMentorStatus(mentor.email, "approved")
-                        }
+                        disabled={Boolean(mentorActionBusy) || portalReactivateBusy}
+                        onClick={() => reactivatePortalByEmail(mentor.email)}
                       >
                         <AdminBusyLabel
                           busy={

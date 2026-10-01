@@ -657,6 +657,40 @@ export async function updateMentorStatus(email, status) {
   }
 }
 
+/** Super-admin: restore a deactivated mentor portal by email (fresh activity week). */
+export async function reactivateMentorPortal(email) {
+  const key = normalizeEmail(email);
+  if (!key || !key.includes("@")) {
+    throw new Error("Enter a mentor email address");
+  }
+  try {
+    const data = await apiFetch("", {
+      method: "PATCH",
+      body: {
+        action: "reactivate-portal",
+        email: key,
+        reactivate: true,
+      },
+    });
+    const mentor = data?.mentor || null;
+    if (mentor && typeof data?.approvalEmailSent === "boolean") {
+      mentor.approvalEmailSent = data.approvalEmailSent;
+    }
+    if (mentor) mentor.reactivated = true;
+    return mentor;
+  } catch (error) {
+    // Older deploys may not know reactivate-portal — fall back to approve.
+    if (error.status === 400 || error.status === 404 || error.status >= 500) {
+      try {
+        return await updateMentorStatus(key, "approved");
+      } catch (fallbackError) {
+        throw fallbackError;
+      }
+    }
+    throw error;
+  }
+}
+
 export async function updateMentorBanking(email, bankingInput = {}) {
   const banking = {
     ...normalizeBanking(bankingInput),
