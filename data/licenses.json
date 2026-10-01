@@ -1551,19 +1551,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "EURUSD",
-          "GBPUSD",
-          "XAUUSD",
-          "NAS100",
-          "US30",
-          "BTCUSD",
-          "USDCAD",
           "XAUUSDM",
           "US30M",
-          "EURUSDM",
-          "USDJPY",
-          "USTEC",
-          "USTECM"
+          "USTECM",
+          "BTCUSDM",
+          "DE30M"
         ]
       }
     },
@@ -8165,14 +8157,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "NAS100",
-          "US100",
-          "NASDAQ100INDEX",
-          "NASDAQ100",
-          "US30",
-          "US30.STD",
           "XAUUSD",
-          "XAUUSD.M"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -10524,8 +10511,11 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
+          "EURGBP",
+          "XAUUSD.MICRO",
+          "BTCUSD",
           "US30",
-          ".US30."
+          "EURUSD"
         ]
       }
     },
@@ -18214,9 +18204,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -18262,9 +18250,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "GOLD"
         ]
       }
     },
@@ -18688,7 +18674,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -22456,9 +22446,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSDM",
-          "USDJPY",
-          "USDJPYM"
+          "US30",
+          ".US30."
         ]
       }
     },
