@@ -6658,34 +6658,36 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 }
 
 .trade-script-history {
-  border: 1px solid rgba(var(--pink-rgb), 0.45);
-  background: rgba(var(--pink-rgb), 0.12);
+  border: 1.5px solid rgba(var(--pink-rgb), 0.85);
+  background: transparent;
   color: #fff;
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 7px 12px;
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
   line-height: 1;
 }
 
 .trade-script-history.is-active {
-  background: rgba(var(--pink-rgb), 0.28);
-  border-color: rgba(var(--pink-rgb), 0.75);
+  background: rgba(var(--pink-rgb), 0.16);
+  border-color: var(--pink);
 }
 
 .trade-script-history-count {
-  min-width: 1.15em;
-  height: 1.15em;
-  padding: 0 4px;
+  min-width: 1.25em;
+  height: 1.25em;
+  padding: 0 5px;
   border-radius: 999px;
   background: var(--pink);
   color: #fff;
   font-size: 0.68rem;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;

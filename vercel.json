@@ -92,7 +92,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.48.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.49.apk\""
         },
         {
           "key": "Cache-Control",
@@ -101,7 +101,7 @@
       ]
     },
     {
-      "source": "/apex-ea-v2.48.apk",
+      "source": "/apex-ea-v2.49.apk",
       "headers": [
         {
           "key": "Content-Type",
@@ -109,7 +109,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.48.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.49.apk\""
         },
         {
           "key": "Cache-Control",
@@ -126,7 +126,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.48.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.49.apk\""
         },
         {
           "key": "Cache-Control",
@@ -143,7 +143,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.48.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.49.apk\""
         },
         {
           "key": "Cache-Control",
@@ -160,7 +160,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.48.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.49.apk\""
         },
         {
           "key": "Cache-Control",
@@ -177,7 +177,7 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"apex-ea-v2.48.apk\""
+          "value": "attachment; filename=\"apex-ea-v2.49.apk\""
         },
         {
           "key": "Cache-Control",
@@ -284,6 +284,10 @@
       "destination": "http://66.23.225.158/:path*"
     },
     {
+      "source": "/apex-ea-v2.48.apk",
+      "destination": "/api/download-apk"
+    },
+    {
       "source": "/apex-ea-v2.47.apk",
       "destination": "/api/download-apk"
     },
@@ -292,7 +296,7 @@
       "destination": "/api/download-apk"
     },
     {
-      "source": "/apex-ea-v2.48.apk",
+      "source": "/apex-ea-v2.49.apk",
       "destination": "/api/download-apk"
     },
     {

@@ -8,6 +8,8 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -33,6 +35,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -76,7 +79,7 @@ public class FloatOverlayService extends Service {
   private ImageView photoView;
   private LinearLayout historyPanel;
   private TextView historyBody;
-  private TextView historyTitle;
+  private TextView historyCountBadge;
   private WindowManager.LayoutParams layoutParams;
   private WindowManager.LayoutParams historyParams;
   private String currentPhotoKey = "";
@@ -84,6 +87,9 @@ public class FloatOverlayService extends Service {
   private String historyContent = "No trades taken yet.";
   private boolean showing = false;
   private boolean historyShowing = false;
+
+  private static final int PINK = 0xFFFF2D7A;
+  private static final int PINK_SOFT = 0xFFFF7AB5;
 
   @Override
   public IBinder onBind(Intent intent) {
@@ -120,9 +126,7 @@ public class FloatOverlayService extends Service {
       boolean openHistory = intent.getBooleanExtra(EXTRA_OPEN_HISTORY, false);
       if (history != null) {
         historyContent = history.trim().isEmpty() ? "No trades taken yet." : history.trim();
-        if (historyBody != null) {
-          mainHandler.post(() -> historyBody.setText(historyContent));
-        }
+        mainHandler.post(this::refreshHistoryPanelContent);
       }
       if (label != null && !label.trim().isEmpty()) {
         startForeground(NOTIF_ID, buildNotification(label.trim() + " · tap for History"));
@@ -326,11 +330,7 @@ public class FloatOverlayService extends Service {
 
   private void showHistory() {
     ensureHistoryPanel();
-    if (historyBody != null) {
-      historyBody.setText(historyContent == null || historyContent.isEmpty()
-          ? "No trades taken yet."
-          : historyContent);
-    }
+    refreshHistoryPanelContent();
     positionHistoryPanel();
     if (historyPanel != null && historyPanel.getParent() == null && windowManager != null) {
       try {
@@ -363,6 +363,125 @@ public class FloatOverlayService extends Service {
         });
   }
 
+  private void refreshHistoryPanelContent() {
+    String body =
+        historyContent == null || historyContent.trim().isEmpty()
+            ? "No trades taken yet."
+            : historyContent.trim();
+    if (historyBody != null) {
+      historyBody.setText(body);
+    }
+    if (historyCountBadge != null) {
+      int count = countHistoryLines(body);
+      if (count > 0) {
+        historyCountBadge.setVisibility(View.VISIBLE);
+        historyCountBadge.setText(String.valueOf(count));
+      } else {
+        historyCountBadge.setVisibility(View.GONE);
+      }
+    }
+  }
+
+  private int countHistoryLines(String text) {
+    if (text == null) return 0;
+    String trimmed = text.trim();
+    if (trimmed.isEmpty() || trimmed.equalsIgnoreCase("No trades taken yet.")) return 0;
+    int n = 0;
+    for (String line : trimmed.split("\\n")) {
+      if (!line.trim().isEmpty()) n += 1;
+    }
+    return n;
+  }
+
+  /** iOS-matching pill: pink border + HISTORY label + count badge. */
+  private LinearLayout buildHistoryPillButton() {
+    LinearLayout pill = new LinearLayout(this);
+    pill.setOrientation(LinearLayout.HORIZONTAL);
+    pill.setGravity(Gravity.CENTER_VERTICAL);
+    pill.setPadding(dp(10), dp(6), dp(10), dp(6));
+    GradientDrawable bg = new GradientDrawable();
+    bg.setCornerRadius(dp(999));
+    bg.setColor(Color.TRANSPARENT); // iOS: clear fill inside pink border
+    bg.setStroke(dp(2), PINK); // bright pink capsule border
+    pill.setBackground(bg);
+
+    TextView label = new TextView(this);
+    label.setText("HISTORY");
+    label.setTextColor(Color.WHITE);
+    label.setTypeface(Typeface.DEFAULT_BOLD);
+    label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+    label.setLetterSpacing(0.04f);
+    pill.addView(label);
+
+    historyCountBadge = new TextView(this);
+    historyCountBadge.setTextColor(Color.WHITE);
+    historyCountBadge.setTypeface(Typeface.DEFAULT_BOLD);
+    historyCountBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+    historyCountBadge.setGravity(Gravity.CENTER);
+    historyCountBadge.setPadding(dp(5), dp(1), dp(5), dp(1));
+    historyCountBadge.setMinWidth(dp(18));
+    GradientDrawable badgeBg = new GradientDrawable();
+    badgeBg.setCornerRadius(dp(999));
+    badgeBg.setColor(PINK);
+    historyCountBadge.setBackground(badgeBg);
+    LinearLayout.LayoutParams badgeLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    badgeLp.setMarginStart(dp(5));
+    pill.addView(historyCountBadge, badgeLp);
+    return pill;
+  }
+
+  /** iOS-matching Close pill: white border, white label. */
+  private TextView buildClosePillButton() {
+    TextView close = new TextView(this);
+    close.setText("Close");
+    close.setTextColor(Color.WHITE);
+    close.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+    close.setTypeface(Typeface.DEFAULT_BOLD);
+    close.setPadding(dp(12), dp(7), dp(12), dp(7));
+    GradientDrawable bg = new GradientDrawable();
+    bg.setCornerRadius(dp(999));
+    bg.setColor(0x14FFFFFF);
+    bg.setStroke(dp(1), 0x33FFFFFF);
+    close.setBackground(bg);
+    close.setOnClickListener(v -> hideHistory());
+    return close;
+  }
+
+  private TextView buildCopyHistoryButton() {
+    TextView copy = new TextView(this);
+    copy.setText("COPY HISTORY");
+    copy.setTextColor(Color.WHITE);
+    copy.setTypeface(Typeface.DEFAULT_BOLD);
+    copy.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+    copy.setGravity(Gravity.CENTER);
+    copy.setPadding(dp(14), dp(12), dp(14), dp(12));
+    GradientDrawable bg =
+        new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] {PINK_SOFT, PINK});
+    bg.setCornerRadius(dp(14));
+    copy.setBackground(bg);
+    copy.setOnClickListener(
+        v -> {
+          String text =
+              historyContent == null || historyContent.trim().isEmpty()
+                  ? "No trades taken yet."
+                  : historyContent.trim();
+          try {
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+              cm.setPrimaryClip(ClipData.newPlainText("ApexEA history", text));
+              Toast.makeText(this, "History copied", Toast.LENGTH_SHORT).show();
+            }
+          } catch (Exception ignored) {
+            Toast.makeText(this, "Could not copy history", Toast.LENGTH_SHORT).show();
+          }
+        });
+    return copy;
+  }
+
   private void ensureHistoryPanel() {
     if (historyPanel != null) return;
 
@@ -370,32 +489,48 @@ public class FloatOverlayService extends Service {
     historyPanel.setOrientation(LinearLayout.VERTICAL);
     historyPanel.setPadding(dp(14), dp(12), dp(14), dp(12));
     GradientDrawable bg = new GradientDrawable();
-    bg.setCornerRadius(dp(18));
+    bg.setCornerRadius(dp(22));
     bg.setColor(0xF214141C);
     bg.setStroke(dp(1), 0x66FF2D7A);
     historyPanel.setBackground(bg);
     historyPanel.setElevation(dp(12));
 
+    // Header: iOS pill HISTORY (+ badge) + pill Close — same layout as TradeScriptOrb.
     LinearLayout head = new LinearLayout(this);
     head.setOrientation(LinearLayout.HORIZONTAL);
     head.setGravity(Gravity.CENTER_VERTICAL);
 
-    historyTitle = new TextView(this);
-    historyTitle.setText("History");
-    historyTitle.setTextColor(Color.WHITE);
-    historyTitle.setTypeface(Typeface.DEFAULT_BOLD);
-    historyTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+    LinearLayout titleBlock = new LinearLayout(this);
+    titleBlock.setOrientation(LinearLayout.VERTICAL);
+    TextView kicker = new TextView(this);
+    kicker.setText("HISTORY");
+    kicker.setTextColor(0xE6FF5050);
+    kicker.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+    kicker.setTypeface(Typeface.DEFAULT_BOLD);
+    kicker.setLetterSpacing(0.08f);
+    titleBlock.addView(kicker);
+    TextView taken = new TextView(this);
+    taken.setText("Taken trades");
+    taken.setTextColor(Color.WHITE);
+    taken.setTypeface(Typeface.DEFAULT_BOLD);
+    taken.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f);
+    titleBlock.addView(taken);
     LinearLayout.LayoutParams titleLp =
         new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-    head.addView(historyTitle, titleLp);
+    head.addView(titleBlock, titleLp);
 
-    TextView close = new TextView(this);
-    close.setText("Close");
-    close.setTextColor(0xFFFF7AB5);
-    close.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-    close.setPadding(dp(8), dp(4), dp(4), dp(4));
-    close.setOnClickListener(v -> hideHistory());
-    head.addView(close);
+    LinearLayout actions = new LinearLayout(this);
+    actions.setOrientation(LinearLayout.HORIZONTAL);
+    actions.setGravity(Gravity.CENTER_VERTICAL);
+    LinearLayout historyPill = buildHistoryPillButton();
+    actions.addView(historyPill);
+    TextView closePill = buildClosePillButton();
+    LinearLayout.LayoutParams closeLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    closeLp.setMarginStart(dp(6));
+    actions.addView(closePill, closeLp);
+    head.addView(actions);
 
     historyPanel.addView(
         head,
@@ -403,10 +538,10 @@ public class FloatOverlayService extends Service {
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
     TextView note = new TextView(this);
-    note.setText("Taken trades · stays over other apps");
-    note.setTextColor(0x99FFFFFF);
+    note.setText("View only · does not start trading");
+    note.setTextColor(0x8CFFFFFF);
     note.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-    note.setPadding(0, dp(2), 0, dp(8));
+    note.setPadding(0, dp(6), 0, dp(8));
     historyPanel.addView(
         note,
         new LinearLayout.LayoutParams(
@@ -418,17 +553,23 @@ public class FloatOverlayService extends Service {
     historyBody.setText(historyContent);
     historyBody.setTextColor(0xFFEDEDF2);
     historyBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-    historyBody.setLineSpacing(dp(2), 1.15f);
-    historyBody.setTypeface(Typeface.MONOSPACE);
+    historyBody.setLineSpacing(dp(3), 1.2f);
+    historyBody.setTypeface(Typeface.SANS_SERIF);
     historyBody.setMovementMethod(new ScrollingMovementMethod());
     scroll.addView(
         historyBody,
         new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
-    historyPanel.addView(
-        scroll,
+    LinearLayout.LayoutParams scrollLp =
+        new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+    historyPanel.addView(scroll, scrollLp);
+
+    TextView copyBtn = buildCopyHistoryButton();
+    LinearLayout.LayoutParams copyLp =
         new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    copyLp.topMargin = dp(10);
+    historyPanel.addView(copyBtn, copyLp);
 
     historyParams =
         new WindowManager.LayoutParams(
@@ -442,6 +583,8 @@ public class FloatOverlayService extends Service {
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT);
     historyParams.gravity = Gravity.TOP | Gravity.START;
+
+    refreshHistoryPanelContent();
   }
 
   private void positionHistoryPanel() {
