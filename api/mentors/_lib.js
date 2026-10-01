@@ -101,6 +101,16 @@ export function isMentorOperator(email) {
   return normalizeEmail(email) === normalizeEmail(MENTOR_OPERATOR_EMAIL);
 }
 
+/** Super admin + Trapgoatkaymow operator — unlimited license key generation. */
+export function isUnlimitedLicenseMentor(email) {
+  const key = normalizeEmail(email);
+  if (!key) return false;
+  return (
+    key === normalizeEmail(SUPER_ADMIN_EMAIL) ||
+    key === normalizeEmail(MENTOR_OPERATOR_EMAIL)
+  );
+}
+
 /** Find a mentor by email with normalized comparison (handles legacy unnormalized rows). */
 function findMentorIndex(list, email) {
   const key = normalizeEmail(email);
@@ -115,11 +125,18 @@ function findMentor(list, email) {
   return idx < 0 ? null : list[idx];
 }
 
-export function normalizeLicenseKeysAllowed(value, { role } = {}) {
+export function normalizeLicenseKeysAllowed(value, { role, email } = {}) {
   if (String(role || "").toLowerCase() === "superadmin") {
     return null;
   }
+  if (isUnlimitedLicenseMentor(email)) {
+    return null;
+  }
   if (value == null || value === "") return DEFAULT_MENTOR_LICENSE_KEYS;
+  // Explicit unlimited markers from admin UI / store.
+  if (value === "unlimited" || value === "∞" || value === Infinity) {
+    return null;
+  }
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n) || n < 0) return DEFAULT_MENTOR_LICENSE_KEYS;
   return n;
@@ -317,6 +334,7 @@ export function publicMentor(mentor) {
     banking,
     licenseKeysAllowed: normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role,
+      email: mentor.email,
     }),
     licenseKeysUpdatedAt: Number(mentor.licenseKeysUpdatedAt) || null,
     inviteCode: mentorInviteCode(mentor),
@@ -412,6 +430,7 @@ function decodeMentorsJson(raw, sha = null) {
             banking: normalizeBanking(m.banking),
             licenseKeysAllowed: normalizeLicenseKeysAllowed(m.licenseKeysAllowed, {
               role,
+              email: normalizeEmail(m.email),
             }),
             licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
             appColor,
@@ -530,7 +549,7 @@ function writeLocalStore(mentors) {
                 banking: normalizeBanking(m.banking),
                 licenseKeysAllowed: normalizeLicenseKeysAllowed(
                   m.licenseKeysAllowed,
-                  { role }
+                  { role, email: normalizeEmail(m.email) }
                 ),
                 licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
                 appColor: normalizeAppColor(m.appColor) || "",
@@ -593,9 +612,11 @@ async function readStore() {
         }
         const localKeys = normalizeLicenseKeysAllowed(local.licenseKeysAllowed, {
           role: local.role || m.role,
+          email: local.email || m.email,
         });
         const remoteKeys = normalizeLicenseKeysAllowed(m.licenseKeysAllowed, {
           role: m.role,
+          email: m.email,
         });
         const localUpdated = Number(local.licenseKeysUpdatedAt) || 0;
         const remoteUpdated = Number(m.licenseKeysUpdatedAt) || 0;
@@ -787,7 +808,7 @@ async function writeStore(mentors, sha, message) {
           banking: normalizeBanking(m.banking),
           licenseKeysAllowed: normalizeLicenseKeysAllowed(
             m.licenseKeysAllowed,
-            { role }
+            { role, email: normalizeEmail(m.email) }
           ),
           licenseKeysUpdatedAt: Number(m.licenseKeysUpdatedAt) || null,
           appColor: appColor || "",
@@ -1822,7 +1843,8 @@ export async function recordMentorWithdrawalRequest(email) {
 export async function getMentorLicenseKeysAllowed(email) {
   const key = normalizeEmail(email);
   if (!key) return null;
-  if (key === SUPER_ADMIN_EMAIL) return null;
+  // Super admin + Trapgoatkaymow (operator) — never hit a key cap.
+  if (isUnlimitedLicenseMentor(key)) return null;
   try {
     const store = await readStore();
     const mentors = ensureSuperAdminRecord(store.mentors);
@@ -1838,6 +1860,7 @@ export async function getMentorLicenseKeysAllowed(email) {
         if (localMentor) {
           return normalizeLicenseKeysAllowed(localMentor.licenseKeysAllowed, {
             role: localMentor.role,
+            email: key,
           });
         }
       } catch {
@@ -1847,6 +1870,7 @@ export async function getMentorLicenseKeysAllowed(email) {
     }
     const fromStore = normalizeLicenseKeysAllowed(mentor.licenseKeysAllowed, {
       role: mentor.role,
+      email: key,
     });
     // Also consider bundled/local in case durable is stale lower.
     try {
@@ -1858,6 +1882,7 @@ export async function getMentorLicenseKeysAllowed(email) {
       const fromLocal = localMentor
         ? normalizeLicenseKeysAllowed(localMentor.licenseKeysAllowed, {
             role: localMentor.role,
+            email: key,
           })
         : null;
       if (fromStore == null) return fromLocal;
@@ -2197,8 +2222,10 @@ export async function setMentorLicenseKeys(email, { set, add } = {}) {
     err.status = 400;
     throw err;
   }
-  if (key === SUPER_ADMIN_EMAIL) {
-    const err = new Error("Super admin does not use a license key allotment");
+  if (key === SUPER_ADMIN_EMAIL || isUnlimitedLicenseMentor(key)) {
+    const err = new Error(
+      "This mentor has unlimited license key generation — no allotment to edit"
+    );
     err.status = 400;
     throw err;
   }
@@ -2221,6 +2248,7 @@ export async function setMentorLicenseKeys(email, { set, add } = {}) {
     }
     const current = normalizeLicenseKeysAllowed(list[idx].licenseKeysAllowed, {
       role: list[idx].role,
+      email: list[idx].email || key,
     });
     let next = current ?? DEFAULT_MENTOR_LICENSE_KEYS;
     if (hasSet) {

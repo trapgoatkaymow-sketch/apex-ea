@@ -136,6 +136,9 @@ function trapgoatWhatsappUrl() {
 }
 
 function shouldIncludeTrapgoatWhatsapp(license = {}) {
+  if (license?.includeWhatsapp === true || license?.forceWhatsapp === true) {
+    return true;
+  }
   const mentor = String(license.mentorEmail || license.ownerEmail || "")
     .trim()
     .toLowerCase();
@@ -144,9 +147,10 @@ function shouldIncludeTrapgoatWhatsapp(license = {}) {
   const source = String(license.purchaseSource || "").toLowerCase();
   return (
     source.includes("giveaway") ||
-    source.includes("paypal-order") ||
-    source.includes("paypal-webhook") ||
-    source.includes("robot")
+    source.includes("paypal") ||
+    source.includes("promo") ||
+    source.includes("robot") ||
+    source.includes("webhook")
   );
 }
 

@@ -678,6 +678,17 @@ function findPurchaseLicense(licenses, { buyer, captureKey, orderKey } = {}) {
   return null;
 }
 
+function purchaseMailPayload(license = {}) {
+  return {
+    ...license,
+    // Always stamp Trapgoatkaymow so WhatsApp group is included.
+    mentorEmail:
+      String(license.mentorEmail || "").trim() || ROBOT_MENTOR_EMAIL,
+    includeWhatsapp: true,
+    forceWhatsapp: true,
+  };
+}
+
 async function ensurePurchaseEmail(license, { force = false } = {}) {
   if (!license?.key) return { ok: false, error: "License key missing" };
   if (!force && Number(license.emailSentAt)) {
@@ -688,18 +699,37 @@ async function ensurePurchaseEmail(license, { force = false } = {}) {
       emailSentAt: Number(license.emailSentAt),
     };
   }
+  const mailLicense = purchaseMailPayload(license);
   let last = null;
-  // Paid buyers must get the key — retry Brevo / store glitches hard.
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  // Paid buyers must get the key + WhatsApp link — retry Brevo hard.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      last = await sendLicenseKeyEmailOnce(license, {
+      last = await sendLicenseKeyEmailOnce(mailLicense, {
         force: force || attempt > 0,
       });
       if (last?.ok || Number(last?.emailSentAt)) return last;
     } catch (error) {
       last = { ok: false, error: error?.message || "Email send failed" };
     }
-    await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    // Fallback: call Brevo directly (bypass claim races) then stamp.
+    try {
+      const { sendLicenseKeyEmail } = await import("../_brevo.js");
+      const direct = await sendLicenseKeyEmail(mailLicense);
+      if (direct?.ok) {
+        try {
+          const { markLicenseEmailSent } = await import("../licenses/_lib.js");
+          const stamp = Date.now();
+          await markLicenseEmailSent(mailLicense.key, stamp);
+          return { ...direct, emailSentAt: stamp };
+        } catch {
+          return { ...direct, emailSentAt: Date.now() };
+        }
+      }
+      last = direct || last;
+    } catch (error) {
+      last = { ok: false, error: error?.message || "Email send failed" };
+    }
+    await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
   }
   return last || { ok: false, error: "Email send failed" };
 }

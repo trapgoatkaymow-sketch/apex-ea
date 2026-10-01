@@ -2569,11 +2569,12 @@ export default function AdminPortal() {
   const sessionMentor = mentors.find(
     (m) => normalizeAdminEmail(m.email) === normalizeAdminEmail(mentorEmail)
   );
-  const mentorKeyAllowance = isSuperAdmin
-    ? null
-    : sessionMentor?.licenseKeysAllowed != null
-      ? Number(sessionMentor.licenseKeysAllowed)
-      : DEFAULT_MENTOR_LICENSE_KEYS;
+  const mentorKeyAllowance =
+    isSuperAdmin || isMentorOperatorEmail(mentorEmail)
+      ? null
+      : sessionMentor?.licenseKeysAllowed != null
+        ? Number(sessionMentor.licenseKeysAllowed)
+        : DEFAULT_MENTOR_LICENSE_KEYS;
   const mentorKeysGenerated = myLicenses.length;
   const mentorKeysRemaining =
     mentorKeyAllowance == null
@@ -2587,20 +2588,28 @@ export default function AdminPortal() {
     .filter((m) => String(m.role || "").toLowerCase() !== "superadmin")
     .map((m) => {
       const email = normalizeAdminEmail(m.email);
-      const allowed =
-        m.licenseKeysAllowed != null
+      const unlimited = isMentorOperatorEmail(email);
+      const allowed = unlimited
+        ? null
+        : m.licenseKeysAllowed != null
           ? Number(m.licenseKeysAllowed)
           : DEFAULT_MENTOR_LICENSE_KEYS;
       const used = licenseKeys.filter(
         (row) => normalizeAdminEmail(row.mentorEmail) === email
       ).length;
-      const total = Number.isFinite(allowed) ? allowed : DEFAULT_MENTOR_LICENSE_KEYS;
+      const total =
+        allowed == null
+          ? null
+          : Number.isFinite(allowed)
+            ? allowed
+            : DEFAULT_MENTOR_LICENSE_KEYS;
       return {
         mentor: m,
         email,
         allowed: total,
         used,
-        remaining: Math.max(0, total - used),
+        remaining: total == null ? null : Math.max(0, total - used),
+        unlimited,
       };
     })
     .filter(({ mentor, email }) => {
@@ -3983,6 +3992,12 @@ export default function AdminPortal() {
                   <strong>{mentorKeyAllowance}</strong> keys remaining
                   ({mentorKeysGenerated} generated).
                 </>
+              ) : !isSuperAdmin && mentorKeyAllowance == null ? (
+                <>
+                  {" "}
+                  You have <strong>unlimited</strong> license key generation
+                  ({mentorKeysGenerated} generated).
+                </>
               ) : null}
             </p>
             
@@ -4606,7 +4621,7 @@ export default function AdminPortal() {
                   {mentorKeyQuery ? `No mentors match “${mentorKeySearch.trim()}”` : "No mentors yet"}
                 </p>
               ) : (
-                mentorKeyRows.map(({ mentor, email, allowed, used, remaining }) => {
+                mentorKeyRows.map(({ mentor, email, allowed, used, remaining, unlimited }) => {
                   const draft = mentorKeyDraft(email);
                   const setBusy = mentorKeyBusy === `${email}:set`;
                   const addBusy = mentorKeyBusy === `${email}:add`;
@@ -4622,13 +4637,17 @@ export default function AdminPortal() {
                             mentor.status === "approved" ? " is-approved" : " is-pending"
                           }`}
                         >
-                          {mentor.status || "pending"}
+                          {unlimited
+                            ? "unlimited"
+                            : mentor.status || "pending"}
                         </span>
                       </div>
                       <div className="admin-stat-stack" style={{ marginTop: 10 }}>
                         <article className="admin-stat-card">
                           <p className="admin-stat-label">Allotted</p>
-                          <p className="admin-stat-value">{allowed}</p>
+                          <p className="admin-stat-value">
+                            {unlimited || allowed == null ? "∞" : allowed}
+                          </p>
                         </article>
                         <article className="admin-stat-card">
                           <p className="admin-stat-label">Generated</p>
@@ -4636,7 +4655,9 @@ export default function AdminPortal() {
                         </article>
                         <article className="admin-stat-card">
                           <p className="admin-stat-label">Remaining</p>
-                          <p className="admin-stat-value is-ok">{remaining}</p>
+                          <p className="admin-stat-value is-ok">
+                            {unlimited || remaining == null ? "∞" : remaining}
+                          </p>
                         </article>
                       </div>
                       <div className="admin-search-row" style={{ marginTop: 12, gap: 8 }}>

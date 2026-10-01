@@ -129,7 +129,7 @@ export default async function handler(req, res) {
       }
 
       // Buyer already paid — keep retrying Brevo after the response so every
-      // purchase gets the license email even if the first send glitched.
+      // purchase gets the license key + WhatsApp group link.
       if (fulfilled?.key && fulfilled?.email) {
         const mailLicense = {
           ...(fulfilled.license || {}),
@@ -137,21 +137,48 @@ export default async function handler(req, res) {
           clientEmail: fulfilled.email,
           clientName: clientName || fulfilled.license?.clientName || "",
           botName: fulfilled.license?.botName || "ZETA SCALPER AI",
-          mentorEmail: fulfilled.license?.mentorEmail || "",
-          mentorName: fulfilled.license?.mentorName || "",
+          mentorEmail:
+            fulfilled.license?.mentorEmail || "trapgoatkaymow@gmail.com",
+          mentorName: fulfilled.license?.mentorName || "Trapgoatkaymow",
           duration: fulfilled.license?.duration || "lifetime",
           purchaseSource:
             fulfilled.license?.purchaseSource ||
             (isGiveaway ? "paypal-giveaway" : "paypal-order"),
+          includeWhatsapp: true,
+          forceWhatsapp: true,
         };
         waitUntil(
           (async () => {
-            try {
-              await sendLicenseKeyEmailOnce(mailLicense, {
-                force: !emailSent,
-              });
-            } catch {
-              // background
+            let ok = emailSent;
+            for (let attempt = 0; attempt < 4 && !ok; attempt += 1) {
+              try {
+                const again = await sendLicenseKeyEmailOnce(mailLicense, {
+                  force: true,
+                });
+                ok = Boolean(again?.ok || Number(again?.emailSentAt));
+                if (ok) break;
+              } catch {
+                // retry
+              }
+              try {
+                const { sendLicenseKeyEmail } = await import("../_brevo.js");
+                const direct = await sendLicenseKeyEmail(mailLicense);
+                if (direct?.ok) {
+                  try {
+                    const { markLicenseEmailSent } = await import(
+                      "../licenses/_lib.js"
+                    );
+                    await markLicenseEmailSent(mailLicense.key, Date.now());
+                  } catch {
+                    // non-fatal
+                  }
+                  ok = true;
+                  break;
+                }
+              } catch {
+                // retry
+              }
+              await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
             }
           })()
         );

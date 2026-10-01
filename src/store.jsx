@@ -2454,7 +2454,11 @@ export function AppProvider({ children }) {
 
       // Soft local quota hint only (no mentors list fetch — that delayed Generate).
       // Server still enforces the real allowance on createLicense.
-      if (ownerEmail && ownerEmail !== String(SUPER_ADMIN_EMAIL).toLowerCase()) {
+      // Trapgoatkaymow + super admin are unlimited — never soft-block Generate.
+      const unlimitedOwner =
+        ownerEmail === String(SUPER_ADMIN_EMAIL).toLowerCase() ||
+        ownerEmail === "trapgoatkaymow@gmail.com";
+      if (ownerEmail && !unlimitedOwner) {
         const used = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
           (row) => normalizeEmail(row.mentorEmail) === ownerEmail
         ).length;
