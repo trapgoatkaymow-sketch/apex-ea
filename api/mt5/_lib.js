@@ -1155,8 +1155,19 @@ export async function placeMarketTrade({
     entryPrice: fillPrice,
     stopLoss,
     takeProfit: null,
+    ensureStop: true,
   });
-  const anchoredSl = safeSl.stopLoss;
+  // Always prefer a live-anchored SL — never send a naked market order by default.
+  let anchoredSl = safeSl.stopLoss;
+  if (
+    (!(Number.isFinite(Number(anchoredSl)) && Number(anchoredSl) > 0)) &&
+    Number.isFinite(fillPrice) &&
+    fillPrice > 0
+  ) {
+    const pad = Math.max(Number(safeSl.minDist) || 0, fillPrice * 0.001);
+    anchoredSl =
+      tradeSide === "BUY" ? fillPrice - pad : fillPrice + pad;
+  }
 
   function orderLooksBad(order) {
     const raw =
@@ -1202,10 +1213,14 @@ export async function placeMarketTrade({
       symbol: tradeSymbol || requested,
       side: tradeSide,
       entryPrice: fillPrice,
-      stopLoss: null,
+      stopLoss: anchoredSl,
       takeProfit: tpForThread,
+      ensureStop: true,
     });
     tpForThread = safeTp.takeProfit;
+    if (Number.isFinite(Number(safeTp.stopLoss)) && Number(safeTp.stopLoss) > 0) {
+      anchoredSl = safeTp.stopLoss;
+    }
 
     const threadLabel = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
     // Keep |premium for Interface 2; never append |TP1/TP2/TP3.
@@ -1298,15 +1313,25 @@ export async function placeMarketTrade({
         Number(safeTp.minDist) || 0,
         liveFill ? Math.abs(liveFill) * 0.001 : 0
       ) * 1.8;
-      let retrySl = Number(anchoredSl);
+      // REPLACE bad/tiny SL — never Math.min with a near-zero AI stop (that kept SL invalid).
+      let retrySl = null;
       let retryTp = Number(tpForThread);
       if (Number.isFinite(liveFill) && liveFill > 0 && pad > 0) {
         if (tradeSide === "BUY") {
-          if (Number.isFinite(retrySl)) retrySl = Math.min(retrySl, liveFill - pad);
-          if (Number.isFinite(retryTp)) retryTp = Math.max(retryTp, liveFill + pad);
+          retrySl = liveFill - pad;
+          retryTp = Number.isFinite(retryTp)
+            ? Math.max(retryTp, liveFill + pad)
+            : liveFill + pad * 2;
+          // Keep TP inside a sane band relative to the new SL.
+          const maxTp = liveFill + pad * 4;
+          if (retryTp > maxTp) retryTp = maxTp;
         } else {
-          if (Number.isFinite(retrySl)) retrySl = Math.max(retrySl, liveFill + pad);
-          if (Number.isFinite(retryTp)) retryTp = Math.min(retryTp, liveFill - pad);
+          retrySl = liveFill + pad;
+          retryTp = Number.isFinite(retryTp)
+            ? Math.min(retryTp, liveFill - pad)
+            : liveFill - pad * 2;
+          const minTp = liveFill - pad * 4;
+          if (retryTp < minTp) retryTp = minTp;
         }
       }
       order = await sendOrder({
@@ -1314,9 +1339,37 @@ export async function placeMarketTrade({
         tpValue: retryTp,
         includePrice: false,
       });
+      if (!orderLooksBad(order)) {
+        anchoredSl = retrySl;
+        tpForThread = retryTp;
+      }
     }
 
-    // Last resort: open market without stops so clients still get the fill.
+    // Last resort: still try SL-only (no TP), then TP-only — never prefer naked.
+    if (orderLooksBad(order) && /invalid\s*stops/i.test(orderHint(order))) {
+      const liveFill =
+        Number.isFinite(price) && price > 0 ? price : fillPrice;
+      const pad = Math.max(
+        Number(safeSl.minDist) || 0,
+        liveFill ? Math.abs(liveFill) * 0.0015 : 0
+      ) * 2.2;
+      let soloSl = Number(anchoredSl);
+      if (Number.isFinite(liveFill) && liveFill > 0 && pad > 0) {
+        soloSl = tradeSide === "BUY" ? liveFill - pad : liveFill + pad;
+      }
+      order = await sendOrder({
+        slValue: soloSl,
+        tpValue: null,
+        includePrice: false,
+      });
+      if (!orderLooksBad(order)) {
+        order = {
+          ...(order && typeof order === "object" ? order : { order }),
+          warning: "Opened with SL only after broker rejected paired stops",
+        };
+      }
+    }
+
     if (orderLooksBad(order) && /invalid\s*stops/i.test(orderHint(order))) {
       order = await sendOrder({
         slValue: null,
@@ -1582,6 +1635,99 @@ export async function getSymbolQuote(
   }
 
   const err = new Error(`No live quote for ${requested}`);
+  err.status = 404;
+  throw err;
+}
+
+/**
+ * Today's OHLC bars for a connected account (MT5 PriceHistoryToday).
+ * timeFrame is minutes: 30=M30, 60=H1, 240=H4.
+ */
+export async function getPriceHistoryToday(
+  accountId,
+  symbol,
+  { timeFrame = 30, fast = false } = {}
+) {
+  const id = String(accountId || "").trim();
+  const requested = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
+  const tf = Math.max(1, Math.floor(Number(timeFrame) || 30));
+  if (!id || !requested) {
+    const err = new Error("accountId and symbol are required");
+    err.status = 400;
+    throw err;
+  }
+
+  const timeoutMs = fast ? 8000 : 20000;
+
+  async function historyOne(symbolName) {
+    const name = String(symbolName || "").trim();
+    if (!name) return null;
+    // Path has a trailing space in swagger for Today — try both.
+    const paths = [
+      `/PriceHistoryToday?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&timeFrame=${tf}`,
+      `/PriceHistoryToday%20?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&timeFrame=${tf}`,
+    ];
+    let lastErr = null;
+    for (const path of paths) {
+      try {
+        const data = await mt5Fetch(path, { timeoutMs });
+        const rows = Array.isArray(data) ? data : Array.isArray(data?.bars) ? data.bars : null;
+        if (!rows?.length) continue;
+        const bars = rows
+          .map((row) => {
+            const open = Number(row?.openPrice ?? row?.Open ?? row?.open);
+            const high = Number(row?.highPrice ?? row?.High ?? row?.high);
+            const low = Number(row?.lowPrice ?? row?.Low ?? row?.low);
+            const close = Number(row?.closePrice ?? row?.Close ?? row?.close);
+            if (![open, high, low, close].every((n) => Number.isFinite(n) && n > 0)) {
+              return null;
+            }
+            return {
+              time: row?.time || row?.Time || null,
+              open,
+              high,
+              low,
+              close,
+            };
+          })
+          .filter(Boolean);
+        if (bars.length) {
+          return { ok: true, accountId: id, symbol: name, requestedSymbol: requested, timeFrame: tf, bars };
+        }
+      } catch (error) {
+        lastErr = error;
+      }
+    }
+    if (lastErr) throw lastErr;
+    return null;
+  }
+
+  try {
+    const direct = await historyOne(requested);
+    if (direct) return direct;
+  } catch {
+    // resolve spelling below
+  }
+
+  const { symbol: resolvedSym, accountSymbols } =
+    await resolveTradeSymbolDetailed(id, requested);
+  const probeSymbols = buildTradeSymbolProbe({
+    requested,
+    resolved: resolvedSym,
+    accountSymbols,
+  });
+  const maxProbes = fast ? 6 : 20;
+  for (const alt of probeSymbols.slice(0, maxProbes)) {
+    if (String(alt || "").toLowerCase() === requested.toLowerCase()) continue;
+    try {
+      const hit = await historyOne(alt);
+      if (hit) return hit;
+    } catch {
+      // try next
+    }
+  }
+
+  const err = new Error(`No price history for ${requested}`);
   err.status = 404;
   throw err;
 }

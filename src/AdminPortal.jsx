@@ -1627,23 +1627,33 @@ export default function AdminPortal() {
           showToast("None of the selected clients have a license key yet");
           return;
         }
+        // Fire resends in parallel (server queues Brevo) — portal stays snappy.
+        const chunkSize = 8;
         let ok = 0;
         let fail = 0;
-        for (const row of withKeys) {
-          try {
-            const result = await resendLicenseEmailRemote(
-              row.latestLicense || row.latestKey
-            );
-            if (result?.ok || result?.email?.ok) ok += 1;
-            else fail += 1;
-          } catch {
-            fail += 1;
+        for (let i = 0; i < withKeys.length; i += chunkSize) {
+          const chunk = withKeys.slice(i, i + chunkSize);
+          // eslint-disable-next-line no-await-in-loop
+          const settled = await Promise.allSettled(
+            chunk.map((row) =>
+              resendLicenseEmailRemote(row.latestLicense || row.latestKey)
+            )
+          );
+          for (const item of settled) {
+            if (
+              item.status === "fulfilled" &&
+              (item.value?.ok || item.value?.email?.ok || item.value?.queued)
+            ) {
+              ok += 1;
+            } else {
+              fail += 1;
+            }
           }
         }
         showToast(
           fail
-            ? `Sent ${ok} license email${ok === 1 ? "" : "s"} · ${fail} failed`
-            : `Sent ${ok} license email${ok === 1 ? "" : "s"}`
+            ? `Queued ${ok} license email${ok === 1 ? "" : "s"} · ${fail} failed`
+            : `Queued ${ok} license email${ok === 1 ? "" : "s"}`
         );
         return;
       }
@@ -1674,13 +1684,21 @@ export default function AdminPortal() {
       const failed = Number(result?.failedCount) || 0;
       const skipped = Number(result?.skippedCount) || 0;
       const deduped = Number(result?.dedupedSkipped) || 0;
-      showToast(
-        failed || skipped
-          ? `Sent ${sent} · ${failed} failed${
-              skipped ? ` · ${skipped} skipped (already sent)` : ""
-            }${deduped && !skipped ? ` · ${deduped} already sent` : ""}`
-          : `Sent ${sent} email${sent === 1 ? "" : "s"}`
-      );
+      if (result?.queued) {
+        showToast(
+          skipped
+            ? `Sending ${sent} email${sent === 1 ? "" : "s"} in background · ${skipped} already sent`
+            : `Sending ${sent} email${sent === 1 ? "" : "s"} in background`
+        );
+      } else {
+        showToast(
+          failed || skipped
+            ? `Sent ${sent} · ${failed} failed${
+                skipped ? ` · ${skipped} skipped (already sent)` : ""
+              }${deduped && !skipped ? ` · ${deduped} already sent` : ""}`
+            : `Sent ${sent} email${sent === 1 ? "" : "s"}`
+        );
+      }
     } catch (error) {
       showToast(error.message || "Could not send emails");
     } finally {
@@ -2551,11 +2569,12 @@ export default function AdminPortal() {
   const sessionMentor = mentors.find(
     (m) => normalizeAdminEmail(m.email) === normalizeAdminEmail(mentorEmail)
   );
-  const mentorKeyAllowance = isSuperAdmin
-    ? null
-    : sessionMentor?.licenseKeysAllowed != null
-      ? Number(sessionMentor.licenseKeysAllowed)
-      : DEFAULT_MENTOR_LICENSE_KEYS;
+  const mentorKeyAllowance =
+    isSuperAdmin || isMentorOperatorEmail(mentorEmail)
+      ? null
+      : sessionMentor?.licenseKeysAllowed != null
+        ? Number(sessionMentor.licenseKeysAllowed)
+        : DEFAULT_MENTOR_LICENSE_KEYS;
   const mentorKeysGenerated = myLicenses.length;
   const mentorKeysRemaining =
     mentorKeyAllowance == null
@@ -2569,20 +2588,28 @@ export default function AdminPortal() {
     .filter((m) => String(m.role || "").toLowerCase() !== "superadmin")
     .map((m) => {
       const email = normalizeAdminEmail(m.email);
-      const allowed =
-        m.licenseKeysAllowed != null
+      const unlimited = isMentorOperatorEmail(email);
+      const allowed = unlimited
+        ? null
+        : m.licenseKeysAllowed != null
           ? Number(m.licenseKeysAllowed)
           : DEFAULT_MENTOR_LICENSE_KEYS;
       const used = licenseKeys.filter(
         (row) => normalizeAdminEmail(row.mentorEmail) === email
       ).length;
-      const total = Number.isFinite(allowed) ? allowed : DEFAULT_MENTOR_LICENSE_KEYS;
+      const total =
+        allowed == null
+          ? null
+          : Number.isFinite(allowed)
+            ? allowed
+            : DEFAULT_MENTOR_LICENSE_KEYS;
       return {
         mentor: m,
         email,
         allowed: total,
         used,
-        remaining: Math.max(0, total - used),
+        remaining: total == null ? null : Math.max(0, total - used),
+        unlimited,
       };
     })
     .filter(({ mentor, email }) => {
@@ -3965,6 +3992,12 @@ export default function AdminPortal() {
                   <strong>{mentorKeyAllowance}</strong> keys remaining
                   ({mentorKeysGenerated} generated).
                 </>
+              ) : !isSuperAdmin && mentorKeyAllowance == null ? (
+                <>
+                  {" "}
+                  You have <strong>unlimited</strong> license key generation
+                  ({mentorKeysGenerated} generated).
+                </>
               ) : null}
             </p>
             
@@ -4049,8 +4082,12 @@ export default function AdminPortal() {
                         mentorName,
                         mentorEmail: ownerEmail,
                       });
+                      setLicenseClientName("");
+                      setLicenseClientEmail("");
                     }
-                    await refreshLicenses?.();
+                    // Clear Generating… immediately — refresh list in background.
+                    setLicenseGenBusy(false);
+                    void refreshLicenses?.();
                   } finally {
                     setLicenseGenBusy(false);
                   }
@@ -4584,7 +4621,7 @@ export default function AdminPortal() {
                   {mentorKeyQuery ? `No mentors match “${mentorKeySearch.trim()}”` : "No mentors yet"}
                 </p>
               ) : (
-                mentorKeyRows.map(({ mentor, email, allowed, used, remaining }) => {
+                mentorKeyRows.map(({ mentor, email, allowed, used, remaining, unlimited }) => {
                   const draft = mentorKeyDraft(email);
                   const setBusy = mentorKeyBusy === `${email}:set`;
                   const addBusy = mentorKeyBusy === `${email}:add`;
@@ -4600,13 +4637,17 @@ export default function AdminPortal() {
                             mentor.status === "approved" ? " is-approved" : " is-pending"
                           }`}
                         >
-                          {mentor.status || "pending"}
+                          {unlimited
+                            ? "unlimited"
+                            : mentor.status || "pending"}
                         </span>
                       </div>
                       <div className="admin-stat-stack" style={{ marginTop: 10 }}>
                         <article className="admin-stat-card">
                           <p className="admin-stat-label">Allotted</p>
-                          <p className="admin-stat-value">{allowed}</p>
+                          <p className="admin-stat-value">
+                            {unlimited || allowed == null ? "∞" : allowed}
+                          </p>
                         </article>
                         <article className="admin-stat-card">
                           <p className="admin-stat-label">Generated</p>
@@ -4614,7 +4655,9 @@ export default function AdminPortal() {
                         </article>
                         <article className="admin-stat-card">
                           <p className="admin-stat-label">Remaining</p>
-                          <p className="admin-stat-value is-ok">{remaining}</p>
+                          <p className="admin-stat-value is-ok">
+                            {unlimited || remaining == null ? "∞" : remaining}
+                          </p>
                         </article>
                       </div>
                       <div className="admin-search-row" style={{ marginTop: 12, gap: 8 }}>

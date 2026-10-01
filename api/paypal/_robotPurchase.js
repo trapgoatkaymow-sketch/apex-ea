@@ -103,10 +103,10 @@ let memoryGiveawayWindow = null;
 /** Display-only urgency window — checkout stays open after this elapses. */
 export const GIVEAWAY_COUNTDOWN_HOURS = Math.max(
   1,
-  Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 10
+  Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 17
 );
 /** Bump to force a fresh on-page countdown latch (checkout stays open). */
-export const GIVEAWAY_COUNTDOWN_VERSION = 3;
+export const GIVEAWAY_COUNTDOWN_VERSION = 4;
 
 function countdownFromLatched(row) {
   const ms = Date.parse(String(row?.countdownEndsAt || "").trim());
@@ -433,12 +433,12 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
   const durationMs = Math.max(latched.durationMs || 0, GIVEAWAY_DURATION_MS);
   let countdownEndsAtMs = latched.countdownEndsAtMs;
   const storedVersion = Number(latched.countdownVersion) || 0;
-  // Version bump (2 = 10h display) latches a fresh countdown once per bump.
+  // Version bump latches a fresh countdown once per bump (v4 = +17h).
   if (
     !Number.isFinite(countdownEndsAtMs) ||
     storedVersion < GIVEAWAY_COUNTDOWN_VERSION
   ) {
-    // v3+: prefer packaged absolute countdown (e.g. +12h extend) over a 10h reset.
+    // Prefer packaged absolute countdown when still in the future.
     try {
       const fs = await import("fs");
       const path = await import("path");
@@ -467,7 +467,8 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
               countdownSetAt: new Date(nowMs).toISOString(),
               countdownVersion: GIVEAWAY_COUNTDOWN_VERSION,
               extendedAt: new Date(nowMs).toISOString(),
-              extendedByHours: Number(packaged.extendedByHours) || 12,
+              extendedByHours:
+                Number(packaged.extendedByHours) || GIVEAWAY_COUNTDOWN_HOURS,
               extendedByDays: 0,
             },
             "chore: latch packaged giveaway countdown"
@@ -483,9 +484,7 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
     } catch {
       // fall through
     }
-    if (Number.isFinite(countdownEndsAtMs) && storedVersion < GIVEAWAY_COUNTDOWN_VERSION) {
-      return await extendGiveawayCountdownByHours(12, nowMs);
-    }
+    // Fresh 17h display from deploy time (timer was at zero).
     return await setGiveawayCountdownHours(GIVEAWAY_COUNTDOWN_HOURS, nowMs);
   }
   if (durationMs > (latched.durationMs || 0)) {
@@ -679,6 +678,17 @@ function findPurchaseLicense(licenses, { buyer, captureKey, orderKey } = {}) {
   return null;
 }
 
+function purchaseMailPayload(license = {}) {
+  return {
+    ...license,
+    // Always stamp Trapgoatkaymow so WhatsApp group is included.
+    mentorEmail:
+      String(license.mentorEmail || "").trim() || ROBOT_MENTOR_EMAIL,
+    includeWhatsapp: true,
+    forceWhatsapp: true,
+  };
+}
+
 async function ensurePurchaseEmail(license, { force = false } = {}) {
   if (!license?.key) return { ok: false, error: "License key missing" };
   if (!force && Number(license.emailSentAt)) {
@@ -689,18 +699,37 @@ async function ensurePurchaseEmail(license, { force = false } = {}) {
       emailSentAt: Number(license.emailSentAt),
     };
   }
+  const mailLicense = purchaseMailPayload(license);
   let last = null;
-  // Paid buyers must get the key — retry Brevo / store glitches hard.
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  // Paid buyers must get the key + WhatsApp link — retry Brevo hard.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      last = await sendLicenseKeyEmailOnce(license, {
+      last = await sendLicenseKeyEmailOnce(mailLicense, {
         force: force || attempt > 0,
       });
       if (last?.ok || Number(last?.emailSentAt)) return last;
     } catch (error) {
       last = { ok: false, error: error?.message || "Email send failed" };
     }
-    await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    // Fallback: call Brevo directly (bypass claim races) then stamp.
+    try {
+      const { sendLicenseKeyEmail } = await import("../_brevo.js");
+      const direct = await sendLicenseKeyEmail(mailLicense);
+      if (direct?.ok) {
+        try {
+          const { markLicenseEmailSent } = await import("../licenses/_lib.js");
+          const stamp = Date.now();
+          await markLicenseEmailSent(mailLicense.key, stamp);
+          return { ...direct, emailSentAt: stamp };
+        } catch {
+          return { ...direct, emailSentAt: Date.now() };
+        }
+      }
+      last = direct || last;
+    } catch (error) {
+      last = { ok: false, error: error?.message || "Email send failed" };
+    }
+    await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
   }
   return last || { ok: false, error: "Email send failed" };
 }
@@ -793,7 +822,9 @@ export async function fulfillRobotPurchase({
         mentorId: mentor.mentorId,
         mentorName: mentor.mentorName,
         duration: "lifetime",
+        // Paid buyers must get Brevo synchronously here (not deferred).
         sendEmail: true,
+        asyncEmail: false,
         skipQuota: true,
         purchaseCaptureId: captureKey || null,
         purchaseOrderId: orderKey || null,

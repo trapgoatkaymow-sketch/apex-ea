@@ -74,6 +74,12 @@ export default function TradeScriptOrb({
   tradeLive = null,
   storageKey = "apexea-float-pos",
   showToast,
+  startsLeft = null,
+  startQuota = 10,
+  /** Start trading from the welcome panel (never from History view). */
+  onStartTrading = null,
+  /** True while robot is already running / opening. */
+  isRunning = false,
 }) {
   const [floatPos, setFloatPos] = useState(() => loadFloatPos(storageKey));
   const [scriptOpen, setScriptOpen] = useState(false);
@@ -288,6 +294,7 @@ export default function TradeScriptOrb({
   // When the robot starts opening trades, open the panel and type the trade script.
   useEffect(() => {
     if (isOpening && !wasOpeningRef.current && visible) {
+      setHistoryOpen(false);
       setScriptOpen(true);
     }
     wasOpeningRef.current = isOpening;
@@ -364,6 +371,13 @@ export default function TradeScriptOrb({
       saveFloatPos(storageKey, next);
       return;
     }
+    // Idle tap → history only (never starts trading).
+    if (!isOpening) {
+      setTradeHistory(loadTradeHistory());
+      setHistoryOpen(true);
+    } else {
+      setHistoryOpen(false);
+    }
     setScriptOpen(true);
   }
 
@@ -400,6 +414,17 @@ export default function TradeScriptOrb({
     showToast?.("Trade history cleared");
   }
 
+  function handleStartTrading() {
+    if (typeof onStartTrading !== "function") return;
+    if (isRunning || isOpening) return;
+    if (startsLeft != null && Number(startsLeft) <= 0) {
+      showToast?.("Daily START limit reached (10). Try again tomorrow.");
+      return;
+    }
+    setHistoryOpen(false);
+    onStartTrading();
+  }
+
   if (!visible && !scriptOpen) return null;
 
   return (
@@ -411,8 +436,16 @@ export default function TradeScriptOrb({
             isOpening ? " is-trading" : ""
           }`}
           type="button"
-          aria-label={isOpening ? `${displayName} opening trades` : `${displayName} welcome`}
-          title={isOpening ? "Drag to move · tap for trade script" : "Drag to move · tap to open"}
+          aria-label={
+            isOpening
+              ? `${displayName} opening trades`
+              : `${displayName} — tap for trade history`
+          }
+          title={
+            isOpening
+              ? "Drag to move · tap for trade script"
+              : "Drag to move · tap to view history (does not start trading)"
+          }
           style={
             floatPos
               ? { left: `${floatPos.x}px`, top: `${floatPos.y}px`, right: "auto", bottom: "auto" }
@@ -502,14 +535,31 @@ export default function TradeScriptOrb({
                 </button>
               </div>
             </header>
+            {startsLeft != null ? (
+              <p
+                className={`trade-script-chances${
+                  Number(startsLeft) <= 0 ? " is-empty" : ""
+                }`}
+                aria-label={`${Math.max(0, Number(startsLeft) || 0)} of ${startQuota} daily START chances left`}
+              >
+                Daily chances{" "}
+                <strong>
+                  {Math.max(0, Number(startsLeft) || 0)}/{startQuota}
+                </strong>
+              </p>
+            ) : null}
             {historyOpen ? (
-              <p className="trade-script-note">Saved on this device · does not reset overnight.</p>
+              <p className="trade-script-note">
+                View only · does not start trading · saved on this device.
+              </p>
             ) : isOpening ? (
               <p className="trade-script-note">
                 Comment tag <strong>{tradeComment}</strong>
               </p>
             ) : (
-              <p className="trade-script-note">Your robot is standing by.</p>
+              <p className="trade-script-note">
+                Tap the robot bubble for history. Use Start trading only to open orders.
+              </p>
             )}
             {historyOpen ? (
               <div className="trade-history-list" role="list">
@@ -575,10 +625,27 @@ export default function TradeScriptOrb({
                 <span className="trade-script-caret" aria-hidden="true" />
               </pre>
             )}
-            {isOpening || historyOpen ? (
+            {historyOpen ? (
               <div className="trade-script-actions">
                 <button className="trade-script-copy" type="button" onClick={copyScript}>
-                  {historyOpen ? "Copy history" : "Copy script"}
+                  Copy history
+                </button>
+              </div>
+            ) : isOpening ? (
+              <div className="trade-script-actions">
+                <button className="trade-script-copy" type="button" onClick={copyScript}>
+                  Copy script
+                </button>
+              </div>
+            ) : !isRunning && typeof onStartTrading === "function" ? (
+              <div className="trade-script-actions">
+                <button
+                  className="trade-script-start"
+                  type="button"
+                  onClick={handleStartTrading}
+                  disabled={startsLeft != null && Number(startsLeft) <= 0}
+                >
+                  Start trading
                 </button>
               </div>
             ) : null}

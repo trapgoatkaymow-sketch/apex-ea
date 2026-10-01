@@ -17,6 +17,12 @@ import {
   listAppPairs,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
+import {
+  START_QUOTA_DAILY,
+  canStartToday,
+  consumeStartChance,
+  loadStartsLeft,
+} from "./startQuota.js";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import { useEffect, useRef, useState } from "react";
 
@@ -71,6 +77,7 @@ export default function ZetaInterface() {
   /** Remaining ms for the home START countdown (null = hidden). */
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
+  const [startsLeft, setStartsLeft] = useState(() => loadStartsLeft());
 
   useEffect(() => {
     if (zetaView !== "symbol-edit" || !editingSymbol) return;
@@ -165,10 +172,14 @@ export default function ZetaInterface() {
     setStartStatus("");
   }
 
+  useEffect(() => {
+    // Refresh remaining START chances when home is shown / day rolls over.
+    if (zetaView === "home") setStartsLeft(loadStartsLeft());
+  }, [zetaView, running]);
+
   function toggleRun() {
-    const next = !running;
-    setV2Running(next);
-    if (!next) {
+    if (running) {
+      setV2Running(false);
       if (silentOpenTimerRef.current) {
         clearTimeout(silentOpenTimerRef.current);
         silentOpenTimerRef.current = null;
@@ -176,6 +187,7 @@ export default function ZetaInterface() {
       silentOpenRunRef.current += 1;
       clearStartCountdown();
       clearOrbTrade?.();
+      setStartsLeft(loadStartsLeft());
       return;
     }
 
@@ -183,7 +195,6 @@ export default function ZetaInterface() {
     const ctx = silentOpenCtxRef.current || {};
     const accountId = String(ctx.mt5Session?.accountId || "").trim();
     if (!accountId) {
-      setV2Running(false);
       clearStartCountdown();
       showToast("Connect MetaTrader before START");
       return;
@@ -191,11 +202,22 @@ export default function ZetaInterface() {
     // Freeze the exact "On your app" list at START press (all selected pairs).
     const pairs = listAppPairs(ctx.activeBot, ctx.eas, ctx.appSymbols).slice();
     if (!pairs.length) {
-      setV2Running(false);
       clearStartCountdown();
       showToast("Add a pair first, then press START");
       return;
     }
+
+    // Only block when daily quota is already used — do NOT consume yet.
+    // A chance is spent only after a successful open thread (see below).
+    if (!canStartToday()) {
+      setStartsLeft(loadStartsLeft());
+      clearStartCountdown();
+      showToast("Daily START limit reached (10). Try again tomorrow.");
+      return;
+    }
+    setStartsLeft(loadStartsLeft());
+
+    setV2Running(true);
 
     // Show “Opening positions · 15” countdown — no big timer / pair-list toast.
     countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
@@ -241,9 +263,12 @@ export default function ZetaInterface() {
           showToast(error?.message || "START open failed");
           return;
         }
+        // STOP mid-run cancels this runId — do not count a chance.
         if (silentOpenRunRef.current !== runId) return;
         clearStartCountdown();
-        if (result?.ok) {
+        if (result?.ok && Number(result.opened) > 0) {
+          const chance = consumeStartChance();
+          setStartsLeft(chance.left);
           showToast(
             `Opened ${result.opened || 0} trades · ${
               result.symbols?.join(" · ") || result.symbol || ""
@@ -301,9 +326,19 @@ export default function ZetaInterface() {
                   <span>Pairs</span>
                 </button>
                 <button
-                  className={`stop-btn${running ? " is-running" : ""}`}
+                  className={`stop-btn${running ? " is-running" : ""}${
+                    !running && startsLeft <= 0 ? " is-exhausted" : ""
+                  }`}
                   type="button"
                   onClick={toggleRun}
+                  disabled={!running && startsLeft <= 0}
+                  aria-label={
+                    running
+                      ? "STOP"
+                      : startsLeft <= 0
+                        ? "Start trading locked — 0 chances left today"
+                        : `Start trading · ${startsLeft} of ${START_QUOTA_DAILY} left today`
+                  }
                 >
                   <span className="stop-energy" aria-hidden="true">
                     {Array.from({ length: START_PARTICLE_COUNT }, (_, i) => (
@@ -311,7 +346,16 @@ export default function ZetaInterface() {
                     ))}
                   </span>
                   <span className="stop-core-glow" aria-hidden="true" />
-                  <span className="stop-label">{running ? "STOP" : "START"}</span>
+                  <span
+                    className={`stop-label${running ? "" : " is-start-trading"}`}
+                  >
+                    {running ? "STOP" : "Start trading"}
+                  </span>
+                  {!running ? (
+                    <span className="stop-quota" aria-hidden="true">
+                      {startsLeft}/{START_QUOTA_DAILY}
+                    </span>
+                  ) : null}
                 </button>
                 <button className="glass-btn" type="button" onClick={removeActiveBot}>
                   <span>Remove bot</span>
@@ -511,7 +555,7 @@ export default function ZetaInterface() {
       </nav>
 
       <TradeScriptOrb
-        visible={(running || Boolean(orbTradeLive)) && zetaView === "home"}
+        visible={Boolean(activeBot) && zetaView === "home"}
         photoSrc={floatSrc}
         botId={activeBot?.id || ""}
         bot={activeBot}
@@ -522,6 +566,12 @@ export default function ZetaInterface() {
         tradeLive={orbTradeLive}
         storageKey="apexea-float-pos-zeta"
         showToast={showToast}
+        startsLeft={startsLeft}
+        startQuota={START_QUOTA_DAILY}
+        isRunning={running}
+        onStartTrading={() => {
+          if (!running) toggleRun();
+        }}
       />
     </div>
   );

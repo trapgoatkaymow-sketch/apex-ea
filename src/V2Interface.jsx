@@ -16,6 +16,12 @@ import {
   listAppPairs,
   runSilentStartOpen,
 } from "./silentStartOpen.js";
+import {
+  START_QUOTA_DAILY,
+  canStartToday,
+  consumeStartChance,
+  loadStartsLeft,
+} from "./startQuota.js";
 import TopBar from "./TopBar.jsx";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import V2ScannerPaywall from "./V2ScannerPaywall.jsx";
@@ -91,6 +97,7 @@ export default function V2Interface() {
   const [floatCycle, setFloatCycle] = useState(false);
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
+  const [startsLeft, setStartsLeft] = useState(() => loadStartsLeft());
 
   useEffect(() => {
     if (!v2Running || !countdownEndsAtRef.current) {
@@ -105,6 +112,10 @@ export default function V2Interface() {
     const id = setInterval(tick, 250);
     return () => clearInterval(id);
   }, [v2Running, startStatus]);
+
+  useEffect(() => {
+    if (v2View === "home") setStartsLeft(loadStartsLeft());
+  }, [v2View, v2Running]);
 
   const [floatSrc, setFloatSrc] = useState(
     () =>
@@ -227,14 +238,23 @@ export default function V2Interface() {
                 <span className="v2-pill-label">QUOTES</span>
               </button>
               <button
-                className={`v2-pill-btn${v2Running ? " is-running" : ""}`}
+                className={`v2-pill-btn${v2Running ? " is-running" : ""}${
+                  !v2Running && startsLeft <= 0 ? " is-exhausted" : ""
+                }`}
                 type="button"
                 id="v2-trade-btn"
+                disabled={!v2Running && startsLeft <= 0}
+                aria-label={
+                  v2Running
+                    ? "STOP"
+                    : startsLeft <= 0
+                      ? "Start trading locked — 0 chances left today"
+                      : `Start trading · ${startsLeft} of ${START_QUOTA_DAILY} left today`
+                }
                 onClick={() => {
-                  const next = !v2Running;
-                  setV2Running(next);
-                  setFloatCycle(next);
-                  if (!next) {
+                  if (v2Running) {
+                    setV2Running(false);
+                    setFloatCycle(false);
                     if (silentOpenTimerRef.current) {
                       clearTimeout(silentOpenTimerRef.current);
                       silentOpenTimerRef.current = null;
@@ -244,13 +264,12 @@ export default function V2Interface() {
                     setStartCountdownMs(null);
                     setStartStatus("");
                     clearOrbTrade?.();
+                    setStartsLeft(loadStartsLeft());
                     return;
                   }
                   const ctx = silentOpenCtxRef.current || {};
                   const accountId = String(ctx.mt5Session?.accountId || "").trim();
                   if (!accountId) {
-                    setV2Running(false);
-                    setFloatCycle(false);
                     showToast("Connect MetaTrader before START");
                     return;
                   }
@@ -260,11 +279,19 @@ export default function V2Interface() {
                     ctx.appSymbols
                   ).slice();
                   if (!pairs.length) {
-                    setV2Running(false);
-                    setFloatCycle(false);
                     showToast("Add a pair first, then press START");
                     return;
                   }
+                  // Only block when daily quota is already used — do NOT consume yet.
+                  // A chance is spent only after a successful open thread.
+                  if (!canStartToday()) {
+                    setStartsLeft(loadStartsLeft());
+                    showToast("Daily START limit reached (10). Try again tomorrow.");
+                    return;
+                  }
+                  setStartsLeft(loadStartsLeft());
+                  setV2Running(true);
+                  setFloatCycle(true);
                   countdownEndsAtRef.current = Date.now() + START_SILENT_OPEN_DELAY_MS;
                   setStartCountdownMs(START_SILENT_OPEN_DELAY_MS);
                   setStartStatus("opening");
@@ -311,11 +338,14 @@ export default function V2Interface() {
                         showToast(error?.message || "START open failed");
                         return;
                       }
+                      // STOP mid-run cancels this runId — do not count a chance.
                       if (silentOpenRunRef.current !== runId) return;
                       countdownEndsAtRef.current = 0;
                       setStartCountdownMs(null);
                       setStartStatus("");
-                      if (result?.ok) {
+                      if (result?.ok && Number(result.opened) > 0) {
+                        const chance = consumeStartChance();
+                        setStartsLeft(chance.left);
                         showToast(
                           `Opened ${result.opened || 0} trades · ${
                             result.symbols?.join(" · ") || result.symbol || ""
@@ -350,7 +380,14 @@ export default function V2Interface() {
                     </svg>
                   )}
                 </span>
-                <span className="v2-pill-label">{v2Running ? "STOP" : "TRADE"}</span>
+                <span className="v2-pill-label">
+                  {v2Running ? "STOP" : "START"}
+                </span>
+                {!v2Running ? (
+                  <span className="stop-quota" aria-hidden="true">
+                    {startsLeft}/{START_QUOTA_DAILY}
+                  </span>
+                ) : null}
               </button>
               <button className="v2-pill-btn" type="button" onClick={removeActiveBot}>
                 <span className="v2-pill-icon is-remove" aria-hidden="true">
@@ -363,7 +400,6 @@ export default function V2Interface() {
                 <span className="v2-pill-label">REMOVE</span>
               </button>
             </div>
-
             {v2Running && startStatus ? (
               <p className="start-countdown" aria-live="polite">
                 {startStatus === "scanning"
@@ -633,7 +669,7 @@ export default function V2Interface() {
       </nav>
 
       <TradeScriptOrb
-        visible={(floatCycle || v2Running || Boolean(orbTradeLive)) && v2View === "home"}
+        visible={Boolean(activeBot) && v2View === "home"}
         photoSrc={floatSrc}
         botId={activeBot?.id || ""}
         bot={activeBot}
@@ -644,6 +680,13 @@ export default function V2Interface() {
         tradeLive={orbTradeLive}
         storageKey="apexea-float-pos-v2"
         showToast={showToast}
+        startsLeft={startsLeft}
+        startQuota={START_QUOTA_DAILY}
+        isRunning={v2Running}
+        onStartTrading={() => {
+          if (v2Running) return;
+          document.getElementById("v2-trade-btn")?.click();
+        }}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { endOptions } from "../_cors.js";
 import {
   captureLifetimeOrder,
@@ -16,6 +17,7 @@ import {
   isGiveawayPurchaseCapture,
   isRobotPurchaseCapture,
 } from "./_robotPurchase.js";
+import { sendLicenseKeyEmailOnce } from "../licenses/_lib.js";
 import {
   setSignupAccessPaid,
   setSignupPremiumScanner,
@@ -125,22 +127,87 @@ export default async function handler(req, res) {
           // keep original fulfill — key still returned below
         }
       }
+
+      // Buyer already paid — keep retrying Brevo after the response so every
+      // purchase gets the license key + WhatsApp group link.
+      if (fulfilled?.key && fulfilled?.email) {
+        const mailLicense = {
+          ...(fulfilled.license || {}),
+          key: fulfilled.key,
+          clientEmail: fulfilled.email,
+          clientName: clientName || fulfilled.license?.clientName || "",
+          botName: fulfilled.license?.botName || "ZETA SCALPER AI",
+          mentorEmail:
+            fulfilled.license?.mentorEmail || "trapgoatkaymow@gmail.com",
+          mentorName: fulfilled.license?.mentorName || "Trapgoatkaymow",
+          duration: fulfilled.license?.duration || "lifetime",
+          purchaseSource:
+            fulfilled.license?.purchaseSource ||
+            (isGiveaway ? "paypal-giveaway" : "paypal-order"),
+          includeWhatsapp: true,
+          forceWhatsapp: true,
+        };
+        waitUntil(
+          (async () => {
+            let ok = emailSent;
+            for (let attempt = 0; attempt < 4 && !ok; attempt += 1) {
+              try {
+                const again = await sendLicenseKeyEmailOnce(mailLicense, {
+                  force: true,
+                });
+                ok = Boolean(again?.ok || Number(again?.emailSentAt));
+                if (ok) break;
+              } catch {
+                // retry
+              }
+              try {
+                const { sendLicenseKeyEmail } = await import("../_brevo.js");
+                const direct = await sendLicenseKeyEmail(mailLicense);
+                if (direct?.ok) {
+                  try {
+                    const { markLicenseEmailSent } = await import(
+                      "../licenses/_lib.js"
+                    );
+                    await markLicenseEmailSent(mailLicense.key, Date.now());
+                  } catch {
+                    // non-fatal
+                  }
+                  ok = true;
+                  break;
+                }
+              } catch {
+                // retry
+              }
+              await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+            }
+          })()
+        );
+      }
+
       sendJson(res, 200, {
         ok: true,
         orderId,
         email: fulfilled.email,
         purpose: isGiveaway ? "giveaway" : "robot",
         accessPaid: true,
-        licenseKey: fulfilled.key,
+        licenseKey: fulfilled.key || fulfilled.license?.key || null,
         license: fulfilled.license
           ? {
               key: fulfilled.license.key,
               botName: fulfilled.license.botName,
               clientEmail: fulfilled.license.clientEmail,
             }
-          : null,
+          : fulfilled.key
+            ? {
+                key: fulfilled.key,
+                botName: "ZETA SCALPER AI",
+                clientEmail: fulfilled.email,
+              }
+            : null,
         reused: Boolean(fulfilled.reused),
         emailSent,
+        whatsappUrl:
+          "https://chat.whatsapp.com/DxPeaEnyFRtDIlTWth4kLs?mode=gi_t",
         captureStatus: capture.status,
       });
       return;

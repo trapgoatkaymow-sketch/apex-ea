@@ -6,7 +6,7 @@
     <title>ApexEA Giveaway — App Access + Robot License</title>
     <meta
       name="description"
-      content="Giveaway special: pay R350, unlock ApexEA app access and get a ZETA SCALPER AI license key emailed automatically."
+      content="Last ApexEA giveaway special: pay R350, unlock app access and get a ZETA SCALPER AI license key plus WhatsApp invite emailed automatically. After this, there will never be another special."
     />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -186,14 +186,87 @@
       .msg.ok { color: var(--ok); }
       .msg.err { color: var(--err); }
       .keybox {
-        margin-top: 14px;
-        padding: 12px 14px;
+        display: none;
+        margin-top: 16px;
+        padding: 16px 16px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 179, 71, 0.55);
+        background: rgba(255, 106, 0, 0.12);
+      }
+      .keybox.is-visible {
+        display: block;
+      }
+      .keybox-label {
+        margin: 0 0 8px;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--fire2);
+        font-weight: 700;
+      }
+      .keybox-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .keybox-value {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        padding: 12px 12px;
         border-radius: 12px;
-        border: 1px dashed var(--line);
-        font-family: ui-monospace, monospace;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--line);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.95rem;
         letter-spacing: 0.04em;
         word-break: break-all;
+        color: var(--text);
+      }
+      .keybox-copy {
+        flex: 0 0 auto;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #111;
+        background: linear-gradient(180deg, var(--fire2), var(--fire));
+        cursor: pointer;
+      }
+      .keybox-copy:active {
+        transform: scale(0.97);
+      }
+      .keybox-hint {
+        margin: 10px 0 0;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+      .wa-box {
         display: none;
+        margin-top: 12px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: rgba(37, 211, 102, 0.1);
+        border: 1px solid rgba(37, 211, 102, 0.4);
+        font-size: 0.88rem;
+        line-height: 1.45;
+        color: var(--text);
+      }
+      .wa-box a {
+        color: #25d366;
+        font-weight: 700;
+      }
+      .last-note {
+        margin: 0 0 16px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 106, 0, 0.12);
+        border: 1px solid rgba(255, 179, 71, 0.45);
+        font-size: 0.88rem;
+        line-height: 1.45;
+        color: var(--fire2);
       }
       .foot {
         margin-top: 18px;
@@ -276,7 +349,11 @@
       <p class="sub">
         Limited-time special — pay once for <strong style="color:var(--text)">app access</strong>
         plus a <strong style="color:var(--text)">ZETA SCALPER AI</strong> robot license.
-        Key is emailed automatically. Pay by card — no PayPal account required.
+        Your license key and WhatsApp group link are emailed automatically. Pay by card — no PayPal account required.
+      </p>
+      <p class="last-note">
+        <strong style="color:var(--text)">This is the last special.</strong>
+        After this offer ends, there will never be another ApexEA giveaway special.
       </p>
 
       <div id="timer" class="timer" aria-live="polite">
@@ -343,15 +420,36 @@
       </form>
 
       <p id="msg" class="msg" role="status"></p>
-      <div id="keybox" class="keybox" aria-live="polite"></div>
+      <div id="keybox" class="keybox" aria-live="polite">
+        <p class="keybox-label">Your license key</p>
+        <div class="keybox-row">
+          <p class="keybox-value" id="key-value"></p>
+          <button type="button" class="keybox-copy" id="copy-key-btn">Copy</button>
+        </div>
+        <p class="keybox-hint" id="key-hint">
+          Copy this key now. The same key and WhatsApp link are also emailed automatically — check spam.
+        </p>
+      </div>
+      <div id="wa-box" class="wa-box" aria-live="polite">
+        Join the Trapgoatkaymow ApexEA WhatsApp group (also in your license email):
+        <br />
+        <a
+          id="wa-link"
+          href="https://chat.whatsapp.com/DxPeaEnyFRtDIlTWth4kLs?mode=gi_t"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Join WhatsApp group</a
+        >
+      </div>
 
       <p class="foot">
-        After payment, your email unlocks the app and you get a license key by email (check spam).
+        After payment, your email unlocks the app and you get a license key plus WhatsApp link by email (check spam).
         Open
         <a href="https://www.apex-ea.com/">apex-ea.com</a>
         or the
         <a href="https://www.apex-ea.com/get-app.html">Android app</a>,
         sign in with this same email, then activate the key on ZETA SCALPER AI.
+        This is the last special — there will never be another.
       </p>
     </main>
 
@@ -376,9 +474,11 @@
       const tS = document.getElementById("t-s");
       const endedBox = document.getElementById("ended-box");
       let giveawayActive = true;
-      // Provisional 10h urgency countdown until server syncs display end time.
+      // Provisional 17h urgency countdown until server syncs display end time.
       // Checkout stays open after this hits zero.
-      let endsAtMs = Date.now() + 10 * 60 * 60 * 1000;
+      const WHATSAPP_GROUP_URL =
+        "https://chat.whatsapp.com/DxPeaEnyFRtDIlTWth4kLs?mode=gi_t";
+      let endsAtMs = Date.now() + 17 * 60 * 60 * 1000;
       let timerSynced = false;
 
       function setMsg(text, kind) {
@@ -445,10 +545,60 @@
       paintDigits(endsAtMs - Date.now());
       setInterval(tickTimer, 250);
 
-      function showKey(key) {
-        if (!key) return;
+      function showKey(key, { emailSent = false, email = "" } = {}) {
+        const value = String(key || "").trim().toUpperCase();
+        if (!value) return;
+        const keyValue = document.getElementById("key-value");
+        const keyHint = document.getElementById("key-hint");
+        const copyBtn = document.getElementById("copy-key-btn");
+        if (keyValue) keyValue.textContent = value;
+        keybox.classList.add("is-visible");
         keybox.style.display = "block";
-        keybox.textContent = key;
+        if (keyHint) {
+          keyHint.textContent = emailSent
+            ? `Key emailed to ${email || "your inbox"} (check spam). Copy it here too.`
+            : `Copy this key now. We are also emailing it${
+                email ? " to " + email : ""
+              } with the WhatsApp link — check spam.`;
+        }
+        if (copyBtn && !copyBtn.dataset.bound) {
+          copyBtn.dataset.bound = "1";
+          copyBtn.addEventListener("click", async () => {
+            const text = String(keyValue?.textContent || "").trim();
+            if (!text) return;
+            try {
+              await navigator.clipboard.writeText(text);
+              copyBtn.textContent = "Copied";
+              setTimeout(() => {
+                copyBtn.textContent = "Copy";
+              }, 1600);
+            } catch {
+              try {
+                const range = document.createRange();
+                range.selectNodeContents(keyValue);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                document.execCommand("copy");
+                copyBtn.textContent = "Copied";
+                setTimeout(() => {
+                  copyBtn.textContent = "Copy";
+                }, 1600);
+              } catch {
+                setMsg("Could not copy — select the key manually", "err");
+              }
+            }
+          });
+        }
+        const waBox = document.getElementById("wa-box");
+        const waLink = document.getElementById("wa-link");
+        if (waBox) waBox.style.display = "block";
+        if (waLink) waLink.href = WHATSAPP_GROUP_URL;
+        try {
+          keybox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch {
+          // ignore
+        }
       }
 
       function hidePayUi() {
@@ -557,15 +707,24 @@
           }
         }
         if (!result) throw lastError || new Error("Could not finish payment");
+        const licenseKey =
+          result.licenseKey || result.license?.key || result.key || "";
         setMsg(
           result.reused
             ? "Already paid — your license key is below (also emailed). App access is unlocked for this email."
-            : "Paid! App access unlocked and license emailed to " +
+            : result.emailSent
+              ? "Paid! License key is below and emailed to " +
+                (result.email || email) +
+                "."
+              : "Paid! Your license key is below — copy it now. Email is also on the way to " +
                 (result.email || email) +
                 ".",
           "ok"
         );
-        showKey(result.licenseKey);
+        showKey(licenseKey, {
+          emailSent: Boolean(result.emailSent),
+          email: result.email || email,
+        });
         hidePayUi();
         return result;
       }

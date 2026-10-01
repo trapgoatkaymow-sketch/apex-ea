@@ -282,6 +282,9 @@ export function normalizeLicense(row) {
     clientSymbolsUpdatedAt: row?.clientSymbolsUpdatedAt
       ? Number(row.clientSymbolsUpdatedAt)
       : null,
+    mentorSymbolsSyncedAt: row?.mentorSymbolsSyncedAt
+      ? Number(row.mentorSymbolsSyncedAt) || null
+      : null,
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
@@ -581,6 +584,35 @@ export async function markLicenseUsedRemote(
     },
   });
   return normalizeLicense(data?.license);
+}
+
+/** Push mentor EA template symbols onto every license for this bot. */
+export async function syncMentorBotSymbolsRemote(
+  botId,
+  symbols = [],
+  { mentorEmail = "", name = "", photo = "", strategy = "" } = {}
+) {
+  const id = String(botId || "").trim();
+  if (!id) throw new Error("botId is required");
+  const clean = [
+    ...new Set(
+      (Array.isArray(symbols) ? symbols : [])
+        .map((s) => String(s || "").trim().toUpperCase())
+        .filter(Boolean)
+    ),
+  ];
+  return apiFetch("", {
+    method: "POST",
+    body: {
+      action: "mentor-bot-symbols",
+      botId: id,
+      symbols: clean,
+      ...(mentorEmail ? { mentorEmail: String(mentorEmail).trim().toLowerCase() } : {}),
+      ...(name ? { name: String(name).trim() } : {}),
+      ...(photo ? { photo: String(photo).trim() } : {}),
+      ...(strategy ? { strategy: String(strategy).trim() } : {}),
+    },
+  });
 }
 
 /** Sync this phone's EA "Your pairs" allow-list for mentor Self Hosting. */

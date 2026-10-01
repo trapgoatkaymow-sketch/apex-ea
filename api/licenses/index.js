@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { endOptions } from "../_cors.js";
 import {
   claimLicenseViaInvite,
@@ -16,8 +17,10 @@ import {
   mirrorLicensesToDurableStores,
   readJsonBody,
   resendPurchaseLicenseEmails,
+  sendLicenseKeyEmailOnce,
   sendJson,
   setLicenseClientSymbols,
+  syncMentorBotSymbols,
 } from "./_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
@@ -79,7 +82,8 @@ export default async function handler(req, res) {
         return;
       }
       const [licenses, deletedKeys] = await Promise.all([
-        listLicenses(),
+        // Skip mentor-name backfill on list — saves a mentors-store read on every portal refresh.
+        listLicenses({ fillMentorNames: false }),
         listDeletedKeys(),
       ]);
       sendJson(res, 200, { licenses, deletedKeys });
@@ -95,8 +99,45 @@ export default async function handler(req, res) {
         return;
       }
       if (action === "bulk" || Array.isArray(body?.clients)) {
-        const result = await createLicensesBulk(body);
-        sendJson(res, 200, result);
+        // Create keys fast; email Brevo after the response.
+        const result = await createLicensesBulk({
+          ...body,
+          sendEmail: false,
+        });
+        const created = Array.isArray(result?.created) ? result.created : [];
+        if (created.length) {
+          waitUntil(
+            (async () => {
+              try {
+                const { sendLicenseKeyEmails } = await import("../_brevo.js");
+                const email = await sendLicenseKeyEmails(created, {
+                  concurrency: 8,
+                });
+                const stampedAt = Date.now();
+                for (const row of email?.results || []) {
+                  if (row?.ok && row?.key) {
+                    await markLicenseEmailSent(row.key, stampedAt).catch(
+                      () => null
+                    );
+                  }
+                }
+              } catch {
+                // background
+              }
+            })()
+          );
+        }
+        sendJson(res, 200, {
+          ...result,
+          email: {
+            sentCount: 0,
+            failedCount: 0,
+            skippedCount: created.length,
+            queued: true,
+            reason: "queued",
+            results: [],
+          },
+        });
         return;
       }
       if (
@@ -117,6 +158,25 @@ export default async function handler(req, res) {
         return;
       }
       if (
+        action === "mentor-bot-symbols" ||
+        action === "mentorbotsymbols" ||
+        action === "sync-bot-symbols" ||
+        action === "syncbotsymbols"
+      ) {
+        const result = await syncMentorBotSymbols(
+          body.botId || body.id,
+          body.symbols || body.allowedSymbols || [],
+          {
+            mentorEmail: body.mentorEmail || body.ownerEmail || body.email || "",
+            name: body.name || body.botName || "",
+            photo: body.photo || "",
+            strategy: body.strategy || "",
+          }
+        );
+        sendJson(res, 200, result);
+        return;
+      }
+      if (
         action === "send-email" ||
         action === "sendemail" ||
         action === "resend-email" ||
@@ -131,18 +191,29 @@ export default async function handler(req, res) {
           sendJson(res, 404, { error: "License not found" });
           return;
         }
-        const { sendLicenseKeyEmail } = await import("../_brevo.js");
-        const email = await sendLicenseKeyEmail(license);
-        if (email?.ok) {
-          try {
-            await markLicenseEmailSent(license.key);
-          } catch {
-            // non-fatal
-          }
-        }
-        sendJson(res, email.ok ? 200 : email.skipped ? 503 : 502, {
-          ok: Boolean(email.ok),
-          email,
+        // Return immediately — Brevo send continues in the background.
+        waitUntil(
+          (async () => {
+            try {
+              const { sendLicenseKeyEmail } = await import("../_brevo.js");
+              const email = await sendLicenseKeyEmail(license);
+              if (email?.ok) {
+                await markLicenseEmailSent(license.key).catch(() => null);
+              }
+            } catch {
+              // background
+            }
+          })()
+        );
+        sendJson(res, 200, {
+          ok: true,
+          queued: true,
+          email: {
+            ok: true,
+            skipped: true,
+            reason: "queued",
+            message: "Email sending in background",
+          },
           license,
         });
         return;
@@ -218,11 +289,41 @@ export default async function handler(req, res) {
         sendJson(res, 200, result);
         return;
       }
-      const license = await createLicense(body);
-      const email = license?._email || null;
+      // Mentor Generate must feel instant — save the key, respond, email Brevo
+      // in the background. Paid PayPal fulfillments still wait for email.
+      const isPaidPurchase = Boolean(
+        body?.purchaseCaptureId || body?.purchaseSource
+      );
+      const forceSyncEmail =
+        body?.sendEmail === true ||
+        String(body?.sendEmail || "").toLowerCase() === "true" ||
+        body?.asyncEmail === false ||
+        String(body?.asyncEmail || "").toLowerCase() === "false";
+      const deferEmail = !isPaidPurchase && !forceSyncEmail;
+
+      const license = await createLicense({
+        ...body,
+        // Skip GitHub photo existence round-trip on every mentor key mint.
+        fastPhoto: body?.fastPhoto !== false && !isPaidPurchase,
+        sendEmail: deferEmail ? false : body?.sendEmail,
+      });
+      let email = license?._email || null;
       if (license && Object.prototype.hasOwnProperty.call(license, "_email")) {
         delete license._email;
       }
+
+      if (deferEmail && license?.key) {
+        waitUntil(
+          sendLicenseKeyEmailOnce(license, { force: false }).catch(() => null)
+        );
+        email = {
+          ok: true,
+          skipped: true,
+          reason: "queued",
+          message: "Email sending in background",
+        };
+      }
+
       sendJson(res, 200, { license, email });
       return;
     }
@@ -251,6 +352,25 @@ export default async function handler(req, res) {
           {
             botId: body.botId || "",
             licenseKey: body.key || body.licenseKey || "",
+          }
+        );
+        sendJson(res, 200, result);
+        return;
+      }
+      if (
+        action === "mentor-bot-symbols" ||
+        action === "mentorbotsymbols" ||
+        action === "sync-bot-symbols" ||
+        action === "syncbotsymbols"
+      ) {
+        const result = await syncMentorBotSymbols(
+          body.botId || body.id,
+          body.symbols || body.allowedSymbols || [],
+          {
+            mentorEmail: body.mentorEmail || body.ownerEmail || body.email || "",
+            name: body.name || body.botName || "",
+            photo: body.photo || "",
+            strategy: body.strategy || "",
           }
         );
         sendJson(res, 200, result);

@@ -614,8 +614,8 @@ html:has(.phone[data-interface="v2"]) body {
 
 .stop-btn {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 78px;
+  height: 78px;
   border-radius: 50%;
   /* Keep overflow visible so the theme edge glow is not clipped;
      particles are clipped by .stop-energy instead. */
@@ -624,7 +624,7 @@ html:has(.phone[data-interface="v2"]) body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   color: var(--pink);
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.42), transparent 36%),
@@ -1007,6 +1007,53 @@ html:has(.phone[data-interface="v2"]) body {
     0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
+.stop-label.is-start-trading {
+  font-size: 0.48rem;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  max-width: 3.8rem;
+  text-align: center;
+  white-space: normal;
+  text-transform: none;
+}
+
+.action-row-secondary {
+  margin-top: 6px;
+  justify-content: center;
+}
+
+.glass-btn-wide {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 16px;
+  font-size: 0.78rem;
+}
+
+.stop-quota {
+  position: relative;
+  z-index: 2;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.stop-btn.is-exhausted,
+#v2-trade-btn.is-exhausted {
+  opacity: 0.45;
+  cursor: not-allowed;
+  animation: none;
+  filter: grayscale(0.35);
+}
+
+.stop-btn:disabled,
+#v2-trade-btn:disabled {
+  pointer-events: none;
+}
+
 .powered-badge {
   margin: 0;
   display: inline-flex;
@@ -1300,7 +1347,12 @@ html:has(.phone[data-interface="v2"]) body {
   grid-template-columns: 1fr auto;
   gap: 10px;
   align-items: end;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
+}
+
+.pairs-custom-hint {
+  margin: 0 0 18px !important;
+  color: rgba(255, 255, 255, 0.58) !important;
 }
 
 .pairs-field {
@@ -6121,6 +6173,11 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
+#v2-trade-btn .stop-quota {
+  margin-top: 0;
+  font-size: 0.5rem;
+}
+
 .v2-pill-btn.is-running .v2-pill-icon.is-trade,
 #v2-trade-btn.is-running .v2-pill-icon.is-trade {
   color: #ffffff;
@@ -6663,6 +6720,36 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   font-size: 0.82rem;
 }
 
+.trade-script-chances {
+  margin: 0;
+  align-self: flex-end;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+
+.trade-script-chances strong {
+  color: #fff;
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.trade-script-chances.is-empty,
+.trade-script-chances.is-empty strong {
+  color: rgba(255, 120, 140, 0.95);
+}
+
+.trade-script-panel > .trade-script-chances {
+  margin-left: auto;
+  margin-right: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+
 .trade-script-note,
 .v2-script-note {
   margin: 0;
@@ -6875,21 +6962,58 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 .trade-script-actions,
 .v2-script-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  align-items: stretch;
 }
 
 .trade-script-copy,
+.trade-script-start,
 .v2-script-copy {
   flex: 1;
   border: 0;
-  border-radius: 14px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #fff;
   background: linear-gradient(180deg, var(--pink-soft) 0%, var(--pink-deep) 100%);
-  box-shadow: 0 10px 22px rgba(var(--pink-hot-rgb), 0.35);
+  box-shadow: 0 6px 14px rgba(var(--pink-hot-rgb), 0.28);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.trade-script-start {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 0.72rem;
+}
+
+.trade-script-start:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+.v2-history-row {
+  display: flex;
+  justify-content: center;
+  margin: 6px 18px 0;
+}
+
+.v2-history-btn {
+  min-width: 0;
+  border: 1px solid rgba(var(--pink-rgb), 0.35);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(12, 4, 10, 0.72);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
 }
 
 

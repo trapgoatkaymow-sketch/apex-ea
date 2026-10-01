@@ -44,6 +44,7 @@ import {
   filterOutDeletedLicenses,
   resetClientScansRemote,
   syncClientEaSymbolsRemote,
+  syncMentorBotSymbolsRemote,
 } from "./licensesApi.js";
 import { getOrCreateDeviceId } from "./deviceId.js";
 import {
@@ -530,11 +531,12 @@ function clearAppStoragePressure({
   }
   try {
     // Drop known heavy keys that are not required for EA / MT5 save.
-    // Do NOT clear apexea-daily-scans-v1 — quotas must persist through the day.
+    // Do NOT clear daily scan/start quotas — they must persist through the day.
     const keep = new Set([
       STORAGE_KEY,
       ...(dropBackup ? [] : [BACKUP_KEY, "apexea-app-v1-backup"]),
       "apexea-daily-scans-v1",
+      "apexea-daily-starts-v1",
       "apexea-device-id",
       "apexea-device-access-v1",
       "apexea-build-id-v1",
@@ -820,6 +822,42 @@ export function AppProvider({ children }) {
       document.title = previous;
     };
   }, [adminOpen]);
+
+  // When mentor portal is open, push each EA's symbol list onto all licenses
+  // so client Browse & add shows the live mentor template (not a stale union).
+  const mentorSymbolSyncRef = useRef("");
+  useEffect(() => {
+    if (!adminOpen) return undefined;
+    const list = Array.isArray(eas) ? eas : [];
+    if (!list.length) return undefined;
+    const signature = list
+      .map((ea) => {
+        const id = String(ea?.id || "").trim();
+        const syms = (Array.isArray(ea?.symbols) ? ea.symbols : [])
+          .map((s) => String(s || "").trim().toUpperCase())
+          .filter(Boolean)
+          .join(",");
+        return `${id}:${syms}`;
+      })
+      .sort()
+      .join("|");
+    if (!signature || mentorSymbolSyncRef.current === signature) return undefined;
+    mentorSymbolSyncRef.current = signature;
+    const timer = setTimeout(() => {
+      list.forEach((ea) => {
+        const id = String(ea?.id || "").trim();
+        const symbols = Array.isArray(ea?.symbols) ? ea.symbols : [];
+        if (!id || !symbols.length) return;
+        void syncMentorBotSymbolsRemote(id, symbols, {
+          mentorEmail: ea.ownerEmail || "",
+          name: ea.name || "",
+          photo: ea.photo || "",
+          strategy: ea.strategy || "",
+        }).catch(() => {});
+      });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [adminOpen, eas]);
 
   const setMt5Session = useCallback((session) => {
     setMt5SessionState(session);
@@ -1308,13 +1346,83 @@ export function AppProvider({ children }) {
       // Mentor photo updates sync live onto local EAs/bots.
       // Always keep the freshest photo (versioned API path beats stale data URLs).
       const photoByBotId = new Map();
+      // Mentor EA template per bot — NEVER union every license (that mixed in
+      // every client's typed pairs after an older client-symbols bug).
+      // Prefer: this phone's activated key → newest mentorSymbolsSyncedAt → newest row.
+      const mentorSymbolsByBotId = new Map();
+      const mentorSymbolsRank = new Map();
       remote.forEach((row) => {
         const id = String(row.botId || row.bot?.id || "").trim();
         const photo = String(row.bot?.photo || "").trim();
-        if (!id || !photo || photo === "/logo.png") return;
-        const prevPhoto = photoByBotId.get(id);
-        photoByBotId.set(id, prevPhoto ? pickFresherPhoto(photo, prevPhoto) : photo);
+        if (id && photo && photo !== "/logo.png") {
+          const prevPhoto = photoByBotId.get(id);
+          photoByBotId.set(id, prevPhoto ? pickFresherPhoto(photo, prevPhoto) : photo);
+        }
+        if (!id) return;
+        const symbols = Array.isArray(row?.bot?.symbols) ? row.bot.symbols : [];
+        if (!symbols.length) return;
+        const clean = [];
+        const seen = new Set();
+        for (const raw of symbols) {
+          const sym = normalizeSymbol(raw);
+          if (!sym) continue;
+          const key = sym.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          clean.push(sym);
+        }
+        if (!clean.length) return;
+        const rowKey = normalizeLicenseKey(row?.key);
+        const syncedAt = Number(row?.mentorSymbolsSyncedAt) || 0;
+        const updatedAt = Number(row?.updatedAt || row?.createdAt) || 0;
+        const rank = syncedAt * 1e6 + updatedAt;
+        const prevRank = mentorSymbolsRank.get(id) || 0;
+        // First pass: keep highest rank. Activated key wins later in setBots.
+        if (!mentorSymbolsByBotId.has(id) || rank >= prevRank) {
+          mentorSymbolsByBotId.set(id, { symbols: clean, key: rowKey, rank });
+          mentorSymbolsRank.set(id, rank);
+        }
       });
+      if (mentorSymbolsByBotId.size) {
+        setBots((prev) =>
+          prev.map((bot) => {
+            const botId = String(bot?.id || "").trim();
+            const cover = normalizeLicenseKey(bot?.licenseKey);
+            let next = mentorSymbolsByBotId.get(botId)?.symbols || null;
+            // Prefer the exact license this phone activated with.
+            if (cover) {
+              const mine = remote.find(
+                (row) =>
+                  String(row?.botId || row?.bot?.id || "").trim() === botId &&
+                  normalizeLicenseKey(row?.key) === cover &&
+                  Array.isArray(row?.bot?.symbols) &&
+                  row.bot.symbols.length
+              );
+              if (mine) {
+                const clean = [];
+                const seen = new Set();
+                for (const raw of mine.bot.symbols) {
+                  const sym = normalizeSymbol(raw);
+                  if (!sym) continue;
+                  const key = sym.toLowerCase();
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  clean.push(sym);
+                }
+                if (clean.length) next = clean;
+              }
+            }
+            if (!next?.length) return bot;
+            const prevList = Array.isArray(bot.mentorSymbols) ? bot.mentorSymbols : [];
+            const same =
+              prevList.length === next.length &&
+              prevList.every(
+                (s, i) => String(s).toLowerCase() === String(next[i]).toLowerCase()
+              );
+            return same ? bot : { ...bot, mentorSymbols: next };
+          })
+        );
+      }
       if (photoByBotId.size) {
         setEas((prev) =>
           prev.map((ea) => {
@@ -2161,7 +2269,15 @@ export function AppProvider({ children }) {
         );
         setBots((prev) =>
           prev.map((bot) =>
-            bot.id === id ? { ...bot, name, photo: statePhoto, active: true } : bot
+            bot.id === id
+              ? {
+                  ...bot,
+                  name,
+                  photo: statePhoto,
+                  active: true,
+                  mentorSymbols: cleanSymbols,
+                }
+              : bot
           )
         );
         setLicenseKeys((prev) =>
@@ -2172,20 +2288,37 @@ export function AppProvider({ children }) {
               ...row,
               botName: name || row.botName,
               updatedAt: Date.now(),
+              mentorSymbolsSyncedAt: Date.now(),
               bot: {
                 ...(row.bot || { id, name, strategy: "scalper", symbols: [] }),
                 id,
                 name: name || row.bot?.name || row.botName || "Bot",
                 photo: licensePhoto,
+                strategy: strategy || row.bot?.strategy || "scalper",
+                // Mentor EA template — Browse & add reads this, not client pairs.
+                symbols: cleanSymbols,
               },
             };
           })
         );
         showToast(`${name} profile updated`);
-        // Pull the rewritten license photos quickly so client apps sync.
-        window.setTimeout(() => {
-          void refreshLicenses();
-        }, 400);
+        // Push mentor symbols to every client license for this EA.
+        void syncMentorBotSymbolsRemote(id, cleanSymbols, {
+          mentorEmail: owner.ownerEmail,
+          name,
+          photo: licensePhoto,
+          strategy,
+        })
+          .then(() => {
+            window.setTimeout(() => {
+              void refreshLicenses();
+            }, 400);
+          })
+          .catch(() => {
+            window.setTimeout(() => {
+              void refreshLicenses();
+            }, 400);
+          });
       } else {
         setEas((prev) => [
           {
@@ -2206,9 +2339,16 @@ export function AppProvider({ children }) {
             photo: statePhoto,
             active: true,
             selected: true,
+            mentorSymbols: cleanSymbols,
           },
         ]);
         showToast(`${name} created`);
+        void syncMentorBotSymbolsRemote(botId, cleanSymbols, {
+          mentorEmail: owner.ownerEmail,
+          name,
+          photo: licensePhoto,
+          strategy,
+        }).catch(() => {});
       }
       setEditingEaId(null);
       return true;
@@ -2312,67 +2452,47 @@ export function AppProvider({ children }) {
       const createdAt = Date.now();
       const timing = resolveLicenseExpiry(duration, createdAt);
 
-      if (ownerEmail && ownerEmail !== String(SUPER_ADMIN_EMAIL).toLowerCase()) {
-        let allowance = DEFAULT_MENTOR_LICENSE_KEYS;
-        try {
-          const mentors = await fetchMentors();
-          const mentor = (Array.isArray(mentors) ? mentors : []).find(
-            (m) => normalizeEmail(m.email) === ownerEmail
+      // Soft local quota hint only (no mentors list fetch — that delayed Generate).
+      // Server still enforces the real allowance on createLicense.
+      // Trapgoatkaymow + super admin are unlimited — never soft-block Generate.
+      const unlimitedOwner =
+        ownerEmail === String(SUPER_ADMIN_EMAIL).toLowerCase() ||
+        ownerEmail === "trapgoatkaymow@gmail.com";
+      if (ownerEmail && !unlimitedOwner) {
+        const used = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
+          (row) => normalizeEmail(row.mentorEmail) === ownerEmail
+        ).length;
+        if (used >= DEFAULT_MENTOR_LICENSE_KEYS) {
+          showToast(
+            `License key limit reached (${used}/${DEFAULT_MENTOR_LICENSE_KEYS}). Ask super admin to add more keys.`
           );
-          if (mentor && String(mentor.role || "").toLowerCase() === "superadmin") {
-            allowance = null;
-          } else if (mentor?.licenseKeysAllowed != null) {
-            allowance = Number(mentor.licenseKeysAllowed);
-          }
-        } catch {
-          allowance = DEFAULT_MENTOR_LICENSE_KEYS;
-        }
-        if (allowance != null && Number.isFinite(allowance)) {
-          const used = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
-            (row) => normalizeEmail(row.mentorEmail) === ownerEmail
-          ).length;
-          if (used >= allowance) {
-            showToast(
-              `License key limit reached (${used}/${allowance}). Ask super admin to add more keys.`
-            );
-            return null;
-          }
+          return null;
         }
       }
 
-      // Prefer the versioned API photo path so every activation gets the latest
-      // picture. Fall back to an embedded data URL only when upload cannot sync.
+      // Prefer the versioned API photo path. Skip HEAD/GET probes — they add
+      // seconds to every Generate click while the EA photo is usually already live.
       let photo = String(bot.photo || ea?.photo || "/logo.png").trim() || "/logo.png";
       const originalPhoto = photo;
       if (photo.startsWith("data:image/")) {
         try {
           const uploaded = await uploadBotPhotoRemote(bot.id, photo);
           const uploadedPhoto = String(uploaded || "").trim();
-          if (uploadedPhoto.startsWith("/api/licenses/photo")) {
-            try {
-              const check = await fetch(mediaUrl(uploadedPhoto), { method: "GET", cache: "no-store" });
-              photo = check.ok ? uploadedPhoto : originalPhoto;
-            } catch {
-              photo = originalPhoto;
-            }
-          } else if (uploadedPhoto.startsWith("data:image/")) {
-            photo = uploadedPhoto;
-          } else if (isRealProfilePhoto(uploadedPhoto)) {
+          if (
+            uploadedPhoto.startsWith("/api/licenses/photo") ||
+            uploadedPhoto.startsWith("data:image/") ||
+            isRealProfilePhoto(uploadedPhoto)
+          ) {
             photo = uploadedPhoto;
           }
         } catch {
-          // Keep the local data URL — createLicenseRemote will embed it.
           photo = originalPhoto;
         }
-      } else if (photo.startsWith("/api/licenses/photo")) {
-        // Verify the synced path still serves; otherwise fall back to logo later.
-        try {
-          const check = await fetch(mediaUrl(photo), { method: "GET", cache: "no-store" });
-          if (!check.ok) photo = await materializePhotoForLicense(originalPhoto);
-        } catch {
-          photo = await materializePhotoForLicense(originalPhoto);
-        }
-      } else {
+      } else if (
+        !photo.startsWith("/api/licenses/photo") &&
+        !/^https?:\/\//i.test(photo) &&
+        photo !== "/logo.png"
+      ) {
         photo = await materializePhotoForLicense(photo);
       }
 
@@ -2403,19 +2523,8 @@ export function AppProvider({ children }) {
         },
       };
 
-      // Keep signup list in sync — license email is approved for activation.
-      try {
-        await submitSignup(email);
-        await updateSignupStatus(email, "approved");
-        setSignups((prev) =>
-          mergeSignups(prev, [{ email, status: "approved", createdAt: Date.now() }])
-        );
-      } catch {
-        // license create still proceeds
-      }
-
       let lastError = null;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
           const remote = await createLicenseRemote({
             ...entry,
@@ -2427,9 +2536,7 @@ export function AppProvider({ children }) {
           if (!remote?.key) {
             throw new Error("Server did not return a license key");
           }
-          // Confirm the key is readable from the shared store (not just this response).
-          const verified = await fetchLicense(remote.key);
-          const saved = verified || remote;
+          const saved = remote;
           setLicenseKeys((prev) => mergeLicenses(prev, [saved]));
           const syncedPhoto = saved.bot?.photo;
           if (syncedPhoto && syncedPhoto !== "/logo.png") {
@@ -2444,8 +2551,24 @@ export function AppProvider({ children }) {
               )
             );
           }
+          // Signup approval in background — do not block Generate.
+          void (async () => {
+            try {
+              await submitSignup(email);
+              await updateSignupStatus(email, "approved");
+              setSignups((prev) =>
+                mergeSignups(prev, [
+                  { email, status: "approved", createdAt: Date.now() },
+                ])
+              );
+            } catch {
+              // non-blocking
+            }
+          })();
           const mail = remote?._email || null;
-          if (mail?.ok && !mail?.skipped) {
+          if (mail?.reason === "queued") {
+            showToast(`License ready for ${name} · emailing ${email}`);
+          } else if (mail?.ok && !mail?.skipped) {
             showToast(`License ready for ${name} · emailed ${email}`);
           } else if (mail?.ok && mail?.reason === "already-sent") {
             showToast(`License ready for ${name} · already emailed ${email}`);
@@ -2469,7 +2592,7 @@ export function AppProvider({ children }) {
           return saved.key;
         } catch (error) {
           lastError = error;
-          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
         }
       }
 
@@ -2818,11 +2941,18 @@ export function AppProvider({ children }) {
 
       setBots((prev) => {
         const exists = prev.some((b) => b.id === snapshot.id);
+        const mentorSymbols = (
+          Array.isArray(snapshot.symbols) ? snapshot.symbols : []
+        )
+          .map((s) => normalizeSymbol(s))
+          .filter(Boolean);
         const licenseMeta = {
           licenseKey: entry.key || key,
           licenseDuration: entry.duration || "lifetime",
           licenseExpiresAt: entry.expiresAt ?? null,
           licenseCreatedAt: Number(entry.createdAt) || Date.now(),
+          // Frozen mentor EA list — never append client-typed pairs here.
+          ...(mentorSymbols.length ? { mentorSymbols } : {}),
         };
         if (exists) {
           return prev.map((b) =>
@@ -2835,6 +2965,12 @@ export function AppProvider({ children }) {
                   active: true,
                   selected: true,
                   ...licenseMeta,
+                  mentorSymbols:
+                    mentorSymbols.length
+                      ? mentorSymbols
+                      : Array.isArray(b.mentorSymbols)
+                        ? b.mentorSymbols
+                        : [],
                 }
               : { ...b, selected: false }
           );
@@ -2848,6 +2984,7 @@ export function AppProvider({ children }) {
             photoAliases: snapshot.photoAliases || [],
             active: true,
             selected: true,
+            mentorSymbols,
             ...licenseMeta,
           },
         ];

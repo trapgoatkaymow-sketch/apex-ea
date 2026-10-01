@@ -671,7 +671,7 @@ async function githubPhotoExists(botId) {
  * Prefer a durable API path when GitHub has the file; otherwise embed a data URL
  * on the license so clients are not stuck with a 404 `/api/licenses/photo` link.
  */
-export async function resolveEmbeddablePhoto(botId, photo) {
+export async function resolveEmbeddablePhoto(botId, photo, { fast = false } = {}) {
   const value = String(photo || "").trim();
   if (!value) return "/logo.png";
   if (value === "/logo.png") return value;
@@ -682,6 +682,9 @@ export async function resolveEmbeddablePhoto(botId, photo) {
   }
 
   if (value.startsWith("/api/licenses/photo")) {
+    // Mentor key mint: trust the existing API path — GitHub HEAD checks add
+    // seconds to every Generate click.
+    if (fast) return value;
     if (await githubPhotoExists(botId)) return value;
     const local = await readBotPhoto(botId);
     const embedded = shrinkDataUrl(dataUrlFromPhoto(local));
@@ -1092,6 +1095,10 @@ function normalizeLicense(row) {
     clientSymbolsUpdatedAt: row?.clientSymbolsUpdatedAt
       ? Number(row.clientSymbolsUpdatedAt)
       : null,
+    // Mentor EA template sync stamp — must survive normalize/merge.
+    mentorSymbolsSyncedAt: row?.mentorSymbolsSyncedAt
+      ? Number(row.mentorSymbolsSyncedAt) || null
+      : null,
     // PayPal robot-purchase stamps (idempotent auto-fulfill).
     purchaseCaptureId: String(row?.purchaseCaptureId || "").trim() || null,
     purchaseOrderId: String(row?.purchaseOrderId || "").trim() || null,
@@ -1207,6 +1214,12 @@ function mergeLicenseLists(...lists) {
         item.purchaseCaptureId || prev.purchaseCaptureId || null,
       purchaseOrderId: item.purchaseOrderId || prev.purchaseOrderId || null,
       purchaseSource: item.purchaseSource || prev.purchaseSource || null,
+      mentorSymbolsSyncedAt: (() => {
+        const a = Number(item.mentorSymbolsSyncedAt) || 0;
+        const b = Number(prev.mentorSymbolsSyncedAt) || 0;
+        const best = Math.max(a, b);
+        return best || null;
+      })(),
       updatedAt: Math.max(
         prev.updatedAt || 0,
         item.updatedAt || 0,
@@ -1217,11 +1230,38 @@ function mergeLicenseLists(...lists) {
       ),
       bot:
         item.bot || prev.bot
-          ? {
-              ...(prev.bot || {}),
-              ...(item.bot || {}),
-              photo: nextPhoto || prev.bot?.photo || item.bot?.photo || "/logo.png",
-            }
+          ? (() => {
+              const prevSyms = Array.isArray(prev.bot?.symbols)
+                ? prev.bot.symbols
+                : [];
+              const itemSyms = Array.isArray(item.bot?.symbols)
+                ? item.bot.symbols
+                : [];
+              const prevSync = Number(prev.mentorSymbolsSyncedAt) || 0;
+              const itemSync = Number(item.mentorSymbolsSyncedAt) || 0;
+              // Never let an empty/stale local seed wipe a mentor-synced template.
+              let nextSymbols = prevSyms;
+              if (itemSync || prevSync) {
+                if (itemSync > prevSync && itemSyms.length) nextSymbols = itemSyms;
+                else if (prevSync > itemSync && prevSyms.length) nextSymbols = prevSyms;
+                else if (itemSyms.length) nextSymbols = itemSyms;
+                else if (prevSyms.length) nextSymbols = prevSyms;
+              } else if (preferIncoming) {
+                nextSymbols = itemSyms.length ? itemSyms : prevSyms;
+              } else {
+                nextSymbols = prevSyms.length ? prevSyms : itemSyms;
+              }
+              return {
+                ...(prev.bot || {}),
+                ...(item.bot || {}),
+                photo:
+                  nextPhoto ||
+                  prev.bot?.photo ||
+                  item.bot?.photo ||
+                  "/logo.png",
+                symbols: nextSymbols,
+              };
+            })()
           : null,
     });
   });
@@ -1562,6 +1602,10 @@ export async function listLicenses(options = {}) {
 
   // Fill missing mentorName from the mentor portal username so client headers
   // show the mentor name even for older licenses.
+  // Portal list passes fillMentorNames:false — that mentors read was slowing every refresh.
+  if (options.fillMentorNames === false) {
+    return licenses;
+  }
   try {
     const missing = licenses.some(
       (row) => normalizeEmail(row.mentorEmail) && !String(row.mentorName || "").trim()
@@ -1623,7 +1667,10 @@ export async function createLicense(payload = {}) {
 
   const rawPhoto = String(payload.bot?.photo || payload.photo || "/logo.png").trim();
   // Prefer an embeddable photo (data URL) when GitHub file storage is down.
-  const photo = await resolveEmbeddablePhoto(botId, rawPhoto);
+  // `fastPhoto` skips GitHub existence checks (mentor Generate latency).
+  const photo = await resolveEmbeddablePhoto(botId, rawPhoto, {
+    fast: Boolean(payload.fastPhoto),
+  });
 
   const bot = {
     id: botId,
@@ -2860,6 +2907,7 @@ export function sendJson(res, status, payload) {
 /**
  * Persist the client's allowed EA pairs onto their used license rows so mentor
  * Self Hosting can refuse symbols that are not on that EA ("Your pairs").
+ * Never overwrites bot.symbols — that list is the mentor EA template.
  */
 export async function setLicenseClientSymbols(
   email,
@@ -2891,24 +2939,9 @@ export async function setLicenseClientSymbols(
       if (wantKey && normalizeLicenseKey(row.key) !== wantKey) continue;
       const rowBot = String(row.botId || row.bot?.id || "").trim();
       if (wantBot && rowBot && rowBot !== wantBot) continue;
-      const prevBot =
-        row.bot && typeof row.bot === "object"
-          ? row.bot
-          : {
-              id: rowBot,
-              name: row.botName || "Bot",
-              photo: "/logo.png",
-              strategy: "scalper",
-              symbols: [],
-            };
       licenses[i] = {
         ...row,
-        bot: {
-          ...prevBot,
-          id: prevBot.id || rowBot,
-          name: prevBot.name || row.botName || "Bot",
-          symbols: cleanSymbols,
-        },
+        // Keep mentor bot.symbols untouched — client pairs live only here.
         clientSymbols: cleanSymbols,
         clientSymbolsUpdatedAt: now,
         updatedAt: now,
@@ -2918,6 +2951,74 @@ export async function setLicenseClientSymbols(
     return licenses;
   }, `chore: client EA symbols ${key} (${cleanSymbols.length})`);
   return { ok: true, email: key, updated, symbols: cleanSymbols };
+}
+
+/**
+ * Rewrite mentor EA template symbols onto every license for this botId.
+ * Used when a mentor saves Create/Edit EA so Browse & add shows the live list.
+ */
+export async function syncMentorBotSymbols(
+  botId,
+  symbols = [],
+  { mentorEmail = "", name = "", photo = "", strategy = "" } = {}
+) {
+  const id = String(botId || "").trim();
+  if (!id) {
+    const err = new Error("botId is required");
+    err.status = 400;
+    throw err;
+  }
+  const cleanSymbols = [
+    ...new Set(
+      (Array.isArray(symbols) ? symbols : [])
+        .map((s) => String(s || "").trim().toUpperCase())
+        .filter(Boolean)
+    ),
+  ];
+  const owner = normalizeEmail(mentorEmail);
+  const botName = String(name || "").trim();
+  const botPhoto = String(photo || "").trim();
+  const botStrategy = String(strategy || "").trim();
+  const now = Date.now();
+  let updated = 0;
+  await mutateStore((licenses) => {
+    for (let i = 0; i < licenses.length; i += 1) {
+      const row = licenses[i];
+      const rowBot = String(row?.botId || row?.bot?.id || "").trim();
+      if (rowBot !== id) continue;
+      if (owner) {
+        const rowOwner = normalizeEmail(row?.mentorEmail || row?.ownerEmail);
+        if (rowOwner && rowOwner !== owner) continue;
+      }
+      const prevBot =
+        row.bot && typeof row.bot === "object"
+          ? row.bot
+          : {
+              id,
+              name: row.botName || "Bot",
+              photo: "/logo.png",
+              strategy: "scalper",
+              symbols: [],
+            };
+      licenses[i] = {
+        ...row,
+        botName: botName || row.botName || prevBot.name || "Bot",
+        bot: {
+          ...prevBot,
+          id,
+          name: botName || prevBot.name || row.botName || "Bot",
+          ...(botPhoto ? { photo: botPhoto } : {}),
+          ...(botStrategy ? { strategy: botStrategy } : {}),
+          symbols: cleanSymbols,
+        },
+        mentorSymbolsSyncedAt: now,
+        updatedAt: now,
+      };
+      updated += 1;
+    }
+    return licenses;
+  }, `chore: mentor EA symbols ${id} (${cleanSymbols.length})`);
+  return { ok: true, botId: id, updated, symbols: cleanSymbols };
 }
 
 /**

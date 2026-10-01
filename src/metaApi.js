@@ -154,6 +154,26 @@ export async function getSymbolQuote({
   });
 }
 
+/** Today's OHLC bars (minutes TF) for Safe Scalper when OpenAI is offline. */
+export async function getPriceHistory({
+  accountId,
+  symbol,
+  timeFrame = 30,
+  fast = true,
+  signal,
+} = {}) {
+  return apiFetch("/history", {
+    method: "POST",
+    signal,
+    body: {
+      accountId: String(accountId || "").trim(),
+      symbol: String(symbol || "").trim(),
+      timeFrame: Math.max(1, Math.floor(Number(timeFrame) || 30)),
+      fast: Boolean(fast),
+    },
+  });
+}
+
 export async function placeTrade({
   accountId,
   symbol,

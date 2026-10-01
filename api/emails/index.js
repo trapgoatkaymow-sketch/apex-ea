@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { endOptions } from "../_cors.js";
 import {
   brevoConfigured,
@@ -18,7 +19,7 @@ import {
   finalizeBroadcastSends,
 } from "./_broadcastDedupe.js";
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 /** Inbox that receives mentor commission withdrawal requests. */
 export const WITHDRAWAL_REQUEST_EMAIL = "apexeaa@gmail.com";
@@ -442,7 +443,7 @@ export default async function handler(req, res) {
 
     const concurrency = Math.max(
       1,
-      Math.min(Number(body.concurrency) || 4, 8)
+      Math.min(Number(body.concurrency) || 8, 12)
     );
     const imageUrl = String(body.imageUrl || body.image || "").trim();
     const downloadUrl = String(
@@ -453,6 +454,11 @@ export default async function handler(req, res) {
       body.campaignId || body.campaign || body.dedupeKey || ""
     ).trim();
     const force = Boolean(body.force || body.forceResend || body.allowDuplicates);
+    const waitForSend =
+      body?.wait === true ||
+      String(body?.wait || "").toLowerCase() === "true" ||
+      body?.async === false ||
+      String(body?.async || "").toLowerCase() === "false";
 
     // Claim recipients first — same email + campaign already sent → skip.
     const claimed = await claimBroadcastRecipients({
@@ -481,6 +487,45 @@ export default async function handler(req, res) {
       return;
     }
 
+    const skippedFromDedupe = claimed.skippedCount || claimed.skipped?.length || 0;
+
+    // Default: queue Brevo after response so the portal is not stuck on Sending…
+    if (!waitForSend) {
+      waitUntil(
+        (async () => {
+          try {
+            const result = await sendBroadcastEmails(claimed.send, {
+              subject,
+              message,
+              imageUrl,
+              downloadUrl,
+              ctaLabel,
+              concurrency,
+            });
+            await finalizeBroadcastSends({
+              campaignKey: claimed.campaignKey,
+              subject,
+              results: result?.results || [],
+            });
+          } catch {
+            // background
+          }
+        })()
+      );
+      sendJson(res, 200, {
+        ok: true,
+        queued: true,
+        sentCount: claimed.send.length,
+        failedCount: 0,
+        skippedCount: skippedFromDedupe,
+        total: recipients.length,
+        campaignKey: claimed.campaignKey,
+        dedupedSkipped: skippedFromDedupe,
+        message: "Emails sending in background",
+      });
+      return;
+    }
+
     const result = await sendBroadcastEmails(claimed.send, {
       subject,
       message,
@@ -496,7 +541,6 @@ export default async function handler(req, res) {
       results: result?.results || [],
     });
 
-    const skippedFromDedupe = claimed.skippedCount || claimed.skipped?.length || 0;
     sendJson(res, 200, {
       ok: true,
       ...result,

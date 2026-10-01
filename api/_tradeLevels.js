@@ -7,9 +7,15 @@
 
 function toFiniteNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  const cleaned = String(value ?? "")
+  if (value == null || value === "") return null;
+  const cleaned = String(value)
     .replace(/,/g, "")
     .replace(/[^\d.\-]/g, "");
+  // Number("") === 0 — that turned missing SL into price 0 and parked
+  // gold stops at the max-distance cap (~75pts / far TPs).
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") {
+    return null;
+  }
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
@@ -81,6 +87,69 @@ export function minStopDistance(symbol, entryPrice) {
   return Math.max(0.0015, e * 0.0015);
 }
 
+/**
+ * Default SL distance when AI omits a stop — scalper-tight, not swing-wide.
+ */
+export function defaultStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+  const min = minStopDistance(symbol, e);
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(min, Math.min(10, e * 0.0022)); // ~9
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(min, Math.min(0.25, e * 0.006));
+  if (/^BTC/.test(core)) return Math.max(min, Math.min(400, e * 0.004));
+  if (/^ETH/.test(core)) return Math.max(min, Math.min(40, e * 0.005));
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(min, Math.min(60, e * 0.0012));
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(min, Math.min(0.45, e * 0.006));
+  if (/JPY$/.test(core)) return Math.max(min, Math.min(0.25, e * 0.0015));
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(min, Math.min(0.0025, e * 0.0015)); // ~25 pips
+  }
+  if (e >= 1000) return Math.max(min, Math.min(40, e * 0.0015));
+  if (e >= 100) return Math.max(min, Math.min(4, e * 0.004));
+  if (e >= 10) return Math.max(min, Math.min(0.35, e * 0.006));
+  return Math.max(min, Math.min(0.0025, e * 0.0025));
+}
+
+/**
+ * Cap how far SL can sit from entry. Blocks wrong-scale AI stops that made
+ * TP ≈ 5× price (20882 on gold), but stays scalper-tight so levels are not
+ * parked 75+ points away on XAU.
+ */
+export function maxStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+  const min = minStopDistance(symbol, e);
+  const def = defaultStopDistance(symbol, e);
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(def, Math.min(18, e * 0.004)); // ~16–18
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(def, Math.min(0.6, e * 0.012));
+  if (/^BTC/.test(core)) return Math.max(def, Math.min(900, e * 0.01));
+  if (/^ETH/.test(core)) return Math.max(def, Math.min(90, e * 0.012));
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(def, Math.min(120, e * 0.003));
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(def, Math.min(1.2, e * 0.015));
+  if (/JPY$/.test(core)) return Math.max(def, Math.min(0.55, e * 0.0035));
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(def, Math.min(0.006, e * 0.004)); // ~60 pips
+  }
+  if (e >= 1000) return Math.max(def, Math.min(80, e * 0.004));
+  if (e >= 100) return Math.max(def, Math.min(8, e * 0.01));
+  if (e >= 10) return Math.max(def, Math.min(0.8, e * 0.015));
+  return Math.max(def, Math.min(0.006, e * 0.006));
+}
+
 export function formatTradePrice(value) {
   const n = toFiniteNumber(value);
   if (n == null) return null;
@@ -118,12 +187,15 @@ export function isH4Timeframe(raw) {
 }
 
 /** TP1/TP2/TP3 reward multiples of stop distance. */
-export function tpRewardMultiples(timeframe) {
+export function tpRewardMultiples(timeframe, overrides = null) {
+  if (Array.isArray(overrides) && overrides.length >= 3) {
+    return overrides.slice(0, 3).map((n) => Math.max(0.1, Number(n) || 1));
+  }
   return isH4Timeframe(timeframe) ? [1, 2, 3] : [2, 3, 4];
 }
 
-export function tpRiskRewardLabel(timeframe) {
-  const [a, b, c] = tpRewardMultiples(timeframe);
+export function tpRiskRewardLabel(timeframe, overrides = null) {
+  const [a, b, c] = tpRewardMultiples(timeframe, overrides);
   return `1:${a} · 1:${b} · 1:${c}`;
 }
 
@@ -138,6 +210,7 @@ export function normalizeProtectiveLevels({
   entryPrice,
   stopLoss,
   takeProfit,
+  ensureStop = true,
 } = {}) {
   const dir = normalizeTradeSide(side, { trustSide: true });
   const entry = toFiniteNumber(entryPrice);
@@ -146,29 +219,59 @@ export function normalizeProtectiveLevels({
   let widened = false;
   // Extra buffer vs chart min — brokers reject stops inside freeze/stops level.
   const minDist =
-    entry != null ? Math.max(minStopDistance(symbol, entry) * 1.35, minStopDistance(symbol, entry)) : 0;
+    entry != null
+      ? Math.max(minStopDistance(symbol, entry) * 1.35, minStopDistance(symbol, entry))
+      : 0;
+  const maxDist =
+    entry != null ? Math.max(maxStopDistance(symbol, entry), minDist) : 0;
+  const defDist =
+    entry != null
+      ? Math.max(defaultStopDistance(symbol, entry), minDist)
+      : 0;
 
   if (entry != null && entry > 0 && minDist > 0) {
+    // Always attach a protective SL when we know the fill — missing SL left
+    // positions naked when AI omitted stopLoss or broker dropped a bad one.
+    // Use scalper default distance (not the wide max cap).
+    if (ensureStop && (!(sl != null && sl > 0))) {
+      sl = dir === "BUY" ? entry - defDist : entry + defDist;
+      widened = true;
+    }
+
     if (sl != null && sl > 0) {
       if (dir === "BUY") {
         if (!(sl <= entry - minDist)) {
           sl = entry - minDist;
           widened = true;
+        } else if (entry - sl > maxDist) {
+          sl = entry - maxDist;
+          widened = true;
         }
       } else if (!(sl >= entry + minDist)) {
         sl = entry + minDist;
+        widened = true;
+      } else if (sl - entry > maxDist) {
+        sl = entry + maxDist;
         widened = true;
       }
     }
 
     if (tp != null && tp > 0) {
+      // Cap absurd TPs (e.g. 20882 on gold) to at most 4R of the max stop.
+      const maxTpDist = maxDist * 4;
       if (dir === "BUY") {
         if (!(tp >= entry + minDist)) {
           tp = entry + minDist;
           widened = true;
+        } else if (tp - entry > maxTpDist) {
+          tp = entry + maxTpDist;
+          widened = true;
         }
       } else if (!(tp <= entry - minDist)) {
         tp = entry - minDist;
+        widened = true;
+      } else if (entry - tp > maxTpDist) {
+        tp = entry - maxTpDist;
         widened = true;
       }
     }
@@ -180,6 +283,7 @@ export function normalizeProtectiveLevels({
     stopLoss: sl != null && sl > 0 ? formatTradePrice(sl) : null,
     takeProfit: tp != null && tp > 0 ? formatTradePrice(tp) : null,
     minDist,
+    maxDist,
     widened,
   };
 }
@@ -195,6 +299,8 @@ export function buildSafeMultiTpLevels({
   entry,
   stopLoss,
   timeframe = "M15",
+  /** Optional explicit R:R ladder, e.g. [2,3,4] for START / scanner non-H4. */
+  rewardMultiples = null,
 } = {}) {
   const dir = normalizeTradeSide(side, { entry, stopLoss });
   let e = toFiniteNumber(entry);
@@ -202,11 +308,10 @@ export function buildSafeMultiTpLevels({
   if (e == null || e <= 0) e = 1;
 
   const minDist = minStopDistance(symbol, e);
-  const fallbackRisk = Math.max(
-    minDist,
-    Math.abs(e) * 0.0025,
-    e >= 1000 ? 25 : e >= 100 ? 2 : e >= 10 ? 0.1 : 0.0015
-  );
+  const maxDist = maxStopDistance(symbol, e);
+  // Instrument-aware scalper default — never the old blunt "e>=1000 → 25" floor
+  // that parked gold SL ~75pts away after the far-TP guard.
+  const fallbackRisk = Math.max(minDist, defaultStopDistance(symbol, e));
 
   if (dir === "BUY") {
     if (sl == null || !(sl < e)) sl = e - fallbackRisk;
@@ -218,9 +323,13 @@ export function buildSafeMultiTpLevels({
   if (risk < minDist) {
     risk = minDist;
     sl = dir === "BUY" ? e - risk : e + risk;
+  } else if (risk > maxDist) {
+    // Wrong-scale AI stops (price "30" on gold, etc.) → pull SL in before R:R.
+    risk = maxDist;
+    sl = dir === "BUY" ? e - risk : e + risk;
   }
 
-  const [m1, m2, m3] = tpRewardMultiples(timeframe);
+  const [m1, m2, m3] = tpRewardMultiples(timeframe, rewardMultiples);
   const tp1 = dir === "BUY" ? e + risk * m1 : e - risk * m1;
   const tp2 = dir === "BUY" ? e + risk * m2 : e - risk * m2;
   const tp3 = dir === "BUY" ? e + risk * m3 : e - risk * m3;
@@ -237,7 +346,7 @@ export function buildSafeMultiTpLevels({
   const finalEntry = safeSl.entry ?? formatTradePrice(e);
   const finalSl = safeSl.stopLoss ?? formatTradePrice(sl);
   const finalRisk = Math.abs((finalEntry || e) - (finalSl || sl));
-  const safeRisk = Math.max(finalRisk, minDist);
+  const safeRisk = Math.min(Math.max(finalRisk, minDist), maxDist);
 
   return {
     side: dir,
@@ -257,7 +366,7 @@ export function buildSafeMultiTpLevels({
     ),
     minDist,
     widened: safeSl.widened || risk < minDist + 1e-12,
-    riskReward: tpRiskRewardLabel(timeframe),
+    riskReward: tpRiskRewardLabel(timeframe, rewardMultiples),
     tpMultiples: [m1, m2, m3],
   };
 }

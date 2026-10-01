@@ -5,9 +5,14 @@
 
 function toFiniteNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  const cleaned = String(value ?? "")
+  if (value == null || value === "") return null;
+  const cleaned = String(value)
     .replace(/,/g, "")
     .replace(/[^\d.\-]/g, "");
+  // Number("") === 0 — missing SL must not become price 0.
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") {
+    return null;
+  }
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
@@ -77,6 +82,63 @@ export function minStopDistance(symbol, entryPrice) {
   return Math.max(0.0015, e * 0.0015);
 }
 
+/** Default SL distance when AI omits a stop — scalper-tight. */
+export function defaultStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+  const min = minStopDistance(symbol, e);
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(min, Math.min(10, e * 0.0022));
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(min, Math.min(0.25, e * 0.006));
+  if (/^BTC/.test(core)) return Math.max(min, Math.min(400, e * 0.004));
+  if (/^ETH/.test(core)) return Math.max(min, Math.min(40, e * 0.005));
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(min, Math.min(60, e * 0.0012));
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(min, Math.min(0.45, e * 0.006));
+  if (/JPY$/.test(core)) return Math.max(min, Math.min(0.25, e * 0.0015));
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(min, Math.min(0.0025, e * 0.0015));
+  }
+  if (e >= 1000) return Math.max(min, Math.min(40, e * 0.0015));
+  if (e >= 100) return Math.max(min, Math.min(4, e * 0.004));
+  if (e >= 10) return Math.max(min, Math.min(0.35, e * 0.006));
+  return Math.max(min, Math.min(0.0025, e * 0.0025));
+}
+
+/** Cap absurd AI stops; keep scalper-tight so gold is not 75pts away. */
+export function maxStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+  const min = minStopDistance(symbol, e);
+  const def = defaultStopDistance(symbol, e);
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(def, Math.min(18, e * 0.004));
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(def, Math.min(0.6, e * 0.012));
+  if (/^BTC/.test(core)) return Math.max(def, Math.min(900, e * 0.01));
+  if (/^ETH/.test(core)) return Math.max(def, Math.min(90, e * 0.012));
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(def, Math.min(120, e * 0.003));
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(def, Math.min(1.2, e * 0.015));
+  if (/JPY$/.test(core)) return Math.max(def, Math.min(0.55, e * 0.0035));
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(def, Math.min(0.006, e * 0.004));
+  }
+  if (e >= 1000) return Math.max(def, Math.min(80, e * 0.004));
+  if (e >= 100) return Math.max(def, Math.min(8, e * 0.01));
+  if (e >= 10) return Math.max(def, Math.min(0.8, e * 0.015));
+  return Math.max(def, Math.min(0.006, e * 0.006));
+}
+
 export function formatTradePrice(value) {
   const n = toFiniteNumber(value);
   if (n == null) return null;
@@ -114,12 +176,15 @@ export function isH4Timeframe(raw) {
 }
 
 /** TP1/TP2/TP3 reward multiples of stop distance. */
-export function tpRewardMultiples(timeframe) {
+export function tpRewardMultiples(timeframe, overrides = null) {
+  if (Array.isArray(overrides) && overrides.length >= 3) {
+    return overrides.slice(0, 3).map((n) => Math.max(0.1, Number(n) || 1));
+  }
   return isH4Timeframe(timeframe) ? [1, 2, 3] : [2, 3, 4];
 }
 
-export function tpRiskRewardLabel(timeframe) {
-  const [a, b, c] = tpRewardMultiples(timeframe);
+export function tpRiskRewardLabel(timeframe, overrides = null) {
+  const [a, b, c] = tpRewardMultiples(timeframe, overrides);
   return `1:${a} · 1:${b} · 1:${c}`;
 }
 
@@ -129,6 +194,8 @@ export function buildSafeMultiTpLevels({
   entry,
   stopLoss,
   timeframe = "M15",
+  /** Optional explicit R:R ladder, e.g. [2,3,4] for START. */
+  rewardMultiples = null,
 } = {}) {
   const dir = normalizeTradeSide(side, { entry, stopLoss });
   let e = toFiniteNumber(entry);
@@ -136,11 +203,8 @@ export function buildSafeMultiTpLevels({
   if (e == null || e <= 0) e = 1;
 
   const minDist = minStopDistance(symbol, e);
-  const fallbackRisk = Math.max(
-    minDist,
-    Math.abs(e) * 0.0025,
-    e >= 1000 ? 25 : e >= 100 ? 2 : e >= 10 ? 0.1 : 0.0015
-  );
+  const maxDist = maxStopDistance(symbol, e);
+  const fallbackRisk = Math.max(minDist, defaultStopDistance(symbol, e));
 
   if (dir === "BUY") {
     if (sl == null || !(sl < e)) sl = e - fallbackRisk;
@@ -152,12 +216,15 @@ export function buildSafeMultiTpLevels({
   if (risk < minDist) {
     risk = minDist;
     sl = dir === "BUY" ? e - risk : e + risk;
+  } else if (risk > maxDist) {
+    risk = maxDist;
+    sl = dir === "BUY" ? e - risk : e + risk;
   }
 
   const entryOut = formatTradePrice(e);
   const slOut = formatTradePrice(sl);
-  const safeRisk = Math.max(Math.abs(entryOut - slOut), minDist);
-  const [m1, m2, m3] = tpRewardMultiples(timeframe);
+  const safeRisk = Math.min(Math.max(Math.abs(entryOut - slOut), minDist), maxDist);
+  const [m1, m2, m3] = tpRewardMultiples(timeframe, rewardMultiples);
 
   return {
     side: dir,
@@ -176,8 +243,9 @@ export function buildSafeMultiTpLevels({
       dir === "BUY" ? entryOut + safeRisk * m3 : entryOut - safeRisk * m3
     ),
     minDist,
-    widened: risk < minDist + 1e-12,
-    riskReward: tpRiskRewardLabel(timeframe),
+    maxDist,
+    widened: risk < minDist + 1e-12 || risk >= maxDist - 1e-12,
+    riskReward: tpRiskRewardLabel(timeframe, rewardMultiples),
     tpMultiples: [m1, m2, m3],
   };
 }
