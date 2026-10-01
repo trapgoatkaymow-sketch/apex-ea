@@ -1417,12 +1417,7 @@
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790752096227,
-      "clientSymbols": [
-        "XAUUSD",
-        "NAS100",
-        "US30",
-        "EURGBP"
-      ],
+      "clientSymbols": [],
       "clientSymbolsUpdatedAt": 1790831728975,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "2A631048XJ125473B",
@@ -7471,9 +7466,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -9463,11 +9456,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
         "symbols": [
-          "XAUUS",
-          "EURUSD",
           "XAUUSD",
-          "XAUUSDM",
-          "EURUSDM"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -16832,9 +16823,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -32199,7 +32188,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
