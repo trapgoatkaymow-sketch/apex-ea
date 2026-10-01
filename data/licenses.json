@@ -207,6 +207,52 @@
       }
     },
     {
+      "key": "APEX-V2B7-WUS4",
+      "botId": "alpha-prime-ai-v2-mucqrgdm",
+      "botName": "ALPHA PRIME AI V2",
+      "clientEmail": "moropaneleago012@gmail.com",
+      "clientName": "Ggg",
+      "mainText": "Ggg",
+      "mentorEmail": "moropaneleago012@gmail.com",
+      "mentorId": "f369d358-b175-40e1-a55f-5ad982c1bab4",
+      "mentorName": "Nas Mafia",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "invite_migrate_bypass",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790669609273,
+      "usedAt": 1790669725998,
+      "deviceId": "83797d36-cec9-46f3-b7dc-33f78f42b2a0",
+      "boundAt": 1790669725998,
+      "updatedAt": 1790842139675,
+      "scanReset": null,
+      "robotAccountId": "7b32e898-05ef-42da-b204-64565b03720e",
+      "robotLogin": "17451",
+      "robotServer": "SwyftMarkets-Live",
+      "robotCompany": "Swyft Markets South Africa (Pty) Ltd",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790833129394,
+      "clientSymbols": [
+        "XAUUSD.S"
+      ],
+      "clientSymbolsUpdatedAt": 1790835672245,
+      "mentorSymbolsSyncedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790669678972,
+      "bot": {
+        "id": "alpha-prime-ai-v2-mucqrgdm",
+        "name": "ALPHA PRIME AI V2",
+        "photo": "/api/licenses/photo?botId=alpha-prime-ai-v2-mucqrgdm&v=full",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD.S"
+        ]
+      }
+    },
+    {
       "key": "APEX-4QP7-G8JP",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -3847,52 +3893,6 @@
       }
     },
     {
-      "key": "APEX-V2B7-WUS4",
-      "botId": "alpha-prime-ai-v2-mucqrgdm",
-      "botName": "ALPHA PRIME AI V2",
-      "clientEmail": "moropaneleago012@gmail.com",
-      "clientName": "Ggg",
-      "mainText": "Ggg",
-      "mentorEmail": "moropaneleago012@gmail.com",
-      "mentorId": "f369d358-b175-40e1-a55f-5ad982c1bab4",
-      "mentorName": "Nas Mafia",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "invite_migrate_bypass",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790669609273,
-      "usedAt": 1790669725998,
-      "deviceId": "83797d36-cec9-46f3-b7dc-33f78f42b2a0",
-      "boundAt": 1790669725998,
-      "updatedAt": 1790841947953,
-      "scanReset": null,
-      "robotAccountId": "4ae3c21d-1efc-4ea1-b107-9c825aef4b74",
-      "robotLogin": "716002165",
-      "robotServer": "ATFXGM25-LIVE",
-      "robotCompany": "AT Global Markets INTL LTD",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790841877428,
-      "clientSymbols": [
-        "XAUUSD.S"
-      ],
-      "clientSymbolsUpdatedAt": 1790835672245,
-      "mentorSymbolsSyncedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790669678972,
-      "bot": {
-        "id": "alpha-prime-ai-v2-mucqrgdm",
-        "name": "ALPHA PRIME AI V2",
-        "photo": "/api/licenses/photo?botId=alpha-prime-ai-v2-mucqrgdm&v=full",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD.S"
-        ]
-      }
-    },
-    {
       "key": "APEX-6P3N-2XEH",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -5809,7 +5809,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -12226,7 +12228,7 @@
       "purchaseCaptureId": "8SV06928JH281613K",
       "purchaseOrderId": "25X734216E163215D",
       "purchaseSource": "paypal-giveaway",
-      "emailSentAt": 1790841272814,
+      "emailSentAt": 1790841219445,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
         "name": "ZETA SCALPER AI",
@@ -30557,8 +30559,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "NAS100",
+          "BTCUSD",
+          "US30"
         ]
       }
     },
