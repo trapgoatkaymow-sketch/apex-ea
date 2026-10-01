@@ -1342,7 +1342,7 @@
         "USDJPY",
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790838387099,
+      "clientSymbolsUpdatedAt": 1790838387112,
       "mentorSymbolsSyncedAt": 1790837309835,
       "purchaseCaptureId": "1PP88106PW6619257",
       "purchaseOrderId": "19N065368W464182C",
@@ -1490,7 +1490,7 @@
         "US30CASH",
         "XAUUSD"
       ],
-      "clientSymbolsUpdatedAt": 1790838400122,
+      "clientSymbolsUpdatedAt": 1790838407696,
       "mentorSymbolsSyncedAt": 1790837309835,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -3932,7 +3932,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -4595,9 +4597,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -9201,7 +9201,7 @@
         "BTCUSD"
       ],
       "clientSymbolsUpdatedAt": 1790781815108,
-      "mentorSymbolsSyncedAt": 1790837309835,
+      "mentorSymbolsSyncedAt": 1790837061966,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -9211,11 +9211,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -10161,11 +10157,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -22595,9 +22587,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100",
-          "BTCUSD",
-          "US30"
+          "US30",
+          ".US30."
         ]
       }
     },
