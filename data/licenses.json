@@ -144,6 +144,52 @@
       }
     },
     {
+      "key": "APEX-DZT3-EMV5",
+      "botId": "kat-matlala-ea-v1-muk0bdxr",
+      "botName": "KAT MATLALA EA V1",
+      "clientEmail": "doskie619@yahoo.com",
+      "clientName": "Peter",
+      "mainText": "Peter",
+      "mentorEmail": "nhlanhlabaloyi12417@gmail.com",
+      "mentorId": "901b6a86-5232-4917-9ba8-531406679357",
+      "mentorName": "Nico wadi demo",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "not_paid",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790837110465,
+      "usedAt": 1790837383518,
+      "deviceId": "6cea1e3c-6202-43f1-b4aa-1b709b0771e7",
+      "boundAt": 1790837383518,
+      "updatedAt": 1790845207867,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": 1790837706755,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790837887267,
+      "bot": {
+        "id": "kat-matlala-ea-v1-muk0bdxr",
+        "name": "KAT MATLALA EA V1",
+        "photo": "/api/licenses/photo?botId=kat-matlala-ea-v1-muk0bdxr&v=1790756235045",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "EURUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-DJK4-JG9P",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -12641,52 +12687,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-DZT3-EMV5",
-      "botId": "kat-matlala-ea-v1-muk0bdxr",
-      "botName": "KAT MATLALA EA V1",
-      "clientEmail": "doskie619@yahoo.com",
-      "clientName": "Peter",
-      "mainText": "Peter",
-      "mentorEmail": "nhlanhlabaloyi12417@gmail.com",
-      "mentorId": "901b6a86-5232-4917-9ba8-531406679357",
-      "mentorName": "Nico wadi demo",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "not_paid",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790837110465,
-      "usedAt": 1790837383518,
-      "deviceId": "6cea1e3c-6202-43f1-b4aa-1b709b0771e7",
-      "boundAt": 1790837383518,
-      "updatedAt": 1790844628859,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1790837706755,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790837887267,
-      "bot": {
-        "id": "kat-matlala-ea-v1-muk0bdxr",
-        "name": "KAT MATLALA EA V1",
-        "photo": "/api/licenses/photo?botId=kat-matlala-ea-v1-muk0bdxr&v=1790756235045",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "EURUSD"
         ]
       }
     },
@@ -28429,8 +28429,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -36623,9 +36624,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -44083,8 +44083,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "GOLD",
-          "NAS100"
+          "XAUUSD",
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
