@@ -598,14 +598,14 @@
       "usedAt": 1790447519079,
       "deviceId": "5c69c368-3310-41de-a525-a6ec184cd64a",
       "boundAt": 1790447519079,
-      "updatedAt": 1790833012441,
+      "updatedAt": 1790833015705,
       "scanReset": null,
-      "robotAccountId": "0ea2a6bb-edf1-497b-98a4-992083ea1d7f",
+      "robotAccountId": "914bbaef-0f55-4644-bc2f-ef5941a963fe",
       "robotLogin": "2002736419",
       "robotServer": "JustMarkets-Live",
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790803544303,
+      "robotConnectedAt": 1790833014323,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
       "mentorSymbolsSyncedAt": 1790807945234,
@@ -644,14 +644,14 @@
       "usedAt": 1790447462156,
       "deviceId": "5c69c368-3310-41de-a525-a6ec184cd64a",
       "boundAt": 1790447462156,
-      "updatedAt": 1790833012441,
+      "updatedAt": 1790833015705,
       "scanReset": null,
-      "robotAccountId": "0ea2a6bb-edf1-497b-98a4-992083ea1d7f",
+      "robotAccountId": "914bbaef-0f55-4644-bc2f-ef5941a963fe",
       "robotLogin": "2002736419",
       "robotServer": "JustMarkets-Live",
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790803544303,
+      "robotConnectedAt": 1790833014323,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
       "mentorSymbolsSyncedAt": 1790807945234,
@@ -21395,7 +21395,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
