@@ -98,21 +98,22 @@ export async function analyzeSymbolSetupWithOpenAI({
             "You are a MetaTrader market analyst (same role as Apex EA Chart Scanner). Return JSON only: " +
             '{"side":"BUY"|"SELL","confidence":0-100,"timeframe":"M30"|"H1"|"H4",' +
             '"stopLoss":number,"analysis":string}. ' +
-            "Choose BUY or SELL for the symbol at the live price using typical M30/H1/H4 structure bias. " +
+            "START always trades M30 + H1 + H4 together. Decide BUY or SELL from confluence across ALL three " +
+            "(M30, H1, and H4 structure / bias) — not a single lower timeframe alone. " +
             "Do NOT default to BUY. stopLoss must be a realistic protective stop FAR enough from entry for the instrument " +
             "(XAUUSD ≥ ~$3–$8, FX ≥ ~15 pips, US30/NAS100 ≥ ~25 points). " +
             "BUY: stopLoss < entry. SELL: stopLoss > entry. " +
-            "timeframe must be one of M30, H1, H4. analysis: one short sentence why.",
+            "timeframe = the strongest of M30/H1/H4 that supports the side. analysis: one short sentence citing M30/H1/H4.",
         },
         {
           role: "user",
           content:
             `Symbol: ${sym}. Live price: ${live}. ` +
-            `Allowed timeframes: ${tfs.join(", ")}. ` +
+            `Required timeframes (use all): ${tfs.join(", ")}. ` +
             (preferredSide
-              ? `Client pair preference (soft): ${preferredSide}. Prefer chart logic over preference. `
+              ? `Client pair preference (soft): ${preferredSide}. Prefer multi-TF chart logic over preference. `
               : "") +
-            "Return side, stopLoss, timeframe (M30/H1/H4), confidence, analysis — same quality as Chart Scanner.",
+            "Return side from M30+H1+H4 confluence, stopLoss, primary timeframe (M30/H1/H4), confidence, analysis.",
         },
       ],
     }),

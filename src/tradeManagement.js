@@ -149,9 +149,17 @@ export function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.
   return vols;
 }
 
+/** TP thread → chart timeframe used by START / Scanner Execute. */
+export const TP_THREAD_TIMEFRAMES = {
+  TP1: "M30",
+  TP2: "H1",
+  TP3: "H4",
+};
+
 /**
  * Build Execute/START threads from a multi-TP signal.
  * `lot` is the TOTAL size for the whole open — split across threads.
+ * Thread map: TP1@M30 · TP2@H1 · TP3@H4.
  */
 export function buildTpThreads({ tradeCount = 1, lot = 0.01, signal = {} } = {}) {
   const count = clampTradeThreadCount(tradeCount);
@@ -166,7 +174,7 @@ export function buildTpThreads({ tradeCount = 1, lot = 0.01, signal = {} } = {})
       target,
       takeProfitKey,
       takeProfit,
-      timeframe: target === "TP1" ? "M30" : target === "TP2" ? "H1" : "H4",
+      timeframe: TP_THREAD_TIMEFRAMES[target] || "M30",
       entry: signal.entry,
       stopLoss: signal.stopLoss,
       side: signal.side,

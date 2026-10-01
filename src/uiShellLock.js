@@ -63,10 +63,11 @@
  * Gen 106 — No AI-offline toast; Safe Scalper keeps pair trade count.
  * Gen 107 — Lot is TOTAL across TP threads (no × trades); max 3 threads;
  *           block stacking another open while the pair still has positions.
+ * Gen 108 — START always uses M30 + H1 + H4 threads (not pair trade count).
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 107;
+export const UI_SHELL_GENERATION = 108;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
