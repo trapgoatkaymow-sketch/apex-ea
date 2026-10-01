@@ -261,7 +261,7 @@ export async function sendLicenseKeyEmail(license = {}) {
 }
 
 /** Send many license emails with light concurrency. */
-export async function sendLicenseKeyEmails(licenses = [], { concurrency = 4 } = {}) {
+export async function sendLicenseKeyEmails(licenses = [], { concurrency = 8 } = {}) {
   const list = Array.isArray(licenses) ? licenses.filter(Boolean) : [];
   const results = [];
   let i = 0;
