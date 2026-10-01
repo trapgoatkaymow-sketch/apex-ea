@@ -51,9 +51,11 @@ const MIN_CHART_CONFIDENCE = 55;
 
 function toFiniteNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  const cleaned = String(value ?? "")
+  if (value == null || value === "") return null;
+  const cleaned = String(value)
     .replace(/,/g, "")
     .replace(/[^\d.\-]/g, "");
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") return null;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }

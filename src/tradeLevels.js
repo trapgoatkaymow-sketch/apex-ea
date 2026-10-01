@@ -5,9 +5,14 @@
 
 function toFiniteNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  const cleaned = String(value ?? "")
+  if (value == null || value === "") return null;
+  const cleaned = String(value)
     .replace(/,/g, "")
     .replace(/[^\d.\-]/g, "");
+  // Number("") === 0 — missing SL must not become price 0.
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") {
+    return null;
+  }
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
@@ -77,32 +82,61 @@ export function minStopDistance(symbol, entryPrice) {
   return Math.max(0.0015, e * 0.0015);
 }
 
-/** Cap absurd AI stops so TP cannot land at ~5× market price. */
-export function maxStopDistance(symbol, entryPrice) {
+/** Default SL distance when AI omits a stop — scalper-tight. */
+export function defaultStopDistance(symbol, entryPrice) {
   const core = symbolCoreName(symbol);
   const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
   const min = minStopDistance(symbol, e);
 
-  if (/^(XAU|GOLD)/.test(core)) return Math.max(min * 12, Math.min(120, e * 0.018));
-  if (/^(XAG|SILVER)/.test(core)) return Math.max(min * 12, Math.min(2.5, e * 0.025));
-  if (/^BTC/.test(core)) return Math.max(min * 10, Math.min(2500, e * 0.03));
-  if (/^ETH/.test(core)) return Math.max(min * 10, Math.min(250, e * 0.03));
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(min, Math.min(10, e * 0.0022));
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(min, Math.min(0.25, e * 0.006));
+  if (/^BTC/.test(core)) return Math.max(min, Math.min(400, e * 0.004));
+  if (/^ETH/.test(core)) return Math.max(min, Math.min(40, e * 0.005));
   if (
     /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
       core
     )
   ) {
-    return Math.max(min * 12, Math.min(400, e * 0.012));
+    return Math.max(min, Math.min(60, e * 0.0012));
   }
-  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(min * 12, Math.min(3, e * 0.03));
-  if (/JPY$/.test(core)) return Math.max(min * 12, Math.min(1.5, e * 0.012));
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(min, Math.min(0.45, e * 0.006));
+  if (/JPY$/.test(core)) return Math.max(min, Math.min(0.25, e * 0.0015));
   if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
-    return Math.max(min * 12, Math.min(0.02, e * 0.012));
+    return Math.max(min, Math.min(0.0025, e * 0.0015));
   }
-  if (e >= 1000) return Math.max(min * 12, Math.min(200, e * 0.015));
-  if (e >= 100) return Math.max(min * 12, Math.min(15, e * 0.02));
-  if (e >= 10) return Math.max(min * 12, Math.min(1.5, e * 0.025));
-  return Math.max(min * 12, Math.min(0.02, e * 0.02));
+  if (e >= 1000) return Math.max(min, Math.min(40, e * 0.0015));
+  if (e >= 100) return Math.max(min, Math.min(4, e * 0.004));
+  if (e >= 10) return Math.max(min, Math.min(0.35, e * 0.006));
+  return Math.max(min, Math.min(0.0025, e * 0.0025));
+}
+
+/** Cap absurd AI stops; keep scalper-tight so gold is not 75pts away. */
+export function maxStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+  const min = minStopDistance(symbol, e);
+  const def = defaultStopDistance(symbol, e);
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(def, Math.min(18, e * 0.004));
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(def, Math.min(0.6, e * 0.012));
+  if (/^BTC/.test(core)) return Math.max(def, Math.min(900, e * 0.01));
+  if (/^ETH/.test(core)) return Math.max(def, Math.min(90, e * 0.012));
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(def, Math.min(120, e * 0.003));
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(def, Math.min(1.2, e * 0.015));
+  if (/JPY$/.test(core)) return Math.max(def, Math.min(0.55, e * 0.0035));
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(def, Math.min(0.006, e * 0.004));
+  }
+  if (e >= 1000) return Math.max(def, Math.min(80, e * 0.004));
+  if (e >= 100) return Math.max(def, Math.min(8, e * 0.01));
+  if (e >= 10) return Math.max(def, Math.min(0.8, e * 0.015));
+  return Math.max(def, Math.min(0.006, e * 0.006));
 }
 
 export function formatTradePrice(value) {
@@ -170,11 +204,7 @@ export function buildSafeMultiTpLevels({
 
   const minDist = minStopDistance(symbol, e);
   const maxDist = maxStopDistance(symbol, e);
-  const fallbackRisk = Math.max(
-    minDist,
-    Math.abs(e) * 0.0025,
-    e >= 1000 ? 25 : e >= 100 ? 2 : e >= 10 ? 0.1 : 0.0015
-  );
+  const fallbackRisk = Math.max(minDist, defaultStopDistance(symbol, e));
 
   if (dir === "BUY") {
     if (sl == null || !(sl < e)) sl = e - fallbackRisk;

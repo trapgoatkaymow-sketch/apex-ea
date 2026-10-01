@@ -7,9 +7,15 @@
 
 function toFiniteNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  const cleaned = String(value ?? "")
+  if (value == null || value === "") return null;
+  const cleaned = String(value)
     .replace(/,/g, "")
     .replace(/[^\d.\-]/g, "");
+  // Number("") === 0 — that turned missing SL into price 0 and parked
+  // gold stops at the max-distance cap (~75pts / far TPs).
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") {
+    return null;
+  }
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
@@ -82,35 +88,66 @@ export function minStopDistance(symbol, entryPrice) {
 }
 
 /**
- * Cap how far SL can sit from entry. Chart AI sometimes returns a near-zero
- * or wrong-scale stop (e.g. "30" as price on gold) which made risk ≈ entry and
- * TP land at ~5× the market (20882 on XAU ~4176).
+ * Default SL distance when AI omits a stop — scalper-tight, not swing-wide.
  */
-export function maxStopDistance(symbol, entryPrice) {
+export function defaultStopDistance(symbol, entryPrice) {
   const core = symbolCoreName(symbol);
   const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
   const min = minStopDistance(symbol, e);
 
-  if (/^(XAU|GOLD)/.test(core)) return Math.max(min * 12, Math.min(120, e * 0.018));
-  if (/^(XAG|SILVER)/.test(core)) return Math.max(min * 12, Math.min(2.5, e * 0.025));
-  if (/^BTC/.test(core)) return Math.max(min * 10, Math.min(2500, e * 0.03));
-  if (/^ETH/.test(core)) return Math.max(min * 10, Math.min(250, e * 0.03));
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(min, Math.min(10, e * 0.0022)); // ~9
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(min, Math.min(0.25, e * 0.006));
+  if (/^BTC/.test(core)) return Math.max(min, Math.min(400, e * 0.004));
+  if (/^ETH/.test(core)) return Math.max(min, Math.min(40, e * 0.005));
   if (
     /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
       core
     )
   ) {
-    return Math.max(min * 12, Math.min(400, e * 0.012));
+    return Math.max(min, Math.min(60, e * 0.0012));
   }
-  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(min * 12, Math.min(3, e * 0.03));
-  if (/JPY$/.test(core)) return Math.max(min * 12, Math.min(1.5, e * 0.012));
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(min, Math.min(0.45, e * 0.006));
+  if (/JPY$/.test(core)) return Math.max(min, Math.min(0.25, e * 0.0015));
   if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
-    return Math.max(min * 12, Math.min(0.02, e * 0.012));
+    return Math.max(min, Math.min(0.0025, e * 0.0015)); // ~25 pips
   }
-  if (e >= 1000) return Math.max(min * 12, Math.min(200, e * 0.015));
-  if (e >= 100) return Math.max(min * 12, Math.min(15, e * 0.02));
-  if (e >= 10) return Math.max(min * 12, Math.min(1.5, e * 0.025));
-  return Math.max(min * 12, Math.min(0.02, e * 0.02));
+  if (e >= 1000) return Math.max(min, Math.min(40, e * 0.0015));
+  if (e >= 100) return Math.max(min, Math.min(4, e * 0.004));
+  if (e >= 10) return Math.max(min, Math.min(0.35, e * 0.006));
+  return Math.max(min, Math.min(0.0025, e * 0.0025));
+}
+
+/**
+ * Cap how far SL can sit from entry. Blocks wrong-scale AI stops that made
+ * TP ≈ 5× price (20882 on gold), but stays scalper-tight so levels are not
+ * parked 75+ points away on XAU.
+ */
+export function maxStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+  const min = minStopDistance(symbol, e);
+  const def = defaultStopDistance(symbol, e);
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(def, Math.min(18, e * 0.004)); // ~16–18
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(def, Math.min(0.6, e * 0.012));
+  if (/^BTC/.test(core)) return Math.max(def, Math.min(900, e * 0.01));
+  if (/^ETH/.test(core)) return Math.max(def, Math.min(90, e * 0.012));
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(def, Math.min(120, e * 0.003));
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(def, Math.min(1.2, e * 0.015));
+  if (/JPY$/.test(core)) return Math.max(def, Math.min(0.55, e * 0.0035));
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(def, Math.min(0.006, e * 0.004)); // ~60 pips
+  }
+  if (e >= 1000) return Math.max(def, Math.min(80, e * 0.004));
+  if (e >= 100) return Math.max(def, Math.min(8, e * 0.01));
+  if (e >= 10) return Math.max(def, Math.min(0.8, e * 0.015));
+  return Math.max(def, Math.min(0.006, e * 0.006));
 }
 
 export function formatTradePrice(value) {
@@ -187,12 +224,17 @@ export function normalizeProtectiveLevels({
       : 0;
   const maxDist =
     entry != null ? Math.max(maxStopDistance(symbol, entry), minDist) : 0;
+  const defDist =
+    entry != null
+      ? Math.max(defaultStopDistance(symbol, entry), minDist)
+      : 0;
 
   if (entry != null && entry > 0 && minDist > 0) {
     // Always attach a protective SL when we know the fill — missing SL left
     // positions naked when AI omitted stopLoss or broker dropped a bad one.
+    // Use scalper default distance (not the wide max cap).
     if (ensureStop && (!(sl != null && sl > 0))) {
-      sl = dir === "BUY" ? entry - minDist : entry + minDist;
+      sl = dir === "BUY" ? entry - defDist : entry + defDist;
       widened = true;
     }
 
@@ -267,11 +309,9 @@ export function buildSafeMultiTpLevels({
 
   const minDist = minStopDistance(symbol, e);
   const maxDist = maxStopDistance(symbol, e);
-  const fallbackRisk = Math.max(
-    minDist,
-    Math.abs(e) * 0.0025,
-    e >= 1000 ? 25 : e >= 100 ? 2 : e >= 10 ? 0.1 : 0.0015
-  );
+  // Instrument-aware scalper default — never the old blunt "e>=1000 → 25" floor
+  // that parked gold SL ~75pts away after the far-TP guard.
+  const fallbackRisk = Math.max(minDist, defaultStopDistance(symbol, e));
 
   if (dir === "BUY") {
     if (sl == null || !(sl < e)) sl = e - fallbackRisk;

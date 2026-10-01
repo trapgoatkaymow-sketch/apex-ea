@@ -54,10 +54,11 @@
  * Gen 97 — Android APK v2.36: Interface 1 scanners 4 charts/day.
  * Gen 98 — Mentor Browse symbols: live EA list only (no client-pair union).
  * Gen 99 — START always TP1 1:2 · TP2 1:3 · TP3 1:4 (scanner ladder).
+ * Gen 100 — Tighter scalper SL/TP; fix null SL→0 blowing stops far out.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 99;
+export const UI_SHELL_GENERATION = 100;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -67,7 +68,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 99;
+export const UI_SHELL_FLOOR = 100;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
