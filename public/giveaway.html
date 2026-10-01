@@ -186,14 +186,62 @@
       .msg.ok { color: var(--ok); }
       .msg.err { color: var(--err); }
       .keybox {
-        margin-top: 14px;
-        padding: 12px 14px;
+        display: none;
+        margin-top: 16px;
+        padding: 16px 16px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 179, 71, 0.55);
+        background: rgba(255, 106, 0, 0.12);
+      }
+      .keybox.is-visible {
+        display: block;
+      }
+      .keybox-label {
+        margin: 0 0 8px;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--fire2);
+        font-weight: 700;
+      }
+      .keybox-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .keybox-value {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        padding: 12px 12px;
         border-radius: 12px;
-        border: 1px dashed var(--line);
-        font-family: ui-monospace, monospace;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--line);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.95rem;
         letter-spacing: 0.04em;
         word-break: break-all;
-        display: none;
+        color: var(--text);
+      }
+      .keybox-copy {
+        flex: 0 0 auto;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #111;
+        background: linear-gradient(180deg, var(--fire2), var(--fire));
+        cursor: pointer;
+      }
+      .keybox-copy:active {
+        transform: scale(0.97);
+      }
+      .keybox-hint {
+        margin: 10px 0 0;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        color: var(--muted);
       }
       .wa-box {
         display: none;
@@ -372,7 +420,16 @@
       </form>
 
       <p id="msg" class="msg" role="status"></p>
-      <div id="keybox" class="keybox" aria-live="polite"></div>
+      <div id="keybox" class="keybox" aria-live="polite">
+        <p class="keybox-label">Your license key</p>
+        <div class="keybox-row">
+          <p class="keybox-value" id="key-value"></p>
+          <button type="button" class="keybox-copy" id="copy-key-btn">Copy</button>
+        </div>
+        <p class="keybox-hint" id="key-hint">
+          Copy this key now. The same key and WhatsApp link are also emailed automatically — check spam.
+        </p>
+      </div>
       <div id="wa-box" class="wa-box" aria-live="polite">
         Join the Trapgoatkaymow ApexEA WhatsApp group (also in your license email):
         <br />
@@ -488,14 +545,60 @@
       paintDigits(endsAtMs - Date.now());
       setInterval(tickTimer, 250);
 
-      function showKey(key) {
-        if (!key) return;
+      function showKey(key, { emailSent = false, email = "" } = {}) {
+        const value = String(key || "").trim().toUpperCase();
+        if (!value) return;
+        const keyValue = document.getElementById("key-value");
+        const keyHint = document.getElementById("key-hint");
+        const copyBtn = document.getElementById("copy-key-btn");
+        if (keyValue) keyValue.textContent = value;
+        keybox.classList.add("is-visible");
         keybox.style.display = "block";
-        keybox.textContent = key;
+        if (keyHint) {
+          keyHint.textContent = emailSent
+            ? `Key emailed to ${email || "your inbox"} (check spam). Copy it here too.`
+            : `Copy this key now. We are also emailing it${
+                email ? " to " + email : ""
+              } with the WhatsApp link — check spam.`;
+        }
+        if (copyBtn && !copyBtn.dataset.bound) {
+          copyBtn.dataset.bound = "1";
+          copyBtn.addEventListener("click", async () => {
+            const text = String(keyValue?.textContent || "").trim();
+            if (!text) return;
+            try {
+              await navigator.clipboard.writeText(text);
+              copyBtn.textContent = "Copied";
+              setTimeout(() => {
+                copyBtn.textContent = "Copy";
+              }, 1600);
+            } catch {
+              try {
+                const range = document.createRange();
+                range.selectNodeContents(keyValue);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                document.execCommand("copy");
+                copyBtn.textContent = "Copied";
+                setTimeout(() => {
+                  copyBtn.textContent = "Copy";
+                }, 1600);
+              } catch {
+                setMsg("Could not copy — select the key manually", "err");
+              }
+            }
+          });
+        }
         const waBox = document.getElementById("wa-box");
         const waLink = document.getElementById("wa-link");
         if (waBox) waBox.style.display = "block";
         if (waLink) waLink.href = WHATSAPP_GROUP_URL;
+        try {
+          keybox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch {
+          // ignore
+        }
       }
 
       function hidePayUi() {
@@ -604,15 +707,24 @@
           }
         }
         if (!result) throw lastError || new Error("Could not finish payment");
+        const licenseKey =
+          result.licenseKey || result.license?.key || result.key || "";
         setMsg(
           result.reused
-            ? "Already paid — your license key and WhatsApp link are below (also emailed). App access is unlocked for this email."
-            : "Paid! App access unlocked. License key and WhatsApp link emailed to " +
+            ? "Already paid — your license key is below (also emailed). App access is unlocked for this email."
+            : result.emailSent
+              ? "Paid! License key is below and emailed to " +
+                (result.email || email) +
+                "."
+              : "Paid! Your license key is below — copy it now. Email is also on the way to " +
                 (result.email || email) +
                 ".",
           "ok"
         );
-        showKey(result.licenseKey);
+        showKey(licenseKey, {
+          emailSent: Boolean(result.emailSent),
+          email: result.email || email,
+        });
         hidePayUi();
         return result;
       }
