@@ -758,7 +758,12 @@
       "robotCompany": "Just Global Markets Ltd.",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790752096227,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "XAUUSD",
+        "NAS100",
+        "US30",
+        "EURGBP"
+      ],
       "clientSymbolsUpdatedAt": 1790831728975,
       "mentorSymbolsSyncedAt": 1790807945234,
       "purchaseCaptureId": "2A631048XJ125473B",
@@ -3673,7 +3678,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "NAS100"
+          "US30",
+          ".US30."
         ]
       }
     },
