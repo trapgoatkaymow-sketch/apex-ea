@@ -2322,6 +2322,21 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
 
   const claimEmail = normalizeEmail(email);
 
+  // Warm-instance fast path: same phone re-opening an already-bound key must not
+  // wait on a preferFresh durable read (Blob/GitHub) — that was the "access later" lag.
+  if (Array.isArray(memoryLicenses) && memoryLicenses.length) {
+    const warm =
+      memoryLicenses.find((row) => variants.includes(row.key)) || null;
+    const warmDevice = String(warm?.deviceId || "").trim();
+    if (warm?.used && warmDevice && warmDevice === claimDevice) {
+      const reclaimEmail = normalizeEmail(warm.clientEmail) || claimEmail;
+      if (reclaimEmail && !warm.commissionEligible) {
+        void reconcileCommissionForEmail(reclaimEmail).catch(() => null);
+      }
+      return { ...warm };
+    }
+  }
+
   // Peek current license + signup before mutate so commission rules use paid/first-access.
   const currentList = await listLicenses({ preferFresh: true });
   const current =
@@ -2371,14 +2386,9 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
       reclaimed = next;
       return licenses;
     }, `license email reclaim: ${variants[0]}`);
-    // Pay-after-activate: payment may have landed after the first use stamp.
+    // Pay-after-activate: never block reclaim unlock on commission reconcile.
     if (claimEmail && !reclaimed?.commissionEligible) {
-      try {
-        const upgraded = await reconcileCommissionForEmail(claimEmail);
-        if (upgraded) reclaimed = upgraded;
-      } catch {
-        // Best-effort
-      }
+      void reconcileCommissionForEmail(claimEmail).catch(() => null);
     }
     return reclaimed;
   }
@@ -2405,15 +2415,10 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
         return licenses;
       }, `license device claim: ${variants[0]}`);
     }
-    // Pay-after-activate: payment may have landed after the first use stamp.
+    // Returning users must unlock instantly — commission stamp is background.
     const reclaimEmail = normalizeEmail(claimed?.clientEmail) || claimEmail;
     if (reclaimEmail && !claimed?.commissionEligible) {
-      try {
-        const upgraded = await reconcileCommissionForEmail(reclaimEmail);
-        if (upgraded) claimed = upgraded;
-      } catch {
-        // Best-effort; commission page also live-counts paid unlocks.
-      }
+      void reconcileCommissionForEmail(reclaimEmail).catch(() => null);
     }
     return claimed;
   }
@@ -2503,25 +2508,24 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     return licenses;
   }, `license used: ${variants[0]}`);
 
+  // Respond as soon as the key is bound — signup/mentor stamps must not delay unlock.
   const unlockEmail = normalizeEmail(result?.clientEmail) || claimEmail;
   if (unlockEmail) {
-    try {
-      await setSignupAppAccessUnlocked(unlockEmail, result?.usedAt || Date.now());
-    } catch {
-      // Unlock stamp is best-effort; license commissionEligible is already set.
-    }
+    void setSignupAppAccessUnlocked(
+      unlockEmail,
+      result?.usedAt || Date.now()
+    ).catch(() => null);
   }
 
   if (result?.commissionEligible && result?.mentorEmail) {
-    try {
-      const { noteMentorQualifyingActivity } = await import("../mentors/_lib.js");
-      await noteMentorQualifyingActivity(
-        result.mentorEmail,
-        result.usedAt || Date.now()
-      );
-    } catch {
-      // Activity stamp is best-effort.
-    }
+    void import("../mentors/_lib.js")
+      .then(({ noteMentorQualifyingActivity }) =>
+        noteMentorQualifyingActivity(
+          result.mentorEmail,
+          result.usedAt || Date.now()
+        )
+      )
+      .catch(() => null);
   }
 
   return result;

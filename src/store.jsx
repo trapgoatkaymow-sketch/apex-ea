@@ -2719,11 +2719,17 @@ export function AppProvider({ children }) {
         );
       };
       let entry = licenseKeys.find(matchKey) || null;
+      // Track whether we already have a fresh server row (skip a second round-trip).
+      let fetchedFresh = false;
 
       if (!entry) {
         try {
-          entry = await fetchLicense(rawKey);
-          if (entry) setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
+          // Re-activate path: no 450ms retry lag — key already exists in store.
+          entry = await fetchLicense(rawKey, { retry: false });
+          if (entry) {
+            fetchedFresh = true;
+            setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
+          }
         } catch {
           entry = null;
         }
@@ -2733,19 +2739,13 @@ export function AppProvider({ children }) {
           const byEmail = await fetchLicensesByEmail(accountEmail);
           setLicenseKeys((prev) => mergeLicenses(prev, byEmail));
           entry = byEmail.find(matchKey) || null;
+          if (entry) fetchedFresh = true;
         } catch {
           // continue
         }
       }
-      if (!entry) {
-        try {
-          const remote = await fetchLicenses();
-          setLicenseKeys((prev) => mergeLicenses(prev, remote));
-          entry = remote.find(matchKey) || null;
-        } catch {
-          // keep local miss
-        }
-      }
+      // Do not download the entire license store on activate — that made re-entry
+      // feel slow after a new APK install. Key + email lookups are enough.
 
       if (!entry) {
         showToast("Invalid license key — ask your mentor to generate a new one");
@@ -2779,26 +2779,27 @@ export function AppProvider({ children }) {
 
       const deviceId = getOrCreateDeviceId();
       let boundDevice = String(entry.deviceId || "").trim();
-      // Always refresh from the server before the phone-lock check so a just
-      // reactivated key is not blocked by a stale localStorage used/deviceId.
-      try {
-        const fresh = await fetchLicense(rawKey);
-        if (fresh) {
-          entry = fresh;
-          setLicenseKeys((prev) => mergeLicenses(prev, [fresh]));
-          boundDevice = String(entry.deviceId || "").trim();
-          const freshClient = normalizeEmail(entry.clientEmail);
-          const freshMentor = normalizeEmail(
-            entry.mentorEmail || entry.ownerEmail
-          );
-          emailOwnsLicense = Boolean(
-            accountEmail &&
-              ((freshClient && accountEmail === freshClient) ||
-                (freshMentor && accountEmail === freshMentor))
-          );
+      // Refresh only when local cache may be stale (skip if we just fetched).
+      if (!fetchedFresh) {
+        try {
+          const fresh = await fetchLicense(rawKey, { retry: false });
+          if (fresh) {
+            entry = fresh;
+            setLicenseKeys((prev) => mergeLicenses(prev, [fresh]));
+            boundDevice = String(entry.deviceId || "").trim();
+            const freshClient = normalizeEmail(entry.clientEmail);
+            const freshMentor = normalizeEmail(
+              entry.mentorEmail || entry.ownerEmail
+            );
+            emailOwnsLicense = Boolean(
+              accountEmail &&
+                ((freshClient && accountEmail === freshClient) ||
+                  (freshMentor && accountEmail === freshMentor))
+            );
+          }
+        } catch {
+          // keep local
         }
-      } catch {
-        // keep local
       }
       if (entry.used && boundDevice && boundDevice !== deviceId) {
         // Owner or issuing mentor can reclaim after reinstall (new device id).
@@ -2839,13 +2840,13 @@ export function AppProvider({ children }) {
         symbols: [],
       };
 
-      // Prefer a durable photo from this bot's other licenses / same EA name /
-      // photo API over /logo.png (older keys reuse a different botId).
+      // Pick a local photo instantly — network photo probes run in the existing
+      // useEffect after unlock so returning users are not stuck on the lock screen.
       const snapshotName = String(snapshot.name || entry.botName || "")
         .trim()
         .toLowerCase();
       const snapshotId = String(snapshot.id || entry.botId || "").trim();
-      let activationPhoto = pickProfilePhoto(
+      const activationPhoto = pickProfilePhoto(
         snapshot.photo,
         ...(Array.isArray(licenseKeys) ? licenseKeys : [])
           .filter((row) => {
@@ -2875,25 +2876,6 @@ export function AppProvider({ children }) {
             .filter((id) => id && id !== botIdForPhoto)
         ),
       ];
-      if (botIdForPhoto && !isRealProfilePhoto(activationPhoto)) {
-        const probeIds = [botIdForPhoto, ...aliasIds];
-        for (const probeId of probeIds) {
-          const apiPath = `/api/licenses/photo?botId=${encodeURIComponent(probeId)}&v=full`;
-          try {
-            const check = await fetch(mediaUrl(apiPath), {
-              method: "GET",
-              cache: "no-store",
-            });
-            const type = String(check.headers.get("content-type") || "");
-            if (check.ok && type.startsWith("image/")) {
-              activationPhoto = apiPath;
-              break;
-            }
-          } catch {
-            // try next alias
-          }
-        }
-      }
       snapshot.photo = activationPhoto;
       if (aliasIds.length) snapshot.photoAliases = aliasIds;
 
@@ -3104,15 +3086,18 @@ export function AppProvider({ children }) {
         return false;
       }
 
-      let restored = 0;
-      for (const row of mine) {
-        const ok = await activateLicense(row.key);
-        if (ok) restored += 1;
+      // Unlock on the first key immediately, then bind any remaining keys in parallel.
+      const [first, ...rest] = mine;
+      const firstOk = await activateLicense(first.key);
+      if (rest.length) {
+        void Promise.allSettled(rest.map((row) => activateLicense(row.key)));
       }
-      if (restored === 0) {
-        return false;
-      }
-      return true;
+      if (firstOk) return true;
+      // First key failed — try the rest before giving up.
+      const settled = await Promise.allSettled(
+        rest.map((row) => activateLicense(row.key))
+      );
+      return settled.some((r) => r.status === "fulfilled" && r.value);
     },
     [activateLicense, coverEmail, getSignup, licenseKeys, showToast]
   );

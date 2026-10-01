@@ -330,7 +330,10 @@ export default function CoverLock() {
     if (!key.includes("@")) return undefined;
     let cancelled = false;
     void (async () => {
-      const { entitled, current } = await resolveReturningAccess(key, { waitMs: 8000 });
+      // Short budget — returning paid users should not sit on the paywall.
+      const { entitled, current } = await resolveReturningAccess(key, {
+        waitMs: 2200,
+      });
       if (cancelled || !entitled) return;
       await grantAccessForEmail(key, current);
     })();
@@ -584,6 +587,52 @@ export default function CoverLock() {
     const BUDGET_MS = Math.max(400, Number(waitMs) || 900);
     let current = getSignup(key);
 
+    // Instant path: local signup / device already proves paid or bypass.
+    if (isAccountPaidOrBypassed(current) || hasPaidOnThisDevice(key)) {
+      const entitledNow = isAccountPaidOrBypassed(current)
+        ? current
+        : current || persistPaidLocally(key, null);
+      if (isAccountPaidOrBypassed(entitledNow) || hasPaidOnThisDevice(key)) {
+        rememberDeviceAccess(key, {
+          paid: Boolean(entitledNow?.accessPaid) || hasPaidOnThisDevice(key),
+          bypassed:
+            Boolean(entitledNow?.accessBypassed) &&
+            !entitledNow?.accessPaid &&
+            !hasPaidOnThisDevice(key),
+        });
+        // Refresh signup/licenses in the background — do not delay unlock.
+        void Promise.all([
+          submitSignup(key).catch(() => null),
+          emailOwnsLicense(key).catch(() => []),
+          loadSignupsFast(1200).catch(() => null),
+        ]).then(([remoteSignup, , merged]) => {
+          if (remoteSignup) ingestSignup?.(remoteSignup);
+          else if (Array.isArray(merged)) {
+            const row = merged.find((s) => normalizeEmail(s.email) === key);
+            if (row) ingestSignup?.(row);
+          }
+        });
+        const stamped = entitledNow?.accessPaid
+          ? persistPaidLocally(key, entitledNow)
+          : {
+              ...(entitledNow || { email: key }),
+              email: key,
+              status: "approved",
+              accessPaid: Boolean(entitledNow?.accessPaid) || hasPaidOnThisDevice(key),
+              accessBypassed:
+                Boolean(entitledNow?.accessBypassed) &&
+                !entitledNow?.accessPaid &&
+                !hasPaidOnThisDevice(key),
+            };
+        if (stamped.accessPaid || stamped.accessBypassed) ingestSignup?.(stamped);
+        return {
+          entitled: true,
+          current: stamped,
+          owned: localLicensesForEmail(key),
+        };
+      }
+    }
+
     const remaining = () => Math.max(0, BUDGET_MS - (Date.now() - started));
     const [remoteSignup, owned, merged] = await Promise.all([
       withDeadline(
@@ -663,7 +712,9 @@ export default function CoverLock() {
     }
     const key = await requestSignup(email);
     if (!key) return;
-    const { entitled, current } = await resolveReturningAccess(key, { waitMs: 6000 });
+    const { entitled, current } = await resolveReturningAccess(key, {
+      waitMs: 2200,
+    });
     if (entitled) {
       await grantAccessForEmail(key, current);
       return;
@@ -686,8 +737,10 @@ export default function CoverLock() {
     if (checkingPaid) return;
     setCheckingPaid(true);
     try {
-      // Explicit tap — wait for POST upsert + license lookup so bypassed/paid restore.
-      const { entitled, current } = await resolveReturningAccess(key, { waitMs: 8000 });
+      // Explicit tap — short wait for POST upsert + license lookup.
+      const { entitled, current } = await resolveReturningAccess(key, {
+        waitMs: 2500,
+      });
       if (entitled) {
         await grantAccessForEmail(key, current);
         return;

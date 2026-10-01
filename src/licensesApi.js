@@ -455,9 +455,10 @@ export async function fetchLicenses() {
   return filterOutDeletedLicenses(rows);
 }
 
-export async function fetchLicense(key) {
+export async function fetchLicense(key, { retry = true } = {}) {
   const variants = licenseKeyVariants(key);
-  for (let pass = 0; pass < 2; pass += 1) {
+  const passes = retry ? 2 : 1;
+  for (let pass = 0; pass < passes; pass += 1) {
     for (const candidate of variants) {
       try {
         const data = await apiFetch(`?key=${encodeURIComponent(candidate)}`);
@@ -468,7 +469,8 @@ export async function fetchLicense(key) {
       }
     }
     // Brief pause then retry — newly generated keys can lag one serverless hop.
-    if (pass === 0) {
+    // Skip on re-activate (retry:false) so returning users unlock immediately.
+    if (retry && pass === 0) {
       await new Promise((resolve) => setTimeout(resolve, 450));
     }
   }
