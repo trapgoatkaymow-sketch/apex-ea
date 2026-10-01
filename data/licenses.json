@@ -1,6 +1,52 @@
 {
   "licenses": [
     {
+      "key": "APEX-SNK3-UCYX",
+      "botId": "market-robber-v1-0-mujqt7si",
+      "botName": "Market Robber V1.0",
+      "clientEmail": "astrokauu@gmail.com",
+      "clientName": "Ntsako Lukhele",
+      "mainText": "Ntsako Lukhele",
+      "mentorEmail": "astrokauu@gmail.com",
+      "mentorId": "80ba51ea-74df-4929-97fa-afb5b14a11f8",
+      "mentorName": "XAU_STRIKER",
+      "used": false,
+      "commissionEligible": false,
+      "commissionReason": "",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790509087375,
+      "usedAt": null,
+      "deviceId": null,
+      "boundAt": null,
+      "updatedAt": 1790813127739,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": 1790810190339,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "market-robber-v1-0-mujqt7si",
+        "name": "Market Robber V1.0",
+        "photo": "/api/licenses/photo?botId=market-robber-v1-0-mujqt7si&v=1790677832864",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "USTECH"
+        ]
+      }
+    },
+    {
       "key": "APEX-JFGU-T7CM",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -799,11 +845,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
-        ]
+        "symbols": []
       }
     },
     {
@@ -1845,9 +1887,19 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1790523490194",
         "strategy": "scalper",
         "symbols": [
+          "GOLD",
+          "GOLDMICRO",
+          "US100CASH",
+          "BTCUSD",
           "XAUUSD",
-          "US30",
-          ".US30."
+          "NAS100",
+          "USCASH",
+          "NASDAQ",
+          "USTECH",
+          "XAAUSD",
+          "BOOM",
+          "STEP",
+          "BOOM900"
         ]
       }
     },
@@ -4268,58 +4320,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-SNK3-UCYX",
-      "botId": "market-robber-v1-0-mujqt7si",
-      "botName": "Market Robber V1.0",
-      "clientEmail": "astrokauu@gmail.com",
-      "clientName": "Ntsako Lukhele",
-      "mainText": "Ntsako Lukhele",
-      "mentorEmail": "astrokauu@gmail.com",
-      "mentorId": "80ba51ea-74df-4929-97fa-afb5b14a11f8",
-      "mentorName": "XAU_STRIKER",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790509087375,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790810190339,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1790810190339,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "market-robber-v1-0-mujqt7si",
-        "name": "Market Robber V1.0",
-        "photo": "/api/licenses/photo?botId=market-robber-v1-0-mujqt7si&v=1790677832864",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "XAUUSDMIC",
-          "XAUUSD.MIC",
-          "USDJPY.MIC",
-          "GOLD",
-          "XAUUSD.S",
-          "USDJPY.S",
-          "USDJPY"
         ]
       }
     },
