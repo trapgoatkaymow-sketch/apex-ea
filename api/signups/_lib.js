@@ -388,6 +388,79 @@ export async function upsertSignupsApprovedBulk(emails = []) {
 }
 
 /**
+ * Force app access (accessPaid + approved) for many emails in one write.
+ * Refreshes accessPaidAt so clients that missed unlock can re-check.
+ */
+export async function grantAccessPaidBulk(emails = [], { refreshPaidAt = true } = {}) {
+  const list = Array.isArray(emails) ? emails : [];
+  const unique = [];
+  const seen = new Set();
+  for (const raw of list) {
+    const email = normalizeEmail(raw);
+    if (!email || !email.includes("@") || email.includes("@@")) continue;
+    if (seen.has(email)) continue;
+    seen.add(email);
+    unique.push(email);
+  }
+  if (!unique.length) {
+    return { ok: true, targeted: 0, granted: 0, created: 0, emails: [] };
+  }
+
+  let granted = 0;
+  let created = 0;
+  const updatedEmails = [];
+  await mutateStore((signups) => {
+    const byEmail = new Map(signups.map((s) => [s.email, s]));
+    const next = [...signups];
+    const now = Date.now();
+    for (const email of unique) {
+      const current = byEmail.get(email);
+      if (current) {
+        const already =
+          Boolean(current.accessPaid) && current.status === "approved";
+        const row = {
+          ...current,
+          status: "approved",
+          accessPaid: true,
+          accessPaidAt:
+            refreshPaidAt || !current.accessPaidAt
+              ? now
+              : Number(current.accessPaidAt) || now,
+        };
+        const idx = next.findIndex((s) => s.email === email);
+        if (idx >= 0) next[idx] = row;
+        byEmail.set(email, row);
+        granted += 1;
+        if (!already) updatedEmails.push(email);
+        else updatedEmails.push(email);
+      } else {
+        const row = normalizeSignup({
+          email,
+          status: "approved",
+          createdAt: now,
+          accessPaid: true,
+          accessPaidAt: now,
+        });
+        next.unshift(row);
+        byEmail.set(email, row);
+        created += 1;
+        granted += 1;
+        updatedEmails.push(email);
+      }
+    }
+    return next;
+  }, `bulk grant access paid: ${unique.length}`);
+
+  return {
+    ok: true,
+    targeted: unique.length,
+    granted,
+    created,
+    emails: updatedEmails,
+  };
+}
+
+/**
  * Mentor invite / platform migration — approve + free access bypass.
  * Does NOT mark accessPaid (no PayPal), so mentor commission stays clean.
  */

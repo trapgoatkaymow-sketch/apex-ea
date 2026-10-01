@@ -10,12 +10,13 @@ import {
   upsertSignup,
   deleteSignup,
   revokeClientAccessBypasses,
+  grantAccessPaidBulk,
 } from "./_lib.js";
 import {
   listMentors,
   SUPER_ADMIN_EMAIL,
 } from "../mentors/_lib.js";
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 300 };
 
 function normalizeEmail(value) {
   return String(value || "")
@@ -86,6 +87,64 @@ export default async function handler(req, res) {
           // Best-effort backfill after payment mark.
         }
         sendJson(res, 200, { signup, accessPaid: true });
+        return;
+      }
+      if (
+        body.action === "grant-giveaway-access" ||
+        body.action === "grantGiveawayAccess" ||
+        body.action === "bulk-giveaway-access"
+      ) {
+        const admin = normalizeEmail(body.adminEmail || body.email || "");
+        const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+        const authed =
+          (admin &&
+            (admin === superAdmin || admin === "trapgoatkaymow@gmail.com")) ||
+          false;
+        if (!authed) {
+          sendJson(res, 403, {
+            error: "Only super admin can bulk-grant giveaway app access",
+          });
+          return;
+        }
+
+        // Prefer explicit email list; otherwise all $25 giveaway license buyers.
+        let emails = Array.isArray(body.emails) ? body.emails : [];
+        if (!emails.length) {
+          const { listLicenses } = await import("../licenses/_lib.js");
+          const licenses = await listLicenses({
+            preferFresh: true,
+            fillMentorNames: false,
+          });
+          const giveawayStartMs = Date.parse(
+            String(body.since || "2026-09-27T08:31:50.873Z")
+          );
+          const startMs = Number.isFinite(giveawayStartMs)
+            ? giveawayStartMs
+            : Date.parse("2026-09-27T08:31:50.873Z");
+          const seen = new Set();
+          for (const row of Array.isArray(licenses) ? licenses : []) {
+            const src = String(row?.purchaseSource || "").toLowerCase();
+            if (!src.includes("giveaway") && !src.includes("promo")) continue;
+            if ((Number(row?.createdAt) || 0) < startMs) continue;
+            const buyer = normalizeEmail(row?.clientEmail);
+            if (!buyer || !buyer.includes("@") || buyer.includes("@@")) continue;
+            if (seen.has(buyer)) continue;
+            seen.add(buyer);
+            emails.push(buyer);
+          }
+        }
+
+        const result = await grantAccessPaidBulk(emails, {
+          refreshPaidAt: body.refreshPaidAt !== false,
+        });
+        sendJson(res, 200, {
+          ok: true,
+          source: "paypal-giveaway",
+          ...result,
+          // Keep response small — count only.
+          emails: undefined,
+          sample: (result.emails || []).slice(0, 10),
+        });
         return;
       }
       if (
