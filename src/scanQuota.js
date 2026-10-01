@@ -3,8 +3,6 @@ import { loadStartsLeft } from "./startQuota.js";
 /** Daily scan quotas — Interface 1 (Zeta) vs Interface 2 (V2). */
 export const SCAN_QUOTA_ZETA = 4;
 export const SCAN_QUOTA_V2 = 20;
-/** Previous Interface 1 floor — used to top up mid-day when quota is raised. */
-const SCAN_QUOTA_ZETA_PREV = 3;
 const SCANS_STORE_KEY = "apexea-daily-scans-v1";
 
 /** In-memory fallback when localStorage is full (common on Android WebView). */
@@ -70,21 +68,8 @@ export function loadScansLeft(variant) {
     return quota;
   }
   const floor = Math.max(0, Math.floor(value));
-  // When Interface 1 quota is raised (3 → 4), keep spent scans spent and
-  // grant the extra allotment for the rest of today.
-  if (
-    bucket === "zeta" &&
-    quota > SCAN_QUOTA_ZETA_PREV &&
-    floor <= SCAN_QUOTA_ZETA_PREV
-  ) {
-    const used = SCAN_QUOTA_ZETA_PREV - floor;
-    const raised = Math.max(0, quota - used);
-    if (raised !== floor) {
-      writeScanStore({ ...prev, day, zeta: raised });
-      return raised;
-    }
-  }
   // Cap leftover counts when the daily quota is lowered (e.g. 10 → 3).
+  // Do not auto-top-up mid-day — that fought same-key remainder restore.
   const capped = Math.min(quota, floor);
   if (capped !== floor) {
     writeScanStore({ ...prev, day, [bucket]: capped });
