@@ -1155,8 +1155,19 @@ export async function placeMarketTrade({
     entryPrice: fillPrice,
     stopLoss,
     takeProfit: null,
+    ensureStop: true,
   });
-  const anchoredSl = safeSl.stopLoss;
+  // Always prefer a live-anchored SL — never send a naked market order by default.
+  let anchoredSl = safeSl.stopLoss;
+  if (
+    (!(Number.isFinite(Number(anchoredSl)) && Number(anchoredSl) > 0)) &&
+    Number.isFinite(fillPrice) &&
+    fillPrice > 0
+  ) {
+    const pad = Math.max(Number(safeSl.minDist) || 0, fillPrice * 0.001);
+    anchoredSl =
+      tradeSide === "BUY" ? fillPrice - pad : fillPrice + pad;
+  }
 
   function orderLooksBad(order) {
     const raw =
@@ -1202,10 +1213,14 @@ export async function placeMarketTrade({
       symbol: tradeSymbol || requested,
       side: tradeSide,
       entryPrice: fillPrice,
-      stopLoss: null,
+      stopLoss: anchoredSl,
       takeProfit: tpForThread,
+      ensureStop: true,
     });
     tpForThread = safeTp.takeProfit;
+    if (Number.isFinite(Number(safeTp.stopLoss)) && Number(safeTp.stopLoss) > 0) {
+      anchoredSl = safeTp.stopLoss;
+    }
 
     const threadLabel = slot === 0 ? "TP1" : slot === 1 ? "TP2" : "TP3";
     // Keep |premium for Interface 2; never append |TP1/TP2/TP3.
@@ -1298,15 +1313,25 @@ export async function placeMarketTrade({
         Number(safeTp.minDist) || 0,
         liveFill ? Math.abs(liveFill) * 0.001 : 0
       ) * 1.8;
-      let retrySl = Number(anchoredSl);
+      // REPLACE bad/tiny SL — never Math.min with a near-zero AI stop (that kept SL invalid).
+      let retrySl = null;
       let retryTp = Number(tpForThread);
       if (Number.isFinite(liveFill) && liveFill > 0 && pad > 0) {
         if (tradeSide === "BUY") {
-          if (Number.isFinite(retrySl)) retrySl = Math.min(retrySl, liveFill - pad);
-          if (Number.isFinite(retryTp)) retryTp = Math.max(retryTp, liveFill + pad);
+          retrySl = liveFill - pad;
+          retryTp = Number.isFinite(retryTp)
+            ? Math.max(retryTp, liveFill + pad)
+            : liveFill + pad * 2;
+          // Keep TP inside a sane band relative to the new SL.
+          const maxTp = liveFill + pad * 4;
+          if (retryTp > maxTp) retryTp = maxTp;
         } else {
-          if (Number.isFinite(retrySl)) retrySl = Math.max(retrySl, liveFill + pad);
-          if (Number.isFinite(retryTp)) retryTp = Math.min(retryTp, liveFill - pad);
+          retrySl = liveFill + pad;
+          retryTp = Number.isFinite(retryTp)
+            ? Math.min(retryTp, liveFill - pad)
+            : liveFill - pad * 2;
+          const minTp = liveFill - pad * 4;
+          if (retryTp < minTp) retryTp = minTp;
         }
       }
       order = await sendOrder({
@@ -1314,9 +1339,37 @@ export async function placeMarketTrade({
         tpValue: retryTp,
         includePrice: false,
       });
+      if (!orderLooksBad(order)) {
+        anchoredSl = retrySl;
+        tpForThread = retryTp;
+      }
     }
 
-    // Last resort: open market without stops so clients still get the fill.
+    // Last resort: still try SL-only (no TP), then TP-only — never prefer naked.
+    if (orderLooksBad(order) && /invalid\s*stops/i.test(orderHint(order))) {
+      const liveFill =
+        Number.isFinite(price) && price > 0 ? price : fillPrice;
+      const pad = Math.max(
+        Number(safeSl.minDist) || 0,
+        liveFill ? Math.abs(liveFill) * 0.0015 : 0
+      ) * 2.2;
+      let soloSl = Number(anchoredSl);
+      if (Number.isFinite(liveFill) && liveFill > 0 && pad > 0) {
+        soloSl = tradeSide === "BUY" ? liveFill - pad : liveFill + pad;
+      }
+      order = await sendOrder({
+        slValue: soloSl,
+        tpValue: null,
+        includePrice: false,
+      });
+      if (!orderLooksBad(order)) {
+        order = {
+          ...(order && typeof order === "object" ? order : { order }),
+          warning: "Opened with SL only after broker rejected paired stops",
+        };
+      }
+    }
+
     if (orderLooksBad(order) && /invalid\s*stops/i.test(orderHint(order))) {
       order = await sendOrder({
         slValue: null,

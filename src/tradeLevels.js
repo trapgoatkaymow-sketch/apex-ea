@@ -77,6 +77,34 @@ export function minStopDistance(symbol, entryPrice) {
   return Math.max(0.0015, e * 0.0015);
 }
 
+/** Cap absurd AI stops so TP cannot land at ~5× market price. */
+export function maxStopDistance(symbol, entryPrice) {
+  const core = symbolCoreName(symbol);
+  const e = Math.abs(toFiniteNumber(entryPrice) || 0) || 1;
+  const min = minStopDistance(symbol, e);
+
+  if (/^(XAU|GOLD)/.test(core)) return Math.max(min * 12, Math.min(120, e * 0.018));
+  if (/^(XAG|SILVER)/.test(core)) return Math.max(min * 12, Math.min(2.5, e * 0.025));
+  if (/^BTC/.test(core)) return Math.max(min * 10, Math.min(2500, e * 0.03));
+  if (/^ETH/.test(core)) return Math.max(min * 10, Math.min(250, e * 0.03));
+  if (
+    /^(US30|DJ30|DJIA|WS30|DOW|USA30|USWALLST30|NAS100|USTEC|NDX|US100|USATECH|TECH100|SPX|US500|SP500|DE30|DE40|GER40|GER30|GDAXI|DAX|UK100|FTSE|JP225|JPN225|NI225|NIKKEI|AUS200|AU200|ASX|FRA40|CAC|HK50|HSI)/.test(
+      core
+    )
+  ) {
+    return Math.max(min * 12, Math.min(400, e * 0.012));
+  }
+  if (/OIL|WTI|BRENT|^CL/.test(core)) return Math.max(min * 12, Math.min(3, e * 0.03));
+  if (/JPY$/.test(core)) return Math.max(min * 12, Math.min(1.5, e * 0.012));
+  if (/^[A-Z]{6}$/.test(core) || /^(EUR|GBP|AUD|NZD|USD|CAD|CHF)/.test(core)) {
+    return Math.max(min * 12, Math.min(0.02, e * 0.012));
+  }
+  if (e >= 1000) return Math.max(min * 12, Math.min(200, e * 0.015));
+  if (e >= 100) return Math.max(min * 12, Math.min(15, e * 0.02));
+  if (e >= 10) return Math.max(min * 12, Math.min(1.5, e * 0.025));
+  return Math.max(min * 12, Math.min(0.02, e * 0.02));
+}
+
 export function formatTradePrice(value) {
   const n = toFiniteNumber(value);
   if (n == null) return null;
@@ -136,6 +164,7 @@ export function buildSafeMultiTpLevels({
   if (e == null || e <= 0) e = 1;
 
   const minDist = minStopDistance(symbol, e);
+  const maxDist = maxStopDistance(symbol, e);
   const fallbackRisk = Math.max(
     minDist,
     Math.abs(e) * 0.0025,
@@ -152,11 +181,14 @@ export function buildSafeMultiTpLevels({
   if (risk < minDist) {
     risk = minDist;
     sl = dir === "BUY" ? e - risk : e + risk;
+  } else if (risk > maxDist) {
+    risk = maxDist;
+    sl = dir === "BUY" ? e - risk : e + risk;
   }
 
   const entryOut = formatTradePrice(e);
   const slOut = formatTradePrice(sl);
-  const safeRisk = Math.max(Math.abs(entryOut - slOut), minDist);
+  const safeRisk = Math.min(Math.max(Math.abs(entryOut - slOut), minDist), maxDist);
   const [m1, m2, m3] = tpRewardMultiples(timeframe);
 
   return {
@@ -176,7 +208,8 @@ export function buildSafeMultiTpLevels({
       dir === "BUY" ? entryOut + safeRisk * m3 : entryOut - safeRisk * m3
     ),
     minDist,
-    widened: risk < minDist + 1e-12,
+    maxDist,
+    widened: risk < minDist + 1e-12 || risk >= maxDist - 1e-12,
     riskReward: tpRiskRewardLabel(timeframe),
     tpMultiples: [m1, m2, m3],
   };
