@@ -1,6 +1,68 @@
 {
   "licenses": [
     {
+      "key": "APEX-688M-VBBV",
+      "botId": "money-vault-ea-v2-mujhybmc",
+      "botName": "MONEY VAULT EA V2",
+      "clientEmail": "dubeobakeng935@gmail.com",
+      "clientName": "Dube",
+      "mainText": "Dube",
+      "mentorEmail": "modisanamotloung64@gmail.com",
+      "mentorId": "1656b744-09ec-4097-bf33-59ca33104955",
+      "mentorName": "Modisana",
+      "used": false,
+      "commissionEligible": false,
+      "commissionReason": "",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790597605942,
+      "usedAt": null,
+      "deviceId": null,
+      "boundAt": null,
+      "updatedAt": 1790842145761,
+      "scanReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790842145761,
+      "bot": {
+        "id": "money-vault-ea-v2-mujhybmc",
+        "name": "MONEY VAULT EA V2",
+        "photo": "/api/licenses/photo?botId=money-vault-ea-v2-mujhybmc&v=1790615512293",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          "NASDAQ",
+          "BTCUSD",
+          "EURUSD",
+          "GBPUSD",
+          "USDJPY",
+          "USDCHF",
+          "AUDUSD",
+          "USDCAD",
+          "NZDUSD",
+          "EURGBP",
+          "EURJPY",
+          "XAGUSD",
+          "ETHUSD",
+          "NAS100",
+          "GBPJPY",
+          "USDZAR",
+          "XAUUSDM"
+        ]
+      }
+    },
+    {
       "key": "APEX-VYZV-2R94",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1081,68 +1143,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-688M-VBBV",
-      "botId": "money-vault-ea-v2-mujhybmc",
-      "botName": "MONEY VAULT EA V2",
-      "clientEmail": "dubeobakeng935@gmail.com",
-      "clientName": "Dube",
-      "mainText": "Dube",
-      "mentorEmail": "modisanamotloung64@gmail.com",
-      "mentorId": "1656b744-09ec-4097-bf33-59ca33104955",
-      "mentorName": "Modisana",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790597605942,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790842091367,
-      "scanReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "money-vault-ea-v2-mujhybmc",
-        "name": "MONEY VAULT EA V2",
-        "photo": "/api/licenses/photo?botId=money-vault-ea-v2-mujhybmc&v=1790615512293",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "US30",
-          "NASDAQ",
-          "BTCUSD",
-          "EURUSD",
-          "GBPUSD",
-          "USDJPY",
-          "USDCHF",
-          "AUDUSD",
-          "USDCAD",
-          "NZDUSD",
-          "EURGBP",
-          "EURJPY",
-          "XAGUSD",
-          "ETHUSD",
-          "NAS100",
-          "GBPJPY",
-          "USDZAR",
-          "XAUUSDM"
         ]
       }
     },
@@ -7214,7 +7214,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -45770,8 +45774,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "NAS100",
-          "GOLD"
+          ".US30."
         ]
       }
     },
@@ -52567,7 +52570,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
