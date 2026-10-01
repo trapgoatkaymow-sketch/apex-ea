@@ -1,3 +1,5 @@
+import { loadStartsLeft } from "./startQuota.js";
+
 /** Daily scan quotas — Interface 1 (Zeta) vs Interface 2 (V2). */
 export const SCAN_QUOTA_ZETA = 4;
 export const SCAN_QUOTA_V2 = 20;
@@ -110,11 +112,71 @@ export function saveScansLeft(variant, value) {
   return next[bucket];
 }
 
+/** Snapshot of local start+scan remainders for license sync. */
+export function readLocalUsageSnapshot() {
+  return {
+    day: todayKey(),
+    startsLeft: loadStartsLeft(),
+    zeta: loadScansLeft("zeta"),
+    v2: loadScansLeft("v2"),
+  };
+}
+
+/**
+ * Restore scan remainders from license.usageQuota.
+ * force=true overwrites; otherwise keep the lower of local vs remote per bucket.
+ */
+export function applyRemoteUsageQuota(usageQuota, { force = false } = {}) {
+  if (!usageQuota || typeof usageQuota !== "object") return null;
+  const day = String(usageQuota.day || "").trim();
+  if (day !== todayKey()) return null;
+  const zetaRemote = Math.floor(Number(usageQuota.zeta));
+  const v2Remote = Math.floor(Number(usageQuota.v2));
+  if (!Number.isFinite(zetaRemote) && !Number.isFinite(v2Remote)) return null;
+
+  const prev = readScanStore();
+  const localZeta =
+    prev?.day === day && Number.isFinite(Number(prev.zeta))
+      ? Math.max(0, Math.floor(Number(prev.zeta)))
+      : SCAN_QUOTA_ZETA;
+  const localV2 =
+    prev?.day === day && Number.isFinite(Number(prev.v2))
+      ? Math.max(0, Math.floor(Number(prev.v2)))
+      : SCAN_QUOTA_V2;
+
+  const nextZeta = Number.isFinite(zetaRemote)
+    ? Math.max(
+        0,
+        Math.min(
+          SCAN_QUOTA_ZETA,
+          force ? zetaRemote : Math.min(localZeta, zetaRemote)
+        )
+      )
+    : localZeta;
+  const nextV2 = Number.isFinite(v2Remote)
+    ? Math.max(
+        0,
+        Math.min(SCAN_QUOTA_V2, force ? v2Remote : Math.min(localV2, v2Remote))
+      )
+    : localV2;
+
+  writeScanStore({ day, zeta: nextZeta, v2: nextV2 });
+  return { day, zeta: nextZeta, v2: nextV2 };
+}
+
 /** Consume one scan after a successful analysis. Returns the new remaining count. */
 export function consumeScan(variant) {
   // Always re-read so a new calendar day refreshes quota before decrementing.
   const live = loadScansLeft(variant);
-  return saveScansLeft(variant, Math.max(0, live - 1));
+  const left = saveScansLeft(variant, Math.max(0, live - 1));
+  try {
+    import("./usageQuotaSync.js").then((mod) => {
+      mod.scheduleUsageQuotaSync?.();
+    });
+  } catch {
+    // ignore
+  }
+  return left;
 }
 
 const SCAN_GRANT_APPLIED_KEY = "apexea-scan-grant-applied-v1";
@@ -190,6 +252,14 @@ export function applyRemoteScanGrant(grant) {
   };
   writeScanStore(fresh);
   writeAppliedGrant({ token, day, resetAt, appliedAt: Date.now() });
+  try {
+    import("./usageQuotaSync.js").then((mod) => {
+      // Push refilled scans onto the license (server grant already wrote usageQuota).
+      mod.scheduleUsageQuotaSync?.(600);
+    });
+  } catch {
+    // ignore
+  }
   return { applied: true, zeta: fresh.zeta, v2: fresh.v2 };
 }
 

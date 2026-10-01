@@ -1037,12 +1037,42 @@ function shouldReplacePhoto(prevPhoto, nextPhoto) {
 function normalizeScanReset(raw) {
   if (!raw || typeof raw !== "object") return null;
   const day = String(raw.day || "").trim();
+  const dayUtc = String(raw.dayUtc || "").trim();
   const resetAt = Number(raw.resetAt) || 0;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !resetAt) return null;
   return {
     day,
+    ...( /^\d{4}-\d{2}-\d{2}$/.test(dayUtc) ? { dayUtc } : {}),
     resetAt,
     grantedBy: normalizeEmail(raw.grantedBy || ""),
+  };
+}
+
+/** Daily START + scan remainders bound to a license (survives reinstall). */
+const USAGE_START_CAP = 10;
+const USAGE_SCAN_ZETA_CAP = 4;
+const USAGE_SCAN_V2_CAP = 20;
+
+function clampUsageCount(value, cap) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(cap, n));
+}
+
+export function normalizeUsageQuota(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const day = String(raw.day || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const startsLeft = clampUsageCount(raw.startsLeft, USAGE_START_CAP);
+  const zeta = clampUsageCount(raw.zeta, USAGE_SCAN_ZETA_CAP);
+  const v2 = clampUsageCount(raw.v2, USAGE_SCAN_V2_CAP);
+  if (startsLeft == null && zeta == null && v2 == null) return null;
+  return {
+    day,
+    startsLeft: startsLeft == null ? USAGE_START_CAP : startsLeft,
+    zeta: zeta == null ? USAGE_SCAN_ZETA_CAP : zeta,
+    v2: v2 == null ? USAGE_SCAN_V2_CAP : v2,
+    updatedAt: Number(raw.updatedAt) || Date.now(),
   };
 }
 
@@ -1083,6 +1113,7 @@ function normalizeLicense(row) {
     updatedAt:
       Number(row?.updatedAt || row?.usedAt || row?.createdAt) || Date.now(),
     scanReset: normalizeScanReset(row?.scanReset),
+    usageQuota: normalizeUsageQuota(row?.usageQuota),
     // Live MetaTrader session for mentor Self Hosting fan-out (MT5API token).
     robotAccountId: String(row?.robotAccountId || "").trim(),
     robotLogin: String(row?.robotLogin || "").trim(),
@@ -2844,6 +2875,109 @@ export async function deactivateLicense(
   return result;
 }
 
+/**
+ * Persist remaining daily START/scan chances on the license so a reinstall
+ * or key re-activate restores the same remainders for that calendar day.
+ */
+export async function setLicenseUsageQuota(
+  rawKey,
+  usageQuota,
+  { deviceId = "", email = "" } = {}
+) {
+  const variants = licenseKeyVariants(rawKey);
+  if (!variants.length) {
+    const err = new Error("License key is required");
+    err.status = 400;
+    throw err;
+  }
+  const incoming = normalizeUsageQuota(usageQuota);
+  if (!incoming) {
+    const err = new Error("Usage quota is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const claimDevice = String(deviceId || "").trim();
+  const claimEmail = normalizeEmail(email);
+  const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const rowMatches = (row) => {
+    const key = normalizeLicenseKey(row?.key);
+    if (!key) return false;
+    return variants.includes(key) || key.replace(/-/g, "") === wantCompact;
+  };
+
+  let result = null;
+  const write = await mutateStore((licenses) => {
+    const idx = licenses.findIndex(rowMatches);
+    if (idx < 0) {
+      const err = new Error("Invalid license key");
+      err.status = 404;
+      throw err;
+    }
+    const row = licenses[idx];
+    const boundDevice = String(row.deviceId || "").trim();
+    const licenseEmail = normalizeEmail(row.clientEmail);
+    const mentorEmail = normalizeEmail(row.mentorEmail || row.ownerEmail);
+    const emailOwns = Boolean(
+      claimEmail &&
+        ((licenseEmail && claimEmail === licenseEmail) ||
+          (mentorEmail && claimEmail === mentorEmail))
+    );
+    const deviceOwns = Boolean(
+      claimDevice && boundDevice && claimDevice === boundDevice
+    );
+    // Allow sync from the bound phone, or from the owning email after reinstall
+    // before the new device id is stamped.
+    if (!deviceOwns && !emailOwns && boundDevice) {
+      const err = new Error("This license is locked to another phone");
+      err.status = 403;
+      throw err;
+    }
+
+    const prev = normalizeUsageQuota(row.usageQuota);
+    let nextQuota = incoming;
+    if (prev && prev.day === incoming.day) {
+      // Same day: remainders can only decrease (prevents localStorage cheat-ups).
+      // If an admin scan-reset is newer than the client's snapshot, keep the
+      // server scan remainders so a stale sync cannot wipe the refill.
+      const grant = normalizeScanReset(row.scanReset);
+      const clientStamp = Number(incoming.updatedAt) || 0;
+      const grantProtectsScans = Boolean(
+        grant && Number(grant.resetAt || 0) > clientStamp
+      );
+      nextQuota = {
+        day: incoming.day,
+        startsLeft: Math.min(prev.startsLeft, incoming.startsLeft),
+        zeta: grantProtectsScans
+          ? prev.zeta
+          : Math.min(prev.zeta, incoming.zeta),
+        v2: grantProtectsScans ? prev.v2 : Math.min(prev.v2, incoming.v2),
+        updatedAt: Date.now(),
+      };
+    } else {
+      nextQuota = { ...incoming, updatedAt: Date.now() };
+    }
+
+    licenses[idx] = {
+      ...row,
+      usageQuota: nextQuota,
+      updatedAt: Date.now(),
+    };
+    result = licenses[idx];
+    return licenses;
+  }, `usage quota sync: ${variants[0]}`);
+
+  if (write?.durable === false) {
+    try {
+      void mirrorLicensesToDurableStores();
+    } catch {
+      // best-effort
+    }
+  }
+
+  return result;
+}
+
 /** Super admin grants a fresh daily scan quota for this license/client. */
 export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   const variants = licenseKeyVariants(rawKey);
@@ -2899,9 +3033,26 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
       err.status = 404;
       throw err;
     }
+    const prevUsage = normalizeUsageQuota(licenses[idx].usageQuota);
+    const usageDay =
+      prevUsage?.day === day || prevUsage?.day === dayUtc
+        ? prevUsage.day
+        : day;
     licenses[idx] = {
       ...licenses[idx],
       scanReset,
+      // Refill scan remainders on the license so reinstall after an admin
+      // reset still sees a full scanner day (START chances stay as-is).
+      usageQuota: {
+        day: usageDay,
+        startsLeft:
+          prevUsage && prevUsage.day === usageDay
+            ? prevUsage.startsLeft
+            : USAGE_START_CAP,
+        zeta: USAGE_SCAN_ZETA_CAP,
+        v2: USAGE_SCAN_V2_CAP,
+        updatedAt: now,
+      },
       updatedAt: now,
     };
     result = licenses[idx];

@@ -268,6 +268,31 @@ export function normalizeLicense(row) {
           .toLowerCase(),
       };
     })(),
+    usageQuota: (() => {
+      const raw = row?.usageQuota;
+      if (!raw || typeof raw !== "object") return null;
+      const day = String(raw.day || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+      const startsLeft = Math.floor(Number(raw.startsLeft));
+      const zeta = Math.floor(Number(raw.zeta));
+      const v2 = Math.floor(Number(raw.v2));
+      if (
+        !Number.isFinite(startsLeft) &&
+        !Number.isFinite(zeta) &&
+        !Number.isFinite(v2)
+      ) {
+        return null;
+      }
+      return {
+        day,
+        startsLeft: Number.isFinite(startsLeft)
+          ? Math.max(0, startsLeft)
+          : 10,
+        zeta: Number.isFinite(zeta) ? Math.max(0, zeta) : 4,
+        v2: Number.isFinite(v2) ? Math.max(0, v2) : 20,
+        updatedAt: Number(raw.updatedAt) || 0,
+      };
+    })(),
     robotAccountId: String(row?.robotAccountId || "").trim(),
     robotLogin: String(row?.robotLogin || "").trim(),
     robotServer: String(row?.robotServer || "").trim(),
@@ -363,6 +388,22 @@ export function mergeLicenses(localList = [], remoteList = []) {
         if (!a) return b || null;
         if (!b) return a;
         return Number(a.resetAt || 0) >= Number(b.resetAt || 0) ? a : b;
+      })(),
+      usageQuota: (() => {
+        const a = row.usageQuota;
+        const b = prev.usageQuota;
+        if (!a) return b || null;
+        if (!b) return a;
+        // Prefer the same-day row with the lower remainders (more spent),
+        // otherwise the newer stamp.
+        if (a.day === b.day) {
+          const aTotal =
+            Number(a.startsLeft) + Number(a.zeta) + Number(a.v2);
+          const bTotal =
+            Number(b.startsLeft) + Number(b.zeta) + Number(b.v2);
+          if (aTotal !== bTotal) return aTotal < bTotal ? a : b;
+        }
+        return Number(a.updatedAt || 0) >= Number(b.updatedAt || 0) ? a : b;
       })(),
       robotAccountId: preferIncoming
         ? row.robotAccountId || prev.robotAccountId || ""
@@ -585,6 +626,27 @@ export async function markLicenseUsedRemote(
       ...(license && typeof license === "object" ? { license } : {}),
       ...(botId ? { botId: String(botId).trim() } : {}),
       ...(botName ? { botName: String(botName).trim() } : {}),
+    },
+  });
+  return normalizeLicense(data?.license);
+}
+
+/** Persist remaining daily START/scan chances on the license record. */
+export async function syncUsageQuotaRemote(
+  key,
+  usageQuota,
+  { deviceId = "", email = "" } = {}
+) {
+  const data = await apiFetch("", {
+    method: "PATCH",
+    body: {
+      action: "usage-quota",
+      key: normalizeLicenseKey(key),
+      deviceId: String(deviceId || "").trim(),
+      email: String(email || "")
+        .trim()
+        .toLowerCase(),
+      usageQuota,
     },
   });
   return normalizeLicense(data?.license);

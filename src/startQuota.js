@@ -68,6 +68,24 @@ export function saveStartsLeft(value) {
 }
 
 /**
+ * Restore START remainders from a license.usageQuota row.
+ * force=true overwrites; otherwise keep the lower of local vs remote.
+ */
+export function applyRemoteStartsQuota(remoteLeft, { force = false, day = "" } = {}) {
+  const today = todayKey();
+  const stamp = String(day || today).trim() || today;
+  if (stamp !== today) return loadStartsLeft();
+  const remote = Math.floor(Number(remoteLeft));
+  if (!Number.isFinite(remote)) return loadStartsLeft();
+  const capped = Math.max(0, Math.min(START_QUOTA_DAILY, remote));
+  if (force) {
+    return saveStartsLeft(capped);
+  }
+  const local = loadStartsLeft();
+  return saveStartsLeft(Math.min(local, capped));
+}
+
+/**
  * Consume one START chance. Returns { ok, left }.
  * When left is already 0, ok is false and left stays 0.
  */
@@ -77,6 +95,14 @@ export function consumeStartChance() {
     return { ok: false, left: 0 };
   }
   const left = saveStartsLeft(live - 1);
+  try {
+    // Keep license.usageQuota in sync so reinstall restores remaining START.
+    import("./usageQuotaSync.js").then((mod) => {
+      mod.scheduleUsageQuotaSync?.();
+    });
+  } catch {
+    // ignore
+  }
   return { ok: true, left };
 }
 

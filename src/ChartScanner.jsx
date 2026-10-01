@@ -168,6 +168,12 @@ export default function ChartScanner({ variant = "default", active = true }) {
     if (active) setScansLeft(loadScansLeft(variant));
   }, [variant, active]);
 
+  useEffect(() => {
+    const onQuota = () => setScansLeft(loadScansLeft(variant));
+    window.addEventListener("apexea-usage-quota", onQuota);
+    return () => window.removeEventListener("apexea-usage-quota", onQuota);
+  }, [variant]);
+
   // Refresh quota when the app returns to the foreground (new calendar day),
   // and apply any super-admin daily scan reset grant for this client.
   useEffect(() => {

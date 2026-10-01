@@ -1593,6 +1593,53 @@ export function AppProvider({ children }) {
     };
   }, [licenseKeys]);
 
+  // Keep daily START/scan remainders tied to the active license key so a
+  // reinstall / same-key re-activate continues with what was left that day.
+  useEffect(() => {
+    const botKey = normalizeLicenseKey(activeBot?.licenseKey || "");
+    const deviceId = getOrCreateDeviceId();
+    const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
+    const row =
+      (botKey &&
+        keys.find((item) => normalizeLicenseKey(item?.key) === botKey)) ||
+      keys.find(
+        (item) =>
+          item?.used &&
+          String(item?.deviceId || "").trim() === deviceId &&
+          item?.usageQuota
+      ) ||
+      null;
+    const key = normalizeLicenseKey(row?.key || botKey);
+    if (!key) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const {
+          setUsageQuotaSyncTarget,
+          restoreUsageQuotaFromLicense,
+          scheduleUsageQuotaSync,
+        } = await import("./usageQuotaSync.js");
+        if (cancelled) return;
+        setUsageQuotaSyncTarget({
+          licenseKey: key,
+          email: coverEmail || row?.clientEmail || "",
+        });
+        if (row?.usageQuota) {
+          restoreUsageQuotaFromLicense(row.usageQuota, { force: false });
+        } else {
+          // First sync of the day — stamp current local remainders onto the key.
+          scheduleUsageQuotaSync(800);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBot?.licenseKey, coverEmail, licenseKeys]);
+
   // If mentor uploaded a photo after the license was issued (still /logo.png on
   // the key), upgrade local bots/EAs when the photo API starts serving bytes.
   // Also try sibling botIds that share the same EA name (older keys).
@@ -2830,6 +2877,28 @@ export function AppProvider({ children }) {
       if (remote) {
         entry = remote;
         setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
+      }
+
+      // Restore remaining START/scan chances from the license (same calendar day).
+      // Fresh localStorage after a new APK / key reuse must not refill to 10 / 4.
+      try {
+        const {
+          setUsageQuotaSyncTarget,
+          restoreUsageQuotaFromLicense,
+          flushUsageQuotaSync,
+        } = await import("./usageQuotaSync.js");
+        setUsageQuotaSyncTarget({
+          licenseKey: entry.key || key,
+          email: accountEmail,
+        });
+        if (entry.usageQuota) {
+          restoreUsageQuotaFromLicense(entry.usageQuota, { force: true });
+        } else {
+          // No prior stamp — push whatever is local so the next reinstall keeps it.
+          void flushUsageQuotaSync();
+        }
+      } catch {
+        // ignore quota sync failures — activation still succeeds
       }
 
       const snapshot = entry.bot || {

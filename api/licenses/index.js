@@ -20,6 +20,7 @@ import {
   sendLicenseKeyEmailOnce,
   sendJson,
   setLicenseClientSymbols,
+  setLicenseUsageQuota,
   syncMentorBotSymbols,
 } from "./_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
@@ -391,6 +392,27 @@ export default async function handler(req, res) {
           adminEmail: body.adminEmail || body.email || "",
         });
         sendJson(res, 200, { license, scanReset: license?.scanReset || null });
+        return;
+      }
+      if (
+        action === "usage-quota" ||
+        action === "usagequota" ||
+        action === "sync-usage" ||
+        action === "syncusage" ||
+        body.usageQuota
+      ) {
+        const license = await setLicenseUsageQuota(
+          body.key || body.licenseKey,
+          body.usageQuota || body.quota || body,
+          {
+            deviceId: body.deviceId || "",
+            email: body.email || body.clientEmail || "",
+          }
+        );
+        sendJson(res, 200, {
+          license,
+          usageQuota: license?.usageQuota || null,
+        });
         return;
       }
       const license = shouldDeactivate
