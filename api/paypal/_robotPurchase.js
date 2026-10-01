@@ -142,7 +142,7 @@ function windowFromStart(
   const purchaseOpen = !notStarted && !purchasesExpired;
   return {
     startsAt: new Date(startMs).toISOString(),
-    endsAt: new Date(displayEndMs).toISOString(),
+    endsAt: new Date(liveCountdownEndMs).toISOString(),
     countdownEndsAt: new Date(displayEndMs).toISOString(),
     purchasesEndAt: new Date(purchaseEndMs).toISOString(),
     durationMs: dur,
