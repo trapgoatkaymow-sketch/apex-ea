@@ -1569,6 +1569,9 @@ export async function placeMarketTrade({
   }
 
   const last = fills[fills.length - 1];
+  const totalOpenedLot = threadVolumes
+    .slice(0, fills.length)
+    .reduce((a, b) => a + Number(b || 0), 0);
   return {
     ok: true,
     provider: "mt5api",
@@ -1578,7 +1581,9 @@ export async function placeMarketTrade({
     count: fills.length,
     ticket: last?.ticket ?? last?.order ?? null,
     symbol: tradeSymbol,
-    volume: lots,
+    // Total lot for the open (split across threads — not per-thread × count).
+    volume: Math.round(totalOpenedLot * 100) / 100 || lots,
+    threadVolumes: threadVolumes.slice(0, fills.length),
     side: action.toUpperCase(),
   };
 }
