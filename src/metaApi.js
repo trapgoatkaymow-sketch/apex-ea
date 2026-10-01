@@ -33,6 +33,9 @@ async function apiFetch(path, { method = "GET", body, signal } = {}) {
     const message = formatApiError(data, response.status);
     const err = new Error(message);
     err.status = response.status;
+    err.code =
+      (data && typeof data === "object" && (data.code || data.errorCode)) ||
+      null;
     err.data = data;
     throw err;
   }
@@ -132,6 +135,34 @@ export async function closeAllPositions(accountId, { signal } = {}) {
       accountId: String(accountId || "").trim(),
     },
   });
+}
+
+/**
+ * Check whether opening `side` on `symbol` conflicts with open positions.
+ * Returns { ok: true } or { ok: false, error, code, details }.
+ */
+export async function checkTradeDirection({
+  accountId,
+  symbol,
+  side = "BUY",
+  signal,
+} = {}) {
+  const data = await apiFetch("/positions", {
+    method: "POST",
+    signal,
+    body: {
+      accountId: String(accountId || "").trim(),
+      symbol: String(symbol || "").trim(),
+      side: String(side || "BUY").trim().toUpperCase() === "SELL" ? "SELL" : "BUY",
+    },
+  });
+  return {
+    ok: data?.ok !== false,
+    positions: Array.isArray(data?.positions) ? data.positions : [],
+    error: data?.error || null,
+    code: data?.code || null,
+    details: data?.details || null,
+  };
 }
 
 /** Live bid/ask/mid for a connected account symbol. */

@@ -9,7 +9,11 @@ import {
   parseSignalTrade,
   SA_TIMEZONE,
 } from "./economicCalendarSchedule.js";
-import { buildBotTradeComment, placeTrade } from "./metaApi.js";
+import {
+  buildBotTradeComment,
+  checkTradeDirection,
+  placeTrade,
+} from "./metaApi.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import { useApp } from "./store.jsx";
 
@@ -223,6 +227,25 @@ export default function EconomicCalendarButton({ variant = "zeta" }) {
     const meta = getSymbolMeta?.(parsed.symbol) || {};
     const lot = clampLot(meta.lotSize);
     const comment = buildBotTradeComment(activeBot?.name || "news");
+    const side =
+      String(parsed.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
+
+    try {
+      const dir = await checkTradeDirection({
+        accountId: mt5Session.accountId,
+        symbol: parsed.symbol,
+        side,
+      });
+      if (dir && dir.ok === false) {
+        showToast(
+          dir.error ||
+            "Close open trades in the other direction first"
+        );
+        return;
+      }
+    } catch {
+      // Soft-fail — server still blocks opposite direction on placeTrade.
+    }
 
     setExecuting(true);
     publishOrbTrade?.({
@@ -230,15 +253,15 @@ export default function EconomicCalendarButton({ variant = "zeta" }) {
       comment,
       symbol: parsed.symbol,
       lotSize: lot,
-      action: parsed.side,
-      side: parsed.side,
+      action: side,
+      side,
     });
     try {
       const fill = await placeTrade({
         accountId: mt5Session.accountId,
         symbol: parsed.symbol,
         volume: lot,
-        side: parsed.side,
+        side,
         region: mt5Session.region || "",
         comment: `${comment}|NEWS`.slice(0, 31),
         source: "chart-scanner",

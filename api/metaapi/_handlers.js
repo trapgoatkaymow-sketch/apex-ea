@@ -14,10 +14,12 @@ import {
   symbolCore,
 } from "../_symbolResolve.js";
 import {
+  assertNoOppositeDirection as mt5AssertNoOppositeDirection,
   closeAllPositions as mt5CloseAllPositions,
   connectAccount as mt5ConnectAccount,
   disconnectAccount as mt5DisconnectAccount,
   getAccountStatus as mt5GetAccountStatus,
+  listOpenMarketPositions as mt5ListOpenMarketPositions,
   pingBrokerApi,
   getSymbolQuote as mt5GetSymbolQuote,
   getPriceHistoryToday as mt5GetPriceHistoryToday,
@@ -232,6 +234,64 @@ export async function handleTrade(req, res) {
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Trade failed",
+      code: error.code || null,
+      details: error.data || null,
+    });
+  }
+}
+
+/** List open market positions (symbol + side) for opposite-direction guards. */
+export async function handleOpenPositions(req, res) {
+  if (req.method === "OPTIONS") {
+    endOptions(res);
+    return;
+  }
+  if (req.method !== "GET" && req.method !== "POST") {
+    sendJson(res, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  try {
+    const host = req.headers.host || "localhost";
+    const url = new URL(req.url || "/", `http://${host}`);
+    const body =
+      req.method === "POST"
+        ? await readJsonBody(req)
+        : Object.fromEntries(url.searchParams);
+    const accountId = String(body.accountId || "").trim();
+    if (!accountId) {
+      sendJson(res, 400, { error: "accountId is required" });
+      return;
+    }
+    const positions = await mt5ListOpenMarketPositions(accountId);
+    const symbol = String(body.symbol || "").trim();
+    const side = String(body.side || body.action || "")
+      .trim()
+      .toUpperCase();
+    if (symbol && (side === "BUY" || side === "SELL")) {
+      try {
+        await mt5AssertNoOppositeDirection(accountId, symbol, side);
+        sendJson(res, 200, { positions, ok: true });
+        return;
+      } catch (error) {
+        if (error?.code === "OPPOSITE_DIRECTION") {
+          sendJson(res, 200, {
+            positions,
+            ok: false,
+            code: error.code,
+            error: error.message,
+            details: error.data || null,
+          });
+          return;
+        }
+        throw error;
+      }
+    }
+    sendJson(res, 200, { positions, ok: true });
+  } catch (error) {
+    sendJson(res, error.status || 500, {
+      error: error.message || "Could not load open positions",
+      code: error.code || null,
       details: error.data || null,
     });
   }
