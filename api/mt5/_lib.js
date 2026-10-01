@@ -1638,3 +1638,96 @@ export async function getSymbolQuote(
   err.status = 404;
   throw err;
 }
+
+/**
+ * Today's OHLC bars for a connected account (MT5 PriceHistoryToday).
+ * timeFrame is minutes: 30=M30, 60=H1, 240=H4.
+ */
+export async function getPriceHistoryToday(
+  accountId,
+  symbol,
+  { timeFrame = 30, fast = false } = {}
+) {
+  const id = String(accountId || "").trim();
+  const requested = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
+  const tf = Math.max(1, Math.floor(Number(timeFrame) || 30));
+  if (!id || !requested) {
+    const err = new Error("accountId and symbol are required");
+    err.status = 400;
+    throw err;
+  }
+
+  const timeoutMs = fast ? 8000 : 20000;
+
+  async function historyOne(symbolName) {
+    const name = String(symbolName || "").trim();
+    if (!name) return null;
+    // Path has a trailing space in swagger for Today — try both.
+    const paths = [
+      `/PriceHistoryToday?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&timeFrame=${tf}`,
+      `/PriceHistoryToday%20?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&timeFrame=${tf}`,
+    ];
+    let lastErr = null;
+    for (const path of paths) {
+      try {
+        const data = await mt5Fetch(path, { timeoutMs });
+        const rows = Array.isArray(data) ? data : Array.isArray(data?.bars) ? data.bars : null;
+        if (!rows?.length) continue;
+        const bars = rows
+          .map((row) => {
+            const open = Number(row?.openPrice ?? row?.Open ?? row?.open);
+            const high = Number(row?.highPrice ?? row?.High ?? row?.high);
+            const low = Number(row?.lowPrice ?? row?.Low ?? row?.low);
+            const close = Number(row?.closePrice ?? row?.Close ?? row?.close);
+            if (![open, high, low, close].every((n) => Number.isFinite(n) && n > 0)) {
+              return null;
+            }
+            return {
+              time: row?.time || row?.Time || null,
+              open,
+              high,
+              low,
+              close,
+            };
+          })
+          .filter(Boolean);
+        if (bars.length) {
+          return { ok: true, accountId: id, symbol: name, requestedSymbol: requested, timeFrame: tf, bars };
+        }
+      } catch (error) {
+        lastErr = error;
+      }
+    }
+    if (lastErr) throw lastErr;
+    return null;
+  }
+
+  try {
+    const direct = await historyOne(requested);
+    if (direct) return direct;
+  } catch {
+    // resolve spelling below
+  }
+
+  const { symbol: resolvedSym, accountSymbols } =
+    await resolveTradeSymbolDetailed(id, requested);
+  const probeSymbols = buildTradeSymbolProbe({
+    requested,
+    resolved: resolvedSym,
+    accountSymbols,
+  });
+  const maxProbes = fast ? 6 : 20;
+  for (const alt of probeSymbols.slice(0, maxProbes)) {
+    if (String(alt || "").toLowerCase() === requested.toLowerCase()) continue;
+    try {
+      const hit = await historyOne(alt);
+      if (hit) return hit;
+    } catch {
+      // try next
+    }
+  }
+
+  const err = new Error(`No price history for ${requested}`);
+  err.status = 404;
+  throw err;
+}

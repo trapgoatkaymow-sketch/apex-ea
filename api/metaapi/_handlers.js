@@ -20,6 +20,7 @@ import {
   getAccountStatus as mt5GetAccountStatus,
   pingBrokerApi,
   getSymbolQuote as mt5GetSymbolQuote,
+  getPriceHistoryToday as mt5GetPriceHistoryToday,
   placeMarketTrade as mt5PlaceMarketTrade,
   readJsonBody,
   searchBrokers as mt5SearchBrokers,
@@ -259,6 +260,34 @@ export async function handleQuote(req, res) {
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: error.message || "Quote failed",
+      details: error.data || null,
+    });
+  }
+}
+
+/** OHLC bars for Safe Scalper START when OpenAI is offline. */
+export async function handleHistory(req, res) {
+  if (req.method === "OPTIONS") {
+    endOptions(res);
+    return;
+  }
+  if (req.method !== "GET" && req.method !== "POST") {
+    sendJson(res, 405, { error: "Method not allowed" });
+    return;
+  }
+  try {
+    const body =
+      req.method === "POST"
+        ? await readJsonBody(req)
+        : Object.fromEntries(new URL(req.url, "http://local").searchParams);
+    const result = await mt5GetPriceHistoryToday(body.accountId, body.symbol, {
+      timeFrame: body.timeFrame ?? body.timeframe ?? 30,
+      fast: body.fast === true || body.fast === "1" || body.fast === 1,
+    });
+    sendJson(res, 200, result);
+  } catch (error) {
+    sendJson(res, error.status || 500, {
+      error: error.message || "History failed",
       details: error.data || null,
     });
   }

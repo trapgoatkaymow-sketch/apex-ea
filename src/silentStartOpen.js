@@ -14,6 +14,7 @@ import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { recordTrade } from "./dailyTradeHistory.js";
 import {
   buildScannerFillComment,
+  getPriceHistory,
   getSymbolQuote,
   placeTrade,
 } from "./metaApi.js";
@@ -27,6 +28,9 @@ import {
 
 /** Built-in START strategy when OpenAI credits/API fail. */
 export const START_OFFLINE_STRATEGY = "safe-scalper";
+
+/** M30 bars for offline EMA bias. */
+const SAFE_SCALPER_HISTORY_TF = 30;
 
 /** Delay after START before the silent OpenAI scan + open runs. */
 export const START_SILENT_OPEN_DELAY_MS = 15_000;
@@ -206,11 +210,60 @@ async function analyzeSymbolWithOpenAI({
 /** START button R:R — same as Chart Scanner non-H4 ladder. */
 export const START_TP_REWARD_MULTIPLES = [2, 3, 4];
 
+function emaLast(values, period) {
+  const nums = (values || []).filter((n) => Number.isFinite(n));
+  if (!nums.length || period < 1) return null;
+  const k = 2 / (period + 1);
+  let ema = nums[0];
+  for (let i = 1; i < nums.length; i += 1) {
+    ema = nums[i] * k + ema * (1 - k);
+  }
+  return ema;
+}
+
+/**
+ * Offline Safe Scalper bias from M30 OHLC (no OpenAI).
+ * EMA9 vs EMA21 + last 3 candle body majority.
+ */
+export function inferSafeScalperSideFromBars(bars = []) {
+  const rows = Array.isArray(bars) ? bars : [];
+  const closes = rows
+    .map((b) => toFiniteNumber(b?.close ?? b?.closePrice))
+    .filter((n) => n != null && n > 0);
+  if (closes.length < 8) return null;
+
+  const emaFast = emaLast(closes, 9);
+  const emaSlow = emaLast(closes, 21);
+  if (emaFast == null || emaSlow == null) return null;
+
+  const recent = rows.slice(-3);
+  let bullBodies = 0;
+  let bearBodies = 0;
+  for (const bar of recent) {
+    const o = toFiniteNumber(bar?.open ?? bar?.openPrice);
+    const c = toFiniteNumber(bar?.close ?? bar?.closePrice);
+    if (o == null || c == null) continue;
+    if (c > o) bullBodies += 1;
+    else if (c < o) bearBodies += 1;
+  }
+
+  const last = closes[closes.length - 1];
+  const bullTrend = emaFast > emaSlow && last >= emaFast;
+  const bearTrend = emaFast < emaSlow && last <= emaFast;
+
+  if (bullTrend && bullBodies >= bearBodies) return "BUY";
+  if (bearTrend && bearBodies >= bullBodies) return "SELL";
+  // Soft fallback: follow EMA slope when candles are mixed.
+  if (emaFast > emaSlow * 1.00005) return "BUY";
+  if (emaFast < emaSlow * 0.99995) return "SELL";
+  return null;
+}
+
 /**
  * Protective START plan when OpenAI is unavailable.
  * Rules (anti-blow):
  *  1. Live quote required — never trade on a table estimate
- *  2. Mentor Action must be BUY or SELL — never guess BOTH → BUY
+ *  2. Side from M30 EMA scalper (or mentor BUY/SELL if set)
  *  3. Half lot + 1 trade (TP1 only) — cut exposure vs full AI open
  *  4. Tight scalper SL from defaultStopDistance
  */
@@ -218,6 +271,7 @@ export function buildStartSafeScalperPlan({
   symbol = "",
   livePrice = null,
   preferredSide = "",
+  strategySide = "",
   lot = 0.01,
   hasLiveQuote = false,
 } = {}) {
@@ -231,23 +285,39 @@ export function buildStartSafeScalperPlan({
     };
   }
 
-  const sideRaw = String(preferredSide || "")
-    .trim()
-    .toUpperCase();
-  const side = sideRaw === "BUY" || sideRaw === "SELL" ? sideRaw : "";
+  const mentorSide = ["BUY", "SELL"].includes(
+    String(preferredSide || "")
+      .trim()
+      .toUpperCase()
+  )
+    ? String(preferredSide).trim().toUpperCase()
+    : "";
+  const barSide = ["BUY", "SELL"].includes(
+    String(strategySide || "")
+      .trim()
+      .toUpperCase()
+  )
+    ? String(strategySide).trim().toUpperCase()
+    : "";
+
+  // Mentor Action wins when set; otherwise use M30 EMA bias — never blind BUY.
+  const side = mentorSide || barSide;
   if (!side) {
     return {
       skip: true,
       source: START_OFFLINE_STRATEGY,
-      error: `Safe Scalper: set Action to BUY or SELL on ${
+      error: `Safe Scalper: no clear M30 bias on ${
         sym || "this pair"
-      } (AI offline — no blind trades)`,
+      } (AI offline) — try again shortly`,
     };
   }
 
   const risk = defaultStopDistance(sym, entry);
   const stopLoss = side === "BUY" ? entry - risk : entry + risk;
   const safeLot = clampLot(Math.max(0.01, clampLot(lot) * 0.5));
+  const biasLabel = mentorSide
+    ? `mentor ${mentorSide}`
+    : `M30 EMA ${side}`;
 
   return {
     skip: false,
@@ -258,9 +328,8 @@ export function buildStartSafeScalperPlan({
     lot: safeLot,
     tradeCount: 1,
     timeframe: "M30",
-    confidence: 55,
-    analysis:
-      "Safe Scalper (AI offline): mentor BUY/SELL only, half lot, 1 trade (TP1 1:2), tight SL — protects the account when OpenAI credits are low.",
+    confidence: mentorSide ? 58 : 62,
+    analysis: `Safe Scalper (AI offline): ${biasLabel}, half lot, 1 trade (TP1 1:2), tight SL.`,
   };
 }
 
@@ -391,7 +460,7 @@ async function openPairSilent({
       timeframes: START_SCANNER_TIMEFRAMES,
     });
   } catch {
-    // Safe Scalper below — never blind BUY on full size
+    // Safe Scalper below — M30 EMA bias, never blind BUY on full size
   }
 
   let signal;
@@ -410,10 +479,28 @@ async function openPairSilent({
     });
   } else {
     mode = START_OFFLINE_STRATEGY;
+    let strategySide = "";
+    try {
+      const hist = await getPriceHistory({
+        accountId,
+        symbol: tradeSymbol,
+        timeFrame: SAFE_SCALPER_HISTORY_TF,
+        fast: true,
+        signal: abortSignalAfter(12_000),
+      });
+      strategySide = inferSafeScalperSideFromBars(hist?.bars) || "";
+      if (hist?.symbol) {
+        tradeSymbol = normalizeBrokerSymbol(hist.symbol) || tradeSymbol;
+      }
+    } catch {
+      // mentor Action or skip below
+    }
+
     const plan = buildStartSafeScalperPlan({
       symbol: tradeSymbol,
       livePrice,
       preferredSide,
+      strategySide,
       lot,
       hasLiveQuote,
     });

@@ -348,7 +348,7 @@ export default function V2Interface() {
                         setStartsLeft(chance.left);
                         const safeNote =
                           result.mode === "safe-scalper"
-                            ? " · Safe Scalper (AI offline, half lot)"
+                            ? " · Safe Scalper M30 EMA (AI offline)"
                             : "";
                         showToast(
                           `Opened ${result.opened || 0} trades · ${
