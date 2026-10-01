@@ -264,7 +264,7 @@ export function inferSafeScalperSideFromBars(bars = []) {
  * Rules (anti-blow):
  *  1. Live quote required — never trade on a table estimate
  *  2. Side from M30 EMA scalper (or mentor BUY/SELL if set)
- *  3. Half lot + 1 trade (TP1 only) — cut exposure vs full AI open
+ *  3. Half lot — cut size vs full AI open; keep pair trade count (threads)
  *  4. Tight scalper SL from defaultStopDistance
  */
 export function buildStartSafeScalperPlan({
@@ -273,6 +273,7 @@ export function buildStartSafeScalperPlan({
   preferredSide = "",
   strategySide = "",
   lot = 0.01,
+  tradeCount = 1,
   hasLiveQuote = false,
 } = {}) {
   const sym = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
@@ -281,7 +282,7 @@ export function buildStartSafeScalperPlan({
     return {
       skip: true,
       source: START_OFFLINE_STRATEGY,
-      error: `Safe Scalper: need a live ${sym || "pair"} quote (AI offline)`,
+      error: `Safe Scalper: need a live ${sym || "pair"} quote`,
     };
   }
 
@@ -308,13 +309,14 @@ export function buildStartSafeScalperPlan({
       source: START_OFFLINE_STRATEGY,
       error: `Safe Scalper: no clear M30 bias on ${
         sym || "this pair"
-      } (AI offline) — try again shortly`,
+      } — try again shortly`,
     };
   }
 
   const risk = defaultStopDistance(sym, entry);
   const stopLoss = side === "BUY" ? entry - risk : entry + risk;
   const safeLot = clampLot(Math.max(0.01, clampLot(lot) * 0.5));
+  const threads = clampTrades(tradeCount);
   const biasLabel = mentorSide
     ? `mentor ${mentorSide}`
     : `M30 EMA ${side}`;
@@ -326,10 +328,10 @@ export function buildStartSafeScalperPlan({
     entry,
     stopLoss,
     lot: safeLot,
-    tradeCount: 1,
+    tradeCount: threads,
     timeframe: "M30",
     confidence: mentorSide ? 58 : 62,
-    analysis: `Safe Scalper (AI offline): ${biasLabel}, half lot, 1 trade (TP1 1:2), tight SL.`,
+    analysis: `Safe Scalper: ${biasLabel}, half lot, ${threads} trade(s), tight SL.`,
   };
 }
 
@@ -502,6 +504,7 @@ async function openPairSilent({
       preferredSide,
       strategySide,
       lot,
+      tradeCount,
       hasLiveQuote,
     });
     if (plan.skip) {
@@ -517,6 +520,7 @@ async function openPairSilent({
       };
     }
     lot = plan.lot;
+    // Keep the pair’s selected thread count (e.g. 2 → TP1 + TP2).
     tradeCount = plan.tradeCount;
     signal = buildScannerAlignedSetup({
       symbol: tradeSymbol,

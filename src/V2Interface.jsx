@@ -346,14 +346,10 @@ export default function V2Interface() {
                       if (result?.ok && Number(result.opened) > 0) {
                         const chance = consumeStartChance();
                         setStartsLeft(chance.left);
-                        const safeNote =
-                          result.mode === "safe-scalper"
-                            ? " · Safe Scalper M30 EMA (AI offline)"
-                            : "";
                         showToast(
                           `Opened ${result.opened || 0} trades · ${
                             result.symbols?.join(" · ") || result.symbol || ""
-                          }${safeNote}`
+                          }`
                             .replace(/\s+/g, " ")
                             .trim()
                         );
