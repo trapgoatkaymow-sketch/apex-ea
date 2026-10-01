@@ -68,6 +68,7 @@
       "boundAt": 1790014043184,
       "updatedAt": 1790874701191,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "732a33ef-52fc-4cf4-9617-008335d0c668",
       "robotLogin": "4118944",
       "robotServer": "RazorMarkets-Live",
@@ -91,8 +92,7 @@
         "symbols": [
           "XAUUSD"
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-VP9J-U33X",
@@ -115,6 +115,7 @@
       "boundAt": 1790690186993,
       "updatedAt": 1790874689301,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "65f75cb9-c9bf-4f79-ae30-d34934ea017e",
       "robotLogin": "430411668",
       "robotServer": "XMGlobal-MT5 18",
@@ -138,8 +139,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-ZBCW-BWJR",
@@ -714,6 +714,7 @@
       "boundAt": null,
       "updatedAt": 1790874674793,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "",
       "robotLogin": "",
       "robotServer": "",
@@ -737,8 +738,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-36BS-59UD",
@@ -808,6 +808,7 @@
       "boundAt": 1790711678597,
       "updatedAt": 1790874671889,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "463c183f-504c-4cd7-adfa-0c9eb97fcc79",
       "robotLogin": "6058078",
       "robotServer": "Headway-Demo",
@@ -834,8 +835,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-M9N7-SDU8",
@@ -858,6 +858,7 @@
       "boundAt": null,
       "updatedAt": 1790874671820,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "",
       "robotLogin": "",
       "robotServer": "",
@@ -881,8 +882,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-YEY4-Z595",
@@ -1109,6 +1109,7 @@
       "boundAt": 1790863391869,
       "updatedAt": 1790874652911,
       "scanReset": null,
+      "startReset": null,
       "robotAccountId": "fa9fcb51-9e09-4833-96bf-7563dc018e2f",
       "robotLogin": "10323585",
       "robotServer": "DerivSVG-Server",
@@ -1136,8 +1137,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "startReset": null
+      }
     },
     {
       "key": "APEX-CT93-A8HZ",
@@ -1982,7 +1982,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -4146,7 +4148,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -4191,7 +4195,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -5037,7 +5043,11 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          "GOLDMICRO",
+          "US100CASH",
+          "USDJPY"
         ]
       }
     },
@@ -5185,7 +5195,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -5480,7 +5492,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -5889,9 +5903,7 @@
         "symbols": [
           "XAUUSD",
           "US30",
-          "GOLDMICRO",
-          "US100CASH",
-          "USDJPY"
+          ".US30."
         ]
       }
     },
@@ -5941,7 +5953,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -6332,7 +6346,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -6629,9 +6645,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -7526,7 +7541,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -8163,7 +8180,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
