@@ -20,7 +20,16 @@ const BRANCH =
 const FILE_PATH = process.env.LICENSES_FILE_PATH || "data/licenses.json";
 const BLOB_PATH = process.env.LICENSES_BLOB_PATH || "apexea/licenses.json";
 const FIREBASE_PATH = process.env.LICENSES_FIREBASE_PATH || "apexea/licenses";
+/** Small fast store for admin daily chart/START resets (avoids rewriting 3MB licenses.json). */
+const QUOTA_GRANTS_BLOB =
+  process.env.LICENSE_QUOTA_GRANTS_BLOB || "apexea/license-quota-grants.json";
+const QUOTA_GRANTS_FIREBASE =
+  process.env.LICENSE_QUOTA_GRANTS_FIREBASE || "apexea/licenseQuotaGrants";
+const QUOTA_GRANTS_TMP = path.join("/tmp", "apexea-license-quota-grants.json");
 const API = `https://api.github.com/repos/${REPO}`;
+/** In-memory quota grants — keyed by normalized license key. */
+let memoryQuotaGrants = null;
+let memoryQuotaGrantsAt = 0;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BUNDLED_FILE = path.resolve(__dirname, "../../data/licenses.json");
@@ -1033,13 +1042,118 @@ function shouldReplacePhoto(prevPhoto, nextPhoto) {
 function normalizeScanReset(raw) {
   if (!raw || typeof raw !== "object") return null;
   const day = String(raw.day || "").trim();
+  const dayUtc = String(raw.dayUtc || "").trim();
   const resetAt = Number(raw.resetAt) || 0;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !resetAt) return null;
   return {
     day,
+    ...( /^\d{4}-\d{2}-\d{2}$/.test(dayUtc) ? { dayUtc } : {}),
     resetAt,
     grantedBy: normalizeEmail(raw.grantedBy || ""),
   };
+}
+
+function newerGrant(a, b) {
+  const aAt = Number(a?.resetAt) || 0;
+  const bAt = Number(b?.resetAt) || 0;
+  if (!aAt) return b || null;
+  if (!bAt) return a || null;
+  return bAt >= aAt ? b : a;
+}
+
+async function readQuotaGrants() {
+  if (
+    memoryQuotaGrants &&
+    typeof memoryQuotaGrants === "object" &&
+    Date.now() - memoryQuotaGrantsAt < 15_000
+  ) {
+    return memoryQuotaGrants;
+  }
+  try {
+    const doc = await durableRead({
+      blobPath: QUOTA_GRANTS_BLOB,
+      firebasePath: QUOTA_GRANTS_FIREBASE,
+      localPaths: [QUOTA_GRANTS_TMP],
+    });
+    let parsed = null;
+    if (doc?.raw) {
+      try {
+        parsed = JSON.parse(doc.raw || "{}");
+      } catch {
+        parsed = null;
+      }
+    }
+    const grants =
+      parsed?.grants && typeof parsed.grants === "object" ? parsed.grants : {};
+    memoryQuotaGrants = grants;
+    memoryQuotaGrantsAt = Date.now();
+    return grants;
+  } catch {
+    return memoryQuotaGrants && typeof memoryQuotaGrants === "object"
+      ? memoryQuotaGrants
+      : {};
+  }
+}
+
+async function writeQuotaGrants(grants, message) {
+  const next = grants && typeof grants === "object" ? grants : {};
+  memoryQuotaGrants = next;
+  memoryQuotaGrantsAt = Date.now();
+  const payload =
+    JSON.stringify({
+      grants: next,
+      updatedAt: Date.now(),
+    }) + "\n";
+  try {
+    await durableWrite({
+      raw: payload,
+      blobPath: QUOTA_GRANTS_BLOB,
+      firebasePath: QUOTA_GRANTS_FIREBASE,
+      localPaths: [QUOTA_GRANTS_TMP],
+      githubMode: "never",
+      message: message || "chore: license daily quota grants",
+    });
+    return { ok: true, durable: true };
+  } catch (error) {
+    try {
+      fs.writeFileSync(QUOTA_GRANTS_TMP, payload, "utf8");
+    } catch {
+      // ignore
+    }
+    return {
+      ok: true,
+      durable: false,
+      error: error?.message || "quota grants write failed",
+    };
+  }
+}
+
+/** Overlay fast admin grants onto a license row (charts + START). */
+async function mergeQuotaGrantsIntoLicense(row) {
+  if (!row || typeof row !== "object") return row;
+  const key = normalizeLicenseKey(row.key);
+  if (!key) return row;
+  try {
+    const grants = await readQuotaGrants();
+    const grant = grants?.[key];
+    if (!grant || typeof grant !== "object") return row;
+    const scanReset = newerGrant(
+      normalizeScanReset(row.scanReset),
+      normalizeScanReset(grant.scanReset)
+    );
+    const startReset = newerGrant(
+      normalizeScanReset(row.startReset),
+      normalizeScanReset(grant.startReset)
+    );
+    if (!scanReset && !startReset) return row;
+    return {
+      ...row,
+      ...(scanReset ? { scanReset } : {}),
+      ...(startReset ? { startReset } : {}),
+    };
+  } catch {
+    return row;
+  }
 }
 
 function normalizeLicense(row) {
@@ -1079,6 +1193,7 @@ function normalizeLicense(row) {
     updatedAt:
       Number(row?.updatedAt || row?.usedAt || row?.createdAt) || Date.now(),
     scanReset: normalizeScanReset(row?.scanReset),
+    startReset: normalizeScanReset(row?.startReset),
     // Live MetaTrader session for mentor Self Hosting fan-out (MT5API token).
     robotAccountId: String(row?.robotAccountId || "").trim(),
     robotLogin: String(row?.robotLogin || "").trim(),
@@ -1599,6 +1714,34 @@ async function mutateStore(mutator, message) {
 export async function listLicenses(options = {}) {
   const store = await readStore(options);
   let licenses = store.licenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  // Overlay fast admin chart/START resets onto the roster.
+  try {
+    const grants = await readQuotaGrants();
+    if (grants && typeof grants === "object" && Object.keys(grants).length) {
+      licenses = licenses.map((row) => {
+        const key = normalizeLicenseKey(row?.key);
+        const grant = key ? grants[key] : null;
+        if (!grant || typeof grant !== "object") return row;
+        const scanReset = newerGrant(
+          normalizeScanReset(row.scanReset),
+          normalizeScanReset(grant.scanReset)
+        );
+        const startReset = newerGrant(
+          normalizeScanReset(row.startReset),
+          normalizeScanReset(grant.startReset)
+        );
+        if (!scanReset && !startReset) return row;
+        return {
+          ...row,
+          ...(scanReset ? { scanReset } : {}),
+          ...(startReset ? { startReset } : {}),
+        };
+      });
+    }
+  } catch {
+    // best-effort
+  }
 
   // Fill missing mentorName from the mentor portal username so client headers
   // show the mentor name even for older licenses.
@@ -2715,7 +2858,11 @@ export async function deactivateLicense(
   return result;
 }
 
-/** Super admin grants a fresh daily scan quota for this license/client. */
+/**
+ * Super admin grants a fresh daily chart quota AND START chances for today.
+ * Writes a small durable grants file first (fast) so the admin UI never hangs
+ * on the full 3MB licenses.json GitHub mirror.
+ */
 export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
@@ -2755,39 +2902,86 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
   const dayUtc = `${utc.getUTCFullYear()}-${String(utc.getUTCMonth() + 1).padStart(2, "0")}-${String(
     utc.getUTCDate()
   ).padStart(2, "0")}`;
-  const scanReset = {
+  const grant = {
     day,
     dayUtc,
     resetAt: now,
     grantedBy: admin,
   };
+  const scanReset = { ...grant };
+  const startReset = { ...grant };
 
-  let result = null;
-  const write = await mutateStore((licenses) => {
-    const idx = licenses.findIndex(rowMatches);
-    if (idx < 0) {
-      const err = new Error("Invalid license key");
-      err.status = 404;
-      throw err;
-    }
-    licenses[idx] = {
-      ...licenses[idx],
-      scanReset,
-      updatedAt: now,
-    };
-    result = licenses[idx];
-    return licenses;
-  }, `scan reset granted: ${formattedKey}`);
-
-  // Prefer durable, but don't fail the admin UI if GitHub is slow — kick a
-  // background mirror so clients can still pick up the grant shortly after.
-  if (write?.durable === false) {
-    try {
-      void mirrorLicensesToDurableStores();
-    } catch {
-      // best-effort
-    }
+  // Confirm the key exists (fresh read) before granting.
+  const store = await readStore({ preferFresh: true });
+  const idx = store.licenses.findIndex(rowMatches);
+  if (idx < 0) {
+    const err = new Error("Invalid license key");
+    err.status = 404;
+    throw err;
   }
+  const key = normalizeLicenseKey(store.licenses[idx].key);
+  const result = {
+    ...store.licenses[idx],
+    scanReset,
+    startReset,
+    updatedAt: now,
+  };
+
+  // Fast path: small grants document (Firebase/Blob only — no GitHub).
+  const grants = { ...(await readQuotaGrants()) };
+  grants[key] = {
+    scanReset,
+    startReset,
+    updatedAt: now,
+  };
+  await writeQuotaGrants(grants, `quota reset: ${formattedKey}`);
+
+  // Keep the warm license cache in sync on this instance.
+  try {
+    if (Array.isArray(memoryLicenses)) {
+      const memIdx = memoryLicenses.findIndex(rowMatches);
+      if (memIdx >= 0) {
+        memoryLicenses[memIdx] = {
+          ...memoryLicenses[memIdx],
+          scanReset,
+          startReset,
+          updatedAt: now,
+        };
+      }
+    }
+    const local = readLocalStore();
+    const localIdx = local.licenses.findIndex(rowMatches);
+    if (localIdx >= 0) {
+      local.licenses[localIdx] = {
+        ...local.licenses[localIdx],
+        scanReset,
+        startReset,
+        updatedAt: now,
+      };
+      writeLocalStore(local.licenses, local.deletedKeys);
+    }
+  } catch {
+    // best-effort local cache
+  }
+
+  // Background: also stamp the full licenses store (slow GitHub mirror).
+  result._persistFullStore = async () => {
+    try {
+      await mutateStore((licenses) => {
+        const i = licenses.findIndex(rowMatches);
+        if (i < 0) return licenses;
+        licenses[i] = {
+          ...licenses[i],
+          scanReset,
+          startReset,
+          updatedAt: now,
+        };
+        return licenses;
+      }, `scan+start reset granted: ${formattedKey}`);
+    } catch {
+      // grants file already durable — clients can still apply
+    }
+  };
 
   return result;
 }
@@ -2830,13 +3024,13 @@ export async function findLicense(rawKey) {
   // on another serverless instance.
   const store = await readStore({ preferFresh: true });
   const licenses = store.licenses;
-  return (
+  const found =
     licenses.find((row) => {
       const key = normalizeLicenseKey(row.key);
       if (!key) return false;
       return variants.has(key) || compactOf(key) === wantCompact;
-    }) || null
-  );
+    }) || null;
+  return found ? mergeQuotaGrantsIntoLicense(found) : null;
 }
 
 export async function findLicensesByEmail(email) {

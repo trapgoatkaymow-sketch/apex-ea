@@ -452,13 +452,14 @@ export default function AdminPortal() {
       if (result) {
         // Update the open license sheet immediately — don't wait on a full
         // license-list refresh (that was leaving the button stuck on
-        // "Resetting charts…" for a long time).
+        // "Resetting…" for a long time).
         if (latestKey === key) {
           setLatestLicenseMeta((prev) =>
             prev
               ? {
                   ...prev,
                   scanReset: result.scanReset || prev.scanReset || null,
+                  startReset: result.startReset || prev.startReset || null,
                 }
               : prev
           );
@@ -4340,14 +4341,14 @@ export default function AdminPortal() {
                               }`}
                               type="button"
                               disabled={Boolean(licenseActionBusy)}
-                              title="Refill this client's daily chart quota for today"
+                              title="Refill this client's daily charts and START chances for today"
                               onClick={() => void onResetClientScans(entry.key)}
                             >
                               <AdminBusyLabel
                                 busy={licenseActionBusy === `reset-scans:${entry.key}`}
-                                busyText="Resetting charts…"
+                                busyText="Resetting…"
                               >
-                                Reset charts
+                                Reset charts & START
                               </AdminBusyLabel>
                             </button>
                           </>
@@ -6620,9 +6621,9 @@ export default function AdminPortal() {
                 >
                   <AdminBusyLabel
                     busy={licenseActionBusy === `reset-scans:${latestKey}`}
-                    busyText="Resetting charts…"
+                    busyText="Resetting…"
                   >
-                    Reset daily charts
+                    Reset charts & START
                   </AdminBusyLabel>
                 </button>
               </>

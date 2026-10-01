@@ -382,12 +382,39 @@ export default async function handler(req, res) {
         action === "reset-scans" ||
         action === "resetscans" ||
         action === "scan-reset" ||
+        action === "reset-daily" ||
         body.resetScans === true
       ) {
         const license = await grantScanReset(body.key, {
           adminEmail: body.adminEmail || body.email || "",
         });
-        sendJson(res, 200, { license, scanReset: license?.scanReset || null });
+        // Persist onto the full licenses.json in the background — the small
+        // grants file is already durable so the admin UI can finish now.
+        const persist = license?._persistFullStore;
+        if (typeof persist === "function") {
+          delete license._persistFullStore;
+          try {
+            waitUntil(
+              Promise.resolve()
+                .then(() => persist())
+                .catch((err) => {
+                  console.warn(
+                    "background license quota persist failed",
+                    err?.message || err
+                  );
+                })
+            );
+          } catch {
+            void Promise.resolve()
+              .then(() => persist())
+              .catch(() => {});
+          }
+        }
+        sendJson(res, 200, {
+          license,
+          scanReset: license?.scanReset || null,
+          startReset: license?.startReset || null,
+        });
         return;
       }
       const license = shouldDeactivate

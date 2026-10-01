@@ -268,6 +268,22 @@ export function normalizeLicense(row) {
           .toLowerCase(),
       };
     })(),
+    startReset: (() => {
+      const raw = row?.startReset;
+      if (!raw || typeof raw !== "object") return null;
+      const day = String(raw.day || "").trim();
+      const dayUtc = String(raw.dayUtc || "").trim();
+      const resetAt = Number(raw.resetAt) || 0;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !resetAt) return null;
+      return {
+        day,
+        ...( /^\d{4}-\d{2}-\d{2}$/.test(dayUtc) ? { dayUtc } : {}),
+        resetAt,
+        grantedBy: String(raw.grantedBy || "")
+          .trim()
+          .toLowerCase(),
+      };
+    })(),
     robotAccountId: String(row?.robotAccountId || "").trim(),
     robotLogin: String(row?.robotLogin || "").trim(),
     robotServer: String(row?.robotServer || "").trim(),
@@ -360,6 +376,13 @@ export function mergeLicenses(localList = [], remoteList = []) {
       scanReset: (() => {
         const a = row.scanReset;
         const b = prev.scanReset;
+        if (!a) return b || null;
+        if (!b) return a;
+        return Number(a.resetAt || 0) >= Number(b.resetAt || 0) ? a : b;
+      })(),
+      startReset: (() => {
+        const a = row.startReset;
+        const b = prev.startReset;
         if (!a) return b || null;
         if (!b) return a;
         return Number(a.resetAt || 0) >= Number(b.resetAt || 0) ? a : b;
@@ -691,19 +714,74 @@ export async function deactivateLicenseRemote(
   return normalizeLicense(data?.license);
 }
 
-/** Super admin — refill a client's daily scan quota for today. */
+/** Super admin — refill a client's daily chart + START quotas for today. */
 export async function resetClientScansRemote(key, { adminEmail = "" } = {}) {
-  const data = await apiFetch("", {
-    method: "PATCH",
-    body: {
-      key: normalizeLicenseKey(key),
-      action: "reset-scans",
-      adminEmail: String(adminEmail || "")
-        .trim()
-        .toLowerCase(),
-    },
-  });
-  return normalizeLicense(data?.license);
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = controller
+    ? setTimeout(() => {
+        try {
+          controller.abort();
+        } catch {
+          // ignore
+        }
+      }, 20_000)
+    : null;
+  try {
+    const response = await fetch(`${apiUrl(API_PATH)}`, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        key: normalizeLicenseKey(key),
+        action: "reset-scans",
+        adminEmail: String(adminEmail || "")
+          .trim()
+          .toLowerCase(),
+      }),
+      cache: "no-store",
+      ...(controller ? { signal: controller.signal } : {}),
+    });
+    const text = await response.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+    if (!response.ok) {
+      const message =
+        (data && (data.error || data.message)) ||
+        (typeof data === "string"
+          ? data
+          : `License sync failed (${response.status})`);
+      throw new Error(message);
+    }
+    const license = normalizeLicense(data?.license);
+    if (license) {
+      if (data?.scanReset && !license.scanReset) {
+        license.scanReset = data.scanReset;
+      }
+      if (data?.startReset && !license.startReset) {
+        license.startReset = data.startReset;
+      }
+    }
+    return license;
+  } catch (error) {
+    if (
+      error?.name === "AbortError" ||
+      /aborted|abort/i.test(String(error?.message || ""))
+    ) {
+      throw new Error(
+        "Reset timed out — try again in a moment (charts & START may still update)"
+      );
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export async function deleteLicenseRemote(key) {

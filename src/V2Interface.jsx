@@ -117,6 +117,12 @@ export default function V2Interface() {
     if (v2View === "home") setStartsLeft(loadStartsLeft());
   }, [v2View, v2Running]);
 
+  useEffect(() => {
+    const onReset = () => setStartsLeft(loadStartsLeft());
+    window.addEventListener("apexea-start-quota-reset", onReset);
+    return () => window.removeEventListener("apexea-start-quota-reset", onReset);
+  }, []);
+
   const [floatSrc, setFloatSrc] = useState(
     () =>
       getCachedBotPhotoSync(activeBot?.id) ||

@@ -312,6 +312,7 @@ function slimLicenseRowForStorage(row) {
     boundAt: row.boundAt ? Number(row.boundAt) : null,
     updatedAt: Number(row.updatedAt || row.usedAt || row.createdAt) || Date.now(),
     scanReset: row.scanReset || null,
+    startReset: row.startReset || null,
     robotAccountId: String(row.robotAccountId || "").trim(),
     robotLogin: String(row.robotLogin || "").trim(),
     robotServer: String(row.robotServer || "").trim(),
@@ -1572,7 +1573,7 @@ export function AppProvider({ children }) {
     };
   }, [refreshLicenses]);
 
-  // When super-admin resets daily charts, apply the grant as soon as licenses update.
+  // When super-admin resets daily charts / START, apply grants as licenses update.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -1580,10 +1581,14 @@ export function AppProvider({ children }) {
         const { applyRemoteScanGrant, pickLatestScanGrant } = await import(
           "./scanQuota.js"
         );
+        const { applyRemoteStartGrant, pickLatestStartGrant } = await import(
+          "./startQuota.js"
+        );
         if (cancelled) return;
-        const grant = pickLatestScanGrant(licenseKeys);
-        if (!grant) return;
-        applyRemoteScanGrant(grant);
+        const scanGrant = pickLatestScanGrant(licenseKeys);
+        if (scanGrant) applyRemoteScanGrant(scanGrant);
+        const startGrant = pickLatestStartGrant(licenseKeys);
+        if (startGrant) applyRemoteStartGrant(startGrant);
       } catch {
         // ignore
       }
@@ -3177,14 +3182,22 @@ export function AppProvider({ children }) {
         const remote = await resetClientScansRemote(key, { adminEmail: actor });
         if (remote) {
           setLicenseKeys((prev) => mergeLicenses(prev, [remote]));
-          // Apply the grant on this device too (admin often tests the same key).
+          // Apply grants on this device too (admin often tests the same key).
           try {
             const { applyRemoteScanGrant } = await import("./scanQuota.js");
             applyRemoteScanGrant(remote.scanReset);
           } catch {
             // ignore
           }
-          showToast("Daily charts reset for today — client can analyze again");
+          try {
+            const { applyRemoteStartGrant } = await import("./startQuota.js");
+            applyRemoteStartGrant(remote.startReset);
+          } catch {
+            // ignore
+          }
+          showToast(
+            "Daily charts + START chances reset — client can analyze and start again"
+          );
           return remote;
         }
         showToast("Could not reset daily charts");
