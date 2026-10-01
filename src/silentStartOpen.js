@@ -1,13 +1,13 @@
 /**
  * Silent START → Chart Scanner style open (no scanner UI):
- *   15s “Opening positions” countdown → OpenAI scan (M30/H1/H4) → open
+ *   15s “Opening positions” countdown → OpenAI scan (M15/M30/H1/H4) → open
  *   Number of trades for every pair in Your pairs.
  *
  * START always uses the scanner non-H4 ladder:
  *   TP1 1:2 · TP2 1:3 · TP3 1:4
  *
- * When OpenAI is down / out of credits, START switches to the built-in
- * Safe Scalper strategy (not a blind BUY) so accounts are not blown.
+ * START always executes (never skips with a “Safe Scalper / no bias” toast).
+ * If OpenAI is down, a scanner fallback still opens with mentor Action / tape side.
  */
 import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
@@ -26,19 +26,17 @@ import {
   tpRiskRewardLabel,
 } from "./tradeLevels.js";
 
-/** Built-in START strategy when OpenAI credits/API fail. */
-export const START_OFFLINE_STRATEGY = "safe-scalper";
-
-/** M30 bars for offline EMA bias. */
-const SAFE_SCALPER_HISTORY_TF = 30;
+/** Offline label kept for older UI checks — START still opens (scanner fallback). */
+export const START_OFFLINE_STRATEGY = "scanner-fallback";
 
 /** Delay after START before the silent OpenAI scan + open runs. */
 export const START_SILENT_OPEN_DELAY_MS = 15_000;
 
-/** Scanner timeframes used by the START button (like EA Chart). */
-export const START_SCANNER_TIMEFRAMES = ["M30", "H1", "H4"];
+/** Scanner timeframes used by the START button (EA Chart strategy). */
+export const START_SCANNER_TIMEFRAMES = ["M15", "M30", "H1", "H4"];
 
-const TF_FOR_TP_SLOT = ["M30", "H1", "H4"];
+/** TP thread labels — analysis still uses full M15/M30/H1/H4 set. */
+const TF_FOR_TP_SLOT = ["M15", "M30", "H1"];
 
 /** Seconds left for the START “Opening positions” countdown. */
 export function formatStartCountdownSeconds(ms) {
@@ -309,14 +307,10 @@ export function inferSafeScalperSideFromBars(bars = [], h1Bars = null) {
 }
 
 /**
- * Protective START plan when OpenAI is unavailable.
- * Rules (anti-blow):
- *  1. Live quote required — never trade on a table estimate
- *  2. Side from M30 EMA scalper (or mentor BUY/SELL if set)
- *  3. Half lot — cut size vs full AI open; keep pair trade count (threads)
- *  4. Tight scalper SL from defaultStopDistance
+ * Scanner fallback when OpenAI is unavailable — ALWAYS picks a side and opens.
+ * Never returns skip (no “Safe Scalper / no clear bias” toast).
  */
-export function buildStartSafeScalperPlan({
+export function buildStartScannerFallbackPlan({
   symbol = "",
   livePrice = null,
   preferredSide = "",
@@ -327,11 +321,12 @@ export function buildStartSafeScalperPlan({
 } = {}) {
   const sym = normalizeBrokerSymbol(symbol) || String(symbol || "").trim();
   const entry = toFiniteNumber(livePrice);
-  if (!hasLiveQuote || entry == null || entry <= 0) {
+  if (entry == null || entry <= 0) {
+    // Still must not toast Safe Scalper — caller will surface a real open error.
     return {
       skip: true,
       source: START_OFFLINE_STRATEGY,
-      error: `Safe Scalper: need a live ${sym || "pair"} quote`,
+      error: `Need a price for ${sym || "this pair"}`,
     };
   }
 
@@ -350,34 +345,16 @@ export function buildStartSafeScalperPlan({
     ? String(strategySide).trim().toUpperCase()
     : "";
 
-  // Mentor Action is a soft preference — never force BUY into a clear SELL dump
-  // (that was the main “keeps hitting SL” pattern on gold).
-  let side = "";
-  if (mentorSide && barSide && mentorSide !== barSide) {
-    return {
-      skip: true,
-      source: START_OFFLINE_STRATEGY,
-      error: `Safe Scalper: mentor ${mentorSide} conflicts with M30 ${barSide} — skipped to avoid SL`,
-    };
-  }
-  side = barSide || mentorSide;
-  if (!side) {
-    return {
-      skip: true,
-      source: START_OFFLINE_STRATEGY,
-      error: `Safe Scalper: no clear M30 bias on ${
-        sym || "this pair"
-      } — try again shortly`,
-    };
-  }
-
+  // Always execute: mentor Action → tape bias → default BUY.
+  const side = mentorSide || barSide || "BUY";
   const risk = defaultStopDistance(sym, entry);
   const stopLoss = side === "BUY" ? entry - risk : entry + risk;
-  const safeLot = clampLot(Math.max(0.01, clampLot(lot) * 0.5));
   const threads = clampTrades(tradeCount);
-  const biasLabel = barSide
-    ? `M30/H1 EMA ${side}`
-    : `mentor ${mentorSide}`;
+  const biasLabel = mentorSide
+    ? `mentor ${mentorSide}`
+    : barSide
+      ? `M15/M30/H1/H4 ${side}`
+      : `${side} (scanner default)`;
 
   return {
     skip: false,
@@ -385,12 +362,19 @@ export function buildStartSafeScalperPlan({
     side,
     entry,
     stopLoss,
-    lot: safeLot,
+    lot: clampLot(lot),
     tradeCount: threads,
-    timeframe: "M30",
-    confidence: barSide ? 64 : 55,
-    analysis: `Safe Scalper: ${biasLabel}, half lot, ${threads} trade(s), filtered SL.`,
+    timeframe: "M15",
+    confidence: mentorSide ? 60 : barSide ? 62 : 55,
+    analysis: `Scanner START: ${biasLabel}, ${threads} trade(s)${
+      hasLiveQuote ? "" : " (estimate price)"
+    }.`,
   };
+}
+
+/** @deprecated use buildStartScannerFallbackPlan */
+export function buildStartSafeScalperPlan(args) {
+  return buildStartScannerFallbackPlan(args);
 }
 
 function buildScannerAlignedSetup({
@@ -398,13 +382,13 @@ function buildScannerAlignedSetup({
   side,
   entry,
   stopLoss,
-  timeframe = "M30",
+  timeframe = "M15",
   analysis = "",
   confidence = 70,
   source = "openai-symbol",
 } = {}) {
-  const tfRaw = normalizeChartTimeframe(timeframe || "M30");
-  const tf = ["M30", "H1", "H4"].includes(tfRaw) ? tfRaw : "M30";
+  const tfRaw = normalizeChartTimeframe(timeframe || "M15");
+  const tf = ["M15", "M30", "H1", "H4"].includes(tfRaw) ? tfRaw : "M15";
   // Always TP1 1:2 · TP2 1:3 · TP3 1:4 — even when AI labels the chart H4.
   const levels = buildSafeMultiTpLevels({
     symbol,
@@ -492,7 +476,7 @@ async function openPairSilent({
   let livePrice = estimateEntryForSymbol(symbol);
   let hasLiveQuote = false;
 
-  // Best-effort fast quote — Safe Scalper requires this when AI is down.
+  // Best-effort live quote — START still opens on estimate if quote is slow.
   try {
     const quote = await getSymbolQuote({
       accountId,
@@ -508,40 +492,45 @@ async function openPairSilent({
       hasLiveQuote = true;
     }
   } catch {
-    // keep estimate — AI path can still open; Safe Scalper will skip
+    // keep estimate — scanner START still executes
   }
 
-  // Always load M30 + H1 structure before opening — gates both AI and Safe Scalper
-  // so START does not BUY into a dump (screenshot: gold BUY then immediate SL).
+  // Soft tape hint for offline fallback only (never blocks / never toasts).
   let strategySide = "";
-  let m30Bars = null;
-  let h1Bars = null;
   try {
-    const [histM30, histH1] = await Promise.all([
+    const [histM15, histM30, histH1] = await Promise.all([
       getPriceHistory({
         accountId,
         symbol: tradeSymbol,
-        timeFrame: SAFE_SCALPER_HISTORY_TF,
+        timeFrame: 15,
         fast: true,
-        signal: abortSignalAfter(12_000),
+        signal: abortSignalAfter(10_000),
+      }).catch(() => null),
+      getPriceHistory({
+        accountId,
+        symbol: tradeSymbol,
+        timeFrame: 30,
+        fast: true,
+        signal: abortSignalAfter(10_000),
       }).catch(() => null),
       getPriceHistory({
         accountId,
         symbol: tradeSymbol,
         timeFrame: 60,
         fast: true,
-        signal: abortSignalAfter(12_000),
+        signal: abortSignalAfter(10_000),
       }).catch(() => null),
     ]);
-    m30Bars = histM30?.bars || null;
-    h1Bars = histH1?.bars || null;
     strategySide =
-      inferSafeScalperSideFromBars(m30Bars, h1Bars) || "";
-    if (histM30?.symbol) {
-      tradeSymbol = normalizeBrokerSymbol(histM30.symbol) || tradeSymbol;
+      inferSafeScalperSideFromBars(histM15?.bars || histM30?.bars, histH1?.bars) ||
+      "";
+    if (histM15?.symbol || histM30?.symbol) {
+      tradeSymbol =
+        normalizeBrokerSymbol(histM15?.symbol || histM30?.symbol) ||
+        tradeSymbol;
     }
   } catch {
-    // mentor Action or skip below
+    // fallback below still opens
   }
 
   let ai = null;
@@ -553,7 +542,7 @@ async function openPairSilent({
       timeframes: START_SCANNER_TIMEFRAMES,
     });
   } catch {
-    // Safe Scalper below — M30 EMA bias, never blind BUY on full size
+    // Scanner fallback below — still executes
   }
 
   let signal;
@@ -567,25 +556,21 @@ async function openPairSilent({
     ? String(ai.side).trim().toUpperCase()
     : "";
 
-  // If AI side fights the M30/H1 filter, drop AI and use Safe Scalper / skip.
-  // Blind AI BUY with no OHLC was a top cause of gold SL spam.
-  const aiAllowed =
-    Boolean(aiSide) && (!strategySide || aiSide === strategySide);
-
-  if (aiAllowed) {
+  // Scanner strategy wins — always open. No Safe Scalper skip / bias toast.
+  if (aiSide) {
     signal = buildScannerAlignedSetup({
       symbol: tradeSymbol,
       side: aiSide,
       entry: livePrice,
       stopLoss: ai.stopLoss,
-      timeframe: ai.timeframe || "M30",
+      timeframe: ai.timeframe || "M15",
       analysis: ai.analysis || "",
       confidence: ai.confidence || 65,
       source: ai.source || "openai-symbol",
     });
   } else {
     mode = START_OFFLINE_STRATEGY;
-    const plan = buildStartSafeScalperPlan({
+    const plan = buildStartScannerFallbackPlan({
       symbol: tradeSymbol,
       livePrice,
       preferredSide,
@@ -597,7 +582,7 @@ async function openPairSilent({
     if (plan.skip) {
       return {
         ok: false,
-        skipped: true,
+        skipped: false,
         symbol: tradeSymbol,
         opened: 0,
         tradeCount: 0,
@@ -607,7 +592,6 @@ async function openPairSilent({
       };
     }
     lot = plan.lot;
-    // Keep the pair’s selected thread count (e.g. 2 → TP1 + TP2).
     tradeCount = plan.tradeCount;
     signal = buildScannerAlignedSetup({
       symbol: tradeSymbol,

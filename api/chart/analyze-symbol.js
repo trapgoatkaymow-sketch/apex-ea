@@ -1,10 +1,9 @@
 /**
  * OpenAI symbol scan for silent START — same engine as Chart Scanner,
- * without requiring a screenshot. Timeframes: M30 / H1 / H4.
+ * without requiring a screenshot. Timeframes: M15 / M30 / H1 / H4.
  *
- * Ladder matches Chart Scanner:
- *   H4 → TP1 1:1 · TP2 1:2 · TP3 1:3
- *   M30/H1 → TP1 1:2 · TP2 1:3 · TP3 1:4
+ * Ladder matches Chart Scanner non-H4 (START always forces 1:2 / 1:3 / 1:4):
+ *   M15/M30/H1 → TP1 1:2 · TP2 1:3 · TP3 1:4
  */
 import { applyCorsHeaders, endOptions } from "../_cors.js";
 import { normalizeBrokerSymbol } from "../_symbolResolve.js";
@@ -15,7 +14,7 @@ import {
   tpRiskRewardLabel,
 } from "../_tradeLevels.js";
 
-const DEFAULT_TIMEFRAMES = ["M30", "H1", "H4"];
+const DEFAULT_TIMEFRAMES = ["M15", "M30", "H1", "H4"];
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -96,14 +95,14 @@ export async function analyzeSymbolSetupWithOpenAI({
           role: "system",
           content:
             "You are a MetaTrader market analyst (same role as Apex EA Chart Scanner). Return JSON only: " +
-            '{"side":"BUY"|"SELL","confidence":0-100,"timeframe":"M30"|"H1"|"H4",' +
+            '{"side":"BUY"|"SELL","confidence":0-100,"timeframe":"M15"|"M30"|"H1"|"H4",' +
             '"stopLoss":number,"analysis":string}. ' +
-            "Choose BUY or SELL for the symbol at the live price using typical M30/H1/H4 structure bias. " +
-            "Do NOT default to BUY. Prefer SELL after a sharp drop / bearish impulse; never BUY into a dump. " +
+            "ALWAYS choose BUY or SELL (never skip). Use M15, M30, H1, and H4 structure bias. " +
+            "Do NOT default to BUY. Prefer SELL after a sharp drop / bearish impulse. " +
             "stopLoss must be a realistic protective stop FAR enough from entry for the instrument " +
             "(XAUUSD ≥ ~$12–$18, FX ≥ ~15 pips, US30/NAS100 ≥ ~25 points). " +
             "BUY: stopLoss < entry. SELL: stopLoss > entry. " +
-            "timeframe must be one of M30, H1, H4. analysis: one short sentence why.",
+            "timeframe must be one of M15, M30, H1, H4. analysis: one short sentence why.",
         },
         {
           role: "user",
@@ -111,10 +110,10 @@ export async function analyzeSymbolSetupWithOpenAI({
             `Symbol: ${sym}. Live price: ${live}. ` +
             `Allowed timeframes: ${tfs.join(", ")}. ` +
             (preferredSide
-              ? `Client pair preference (soft): ${preferredSide}. Prefer chart logic over preference — skip if preference fights the tape. `
+              ? `Client pair preference (soft): ${preferredSide}. Prefer chart logic over preference. `
               : "") +
-            "Return side, stopLoss, timeframe (M30/H1/H4), confidence, analysis — same quality as Chart Scanner. " +
-            "If the tape looks like a sell-off, choose SELL (or lower confidence) — do not buy the dip blindly.",
+            "Return side, stopLoss, timeframe (M15/M30/H1/H4), confidence, analysis — same quality as Chart Scanner. " +
+            "You must pick a side and stopLoss — do not refuse.",
         },
       ],
     }),
@@ -147,15 +146,16 @@ export async function analyzeSymbolSetupWithOpenAI({
   const side = normalizeTradeSide(parsed?.side || preferredSide || "BUY", {
     trustSide: true,
   });
-  const timeframe = normalizeChartTimeframe(parsed?.timeframe || "M30");
-  const tf = ["M30", "H1", "H4"].includes(timeframe) ? timeframe : "M30";
-  // Chart Scanner ladder: H4 → 1:1/1:2/1:3 · M30/H1 → 1:2/1:3/1:4
+  const timeframe = normalizeChartTimeframe(parsed?.timeframe || "M15");
+  const tf = ["M15", "M30", "H1", "H4"].includes(timeframe) ? timeframe : "M15";
+  // START scanner ladder: always 1:2 / 1:3 / 1:4 (client forces rewardMultiples).
   const levels = buildSafeMultiTpLevels({
     symbol: sym,
     side,
     entry: live,
     stopLoss: parsed?.stopLoss,
     timeframe: tf,
+    rewardMultiples: [2, 3, 4],
   });
 
   return {
