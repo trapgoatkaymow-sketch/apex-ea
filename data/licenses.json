@@ -19,14 +19,14 @@
       "usedAt": 1790779782789,
       "deviceId": "bf64a128-1dd4-4e78-a37c-e16b9e8a12bb",
       "boundAt": 1790779782789,
-      "updatedAt": 1790828279799,
+      "updatedAt": 1790828282389,
       "scanReset": null,
-      "robotAccountId": "05dd96fe-b956-47c5-b6f0-b9431cbedb7d",
+      "robotAccountId": "a5cc26d3-21b8-4877-95de-5aabe03bc8c1",
       "robotLogin": "342148725",
-      "robotServer": "XMGlobalBVI-MT5 10",
-      "robotCompany": "XM (BVI) Limited",
+      "robotServer": "XMGlobal-MT5 10",
+      "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790780551984,
+      "robotConnectedAt": 1790827263624,
       "clientSymbols": [
         "XAUUSD"
       ],
@@ -27641,7 +27641,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=full",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
