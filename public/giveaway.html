@@ -518,27 +518,46 @@
 
       let purchasesEndAtMs = null;
 
+      function showOfferEndedUi() {
+        timerEl.classList.add("is-expired");
+        paintDigits(0);
+        timerLabel.textContent = "Offer ended";
+        timerEnds.textContent = "This special has closed";
+        endedBox.classList.remove("hidden");
+        buyForm.classList.add("hidden");
+        giveawayActive = false;
+        hidePayUi();
+      }
+
       function showCountdownEndedUi() {
-        // Display-only — keep checkout / PayPal working after the timer hits 0.
+        // Old urgency timer hit zero, but purchasesEndAt is still in the future.
         timerEl.classList.add("is-expired");
         paintDigits(0);
         timerLabel.textContent = "Offer ending soon";
         if (Number.isFinite(purchasesEndAtMs) && purchasesEndAtMs > Date.now()) {
           timerEnds.textContent =
             "Still open until " + formatEndLocal(purchasesEndAtMs) + " — complete checkout below";
-        } else {
-          timerEnds.textContent = "Still open — complete checkout below";
+          endedBox.classList.add("hidden");
+          buyForm.classList.remove("hidden");
+          giveawayActive = true;
+          return;
         }
-        endedBox.classList.add("hidden");
-        buyForm.classList.remove("hidden");
-        giveawayActive = true;
+        showOfferEndedUi();
       }
 
       function tickTimer() {
         if (!endsAtMs) return;
         const left = endsAtMs - Date.now();
         if (left <= 0) {
-          showCountdownEndedUi();
+          // Counting to purchasesEndAt — when it hits zero the special closes.
+          if (
+            Number.isFinite(purchasesEndAtMs) &&
+            endsAtMs === purchasesEndAtMs
+          ) {
+            showOfferEndedUi();
+          } else {
+            showCountdownEndedUi();
+          }
           return;
         }
         timerEl.classList.remove("is-expired");
@@ -900,11 +919,23 @@
           if (Number.isFinite(serverPurchasesEnd) && serverPurchasesEnd > 0) {
             purchasesEndAtMs = serverPurchasesEnd;
           }
-          if (Number.isFinite(serverEnd) && serverEnd > 0) {
-            // Align local urgency countdown to the shared display end time.
-            // Keep zeros if the display deadline is already past.
-            endsAtMs = serverEnd;
+          // Live countdown to the hard special end (purchasesEndAt) when set.
+          // Falls back to the older urgency countdownEndsAt otherwise.
+          const liveCountdownEnd =
+            Number.isFinite(purchasesEndAtMs) && purchasesEndAtMs > Date.now()
+              ? purchasesEndAtMs
+              : Number.isFinite(serverEnd) && serverEnd > 0
+                ? serverEnd
+                : 0;
+          if (liveCountdownEnd > 0) {
+            endsAtMs = liveCountdownEnd;
             timerSynced = true;
+            if (
+              Number.isFinite(purchasesEndAtMs) &&
+              endsAtMs === purchasesEndAtMs
+            ) {
+              timerLabel.textContent = "Offer ends in";
+            }
             tickTimer();
           }
           // Timer hitting zero must NOT hide checkout — payments stay open
