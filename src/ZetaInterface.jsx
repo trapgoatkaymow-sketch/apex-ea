@@ -177,6 +177,12 @@ export default function ZetaInterface() {
     if (zetaView === "home") setStartsLeft(loadStartsLeft());
   }, [zetaView, running]);
 
+  useEffect(() => {
+    const onReset = () => setStartsLeft(loadStartsLeft());
+    window.addEventListener("apexea-start-quota-reset", onReset);
+    return () => window.removeEventListener("apexea-start-quota-reset", onReset);
+  }, []);
+
   function toggleRun() {
     if (running) {
       setV2Running(false);

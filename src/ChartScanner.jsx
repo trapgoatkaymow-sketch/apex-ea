@@ -31,6 +31,10 @@ import {
   scanQuota,
 } from "./scanQuota.js";
 import {
+  applyRemoteStartGrant,
+  pickLatestStartGrant,
+} from "./startQuota.js";
+import {
   describeManagementPlan,
   loadTradeManagement,
 } from "./tradeManagement.js";
@@ -184,6 +188,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         .trim()
         .toLowerCase();
       let grant = pickLatestScanGrant(licenseKeys);
+      let startGrant = pickLatestStartGrant(licenseKeys);
       if (email.includes("@")) {
         try {
           const remote = await fetchLicensesByEmail(email);
@@ -195,20 +200,37 @@ export default function ChartScanner({ variant = "default", active = true }) {
           ) {
             grant = remoteGrant;
           }
+          const remoteStart = pickLatestStartGrant(remote);
+          if (
+            remoteStart &&
+            (!startGrant ||
+              Number(remoteStart.resetAt) > Number(startGrant.resetAt || 0))
+          ) {
+            startGrant = remoteStart;
+          }
         } catch {
           // offline — still try local licenseKeys grant
         }
       }
       if (cancelled) return;
-      if (grant) {
-        const result = applyRemoteScanGrant(grant);
-        if (result?.applied) {
-          setScansLeft(loadScansLeft(variant));
+      const scanResult = grant ? applyRemoteScanGrant(grant) : null;
+      const startResult = startGrant ? applyRemoteStartGrant(startGrant) : null;
+      if (scanResult?.applied || startResult?.applied) {
+        setScansLeft(loadScansLeft(variant));
+        if (scanResult?.applied && startResult?.applied) {
           showToast(
-            `Daily charts restored · I1 ${result.zeta} · I2 ${result.v2}`
+            `Daily charts + START restored · I1 ${scanResult.zeta} · I2 ${scanResult.v2} · START ${startResult.left}`
           );
-          return;
+        } else if (scanResult?.applied) {
+          showToast(
+            `Daily charts restored · I1 ${scanResult.zeta} · I2 ${scanResult.v2}`
+          );
+        } else {
+          showToast(
+            `START chances restored · ${startResult.left} left today`
+          );
         }
+        return;
       }
       setScansLeft(loadScansLeft(variant));
     }
