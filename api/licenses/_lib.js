@@ -1602,6 +1602,10 @@ export async function listLicenses(options = {}) {
 
   // Fill missing mentorName from the mentor portal username so client headers
   // show the mentor name even for older licenses.
+  // Portal list passes fillMentorNames:false — that mentors read was slowing every refresh.
+  if (options.fillMentorNames === false) {
+    return licenses;
+  }
   try {
     const missing = licenses.some(
       (row) => normalizeEmail(row.mentorEmail) && !String(row.mentorName || "").trim()

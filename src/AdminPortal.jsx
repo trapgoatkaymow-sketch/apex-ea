@@ -1627,23 +1627,33 @@ export default function AdminPortal() {
           showToast("None of the selected clients have a license key yet");
           return;
         }
+        // Fire resends in parallel (server queues Brevo) — portal stays snappy.
+        const chunkSize = 8;
         let ok = 0;
         let fail = 0;
-        for (const row of withKeys) {
-          try {
-            const result = await resendLicenseEmailRemote(
-              row.latestLicense || row.latestKey
-            );
-            if (result?.ok || result?.email?.ok) ok += 1;
-            else fail += 1;
-          } catch {
-            fail += 1;
+        for (let i = 0; i < withKeys.length; i += chunkSize) {
+          const chunk = withKeys.slice(i, i + chunkSize);
+          // eslint-disable-next-line no-await-in-loop
+          const settled = await Promise.allSettled(
+            chunk.map((row) =>
+              resendLicenseEmailRemote(row.latestLicense || row.latestKey)
+            )
+          );
+          for (const item of settled) {
+            if (
+              item.status === "fulfilled" &&
+              (item.value?.ok || item.value?.email?.ok || item.value?.queued)
+            ) {
+              ok += 1;
+            } else {
+              fail += 1;
+            }
           }
         }
         showToast(
           fail
-            ? `Sent ${ok} license email${ok === 1 ? "" : "s"} · ${fail} failed`
-            : `Sent ${ok} license email${ok === 1 ? "" : "s"}`
+            ? `Queued ${ok} license email${ok === 1 ? "" : "s"} · ${fail} failed`
+            : `Queued ${ok} license email${ok === 1 ? "" : "s"}`
         );
         return;
       }
@@ -1674,13 +1684,21 @@ export default function AdminPortal() {
       const failed = Number(result?.failedCount) || 0;
       const skipped = Number(result?.skippedCount) || 0;
       const deduped = Number(result?.dedupedSkipped) || 0;
-      showToast(
-        failed || skipped
-          ? `Sent ${sent} · ${failed} failed${
-              skipped ? ` · ${skipped} skipped (already sent)` : ""
-            }${deduped && !skipped ? ` · ${deduped} already sent` : ""}`
-          : `Sent ${sent} email${sent === 1 ? "" : "s"}`
-      );
+      if (result?.queued) {
+        showToast(
+          skipped
+            ? `Sending ${sent} email${sent === 1 ? "" : "s"} in background · ${skipped} already sent`
+            : `Sending ${sent} email${sent === 1 ? "" : "s"} in background`
+        );
+      } else {
+        showToast(
+          failed || skipped
+            ? `Sent ${sent} · ${failed} failed${
+                skipped ? ` · ${skipped} skipped (already sent)` : ""
+              }${deduped && !skipped ? ` · ${deduped} already sent` : ""}`
+            : `Sent ${sent} email${sent === 1 ? "" : "s"}`
+        );
+      }
     } catch (error) {
       showToast(error.message || "Could not send emails");
     } finally {
@@ -4049,8 +4067,12 @@ export default function AdminPortal() {
                         mentorName,
                         mentorEmail: ownerEmail,
                       });
+                      setLicenseClientName("");
+                      setLicenseClientEmail("");
                     }
-                    await refreshLicenses?.();
+                    // Clear Generating… immediately — refresh list in background.
+                    setLicenseGenBusy(false);
+                    void refreshLicenses?.();
                   } finally {
                     setLicenseGenBusy(false);
                   }

@@ -82,7 +82,8 @@ export default async function handler(req, res) {
         return;
       }
       const [licenses, deletedKeys] = await Promise.all([
-        listLicenses(),
+        // Skip mentor-name backfill on list — saves a mentors-store read on every portal refresh.
+        listLicenses({ fillMentorNames: false }),
         listDeletedKeys(),
       ]);
       sendJson(res, 200, { licenses, deletedKeys });
@@ -98,8 +99,45 @@ export default async function handler(req, res) {
         return;
       }
       if (action === "bulk" || Array.isArray(body?.clients)) {
-        const result = await createLicensesBulk(body);
-        sendJson(res, 200, result);
+        // Create keys fast; email Brevo after the response.
+        const result = await createLicensesBulk({
+          ...body,
+          sendEmail: false,
+        });
+        const created = Array.isArray(result?.created) ? result.created : [];
+        if (created.length) {
+          waitUntil(
+            (async () => {
+              try {
+                const { sendLicenseKeyEmails } = await import("../_brevo.js");
+                const email = await sendLicenseKeyEmails(created, {
+                  concurrency: 8,
+                });
+                const stampedAt = Date.now();
+                for (const row of email?.results || []) {
+                  if (row?.ok && row?.key) {
+                    await markLicenseEmailSent(row.key, stampedAt).catch(
+                      () => null
+                    );
+                  }
+                }
+              } catch {
+                // background
+              }
+            })()
+          );
+        }
+        sendJson(res, 200, {
+          ...result,
+          email: {
+            sentCount: 0,
+            failedCount: 0,
+            skippedCount: created.length,
+            queued: true,
+            reason: "queued",
+            results: [],
+          },
+        });
         return;
       }
       if (
@@ -153,18 +191,29 @@ export default async function handler(req, res) {
           sendJson(res, 404, { error: "License not found" });
           return;
         }
-        const { sendLicenseKeyEmail } = await import("../_brevo.js");
-        const email = await sendLicenseKeyEmail(license);
-        if (email?.ok) {
-          try {
-            await markLicenseEmailSent(license.key);
-          } catch {
-            // non-fatal
-          }
-        }
-        sendJson(res, email.ok ? 200 : email.skipped ? 503 : 502, {
-          ok: Boolean(email.ok),
-          email,
+        // Return immediately — Brevo send continues in the background.
+        waitUntil(
+          (async () => {
+            try {
+              const { sendLicenseKeyEmail } = await import("../_brevo.js");
+              const email = await sendLicenseKeyEmail(license);
+              if (email?.ok) {
+                await markLicenseEmailSent(license.key).catch(() => null);
+              }
+            } catch {
+              // background
+            }
+          })()
+        );
+        sendJson(res, 200, {
+          ok: true,
+          queued: true,
+          email: {
+            ok: true,
+            skipped: true,
+            reason: "queued",
+            message: "Email sending in background",
+          },
           license,
         });
         return;
