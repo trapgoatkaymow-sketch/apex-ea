@@ -67,10 +67,11 @@
  * Gen 109 — Keep AI BUY/SELL; repair wrong-side SL (stop BUY→SELL flip).
  * Gen 110 — Interface 2 tabbar Live Chart (between EA Chart and MetaTrader).
  * Gen 111 — Live Chart pulls MT5 account history (range) + Buy/Sell execute.
+ * Gen 112 — Analyze Market returns BUY/SELL on Live Chart (no scanner jump).
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 111;
+export const UI_SHELL_GENERATION = 112;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";

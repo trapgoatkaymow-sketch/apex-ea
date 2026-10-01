@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { apiUrl } from "./apiOrigin.js";
 import {
   buildBotTradeComment,
   checkTradeDirection,
@@ -8,6 +9,11 @@ import {
 } from "./metaApi.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { recordTrade } from "./dailyTradeHistory.js";
+import {
+  inferSafeScalperSideFromBars,
+  START_SCANNER_TIMEFRAMES,
+  START_TP_REWARD_MULTIPLES,
+} from "./silentStartOpen.js";
 import { useApp } from "./store.jsx";
 import {
   buildSafeMultiTpLevels,
@@ -112,7 +118,7 @@ function clampLot(value) {
   return Number(Math.min(1000, n).toFixed(4));
 }
 
-export default function LiveChartView({ active = true, onAnalyze } = {}) {
+export default function LiveChartView({ active = true } = {}) {
   const {
     mt5Session,
     appSymbols = [],
@@ -159,6 +165,8 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
     const meta = getSymbolMeta?.(symbols[0] || "XAUUSD") || {};
     return clampTradeThreadCount(meta.trades || 3);
   });
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
 
   useEffect(() => {
     if (!symbols.includes(symbol) && symbols[0]) setSymbol(symbols[0]);
@@ -169,6 +177,7 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
     setLotSize(clampLot(meta.lotSize));
     setTradeCount(clampTradeThreadCount(meta.trades || 3));
     setPan(0);
+    setAnalysis(null);
   }, [symbol, getSymbolMeta]);
 
   const tfMinutes =
@@ -287,9 +296,107 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
     return { w, priceH, rsiH, gap, slot, yPrice, xAt, min, max, totalH: priceH + gap + rsiH };
   }, [windowBars]);
 
-  function handleAnalyze() {
-    if (typeof onAnalyze === "function") onAnalyze({ symbol, timeframe: tfId });
-    else setV2View("scanner");
+  async function handleAnalyze() {
+    const tradeSymbol =
+      normalizeBrokerSymbol(tradeSymbolRef.current || symbol) || symbol;
+    const entry = toNum(quote?.price) ?? last?.close;
+    if (!connected) {
+      showToast?.("Connect MetaTrader to analyze the live market");
+      setV2View("metatrader");
+      return;
+    }
+    if (entry == null || entry <= 0) {
+      showToast?.("Wait for a live price, then analyze again");
+      return;
+    }
+
+    setAnalyzing(true);
+    setAnalysis(null);
+    try {
+      let side = "";
+      let stopLoss = null;
+      let confidence = 62;
+      let note = "";
+      let timeframe = tfId;
+      let source = "openai-symbol";
+
+      try {
+        const response = await fetch(apiUrl("/api/chart/analyze-symbol"), {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            symbol: tradeSymbol,
+            price: entry,
+            timeframes: START_SCANNER_TIMEFRAMES,
+          }),
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(data?.error || data?.message || "Analyze failed");
+        }
+        side =
+          String(data?.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
+        stopLoss = toNum(data?.stopLoss);
+        confidence = Math.max(
+          55,
+          Math.min(95, Math.round(Number(data?.confidence) || 70))
+        );
+        note = String(data?.analysis || "").trim();
+        timeframe = String(data?.timeframe || tfId).toUpperCase();
+        source = data?.source || "openai-symbol";
+      } catch {
+        // Offline / OpenAI down — M30 EMA bias from connected-account bars.
+        side = inferSafeScalperSideFromBars(bars) || "";
+        if (!side) {
+          throw new Error(
+            "No clear M30/H1/H4 direction right now — try again shortly"
+          );
+        }
+        const risk = defaultStopDistance(tradeSymbol, entry);
+        stopLoss = side === "BUY" ? entry - risk : entry + risk;
+        note = `Safe Scalper bias from connected ${tradeSymbol} bars (${side}).`;
+        timeframe = "M30";
+        source = "safe-scalper";
+        confidence = 60;
+      }
+
+      const levels = buildSafeMultiTpLevels({
+        symbol: tradeSymbol,
+        side,
+        entry,
+        stopLoss,
+        timeframe: timeframe === "H4" ? "H4" : "M30",
+        rewardMultiples: START_TP_REWARD_MULTIPLES,
+        trustSide: true,
+      });
+
+      const next = {
+        symbol: tradeSymbol,
+        side: levels.side,
+        entry: levels.entry,
+        stopLoss: levels.stopLoss,
+        takeProfit1: levels.takeProfit1,
+        takeProfit2: levels.takeProfit2,
+        takeProfit3: levels.takeProfit3,
+        confidence,
+        timeframe,
+        analysis: note || `${levels.side} ${tradeSymbol}`,
+        source,
+        at: Date.now(),
+      };
+      setAnalysis(next);
+      showToast?.(
+        `${next.side} ${tradeSymbol} · ${next.confidence}% · ${next.timeframe}`
+      );
+    } catch (err) {
+      showToast?.(err?.message || "Market analysis failed");
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
   function refresh() {
@@ -335,17 +442,34 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
       return;
     }
 
-    const risk = defaultStopDistance(tradeSymbol, entry);
-    const stopLoss = side === "BUY" ? entry - risk : entry + risk;
-    const levels = buildSafeMultiTpLevels({
-      symbol: tradeSymbol,
-      side,
-      entry,
-      stopLoss,
-      timeframe: tfId === "H4" ? "H4" : "M30",
-      rewardMultiples: [2, 3, 4],
-      trustSide: true,
-    });
+    // Prefer the latest Analyze Market setup when the side matches.
+    const useAnalysis =
+      analysis &&
+      analysis.side === side &&
+      normalizeBrokerSymbol(analysis.symbol) ===
+        normalizeBrokerSymbol(tradeSymbol);
+    const levels = useAnalysis
+      ? buildSafeMultiTpLevels({
+          symbol: tradeSymbol,
+          side,
+          entry,
+          stopLoss: analysis.stopLoss,
+          timeframe: analysis.timeframe === "H4" ? "H4" : "M30",
+          rewardMultiples: START_TP_REWARD_MULTIPLES,
+          trustSide: true,
+        })
+      : buildSafeMultiTpLevels({
+          symbol: tradeSymbol,
+          side,
+          entry,
+          stopLoss:
+            side === "BUY"
+              ? entry - defaultStopDistance(tradeSymbol, entry)
+              : entry + defaultStopDistance(tradeSymbol, entry),
+          timeframe: tfId === "H4" ? "H4" : "M30",
+          rewardMultiples: START_TP_REWARD_MULTIPLES,
+          trustSide: true,
+        });
     const threads = buildTpThreads({
       tradeCount: threadsN,
       lot,
@@ -784,6 +908,28 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
         ))}
       </div>
 
+      {analysis && (
+        <div
+          className={`lc-signal is-${String(analysis.side || "").toLowerCase()}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="lc-signal-top">
+            <strong>{analysis.side}</strong>
+            <span>
+              {analysis.confidence}% · {analysis.timeframe}
+            </span>
+          </div>
+          <p>{analysis.analysis}</p>
+          <div className="lc-signal-levels">
+            <span>SL {formatPrice(analysis.stopLoss, analysis.symbol)}</span>
+            <span>TP1 {formatPrice(analysis.takeProfit1, analysis.symbol)}</span>
+            <span>TP2 {formatPrice(analysis.takeProfit2, analysis.symbol)}</span>
+            <span>TP3 {formatPrice(analysis.takeProfit3, analysis.symbol)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="lc-trade-bar">
         <label className="lc-lot">
           <span>Lot</span>
@@ -813,16 +959,16 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
         </label>
         <button
           type="button"
-          className="lc-buy"
-          disabled={trading || !connected || busy}
+          className={`lc-buy${analysis?.side === "BUY" ? " is-suggested" : ""}`}
+          disabled={trading || !connected || busy || analyzing}
           onClick={() => executeSide("BUY")}
         >
           {trading ? "…" : "Buy"}
         </button>
         <button
           type="button"
-          className="lc-sell"
-          disabled={trading || !connected || busy}
+          className={`lc-sell${analysis?.side === "SELL" ? " is-suggested" : ""}`}
+          disabled={trading || !connected || busy || analyzing}
           onClick={() => executeSide("SELL")}
         >
           {trading ? "…" : "Sell"}
@@ -833,12 +979,12 @@ export default function LiveChartView({ active = true, onAnalyze } = {}) {
         type="button"
         className="lc-analyze"
         onClick={handleAnalyze}
-        disabled={trading}
+        disabled={trading || analyzing || !connected}
       >
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
           <path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z" />
         </svg>
-        Analyze Market
+        {analyzing ? "Analysing market…" : "Analyze Market"}
       </button>
       {!connected && (
         <p className="lc-hint">

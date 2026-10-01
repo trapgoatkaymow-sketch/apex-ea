@@ -13884,6 +13884,69 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
   box-shadow: 0 0 16px rgba(var(--lc-cyan-rgb), 0.45);
 }
 
+.lc-signal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(var(--lc-cyan-rgb), 0.35);
+}
+
+.lc-signal.is-buy {
+  border-color: rgba(74, 222, 128, 0.55);
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.15);
+}
+
+.lc-signal.is-sell {
+  border-color: rgba(248, 113, 113, 0.55);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.15);
+}
+
+.lc-signal-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lc-signal-top strong {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.lc-signal.is-buy .lc-signal-top strong {
+  color: #4ade80;
+}
+
+.lc-signal.is-sell .lc-signal-top strong {
+  color: #f87171;
+}
+
+.lc-signal-top span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.lc-signal p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.lc-signal-levels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .lc-trade-bar {
   display: grid;
   grid-template-columns: 1fr 1fr 1.1fr 1.1fr;
@@ -13937,6 +14000,13 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
   background: linear-gradient(180deg, #f87171, #dc2626);
   box-shadow: 0 6px 16px rgba(239, 68, 68, 0.28);
   color: #fff;
+}
+
+.lc-buy.is-suggested,
+.lc-sell.is-suggested {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 1px;
+  transform: scale(1.02);
 }
 
 .lc-buy:disabled,

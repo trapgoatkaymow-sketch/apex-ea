@@ -624,10 +624,7 @@ export default function V2Interface() {
 
         {v2View === "live-chart" && (
           <section className="v2-view is-active v2-view-live-chart">
-            <LiveChartView
-              active={v2View === "live-chart"}
-              onAnalyze={() => setV2View("scanner")}
-            />
+            <LiveChartView active={v2View === "live-chart"} />
           </section>
         )}
 
