@@ -201,6 +201,56 @@
       }
     },
     {
+      "key": "APEX-Z6SN-W4Q7",
+      "botId": "vector-x-pro-2-0-muljiz22",
+      "botName": "VECTOR X PRO 2.0",
+      "clientEmail": "mahlatsemokgokolo8@gmail.com",
+      "clientName": "Mahlatse",
+      "mainText": "Mahlatse",
+      "mentorEmail": "direkopano5@gmail.com",
+      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
+      "mentorName": "kopanofx",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "1m",
+      "expiresAt": 1793276484097,
+      "createdAt": 1790684484097,
+      "usedAt": 1790684653003,
+      "deviceId": "88a892d9-79dc-4556-8a6a-d50a76b2deb2",
+      "boundAt": 1790686790705,
+      "updatedAt": 1790855473538,
+      "scanReset": null,
+      "robotAccountId": "e4396ed2-0a7b-4e1a-a29f-49d766528071",
+      "robotLogin": "362210911",
+      "robotServer": "XMGlobal-MT5 12",
+      "robotCompany": "XM",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1790831273647,
+      "clientSymbols": [
+        "XAUUSD",
+        "GER40CASH",
+        "US100",
+        "GPBUSD",
+        "GOLD"
+      ],
+      "clientSymbolsUpdatedAt": 1790855473538,
+      "mentorSymbolsSyncedAt": 1790833804770,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "emailSentAt": 1790684517433,
+      "bot": {
+        "id": "vector-x-pro-2-0-muljiz22",
+        "name": "VECTOR X PRO 2.0",
+        "photo": "/api/licenses/photo?botId=vector-x-pro-2-0-muljiz22&v=1790795848529",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-QJW9-QD3B",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -392,8 +442,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -1370,7 +1421,9 @@
       "robotCompany": "XM Global Limited",
       "robotPlatform": "MT5",
       "robotConnectedAt": 1790798128263,
-      "clientSymbols": [],
+      "clientSymbols": [
+        "BTCUSD"
+      ],
       "clientSymbolsUpdatedAt": 1790855424648,
       "mentorSymbolsSyncedAt": 1790855094325,
       "purchaseCaptureId": null,
@@ -1531,9 +1584,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -1765,9 +1817,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "GBPUSD",
-          "EURUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -1867,56 +1919,6 @@
           "XAUUSD",
           "US30",
           ".US30."
-        ]
-      }
-    },
-    {
-      "key": "APEX-Z6SN-W4Q7",
-      "botId": "vector-x-pro-2-0-muljiz22",
-      "botName": "VECTOR X PRO 2.0",
-      "clientEmail": "mahlatsemokgokolo8@gmail.com",
-      "clientName": "Mahlatse",
-      "mainText": "Mahlatse",
-      "mentorEmail": "direkopano5@gmail.com",
-      "mentorId": "a545d3fb-a3ba-4a55-9c6c-24cd93aee1b8",
-      "mentorName": "kopanofx",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "1m",
-      "expiresAt": 1793276484097,
-      "createdAt": 1790684484097,
-      "usedAt": 1790684653003,
-      "deviceId": "88a892d9-79dc-4556-8a6a-d50a76b2deb2",
-      "boundAt": 1790686790705,
-      "updatedAt": 1790855412274,
-      "scanReset": null,
-      "robotAccountId": "e4396ed2-0a7b-4e1a-a29f-49d766528071",
-      "robotLogin": "362210911",
-      "robotServer": "XMGlobal-MT5 12",
-      "robotCompany": "XM",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1790831273647,
-      "clientSymbols": [
-        "XAUUSD",
-        "GER40CASH",
-        "US100",
-        "GPBUSD",
-        "GOLD"
-      ],
-      "clientSymbolsUpdatedAt": 1790855412274,
-      "mentorSymbolsSyncedAt": 1790833804770,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "emailSentAt": 1790684517433,
-      "bot": {
-        "id": "vector-x-pro-2-0-muljiz22",
-        "name": "VECTOR X PRO 2.0",
-        "photo": "/api/licenses/photo?botId=vector-x-pro-2-0-muljiz22&v=1790795848529",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
         ]
       }
     },
@@ -2941,8 +2943,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -3414,7 +3417,7 @@
       "clientSymbols": [
         "XAUUSDC"
       ],
-      "clientSymbolsUpdatedAt": 1790855327495,
+      "clientSymbolsUpdatedAt": 1790855376238,
       "mentorSymbolsSyncedAt": 1790855094325,
       "purchaseCaptureId": "5KG205623W975415X",
       "purchaseOrderId": "89020852W3737332K",
@@ -3718,9 +3721,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -3857,7 +3859,7 @@
         "BCHUSDM",
         "BTCUSDM"
       ],
-      "clientSymbolsUpdatedAt": 1790855292643,
+      "clientSymbolsUpdatedAt": 1790855368025,
       "mentorSymbolsSyncedAt": 1790855094325,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
@@ -4108,8 +4110,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -4895,8 +4898,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -5039,9 +5043,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -5283,8 +5286,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -5482,8 +5486,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -5669,8 +5674,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -5945,9 +5951,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY",
+          "GBPUSD",
+          "EURUSD"
         ]
       }
     },
@@ -6779,8 +6785,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -6827,8 +6834,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -7315,8 +7323,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -7411,8 +7420,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -7502,8 +7512,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -7997,9 +8008,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -8147,8 +8157,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -8243,8 +8254,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -8955,9 +8967,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -9195,9 +9206,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -9295,8 +9305,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -9390,9 +9401,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY",
+          "GBPUSD",
+          "EURUSD"
         ]
       }
     },
@@ -9532,9 +9543,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -10117,9 +10127,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY",
+          "GBPUSD",
+          "EURUSD"
         ]
       }
     },
@@ -10319,8 +10329,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -10365,8 +10376,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -10797,9 +10809,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -10843,9 +10854,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -11388,9 +11397,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "USDJPY",
-          "GBPUSD",
-          "EURUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -11819,8 +11828,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
@@ -12198,8 +12208,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "EURUSD",
+          "GBPUSD",
+          "BTCUSD"
         ]
       }
     },
