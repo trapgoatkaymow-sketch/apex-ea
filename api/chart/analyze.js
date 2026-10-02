@@ -90,7 +90,15 @@ function formatRiskReward(entry, stopLoss, takeProfit) {
  * Enforces instrument-class minimum stop distance so levels are not too close.
  */
 function ensureMultiTpLevels({ side, entry, stopLoss, symbol = "", timeframe = "M15" }) {
-  return buildSafeMultiTpLevels({ side, entry, stopLoss, symbol, timeframe });
+  // Keep AI BUY/SELL; repair a wrong-side SL (never flip to opposite entry).
+  return buildSafeMultiTpLevels({
+    side,
+    entry,
+    stopLoss,
+    symbol,
+    timeframe,
+    trustSide: true,
+  });
 }
 
 function buildNoChartResult() {
@@ -215,6 +223,7 @@ function normalizeSetup(parsed = {}, { catalog = [], hintSymbol = "" } = {}) {
     side: normalizeTradeSide(parsed?.side || parsed?.direction, {
       entry: parsed?.entry ?? parsed?.entryPrice,
       stopLoss: parsed?.stopLoss ?? parsed?.sl,
+      trustSide: true,
     }),
     entry: parsed?.entry ?? parsed?.entryPrice,
     stopLoss: parsed?.stopLoss ?? parsed?.sl,

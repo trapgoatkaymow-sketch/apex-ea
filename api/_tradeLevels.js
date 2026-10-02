@@ -26,7 +26,7 @@ function toFiniteNumber(value) {
  * trust stop geometry over a conflicting label (SL below entry = BUY) —
  * unless `trustSide` is set (live OrderSend must never flip Buy↔Sell).
  */
-export function normalizeTradeSide(side, { entry, stopLoss, trustSide = false } = {}) {
+export function normalizeTradeSide(side, { entry, stopLoss, trustSide = true } = {}) {
   const raw = String(side || "")
     .trim()
     .toUpperCase();
@@ -39,9 +39,9 @@ export function normalizeTradeSide(side, { entry, stopLoss, trustSide = false } 
 
   const e = toFiniteNumber(entry);
   const sl = toFiniteNumber(stopLoss);
+  // Legacy only: when trustSide is explicitly false, geometry may fill a missing label.
   if (!trustSide && e != null && sl != null && e !== sl) {
     const fromLevels = sl < e ? "BUY" : "SELL";
-    // Geometry wins when the text label conflicts or is missing.
     if (!dir || dir !== fromLevels) dir = fromLevels;
   }
 
@@ -302,10 +302,10 @@ export function buildSafeMultiTpLevels({
   /** Optional explicit R:R ladder, e.g. [2,3,4] for START / scanner non-H4. */
   rewardMultiples = null,
   /**
-   * When true, keep the labeled BUY/SELL and repair SL on the correct side.
-   * When false (default), stop geometry may flip a conflicting label.
+   * When true (default), keep the labeled BUY/SELL and repair SL on the correct side.
+   * When false, stop geometry may flip a conflicting label (legacy — avoid for OrderSend).
    */
-  trustSide = false,
+  trustSide = true,
 } = {}) {
   const dir = normalizeTradeSide(side, { entry, stopLoss, trustSide });
   let e = toFiniteNumber(entry);

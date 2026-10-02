@@ -144,7 +144,15 @@ export async function analyzeSymbolSetupWithOpenAI({
     parsed = {};
   }
 
-  const side = normalizeTradeSide(parsed?.side || preferredSide || "BUY", {
+  // Prefer model side; mentor Action is soft. Never invent BUY when model is silent —
+  // fall back to preferredSide, then leave empty for Safe Scalper offline path.
+  const rawSide = parsed?.side || preferredSide || "";
+  if (!String(rawSide).trim()) {
+    const err = new Error("No BUY/SELL from market analysis");
+    err.status = 422;
+    throw err;
+  }
+  const side = normalizeTradeSide(rawSide, {
     trustSide: true,
   });
   const timeframe = normalizeChartTimeframe(parsed?.timeframe || "M30");

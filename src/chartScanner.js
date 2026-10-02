@@ -221,10 +221,12 @@ function ensureCompleteSetup(partial = {}) {
     side: normalizeTradeSide(partial.side, {
       entry: partial.entry,
       stopLoss: partial.stopLoss,
+      trustSide: true,
     }),
     entry: partial.entry,
     stopLoss: partial.stopLoss,
     timeframe,
+    trustSide: true,
   });
 
   const analysis =

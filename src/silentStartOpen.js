@@ -244,8 +244,29 @@ function emaLast(values, period) {
  * Offline Safe Scalper bias from M30 OHLC (no OpenAI).
  * EMA9 vs EMA21 + last 3 candle body majority.
  */
+function sortBarsOldestFirst(bars = []) {
+  const rows = (Array.isArray(bars) ? bars : []).slice();
+  const timeMs = (value) => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value < 1e12 ? value * 1000 : value;
+    }
+    const ms = Date.parse(String(value));
+    return Number.isFinite(ms) ? ms : null;
+  };
+  rows.sort((a, b) => {
+    const at = timeMs(a?.time ?? a?.Time ?? a?.date);
+    const bt = timeMs(b?.time ?? b?.Time ?? b?.date);
+    if (at == null && bt == null) return 0;
+    if (at == null) return -1;
+    if (bt == null) return 1;
+    return at - bt;
+  });
+  return rows;
+}
+
 export function inferSafeScalperSideFromBars(bars = []) {
-  const rows = Array.isArray(bars) ? bars : [];
+  const rows = sortBarsOldestFirst(bars);
   const closes = rows
     .map((b) => toFiniteNumber(b?.close ?? b?.closePrice))
     .filter((n) => n != null && n > 0);
@@ -454,13 +475,43 @@ async function openPairSilent({
     // Safe Scalper below — M30 EMA bias, never blind BUY on full size
   }
 
+  // Always read live M30 bars — blind symbol-only AI invents opposite sides on BTC/XAU.
+  let strategySide = "";
+  try {
+    const hist = await getPriceHistory({
+      accountId,
+      symbol: tradeSymbol,
+      timeFrame: SAFE_SCALPER_HISTORY_TF,
+      fast: true,
+      signal: abortSignalAfter(12_000),
+    });
+    strategySide = inferSafeScalperSideFromBars(hist?.bars) || "";
+    if (hist?.symbol) {
+      tradeSymbol = normalizeBrokerSymbol(hist.symbol) || tradeSymbol;
+    }
+  } catch {
+    // mentor Action or AI-only below
+  }
+
   let signal;
   let mode = "openai";
+  const aiSide = ai?.side
+    ? normalizeTradeSide(ai.side, { trustSide: true })
+    : "";
+  const barSide = strategySide
+    ? normalizeTradeSide(strategySide, { trustSide: true })
+    : "";
 
-  if (ai?.side) {
+  // Prefer live M30 EMA when it clearly disagrees with chartless OpenAI,
+  // unless the mentor locked this pair to BUY or SELL only.
+  const useBarOverAi =
+    Boolean(aiSide && barSide && aiSide !== barSide) &&
+    (!preferredSide || preferredSide === barSide);
+
+  if (aiSide && !useBarOverAi) {
     signal = buildScannerAlignedSetup({
       symbol: tradeSymbol,
-      side: ai.side,
+      side: aiSide,
       entry: livePrice,
       stopLoss: ai.stopLoss,
       timeframe: ai.timeframe || "M30",
@@ -469,29 +520,12 @@ async function openPairSilent({
       source: ai.source || "openai-symbol",
     });
   } else {
-    mode = START_OFFLINE_STRATEGY;
-    let strategySide = "";
-    try {
-      const hist = await getPriceHistory({
-        accountId,
-        symbol: tradeSymbol,
-        timeFrame: SAFE_SCALPER_HISTORY_TF,
-        fast: true,
-        signal: abortSignalAfter(12_000),
-      });
-      strategySide = inferSafeScalperSideFromBars(hist?.bars) || "";
-      if (hist?.symbol) {
-        tradeSymbol = normalizeBrokerSymbol(hist.symbol) || tradeSymbol;
-      }
-    } catch {
-      // mentor Action or skip below
-    }
-
+    mode = useBarOverAi ? "safe-scalper-override" : START_OFFLINE_STRATEGY;
     const plan = buildStartSafeScalperPlan({
       symbol: tradeSymbol,
       livePrice,
       preferredSide,
-      strategySide,
+      strategySide: barSide || strategySide,
       lot,
       tradeCount,
       hasLiveQuote,
@@ -516,9 +550,11 @@ async function openPairSilent({
       entry: plan.entry,
       stopLoss: plan.stopLoss,
       timeframe: plan.timeframe,
-      analysis: plan.analysis,
+      analysis: useBarOverAi
+        ? `Safe Scalper overrode AI ${aiSide}→${plan.side} from live M30 EMA`
+        : plan.analysis,
       confidence: plan.confidence,
-      source: plan.source,
+      source: useBarOverAi ? "safe-scalper-override" : plan.source,
     });
   }
 

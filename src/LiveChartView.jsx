@@ -83,8 +83,17 @@ function rsi(closes, period = 14) {
   return out;
 }
 
+function barTimeMs(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  const ms = Date.parse(String(value));
+  return Number.isFinite(ms) ? ms : null;
+}
+
 function normalizeBars(rows) {
-  return (Array.isArray(rows) ? rows : [])
+  const bars = (Array.isArray(rows) ? rows : [])
     .map((row) => {
       const open = toNum(row?.open ?? row?.openPrice);
       const high = toNum(row?.high ?? row?.highPrice);
@@ -94,6 +103,15 @@ function normalizeBars(rows) {
       return { open, high, low, close, time: row?.time || null };
     })
     .filter(Boolean);
+  bars.sort((a, b) => {
+    const at = barTimeMs(a.time);
+    const bt = barTimeMs(b.time);
+    if (at == null && bt == null) return 0;
+    if (at == null) return -1;
+    if (bt == null) return 1;
+    return at - bt;
+  });
+  return bars;
 }
 
 function clampLot(value) {
