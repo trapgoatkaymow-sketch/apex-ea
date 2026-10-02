@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { endOptions } from "../_cors.js";
 import {
   extractCaptureClientName,
@@ -16,6 +17,7 @@ import {
   isGiveawayPurchaseCapture,
   isRobotPurchaseCapture,
 } from "./_robotPurchase.js";
+import { sendLicenseKeyEmailOnce } from "../licenses/_lib.js";
 import {
   setSignupAccessPaid,
   setSignupPremiumScanner,
@@ -222,6 +224,66 @@ export default async function handler(req, res) {
         });
         return;
       }
+      const emailSent = Boolean(
+        fulfilled.emailSent ||
+          fulfilled.emailResult?.ok ||
+          Number(fulfilled.license?.emailSentAt)
+      );
+      // Webhook is often the only fulfill path (buyer closes the tab). Keep
+      // retrying Brevo after the response — same as capture-order.
+      if (fulfilled?.key && fulfilled?.email && !emailSent) {
+        const mailLicense = {
+          ...(fulfilled.license || {}),
+          key: fulfilled.key,
+          clientEmail: fulfilled.email,
+          clientName: clientName || fulfilled.license?.clientName || "",
+          botName: fulfilled.license?.botName || "ZETA SCALPER AI",
+          mentorEmail:
+            fulfilled.license?.mentorEmail || "trapgoatkaymow@gmail.com",
+          mentorName: fulfilled.license?.mentorName || "Trapgoatkaymow",
+          duration: fulfilled.license?.duration || "lifetime",
+          purchaseSource:
+            fulfilled.license?.purchaseSource ||
+            (giveaway ? "paypal-giveaway-webhook" : "paypal-webhook"),
+          includeWhatsapp: true,
+          forceWhatsapp: true,
+        };
+        waitUntil(
+          (async () => {
+            let ok = false;
+            for (let attempt = 0; attempt < 5 && !ok; attempt += 1) {
+              try {
+                const again = await sendLicenseKeyEmailOnce(mailLicense, {
+                  force: true,
+                });
+                ok = Boolean(again?.ok || Number(again?.emailSentAt));
+                if (ok) break;
+              } catch {
+                // retry
+              }
+              try {
+                const { sendLicenseKeyEmail } = await import("../_brevo.js");
+                const direct = await sendLicenseKeyEmail(mailLicense);
+                if (direct?.ok) {
+                  try {
+                    const { markLicenseEmailSent } = await import(
+                      "../licenses/_lib.js"
+                    );
+                    await markLicenseEmailSent(mailLicense.key, Date.now());
+                  } catch {
+                    // non-fatal
+                  }
+                  ok = true;
+                  break;
+                }
+              } catch {
+                // retry
+              }
+              await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+            }
+          })()
+        );
+      }
       sendJson(res, 200, {
         ok: true,
         purpose: giveaway ? "giveaway" : "robot",
@@ -229,11 +291,7 @@ export default async function handler(req, res) {
         licenseKey: fulfilled.key,
         accessPaid: true,
         reused: Boolean(fulfilled.reused),
-        emailSent: Boolean(
-          fulfilled.emailSent ||
-            fulfilled.emailResult?.ok ||
-            Number(fulfilled.license?.emailSentAt)
-        ),
+        emailSent,
         eventType,
       });
       return;

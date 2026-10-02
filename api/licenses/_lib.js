@@ -61,12 +61,21 @@ export async function markLicenseEmailSent(rawKey, at = Date.now()) {
       if (idx < 0) return licenses;
       const prev = licenses[idx];
       if (prev.emailSentAt) {
-        updated = prev;
+        updated = {
+          ...prev,
+          emailSendingAt: null,
+        };
+        if (prev.emailSendingAt) {
+          licenses[idx] = updated;
+        } else {
+          updated = prev;
+        }
         return licenses;
       }
       updated = {
         ...prev,
         emailSentAt: Number(at) || Date.now(),
+        emailSendingAt: null,
         updatedAt: Date.now(),
       };
       licenses[idx] = updated;
@@ -200,7 +209,7 @@ export async function resendPurchaseLicenseEmails({
   };
 }
 
-/** Clear emailSentAt so a failed send can retry. */
+/** Clear in-flight / failed send markers so a later pass can retry. */
 async function clearLicenseEmailSent(rawKey) {
   const key = normalizeLicenseKey(rawKey);
   if (!key) return;
@@ -211,10 +220,12 @@ async function clearLicenseEmailSent(rawKey) {
       );
       if (idx < 0) return licenses;
       const prev = licenses[idx];
-      if (!prev.emailSentAt) return licenses;
+      // Never clear a real success stamp — only the in-flight claim.
+      if (Number(prev.emailSentAt)) return licenses;
+      if (!prev.emailSendingAt) return licenses;
       licenses[idx] = {
         ...prev,
-        emailSentAt: null,
+        emailSendingAt: null,
         updatedAt: Date.now(),
       };
       return licenses;
@@ -225,10 +236,14 @@ async function clearLicenseEmailSent(rawKey) {
 }
 
 /**
- * Claim the right to send this key's email (optimistic emailSentAt stamp).
+ * Claim the right to send this key's email (in-flight lock only).
+ * IMPORTANT: do NOT write emailSentAt here — that stamp means Brevo succeeded.
+ * A prior bug stamped emailSentAt before the send, so capture/webhook races
+ * treated failed Brevo attempts as "already emailed" and buyers got nothing.
+ *
  * Returns:
  *   { ok: true, claimed: true }  — this caller should send
- *   { ok: true, claimed: false } — another sender already stamped (skip)
+ *   { ok: true, claimed: false } — already sent, or another sender in-flight
  *   { ok: false, error }         — store write failed (must NOT skip send)
  */
 async function claimLicenseEmailSend(rawKey) {
@@ -236,6 +251,10 @@ async function claimLicenseEmailSend(rawKey) {
   if (!key) return { ok: false, claimed: false, error: "License key missing" };
   let claimed = false;
   let already = false;
+  let inflight = false;
+  const now = Date.now();
+  // Treat a fresh emailSendingAt (< 90s) as an in-flight send from another path.
+  const INFLIGHT_MS = 90_000;
   try {
     await mutateStore((licenses) => {
       const idx = licenses.findIndex(
@@ -243,16 +262,22 @@ async function claimLicenseEmailSend(rawKey) {
       );
       if (idx < 0) return licenses;
       const prev = licenses[idx];
-      if (prev.emailSentAt) {
+      if (Number(prev.emailSentAt)) {
         already = true;
+        claimed = false;
+        return licenses;
+      }
+      const sendingAt = Number(prev.emailSendingAt) || 0;
+      if (sendingAt && now - sendingAt < INFLIGHT_MS) {
+        inflight = true;
         claimed = false;
         return licenses;
       }
       claimed = true;
       licenses[idx] = {
         ...prev,
-        emailSentAt: Date.now(),
-        updatedAt: Date.now(),
+        emailSendingAt: now,
+        updatedAt: now,
       };
       return licenses;
     }, `license email claim: ${key}`);
@@ -264,6 +289,7 @@ async function claimLicenseEmailSend(rawKey) {
     };
   }
   if (already) return { ok: true, claimed: false, reason: "already-sent" };
+  if (inflight) return { ok: true, claimed: false, reason: "in-flight" };
   return { ok: true, claimed: Boolean(claimed) };
 }
 
@@ -307,15 +333,36 @@ export async function sendLicenseKeyEmailOnce(license, { force = false } = {}) {
     if (!force) {
       const claim = await claimLicenseEmailSend(key);
       if (claim.ok && !claim.claimed) {
-        return {
-          ok: true,
-          skipped: true,
-          reason: "already-sent",
-          emailSentAt: Date.now(),
-        };
+        if (claim.reason === "already-sent") {
+          return {
+            ok: true,
+            skipped: true,
+            reason: "already-sent",
+            emailSentAt: Date.now(),
+          };
+        }
+        // Another path is mid-send — wait for a real emailSentAt, else send.
+        for (let i = 0; i < 10; i += 1) {
+          await new Promise((r) => setTimeout(r, 300));
+          try {
+            const fresh = await findLicense(key);
+            if (Number(fresh?.emailSentAt)) {
+              return {
+                ok: true,
+                skipped: true,
+                reason: "already-sent",
+                emailSentAt: Number(fresh.emailSentAt),
+              };
+            }
+          } catch {
+            // keep waiting
+          }
+        }
+        // In-flight peer never stamped — send ourselves (force path below).
+      } else {
+        // Store claim failed (503/conflict) — still send Brevo; stamp after success.
+        didClaim = Boolean(claim.ok && claim.claimed);
       }
-      // Store claim failed (503/conflict) — still send Brevo; stamp after success.
-      didClaim = Boolean(claim.ok && claim.claimed);
     }
     const { sendLicenseKeyEmail } = await import("../_brevo.js");
     let email = null;
@@ -333,19 +380,15 @@ export async function sendLicenseKeyEmailOnce(license, { force = false } = {}) {
     }
     if (email?.ok) {
       const stamp = Date.now();
-      if (!didClaim || force) {
-        try {
-          await markLicenseEmailSent(key, stamp);
-        } catch {
-          // Brevo already delivered — non-fatal if stamp write races.
-        }
+      try {
+        await markLicenseEmailSent(key, stamp);
+      } catch {
+        // Brevo already delivered — non-fatal if stamp write races.
       }
       return { ...email, emailSentAt: stamp };
     }
     // Allow a later retry if Brevo failed / not configured.
-    if (didClaim && !force) {
-      await clearLicenseEmailSent(key);
-    }
+    await clearLicenseEmailSent(key);
     return email || { ok: false, error: "Email send failed" };
   } finally {
     licenseEmailInflight.delete(key);
@@ -2762,7 +2805,29 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     }
     return claimed;
   }
-  const clientEmail = normalizeEmail(current.clientEmail) || claimEmail;
+  // New unused keys bind to whichever email is activating — buyers often open
+  // the app under a different inbox than the PayPal checkout email.
+  const paidPurchase = Boolean(
+    current.purchasePaid ||
+      String(current.purchaseSource || "")
+        .toLowerCase()
+        .includes("paypal") ||
+      String(current.purchaseSource || "")
+        .toLowerCase()
+        .includes("giveaway")
+  );
+  const clientEmail =
+    (paidPurchase && claimEmail) ||
+    normalizeEmail(current.clientEmail) ||
+    claimEmail;
+  if (paidPurchase && claimEmail) {
+    try {
+      await upsertSignup(claimEmail, { status: "pending" });
+      await setSignupAccessPaid(claimEmail, true);
+    } catch {
+      // Access grant is best-effort; key bind still proceeds.
+    }
+  }
   const signup = clientEmail ? await findSignup(clientEmail) : null;
   const accessPaid = Boolean(signup?.accessPaid) && !signup?.accessBypassed;
   const alreadyUnlocked = Boolean(signup?.appAccessUnlockedAt);
@@ -2841,8 +2906,8 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
       updatedAt: now,
       commissionEligible,
       commissionReason,
-      // Stamp activating account so mentors still see who used the key.
-      clientEmail: row.clientEmail || claimEmail || "",
+      // Prefer the activating login email so a paid key works on any inbox.
+      clientEmail: claimEmail || row.clientEmail || "",
     };
     result = licenses[idx];
     return licenses;

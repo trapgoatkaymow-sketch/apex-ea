@@ -573,8 +573,17 @@
       paintDigits(endsAtMs - Date.now());
       setInterval(tickTimer, 250);
 
+      function showWhatsappLink() {
+        const waBox = document.getElementById("wa-box");
+        const waLink = document.getElementById("wa-link");
+        if (waBox) waBox.style.display = "block";
+        if (waLink) waLink.href = WHATSAPP_GROUP_URL;
+      }
+
       function showKey(key, { emailSent = false, email = "" } = {}) {
         const value = String(key || "").trim().toUpperCase();
+        // Always surface WhatsApp after a paid checkout — even if key mint lags.
+        showWhatsappLink();
         if (!value) return;
         const keyValue = document.getElementById("key-value");
         const keyHint = document.getElementById("key-hint");
@@ -618,10 +627,6 @@
             }
           });
         }
-        const waBox = document.getElementById("wa-box");
-        const waLink = document.getElementById("wa-link");
-        if (waBox) waBox.style.display = "block";
-        if (waLink) waLink.href = WHATSAPP_GROUP_URL;
         try {
           keybox.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } catch {
@@ -737,18 +742,27 @@
         if (!result) throw lastError || new Error("Could not finish payment");
         const licenseKey =
           result.licenseKey || result.license?.key || result.key || "";
-        setMsg(
-          result.reused
-            ? "Already paid — your license key is below (also emailed). App access is unlocked for this email."
-            : result.emailSent
-              ? "Paid! License key is below and emailed to " +
-                (result.email || email) +
-                "."
-              : "Paid! Your license key is below — copy it now. Email is also on the way to " +
-                (result.email || email) +
-                ".",
-          "ok"
-        );
+        if (licenseKey) {
+          setMsg(
+            result.reused
+              ? "Already paid — your license key is below (also emailed). App access is unlocked for this email."
+              : result.emailSent
+                ? "Paid! License key is below and emailed to " +
+                  (result.email || email) +
+                  "."
+                : "Paid! Your license key is below — copy it now. Email is also on the way to " +
+                  (result.email || email) +
+                  ".",
+            "ok"
+          );
+        } else {
+          setMsg(
+            "Paid! App access is unlocked. Your license key and WhatsApp link are being emailed to " +
+              (result.email || email) +
+              " — check spam. Join the WhatsApp group below.",
+            "ok"
+          );
+        }
         showKey(licenseKey, {
           emailSent: Boolean(result.emailSent),
           email: result.email || email,
