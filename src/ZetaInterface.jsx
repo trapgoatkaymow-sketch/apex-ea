@@ -23,6 +23,11 @@ import {
   consumeStartChance,
   loadStartsLeft,
 } from "./startQuota.js";
+import {
+  REQUEST_HOME_START_EVENT,
+  consumePendingHomeStart,
+  hasPendingHomeStart,
+} from "./scannerBusyPrompt.js";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import { useEffect, useRef, useState } from "react";
 
@@ -183,6 +188,22 @@ export default function ZetaInterface() {
     return () => window.removeEventListener("apexea-start-quota-reset", onReset);
   }, []);
 
+  // Scanner-busy popup → Home: press START once the home tab is visible.
+  useEffect(() => {
+    function tryPendingHomeStart() {
+      if (zetaView !== "home" || running) return;
+      if (!hasPendingHomeStart()) return;
+      consumePendingHomeStart();
+      window.setTimeout(() => {
+        document.getElementById("zeta-trade-btn")?.click();
+      }, 60);
+    }
+    tryPendingHomeStart();
+    window.addEventListener(REQUEST_HOME_START_EVENT, tryPendingHomeStart);
+    return () =>
+      window.removeEventListener(REQUEST_HOME_START_EVENT, tryPendingHomeStart);
+  }, [zetaView, running]);
+
   function toggleRun() {
     if (running) {
       setV2Running(false);
@@ -336,6 +357,7 @@ export default function ZetaInterface() {
                     !running && startsLeft <= 0 ? " is-exhausted" : ""
                   }`}
                   type="button"
+                  id="zeta-trade-btn"
                   onClick={toggleRun}
                   disabled={!running && startsLeft <= 0}
                   aria-label={

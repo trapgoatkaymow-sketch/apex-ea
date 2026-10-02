@@ -23,6 +23,11 @@ import {
   consumeStartChance,
   loadStartsLeft,
 } from "./startQuota.js";
+import {
+  REQUEST_HOME_START_EVENT,
+  consumePendingHomeStart,
+  hasPendingHomeStart,
+} from "./scannerBusyPrompt.js";
 import TopBar from "./TopBar.jsx";
 import TradeScriptOrb, { buildShortOpenTradeScript } from "./TradeScriptOrb.jsx";
 import V2ScannerPaywall from "./V2ScannerPaywall.jsx";
@@ -123,6 +128,22 @@ export default function V2Interface() {
     window.addEventListener("apexea-start-quota-reset", onReset);
     return () => window.removeEventListener("apexea-start-quota-reset", onReset);
   }, []);
+
+  // Scanner-busy popup → Home: press START once the home tab is visible.
+  useEffect(() => {
+    function tryPendingHomeStart() {
+      if (v2View !== "home" || v2Running) return;
+      if (!hasPendingHomeStart()) return;
+      consumePendingHomeStart();
+      window.setTimeout(() => {
+        document.getElementById("v2-trade-btn")?.click();
+      }, 60);
+    }
+    tryPendingHomeStart();
+    window.addEventListener(REQUEST_HOME_START_EVENT, tryPendingHomeStart);
+    return () =>
+      window.removeEventListener(REQUEST_HOME_START_EVENT, tryPendingHomeStart);
+  }, [v2View, v2Running]);
 
   const [floatSrc, setFloatSrc] = useState(
     () =>
