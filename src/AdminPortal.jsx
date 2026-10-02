@@ -19,6 +19,7 @@ import {
   WITHDRAW_MIN_KEYS,
 } from "./mentorsApi.js";
 import {
+  fetchLicenses,
   formatLicenseDuration,
   formatLicenseExpiry,
   isLicenseExpired,
@@ -90,6 +91,39 @@ function licensePaidLabel(row) {
   }
   if (amount) return `Paid $${amount.replace(/\.00$/, "")}`;
   return "Paid";
+}
+
+/** Unique real PayPal pays per calendar day (dedupe capture/order races). */
+function buildRealPaidKeysByDay(rows, { mentorEmail = "", superAdmin = false } = {}) {
+  const map = new Map();
+  const seenByDay = new Map();
+  const mentor = String(mentorEmail || "")
+    .trim()
+    .toLowerCase();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!isLicenseRealPaid(row)) continue;
+    if (!superAdmin) {
+      const owner = String(row?.mentorEmail || "")
+        .trim()
+        .toLowerCase();
+      if (!mentor || owner !== mentor) continue;
+    }
+    const day = licenseDayKey(
+      row?.purchasePaidAt || row?.createdAt || row?.updatedAt
+    );
+    if (!day) continue;
+    const id =
+      String(row?.purchaseCaptureId || "").trim() ||
+      String(row?.purchaseOrderId || "").trim() ||
+      String(row?.key || "").trim();
+    if (!id) continue;
+    if (!seenByDay.has(day)) seenByDay.set(day, new Set());
+    const seen = seenByDay.get(day);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    map.set(day, (map.get(day) || 0) + 1);
+  }
+  return map;
 }
 
 function monthCursorKey(year, monthIndex) {
@@ -313,6 +347,9 @@ export default function AdminPortal() {
     return { year: now.getFullYear(), month: now.getMonth() };
   });
   const [keysCalendarSelectedDay, setKeysCalendarSelectedDay] = useState("");
+  /** Full remote license roster for calendar (not the capped localStorage list). */
+  const [calendarLicenseRows, setCalendarLicenseRows] = useState(null);
+  const [calendarLicensesBusy, setCalendarLicensesBusy] = useState(false);
   const [licenseGenBusy, setLicenseGenBusy] = useState(false);
   const [licenseActionBusy, setLicenseActionBusy] = useState("");
   const [eaBusy, setEaBusy] = useState(false);
@@ -869,6 +906,27 @@ export default function AdminPortal() {
     if (!adminOpen || adminPage !== "top-mentors") return;
     void refreshLicenses?.();
   }, [adminOpen, adminPage, refreshLicenses]);
+
+  // Keys calendar needs the full remote roster — localStorage only keeps ~120 keys.
+  useEffect(() => {
+    if (!keysCalendarOpen || !adminSession) return undefined;
+    let cancelled = false;
+    setCalendarLicensesBusy(true);
+    fetchLicenses()
+      .then((rows) => {
+        if (cancelled) return;
+        setCalendarLicenseRows(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCalendarLicenseRows(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCalendarLicensesBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [keysCalendarOpen, adminSession]);
 
   useEffect(() => {
     if (!adminOpen || !adminSession?.email) return;
@@ -2937,14 +2995,16 @@ export default function AdminPortal() {
 
   // Plain compute (not useMemo): these sit after the auth early-return.
   // Hooks here blanked the portal on login ("Rendered more hooks than previous").
+  // Prefer full remote rows when calendar fetched them; count unique real PayPal pays.
   const keysGeneratedByDay = (() => {
-    const map = new Map();
-    for (const row of myLicenses || []) {
-      const key = licenseDayKey(row?.createdAt);
-      if (!key) continue;
-      map.set(key, (map.get(key) || 0) + 1);
-    }
-    return map;
+    const source =
+      Array.isArray(calendarLicenseRows) && calendarLicenseRows.length
+        ? calendarLicenseRows
+        : myLicenses;
+    return buildRealPaidKeysByDay(source, {
+      mentorEmail,
+      superAdmin: isSuperAdmin,
+    });
   })();
 
   const keysCalendarCells = buildMonthCells(
@@ -4273,8 +4333,10 @@ export default function AdminPortal() {
                         month: now.getMonth(),
                       });
                       setKeysCalendarSelectedDay(licenseDayKey(Date.now()));
+                      setCalendarLicenseRows(null);
                       setKeysCalendarOpen(true);
                     }}
+                    title="Real paid keys by day"
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -6744,7 +6806,9 @@ export default function AdminPortal() {
                   </button>
                 </div>
                 <p className="admin-card-meta">
-                  Tap a day to see how many license keys were generated.
+                  Real PayPal paid keys only (unique pays — not mentor free
+                  generates
+                  {calendarLicensesBusy ? " · loading live list…" : ""}).
                 </p>
 
                 <div className="admin-keys-cal-nav">
@@ -6819,11 +6883,11 @@ export default function AdminPortal() {
 
                 <div className="admin-keys-cal-summary">
                   <p>
-                    <strong>{keysCalendarMonthTotal}</strong> keys this month
+                    <strong>{keysCalendarMonthTotal}</strong> real paid this month
                   </p>
                   {keysCalendarSelectedDay ? (
                     <p>
-                      <strong>{keysCalendarSelectedCount}</strong> key
+                      <strong>{keysCalendarSelectedCount}</strong> real paid key
                       {keysCalendarSelectedCount === 1 ? "" : "s"} on{" "}
                       {(() => {
                         try {
