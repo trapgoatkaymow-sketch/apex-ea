@@ -7312,6 +7312,25 @@ html.is-native.is-paused .mt-platform-btn.is-active {
   line-height: 1.4;
 }
 
+.v2-add-pair-row {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.v2-pairs-sheet-link {
+  display: block;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .v2-sym-card {
   background: #fff;
   border-radius: 18px;
@@ -14147,7 +14166,28 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
   font-weight: 700;
 }
 
-.lc-analyze:disabled {
+.lc-add-pair {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px dashed rgba(var(--lc-cyan-rgb), 0.55);
+  background: rgba(34, 211, 238, 0.08);
+  color: #67e8f9;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lc-action-row {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.lc-analyze:disabled,
+.lc-execute:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -14171,8 +14211,34 @@ html.is-native.is-paused .tg-execute.is-executing .tg-execute-icon-spin {
   box-shadow: 0 8px 22px rgba(var(--lc-cyan-rgb), 0.35);
 }
 
-.lc-analyze:active {
+.lc-analyze.is-secondary {
+  background: rgba(34, 211, 238, 0.12);
+  color: #a5f3fc;
+  box-shadow: none;
+  border: 1px solid rgba(var(--lc-cyan-rgb), 0.35);
+}
+
+.lc-analyze:active,
+.lc-execute:active {
   transform: scale(0.98);
+}
+
+.lc-execute {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #4ade80, #16a34a);
+  color: #041016;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 22px rgba(34, 197, 94, 0.35);
 }
 
 .lc-hint {

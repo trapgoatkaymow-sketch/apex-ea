@@ -890,13 +890,16 @@ export function AppProvider({ children }) {
       }
       setEditingSymbol(clean);
       setPairsOpen(false);
-      // Full-page form on Interface 1 (same Save Symbol screen as the quotes edit).
-      setActiveInterface("zeta");
-      setZetaView("symbol-edit");
       setSymbolSetupOpen(false);
+      // Stay on the active interface — Interface 2 keeps its own symbol editor.
+      if (activeInterface === "v2") {
+        setV2View("symbol-edit");
+      } else {
+        setZetaView("symbol-edit");
+      }
       return true;
     },
-    [showToast]
+    [showToast, activeInterface]
   );
 
   useEffect(() => {
