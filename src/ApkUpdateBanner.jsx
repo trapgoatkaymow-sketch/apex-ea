@@ -70,7 +70,8 @@ export default function ApkUpdateBanner() {
       <div className="apk-update-banner__text">
         <strong>App update ready</strong>
         <span>
-          v{info.remoteName} — tap Install (do not delete the app)
+          v{info.remoteName} — tap Install over the current app. Never delete —
+          your license and bots stay.
         </span>
       </div>
       <div className="apk-update-banner__actions">

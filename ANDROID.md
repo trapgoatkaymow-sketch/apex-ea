@@ -15,6 +15,12 @@ Capacitor shell for the **client trading app only** (not the mentor portal).
 4. Share **https://www.apex-ea.com/android** (or `/download`). One tap installs
    over the old APK.
 
+### WhatsApp note for clients
+
+> Update is live — just close ApexEA and open it again. Do **not** delete the
+> app. Your license and bots stay. If you see **Install**, tap it (install over
+> the same app). Download link: https://www.apex-ea.com/android
+
 ## Runtime
 
 - Live UI: `https://www.apex-ea.com` (`capacitor.config.json` → `server.url`)
