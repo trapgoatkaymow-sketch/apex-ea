@@ -1,6 +1,56 @@
 {
   "licenses": [
     {
+      "key": "APEX-SNK3-UCYX",
+      "botId": "market-robber-v1-0-mujqt7si",
+      "botName": "Market Robber V1.0",
+      "clientEmail": "astrokauu@gmail.com",
+      "clientName": "Ntsako Lukhele",
+      "mainText": "Ntsako Lukhele",
+      "mentorEmail": "astrokauu@gmail.com",
+      "mentorId": "80ba51ea-74df-4929-97fa-afb5b14a11f8",
+      "mentorName": "XAU_STRIKER",
+      "used": false,
+      "commissionEligible": false,
+      "commissionReason": "",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790509087375,
+      "usedAt": null,
+      "deviceId": null,
+      "boundAt": null,
+      "updatedAt": 1790985339268,
+      "scanReset": null,
+      "startReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": 1790977292364,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "purchasePaid": false,
+      "purchasePaidAt": null,
+      "purchaseAmount": null,
+      "purchaseCurrency": null,
+      "emailSentAt": 1790849624166,
+      "bot": {
+        "id": "market-robber-v1-0-mujqt7si",
+        "name": "Market Robber V1.0",
+        "photo": "/api/licenses/photo?botId=market-robber-v1-0-mujqt7si&v=1790677832864",
+        "strategy": "scalper",
+        "symbols": [
+          "USDJPY.S",
+          "XAUUSD.S"
+        ]
+      }
+    },
+    {
       "key": "APEX-UKKK-FYXF",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -1720,56 +1770,6 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD"
-        ]
-      }
-    },
-    {
-      "key": "APEX-SNK3-UCYX",
-      "botId": "market-robber-v1-0-mujqt7si",
-      "botName": "Market Robber V1.0",
-      "clientEmail": "astrokauu@gmail.com",
-      "clientName": "Ntsako Lukhele",
-      "mainText": "Ntsako Lukhele",
-      "mentorEmail": "astrokauu@gmail.com",
-      "mentorId": "80ba51ea-74df-4929-97fa-afb5b14a11f8",
-      "mentorName": "XAU_STRIKER",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790509087375,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790985289997,
-      "scanReset": null,
-      "startReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1790977292364,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "purchasePaid": false,
-      "purchasePaidAt": null,
-      "purchaseAmount": null,
-      "purchaseCurrency": null,
-      "emailSentAt": 1790849624166,
-      "bot": {
-        "id": "market-robber-v1-0-mujqt7si",
-        "name": "Market Robber V1.0",
-        "photo": "/api/licenses/photo?botId=market-robber-v1-0-mujqt7si&v=1790677832864",
-        "strategy": "scalper",
-        "symbols": [
-          "USDJPY.S",
-          "XAUUSD.S"
         ]
       }
     },
@@ -3738,8 +3738,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790962059612",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "XAUUSDM"
+          "XAUUSD"
         ]
       }
     },
@@ -69843,7 +69842,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790962059612",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
