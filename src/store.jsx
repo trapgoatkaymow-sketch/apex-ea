@@ -2790,9 +2790,7 @@ export function AppProvider({ children }) {
         showToast(
           lookupFailed
             ? "Could not verify license — try again in a moment"
-            : accountEmail
-              ? "Invalid license key — use the same email you paid with, or paste the APEX key from your email"
-              : "Invalid license key — ask your mentor to generate a new one"
+            : "Invalid license key — paste the full APEX-XXXX-XXXX key from your email"
         );
         return false;
       }
@@ -2813,10 +2811,17 @@ export function AppProvider({ children }) {
           ((licenseEmail && accountEmail === licenseEmail) ||
             (mentorEmail && accountEmail === mentorEmail))
       );
+      // Unused keys may be activated under any signed-in email (rebinds on server).
+      const unusedKey = !entry.used && !String(entry.deviceId || "").trim();
       const approved = signup?.status === "approved";
       const paidSpecial = isAccountPaidOrBypassed(signup);
+      const paidKey = Boolean(
+        entry.purchasePaid ||
+          /paypal|giveaway|promo/i.test(String(entry.purchaseSource || ""))
+      );
       // Owning the key is enough after signup-store resets; paid $25 buyers skip admin approval.
-      if (!approved && !emailOwnsLicense && !paidSpecial) {
+      // New unused keys also skip the "same email" gate — they bind to this login.
+      if (!approved && !emailOwnsLicense && !paidSpecial && !(unusedKey && (paidKey || accountEmail))) {
         setLockStep("pending");
         showToast(
           signup?.status === "declined"
@@ -2824,6 +2829,10 @@ export function AppProvider({ children }) {
             : "Account must be approved by super admin first"
         );
         return false;
+      }
+      if (unusedKey && accountEmail && licenseEmail && accountEmail !== licenseEmail) {
+        // Will rebind on the server to this login.
+        emailOwnsLicense = true;
       }
 
       const deviceId = getOrCreateDeviceId();

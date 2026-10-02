@@ -2807,8 +2807,8 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     }
     return claimed;
   }
-  // New unused keys bind to whichever email is activating — buyers often open
-  // the app under a different inbox than the PayPal checkout email.
+  // Unused keys always bind to the activating login email — new keys must work
+  // on any inbox (PayPal email typo, different Google account, etc.).
   const paidPurchase = Boolean(
     current.purchasePaid ||
       String(current.purchaseSource || "")
@@ -2816,16 +2816,18 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
         .includes("paypal") ||
       String(current.purchaseSource || "")
         .toLowerCase()
-        .includes("giveaway")
+        .includes("giveaway") ||
+      String(current.purchaseSource || "")
+        .toLowerCase()
+        .includes("promo")
   );
-  const clientEmail =
-    (paidPurchase && claimEmail) ||
-    normalizeEmail(current.clientEmail) ||
-    claimEmail;
-  if (paidPurchase && claimEmail) {
+  const clientEmail = claimEmail || normalizeEmail(current.clientEmail) || "";
+  if (claimEmail) {
     try {
       await upsertSignup(claimEmail, { status: "pending" });
-      await setSignupAccessPaid(claimEmail, true);
+      if (paidPurchase) {
+        await setSignupAccessPaid(claimEmail, true);
+      }
     } catch {
       // Access grant is best-effort; key bind still proceeds.
     }
