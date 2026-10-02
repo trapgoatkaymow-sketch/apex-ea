@@ -47,6 +47,43 @@ export function formatLicenseKey(key) {
   return normalizeLicenseKey(key);
 }
 
+/** Pull an APEX-XXXX-XXXX token out of email copy / chat paste. */
+export function extractLicenseKeyFromInput(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return "";
+  const match = text.match(/APEX[-\s]?[A-Z0-9]{4}[-\s]?[A-Z0-9]{4}/i);
+  if (match) return formatLicenseKey(match[0]);
+  return formatLicenseKey(text);
+}
+
+function normalizeEmail(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isGiveawayPurchase(row) {
+  const src = String(row?.purchaseSource || "").toLowerCase();
+  return src.includes("giveaway") || src.includes("promo");
+}
+
+/** Best license for a paid special buyer when typed key does not match. */
+export function pickOwnedPurchaseLicense(rows = [], email = "") {
+  const account = normalizeEmail(email);
+  if (!account || !account.includes("@")) return null;
+  const owned = (Array.isArray(rows) ? rows : []).filter(
+    (row) => normalizeEmail(row?.clientEmail) === account
+  );
+  if (!owned.length) return null;
+  const giveaway = owned
+    .filter(isGiveawayPurchase)
+    .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+  if (giveaway.length) return giveaway[0];
+  return owned.sort(
+    (a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)
+  )[0];
+}
+
 const DELETED_KEYS_STORAGE = "apexea-deleted-license-keys-v1";
 
 function readDeletedKeyMap() {
@@ -485,7 +522,10 @@ export async function fetchLicense(key) {
       try {
         const data = await apiFetch(`?key=${encodeURIComponent(candidate)}`);
         const row = normalizeLicense(data?.license);
-        if (row) return row;
+        if (row) {
+          forgetDeletedLicenseKey(row.key);
+          return row;
+        }
       } catch {
         // try next lookalike
       }

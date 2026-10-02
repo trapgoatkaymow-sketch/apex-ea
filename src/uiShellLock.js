@@ -70,10 +70,11 @@
  * Gen 112 — Analyze Market returns BUY/SELL on Live Chart (no scanner jump).
  * Gen 113 — Number of Trades uncapped (up to 100); lot still total, split.
  * Gen 114 — Live Chart: mentor portal pairs only; remove Buy/Sell buttons.
+ * Gen 115 — Giveaway license: parse pasted keys, email fallback, server key match.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 114;
+export const UI_SHELL_GENERATION = 115;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -83,7 +84,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 114;
+export const UI_SHELL_FLOOR = 115;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

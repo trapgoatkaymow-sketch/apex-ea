@@ -1042,6 +1042,14 @@ export default function CoverLock() {
                   className="admin-input"
                   value={licenseKey}
                   onChange={(e) => setLicenseKey(e.target.value)}
+                  onBlur={(e) => {
+                    const next = String(e.target.value || "").trim();
+                    if (!next) return;
+                    import("./licensesApi.js").then(({ extractLicenseKeyFromInput }) => {
+                      const cleaned = extractLicenseKeyFromInput(next);
+                      if (cleaned && cleaned !== next) setLicenseKey(cleaned);
+                    });
+                  }}
                   placeholder="APEX-XXXX-XXXX"
                   autoCapitalize="characters"
                   required

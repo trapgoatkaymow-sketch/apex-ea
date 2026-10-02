@@ -458,6 +458,16 @@ export function licenseKeyVariants(rawKey) {
   return Array.from(out).filter(Boolean);
 }
 
+function licenseRowMatchesKey(row, rawKey) {
+  const variants = new Set(licenseKeyVariants(rawKey));
+  if (!variants.size) return false;
+  const key = normalizeLicenseKey(row?.key);
+  if (!key) return false;
+  const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+  const compactOf = (value) => normalizeLicenseKey(value).replace(/-/g, "");
+  return variants.has(key) || compactOf(key) === wantCompact;
+}
+
 function requireToken() {
   const token =
     process.env.SIGNUPS_GITHUB_TOKEN ||
@@ -2509,7 +2519,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   // Peek current license + signup before mutate so commission rules use paid/first-access.
   const currentList = await listLicenses({ preferFresh: true });
   const current =
-    currentList.find((row) => variants.includes(row.key)) || null;
+    currentList.find((row) => licenseRowMatchesKey(row, rawKey)) || null;
   if (!current) {
     const err = new Error("Invalid license key");
     err.status = 404;
@@ -2539,7 +2549,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     let reclaimed = current;
     const now = Date.now();
     await mutateStore((licenses) => {
-      const idx = licenses.findIndex((row) => variants.includes(row.key));
+      const idx = licenses.findIndex((row) => licenseRowMatchesKey(row, rawKey));
       if (idx < 0) return licenses;
       const row = licenses[idx];
       const next = {
@@ -2572,7 +2582,9 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     let claimed = current;
     if (!boundDevice) {
       await mutateStore((licenses) => {
-        const idx = licenses.findIndex((row) => variants.includes(row.key));
+        const idx = licenses.findIndex((row) =>
+          licenseRowMatchesKey(row, rawKey)
+        );
         if (idx < 0) return licenses;
         const row = licenses[idx];
         const next = {
@@ -2609,7 +2621,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     (row) =>
       normalizeEmail(row.clientEmail) === clientEmail &&
       row.used &&
-      !variants.includes(row.key)
+      !licenseRowMatchesKey(row, rawKey)
   );
   const commissionEligible = Boolean(
     clientEmail && accessPaid && !alreadyUnlocked && !priorUsed
@@ -2627,7 +2639,7 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   let result = null;
   const now = Date.now();
   await mutateStore((licenses) => {
-    const idx = licenses.findIndex((row) => variants.includes(row.key));
+    const idx = licenses.findIndex((row) => licenseRowMatchesKey(row, rawKey));
     if (idx < 0) {
       const err = new Error("Invalid license key");
       err.status = 404;

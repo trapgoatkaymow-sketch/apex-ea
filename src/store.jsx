@@ -33,7 +33,10 @@ import {
   mergeLicenses,
   markLicenseUsedRemote,
   normalizeLicenseKey,
+  extractLicenseKeyFromInput,
+  pickOwnedPurchaseLicense,
   licenseKeyVariants,
+  forgetDeletedLicenseKey,
   isLicenseExpired,
   resolveLicenseExpiry,
   photoFreshness,
@@ -49,6 +52,7 @@ import {
 import { getOrCreateDeviceId } from "./deviceId.js";
 import {
   clearDeviceAccess,
+  isAccountPaidOrBypassed,
   isSignupEntitled,
   rememberDeviceAccess,
 } from "./deviceAccess.js";
@@ -2707,14 +2711,15 @@ export function AppProvider({ children }) {
       const accountEmail = normalizeEmail(coverEmail);
       const signup = getSignup(accountEmail);
 
-      const key = normalizeLicenseKey(rawKey);
+      const parsedKey = extractLicenseKeyFromInput(rawKey);
+      const key = normalizeLicenseKey(parsedKey);
       if (!key) {
         showToast("Enter a license key");
         return false;
       }
 
-      const variants = licenseKeyVariants(rawKey);
-      const wantCompact = normalizeLicenseKey(rawKey).replace(/-/g, "");
+      const variants = licenseKeyVariants(parsedKey);
+      const wantCompact = normalizeLicenseKey(parsedKey).replace(/-/g, "");
       const matchKey = (item) => {
         const key = normalizeLicenseKey(item?.key);
         if (!key) return false;
@@ -2724,22 +2729,40 @@ export function AppProvider({ children }) {
         );
       };
       let entry = licenseKeys.find(matchKey) || null;
+      let usedEmailFallback = false;
 
       if (!entry) {
         try {
-          entry = await fetchLicense(rawKey);
-          if (entry) setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
+          entry = await fetchLicense(parsedKey);
+          if (entry) {
+            forgetDeletedLicenseKey(entry.key);
+            setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
+          }
         } catch {
           entry = null;
         }
       }
-      if (!entry && accountEmail) {
+      let emailRows = [];
+      if (accountEmail) {
         try {
-          const byEmail = await fetchLicensesByEmail(accountEmail);
-          setLicenseKeys((prev) => mergeLicenses(prev, byEmail));
-          entry = byEmail.find(matchKey) || null;
+          emailRows = await fetchLicensesByEmail(accountEmail);
+          if (emailRows.length) {
+            setLicenseKeys((prev) => mergeLicenses(prev, emailRows));
+          }
         } catch {
-          // continue
+          emailRows = [];
+        }
+      }
+      if (!entry && emailRows.length) {
+        entry = emailRows.find(matchKey) || null;
+      }
+      // Paid $25 special: wrong/missing paste still unlocks with their purchase key.
+      if (!entry && accountEmail) {
+        const owned = pickOwnedPurchaseLicense(emailRows, accountEmail);
+        if (owned) {
+          entry = owned;
+          usedEmailFallback = true;
+          forgetDeletedLicenseKey(owned.key);
         }
       }
       if (!entry) {
@@ -2747,14 +2770,29 @@ export function AppProvider({ children }) {
           const remote = await fetchLicenses();
           setLicenseKeys((prev) => mergeLicenses(prev, remote));
           entry = remote.find(matchKey) || null;
+          if (!entry && accountEmail) {
+            const owned = pickOwnedPurchaseLicense(remote, accountEmail);
+            if (owned) {
+              entry = owned;
+              usedEmailFallback = true;
+              forgetDeletedLicenseKey(owned.key);
+            }
+          }
         } catch {
           // keep local miss
         }
       }
 
       if (!entry) {
-        showToast("Invalid license key — ask your mentor to generate a new one");
+        showToast(
+          accountEmail
+            ? "Invalid license key — use the same email you paid with, or paste the APEX key from your email"
+            : "Invalid license key — ask your mentor to generate a new one"
+        );
         return false;
+      }
+      if (usedEmailFallback) {
+        showToast(`Using your purchase key ${entry.key}`);
       }
 
       if (isLicenseExpired(entry)) {
@@ -2771,8 +2809,9 @@ export function AppProvider({ children }) {
             (mentorEmail && accountEmail === mentorEmail))
       );
       const approved = signup?.status === "approved";
-      // Owning the key is enough after signup-store resets; otherwise require approval.
-      if (!approved && !emailOwnsLicense) {
+      const paidSpecial = isAccountPaidOrBypassed(signup);
+      // Owning the key is enough after signup-store resets; paid $25 buyers skip admin approval.
+      if (!approved && !emailOwnsLicense && !paidSpecial) {
         setLockStep("pending");
         showToast(
           signup?.status === "declined"
@@ -2787,7 +2826,7 @@ export function AppProvider({ children }) {
       // Always refresh from the server before the phone-lock check so a just
       // reactivated key is not blocked by a stale localStorage used/deviceId.
       try {
-        const fresh = await fetchLicense(rawKey);
+        const fresh = await fetchLicense(entry.key || parsedKey);
         if (fresh) {
           entry = fresh;
           setLicenseKeys((prev) => mergeLicenses(prev, [fresh]));
