@@ -384,8 +384,10 @@ export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
         isChart: true,
         symbol: null,
         suggestedSymbol: null,
-        message: "Scanner AI offline — use the robot START button on Home",
-        uiMessage: "Go to Home and tap START on your robot to trade normally.",
+        message:
+          "Scanner unavailable — many people are using it. Try again in a few minutes.",
+        uiMessage:
+          "Or go to Home and tap START on your robot to trade normally.",
         chartConfidence: 70,
         symbolConfidence: 0,
         confidence: 0,
@@ -508,10 +510,11 @@ export async function analyzeChartImage(
 
   // Live scanner only — send traders to robot START instead of inventing a setup.
   const err = new Error(
-    "Scanner AI offline — use the robot START button on Home"
+    "Scanner unavailable — many people are using it. Try again in a few minutes."
   );
   err.code = "ANALYSIS_UNAVAILABLE";
-  err.uiMessage = "Go to Home and tap START on your robot to trade normally.";
+  err.uiMessage =
+    "Or go to Home and tap START on your robot to trade normally.";
   err.quotaFallback = isOpenAiQuotaError(openAiError, openAiStatus);
   throw err;
 }

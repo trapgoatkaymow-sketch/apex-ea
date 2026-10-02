@@ -308,7 +308,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   function goHomeToStart() {
     setV2View("home");
     setZetaView?.("home");
-    showToast("Use START on your robot to trade normally");
+    showToast("Use START on your robot — or try the scanner again shortly");
   }
 
   async function applyDetectedSymbol(dataUrl) {
@@ -366,13 +366,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
       if (offline) {
         setDetectionMessage(
           detection?.message ||
-            "Scanner AI offline — use the robot START button on Home"
+            "Scanner unavailable — many people are using it. Try again in a few minutes."
         );
         setDetectionHint(
           detection?.uiMessage ||
-            "Go to Home and tap START on your robot to trade normally."
+            "Or go to Home and tap START on your robot to trade normally."
         );
-        showToast("Scanner offline — use START on Home");
+        showToast("Scanner busy — try again shortly, or use START on Home");
       } else if (status === CHART_DETECTION_STATUS.NO_CHART) {
         showToast("No trading chart detected");
       } else if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR) {
@@ -534,13 +534,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
         setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
         setDetectionMessage(
           error.message ||
-            "Scanner AI offline — use the robot START button on Home"
+            "Scanner unavailable — many people are using it. Try again in a few minutes."
         );
         setDetectionHint(
           error.uiMessage ||
-            "Go to Home and tap START on your robot to trade normally."
+            "Or go to Home and tap START on your robot to trade normally."
         );
-        showToast("Scanner offline — use START on Home");
+        showToast("Scanner busy — try again shortly, or use START on Home");
       } else {
         showToast(error.message || "Analyze failed");
       }
