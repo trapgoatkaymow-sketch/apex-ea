@@ -1868,9 +1868,23 @@ export async function getPriceHistoryToday(
   const rangeDays = Math.max(2, Math.min(30, Math.floor(Number(days) || 10)));
   const { from, to, fromMs, toMs } = historyRangeIso(rangeDays);
 
+  async function subscribeSymbol(symbolName) {
+    const name = String(symbolName || "").trim();
+    if (!name) return;
+    try {
+      await mt5Fetch(
+        `/Subscribe?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&interval=0`,
+        { timeoutMs: fast ? 3000 : 8000 }
+      );
+    } catch {
+      // optional — some brokers still return history without Subscribe
+    }
+  }
+
   async function historyOne(symbolName) {
     const name = String(symbolName || "").trim();
     if (!name) return null;
+    await subscribeSymbol(name);
     // Today first; ranged history for laptop charts / higher TFs / thin sessions.
     const paths = [
       `/PriceHistoryToday?id=${encodeURIComponent(id)}&symbol=${encodeURIComponent(name)}&timeFrame=${tf}`,
@@ -1913,13 +1927,7 @@ export async function getPriceHistoryToday(
     return null;
   }
 
-  try {
-    const direct = await historyOne(requested);
-    if (direct) return direct;
-  } catch {
-    // resolve spelling below
-  }
-
+  // Resolve broker catalog first so .US30. / US30Cash beat bare US30 probes.
   const { symbol: resolvedSym, accountSymbols } =
     await resolveTradeSymbolDetailed(id, requested);
   const probeSymbols = buildTradeSymbolProbe({
@@ -1927,9 +1935,28 @@ export async function getPriceHistoryToday(
     resolved: resolvedSym,
     accountSymbols,
   });
-  const maxProbes = fast ? 8 : 24;
+
+  try {
+    const first =
+      (resolvedSym &&
+        String(resolvedSym).toLowerCase() !== requested.toLowerCase() &&
+        (await historyOne(resolvedSym))) ||
+      (await historyOne(requested));
+    if (first) return first;
+  } catch {
+    // walk probes below
+  }
+
+  // Live Chart needs more index spellings than START's snappy quote path.
+  const maxProbes = fast ? 18 : 36;
   for (const alt of probeSymbols.slice(0, maxProbes)) {
     if (String(alt || "").toLowerCase() === requested.toLowerCase()) continue;
+    if (
+      resolvedSym &&
+      String(alt || "").toLowerCase() === String(resolvedSym).toLowerCase()
+    ) {
+      continue;
+    }
     try {
       const hit = await historyOne(alt);
       if (hit) return hit;

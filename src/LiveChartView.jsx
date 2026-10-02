@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiUrl } from "./apiOrigin.js";
 import { getPriceHistory, getSymbolQuote } from "./metaApi.js";
-import { normalizeBrokerSymbol } from "./brokerSymbol.js";
+import {
+  normalizeBrokerSymbol,
+  preferBrokerSymbolSpelling,
+  symbolCore,
+} from "./brokerSymbol.js";
 import { normalizeLicenseKey } from "./licensesApi.js";
 import {
   inferSafeScalperSideFromBars,
@@ -154,20 +158,19 @@ function resolveMentorPairs({
   if (!raw.length) raw = fromEa;
   if (!raw.length) raw = fromBot;
 
-  const out = [];
-  const seen = new Set();
+  // Collapse US30 + .US30. into one pill (prefer broker dotted spelling).
+  const byCore = new Map();
   for (const rawSym of raw) {
     const clean =
       normalizeSymbol?.(rawSym) ||
       normalizeBrokerSymbol(rawSym) ||
       String(rawSym || "").trim().toUpperCase();
     if (!clean) continue;
-    const key = clean.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(clean);
+    const core = symbolCore(clean) || clean.toUpperCase();
+    const prev = byCore.get(core);
+    byCore.set(core, prev ? preferBrokerSymbolSpelling(prev, clean) : clean);
   }
-  return out;
+  return Array.from(byCore.values());
 }
 
 export default function LiveChartView({ active = true } = {}) {
@@ -265,13 +268,14 @@ export default function LiveChartView({ active = true } = {}) {
             symbol,
             timeFrame: tfMinutes,
             days: 14,
-            fast: true,
+            // Chart load must walk .US30. / Cash spellings — not START's tiny probe budget.
+            fast: false,
           }),
           getSymbolQuote({
             accountId,
             symbol,
             side: "BUY",
-            fast: true,
+            fast: false,
           }).catch(() => null),
         ]);
         if (cancelled) return;

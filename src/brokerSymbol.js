@@ -50,3 +50,29 @@ export function normalizeBrokerSymbol(raw) {
 
   return `${lead}${core.toUpperCase()}${suffix}${trail}`;
 }
+
+/** Bare instrument family key — US30 / .US30. / US30Cash → US30 */
+export function symbolCore(raw) {
+  let s = normalizeBrokerSymbol(raw).replace(/^\.+/, "").replace(/\.+$/, "");
+  if (!s) return "";
+  s = s.replace(/\.(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT|FX|M|P|R|I|A|B|C|S)$/i, "");
+  s = s.replace(/(MICRO|MIC|PRO|RAW|ECN|STD|CASH|SPOT|FX)$/i, "");
+  s = s.replace(/([A-Z0-9])[MPABCRIS]$/i, "$1");
+  s = s.split(".")[0] || s;
+  return s.toUpperCase();
+}
+
+/** Prefer broker-native index spellings (.US30.) over bare duplicates. */
+export function preferBrokerSymbolSpelling(a, b) {
+  const left = normalizeBrokerSymbol(a);
+  const right = normalizeBrokerSymbol(b);
+  if (!left) return right;
+  if (!right) return left;
+  const leftDots = (left.match(/\./g) || []).length;
+  const rightDots = (right.match(/\./g) || []).length;
+  if (leftDots !== rightDots) return leftDots > rightDots ? left : right;
+  if (/cash/i.test(left) !== /cash/i.test(right)) {
+    return /cash/i.test(left) ? left : right;
+  }
+  return left.length >= right.length ? left : right;
+}

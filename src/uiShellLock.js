@@ -72,10 +72,11 @@
  * Gen 114 — Live Chart: mentor portal pairs only; remove Buy/Sell buttons.
  * Gen 115 — Giveaway license: parse pasted keys, email fallback, server key match.
  * Gen 116 — Android live UI shell + install-over APK update banner (no delete).
+ * Gen 117 — Live Chart US30/.US30. history: subscribe, index probes, dedupe pills.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 116;
+export const UI_SHELL_GENERATION = 117;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -85,7 +86,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 116;
+export const UI_SHELL_FLOOR = 117;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

@@ -166,6 +166,19 @@ export function candidateSymbols(symbol) {
   push(raw.replace(/\s+/g, "").replace(/[\/_\-]/g, ""));
 
   const cores = aliasesForCore(core);
+  // Indices often only exist as .US30. / .DE40. / US30Cash — try those before FX suffixes.
+  const looksIndex = /[0-9]/.test(core) || /^(DJ|NAS|SPX|DAX|GER|USTEC|FTSE|NIKKEI)/i.test(core);
+  if (looksIndex) {
+    for (const base of cores) {
+      push(`.${base}.`);
+      push(`.${base}`);
+      push(`${base}.`);
+      push(`${base}Cash`);
+      push(`${base}cash`);
+      push(`.${base}Cash`);
+      push(`${base}.cash`);
+    }
+  }
   // High-priority broker suffix spellings first — self-host GetQuote walk is capped.
   // FX brokers often expose EURUSDm / EURUSD.p / EURUSD. / EURUSDs — not bare EURUSD.
   for (const base of cores) {
