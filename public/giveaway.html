@@ -474,12 +474,16 @@
       const tS = document.getElementById("t-s");
       const endedBox = document.getElementById("ended-box");
       let giveawayActive = true;
+      // When server purchaseOpen is stale (packaged hard-close) but countdown
+      // still has time, create PayPal orders in the browser so checkout works.
+      let useClientPayPalOrder = false;
       // Provisional 17h urgency countdown until server syncs display end time.
       // Checkout stays open after this hits zero.
       const WHATSAPP_GROUP_URL =
         "https://chat.whatsapp.com/DxPeaEnyFRtDIlTWth4kLs?mode=gi_t";
       let endsAtMs = Date.now() + 17 * 60 * 60 * 1000;
       let timerSynced = false;
+      let purchasesEndAtMs = null;
 
       function setMsg(text, kind) {
         msg.textContent = text || "";
@@ -517,8 +521,6 @@
         tM.textContent = pad2(m);
         tS.textContent = pad2(s);
       }
-
-      let purchasesEndAtMs = null;
 
       function showOfferEndedUi() {
         timerEl.classList.add("is-expired");
@@ -650,7 +652,8 @@
       }
 
       async function api(path, body) {
-        const res = await fetch("/api/paypal" + path, {
+        // Absolute www API so Firebase-hosted emergency mirror still fulfills.
+        const res = await fetch("https://www.apex-ea.com/api/paypal" + path, {
           method: body ? "POST" : "GET",
           headers: {
             Accept: "application/json",
@@ -694,20 +697,64 @@
         });
       }
 
-      async function createGiveawayOrder() {
-        if (!giveawayActive) {
-          throw new Error("Checkout is not available right now — try again");
-        }
+      function giveawayOrderDetails() {
         const { name, email } = readBuyer();
         if (!name) throw new Error("Enter your name before paying");
         if (!email.includes("@")) throw new Error("Enter a valid email before paying");
-        const order = await api("/create-order", {
+        const nameHint = String(name || "")
+          .trim()
+          .replace(/[:|]/g, " ")
+          .slice(0, 40);
+        const customId = ("giveaway:" + email + (nameHint ? "|" + nameHint : "")).slice(
+          0,
+          127
+        );
+        return {
+          name,
           email,
-          clientName: name,
-          purpose: "giveaway",
-        });
-        if (!order?.id) throw new Error("Could not start checkout");
-        return order.id;
+          intent: "CAPTURE",
+          purchase_units: [
+            {
+              amount: { currency_code: "USD", value: "25.00" },
+              description:
+                "ApexEA Giveaway — App Access + ZETA SCALPER AI License",
+              custom_id: customId,
+            },
+          ],
+          application_context: {
+            shipping_preference: "NO_SHIPPING",
+            user_action: "PAY_NOW",
+            brand_name: "ZETA SCALPER AI",
+          },
+        };
+      }
+
+      async function createGiveawayOrder(data, actions) {
+        if (!giveawayActive) {
+          throw new Error("Checkout is not available right now — try again");
+        }
+        const details = giveawayOrderDetails();
+        // Prefer client-side order create when server hard-close is stale but
+        // the live countdown still has time (capture-order still fulfills).
+        if (useClientPayPalOrder && actions?.order?.create) {
+          return actions.order.create(details);
+        }
+        try {
+          const order = await api("/create-order", {
+            email: details.email,
+            clientName: details.name,
+            purpose: "giveaway",
+          });
+          if (!order?.id) throw new Error("Could not start checkout");
+          return order.id;
+        } catch (error) {
+          const msg = String(error?.message || "");
+          if (actions?.order?.create && /ended|410|not accept|closed/i.test(msg)) {
+            useClientPayPalOrder = true;
+            return actions.order.create(details);
+          }
+          throw error;
+        }
       }
 
       async function captureGiveawayOrder(orderId) {
@@ -782,9 +829,9 @@
             height: 50,
             ...(styleOverrides || {}),
           },
-          createOrder: async () => {
+          createOrder: async (data, actions) => {
             setMsg("Starting card checkout…");
-            return createGiveawayOrder();
+            return createGiveawayOrder(data, actions);
           },
           onApprove: async (data) => {
             setMsg("Payment received — unlocking access and creating your license…");
@@ -818,9 +865,9 @@
               },
               ".invalid": { color: "#ff6b6b" },
             },
-            createOrder: async () => {
+            createOrder: async (data, actions) => {
               setMsg("Starting card payment…");
-              return createGiveawayOrder();
+              return createGiveawayOrder(data, actions);
             },
             onApprove: async (data) => {
               setMsg("Card charged — unlocking access and creating your license…");
@@ -955,7 +1002,8 @@
             tickTimer();
           }
           // Timer hitting zero must NOT hide checkout — payments stay open
-          // until purchasesEndAt (if set).
+          // until purchasesEndAt (if set). If the server hard-close flag is
+          // stale but remainingMs / live countdown is still ahead, keep checkout.
           if (windowInfo.notStarted) {
             giveawayActive = false;
             buyForm.classList.add("hidden");
@@ -964,10 +1012,14 @@
             setMsg("This giveaway has not started yet. Check back soon.", "err");
             return;
           }
-          if (
+          const remainingMs = Number(windowInfo.remainingMs) || 0;
+          const countdownStillLive =
+            remainingMs > 0 ||
+            (Number.isFinite(liveCountdownEnd) && liveCountdownEnd > Date.now());
+          const serverSaysClosed =
             windowInfo.purchaseOpen === false ||
-            windowInfo.purchasesExpired === true
-          ) {
+            windowInfo.purchasesExpired === true;
+          if (serverSaysClosed && !countdownStillLive) {
             giveawayActive = false;
             buyForm.classList.add("hidden");
             hidePayUi();
@@ -979,7 +1031,16 @@
             setMsg("This giveaway special has ended.", "err");
             return;
           }
-          giveawayActive = windowInfo.purchaseOpen !== false;
+          // Stale packaged hard-close with live countdown → show pay UI anyway.
+          if (serverSaysClosed && countdownStillLive) {
+            useClientPayPalOrder = true;
+            endedBox.classList.add("hidden");
+            timerEl.classList.remove("is-expired");
+            timerLabel.textContent = "Offer ends in";
+            setMsg("");
+          }
+          giveawayActive = true;
+          buyForm.classList.remove("hidden");
 
           if (!cfg.ready || !clientId) {
             setMsg(
