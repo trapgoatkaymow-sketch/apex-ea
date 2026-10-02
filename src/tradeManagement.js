@@ -91,7 +91,7 @@ function roundLot(value, minLot = 0.01) {
 }
 
 /**
- * Soft ceiling for Number of Trades (lot is TOTAL, split across N).
+ * Soft ceiling for Number of Trades (exact position count).
  * High enough to feel unlimited for normal use; blocks absurd typos.
  */
 export const MAX_TP_THREADS = 100;
@@ -115,45 +115,25 @@ function targetForTradeIndex(index) {
 }
 
 /**
- * Split TOTAL lot across N threads. Never multiplies risk by thread count.
- * If total is too small for N×minLot, open as many min-lot tickets as fit
- * (remainder on the last), instead of silently collapsing to 1.
+ * Build one volume per trade thread.
+ * Lot size is PER position — selecting 40 trades opens 40 tickets at that lot.
+ * (Name kept for callers; behavior is exact count, not a total-lot split.)
  */
-export function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.01) {
+export function splitTotalLotAcrossThreads(
+  lotPerTrade,
+  threadCount,
+  minLot = 0.01
+) {
   const floor = Math.max(0.01, Number(minLot) || 0.01);
-  const total = roundLot(Math.max(floor, Number(totalVolume) || floor), floor);
-  let n = Math.max(1, Math.min(MAX_TP_THREADS, Math.floor(Number(threadCount) || 1)));
-  // e.g. 0.01 lot × 5 trades → only one 0.01 ticket can fit.
-  const maxByLot = Math.max(1, Math.floor((total + 1e-9) / floor));
-  n = Math.min(n, maxByLot);
-  if (n === 1) {
-    return [total];
-  }
-  const vols = [];
-  let allocated = 0;
-  for (let i = 0; i < n; i += 1) {
-    const isLast = i === n - 1;
-    let volume = isLast
-      ? roundLot(total - allocated, floor)
-      : roundLot(total / n, floor);
-    if (!isLast && allocated + volume > total) {
-      volume = roundLot(Math.max(0, total - allocated), floor);
-    }
-    if (volume > 0) {
-      vols.push(volume);
-      allocated = Math.round((allocated + volume) * 100) / 100;
-    }
-  }
-  if (!vols.length) return [total];
-  const sum = vols.reduce((acc, v) => acc + v, 0);
-  const drift = Math.round((total - sum) * 100) / 100;
-  if (drift !== 0) {
-    vols[vols.length - 1] = roundLot(
-      Math.max(floor, vols[vols.length - 1] + drift),
-      floor
-    );
-  }
-  return vols;
+  const per = roundLot(
+    Math.max(floor, Number(lotPerTrade) || floor),
+    floor
+  );
+  const n = Math.max(
+    1,
+    Math.min(MAX_TP_THREADS, Math.floor(Number(threadCount) || 1))
+  );
+  return Array.from({ length: n }, () => per);
 }
 
 /** TP thread → chart timeframe used by START / Scanner Execute. */
@@ -165,23 +145,39 @@ export const TP_THREAD_TIMEFRAMES = {
 
 /**
  * Build Execute/START threads from a multi-TP signal.
- * `lot` is the TOTAL size for the whole open — split across threads.
- * Thread map: TP1@M30 · TP2@H1 · TP3@H4.
+ * `lot` is the size of EACH position; open exactly `tradeCount` tickets.
+ * Thread map cycles TP1@M30 · TP2@H1 · TP3@H4. Missing TPs fall back to any
+ * available TP so the selected trade count is still honored.
  */
 export function buildTpThreads({ tradeCount = 1, lot = 0.01, signal = {} } = {}) {
   const count = clampTradeThreadCount(tradeCount);
+  const fallbackTp = ["takeProfit1", "takeProfit2", "takeProfit3", "takeProfit"]
+    .map((key) => ({ key, value: Number(signal?.[key]) }))
+    .find((row) => Number.isFinite(row.value) && row.value > 0);
   const pending = [];
   for (let i = 0; i < count; i += 1) {
     const { target, takeProfitKey, tradeNo } = targetForTradeIndex(i);
-    const takeProfit = Number(signal?.[takeProfitKey]);
-    if (!Number.isFinite(takeProfit) || takeProfit <= 0) continue;
+    let takeProfit = Number(signal?.[takeProfitKey]);
+    let resolvedKey = takeProfitKey;
+    let resolvedTarget = target;
+    if (!Number.isFinite(takeProfit) || takeProfit <= 0) {
+      if (!fallbackTp) continue;
+      takeProfit = fallbackTp.value;
+      resolvedKey = fallbackTp.key;
+      resolvedTarget =
+        fallbackTp.key === "takeProfit2"
+          ? "TP2"
+          : fallbackTp.key === "takeProfit3"
+            ? "TP3"
+            : "TP1";
+    }
     pending.push({
       index: i,
       tradeNo,
-      target,
-      takeProfitKey,
+      target: resolvedTarget,
+      takeProfitKey: resolvedKey,
       takeProfit,
-      timeframe: TP_THREAD_TIMEFRAMES[target] || "M30",
+      timeframe: TP_THREAD_TIMEFRAMES[resolvedTarget] || "M30",
       entry: signal.entry,
       stopLoss: signal.stopLoss,
       side: signal.side,
@@ -189,11 +185,9 @@ export function buildTpThreads({ tradeCount = 1, lot = 0.01, signal = {} } = {})
   }
   if (!pending.length) return [];
   const volumes = splitTotalLotAcrossThreads(lot, pending.length);
-  // Lot may only fit fewer min-lot tickets than requested trades.
-  const openCount = Math.min(pending.length, volumes.length);
-  return pending.slice(0, openCount).map((row, i) => ({
+  return pending.map((row, i) => ({
     ...row,
-    volume: volumes[i],
+    volume: volumes[i] ?? volumes[0],
   }));
 }
 

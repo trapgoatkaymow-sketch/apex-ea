@@ -1,7 +1,7 @@
 /**
  * Silent START → Chart Scanner style open (no scanner UI):
  *   15s “Analysing the chart” countdown → OpenAI scan (M30/H1/H4) → open
- *   Opens the pair's saved Number of Trades (lot is TOTAL, split across them).
+ *   Opens the pair's saved Number of Trades (each open uses saved lot size).
  *   TP targets cycle TP1@M30 · TP2@H1 · TP3@H4.
  *
  * START always uses the scanner non-H4 ladder:
@@ -308,7 +308,7 @@ export function inferSafeScalperSideFromBars(bars = []) {
  *  1. Live quote required — never trade on a table estimate
  *  2. Side from M30 EMA scalper (or mentor BUY/SELL if set)
  *  3. Half lot — cut size vs full AI open
- *  4. Honor pair Number of Trades (lot split across threads)
+ *  4. Honor pair Number of Trades (exact position count at lot size)
  *  5. Tight scalper SL from defaultStopDistance
  */
 export function buildStartSafeScalperPlan({
@@ -437,7 +437,7 @@ async function openPairSilent({
   const preferredSide =
     actionRaw === "SELL" ? "SELL" : actionRaw === "BUY" ? "BUY" : "";
   let lot = clampLot(meta.lotSize);
-  // Honor saved Number of Trades (lot is TOTAL — split across that many opens).
+  // Honor saved Number of Trades — open that many positions at lot size each.
   let tradeCount = clampTrades(meta.trades || START_THREAD_COUNT);
 
   let tradeSymbol = normalizeBrokerSymbol(symbol) || symbol;
@@ -597,7 +597,7 @@ async function openPairSilent({
     };
   }
 
-  // TP1@M30 · TP2@H1 · TP3@H4 cycling for N saved trades — lot is TOTAL, split.
+  // TP1@M30 · TP2@H1 · TP3@H4 cycling — open exactly N trades at lot each.
   const threads = buildTpThreads({ signal, lot, tradeCount });
   if (!threads.length) {
     return {

@@ -533,7 +533,7 @@ export default function ZetaInterface() {
                 </select>
               </label>
               <label className="v2-field">
-                <span>Number of Trades (lot is total)</span>
+                <span>Number of Trades (each uses lot size)</span>
                 <input
                   className="v2-input"
                   type="number"

@@ -54,7 +54,7 @@ const SCAN_STEP_GAP_MS = isNativeApp() ? 36 : 70;
 const SCAN_SETTLE_MS = isNativeApp() ? 220 : 500;
 const TRADE_SETTLE_MS = isNativeApp() ? 320 : 700;
 
-/** Number of trades — lot is TOTAL, split across N opens (soft cap via clampTradeThreadCount). */
+/** Number of trades — exact position count (each open uses lot size). */
 function clampTrades(value) {
   return clampTradeThreadCount(value);
 }
@@ -622,7 +622,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     const orbComment = isPremiumScanner
       ? `${tradeComment}|premium`.slice(0, 31)
       : tradeComment;
-    // `lot` is TOTAL size — buildTpThreads splits it across TP threads.
+    // `lot` is per position — buildTpThreads opens exactly tradeCount tickets.
     const threads = buildTpThreads({
       tradeCount,
       lot,

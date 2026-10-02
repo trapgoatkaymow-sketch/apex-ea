@@ -1063,53 +1063,32 @@ export async function disconnectAccount(accountId) {
 
 const MAX_MARKET_THREADS = 100;
 
-/** Split TOTAL lot across N OrderSends — never multiply risk by thread count. */
-function splitTotalLotAcrossThreads(totalVolume, threadCount, minLot = 0.01) {
+/**
+ * One volume per OrderSend.
+ * `volume` is PER position — `count` of 40 opens 40 tickets at that lot.
+ */
+function splitTotalLotAcrossThreads(lotPerTrade, threadCount, minLot = 0.01) {
   const floor = Math.max(0.01, Number(minLot) || 0.01);
-  const total = Number(totalVolume);
-  let n = Math.max(
-    1,
-    Math.min(MAX_MARKET_THREADS, Math.floor(Number(threadCount) || 1))
-  );
-  if (!Number.isFinite(total) || total <= 0) return [floor];
   const round = (v) => {
     const r = Math.round(Math.max(0, v) * 100) / 100;
     return r > 0 && r < floor ? floor : r;
   };
-  const sized = round(Math.max(floor, total));
-  const maxByLot = Math.max(1, Math.floor((sized + 1e-9) / floor));
-  n = Math.min(n, maxByLot);
-  if (n === 1) return [sized];
-  const vols = [];
-  let allocated = 0;
-  for (let i = 0; i < n; i += 1) {
-    const isLast = i === n - 1;
-    let volume = isLast
-      ? round(sized - allocated)
-      : round(sized / n);
-    if (!isLast && allocated + volume > sized) {
-      volume = round(Math.max(0, sized - allocated));
-    }
-    if (volume > 0) {
-      vols.push(volume);
-      allocated = Math.round((allocated + volume) * 100) / 100;
-    }
-  }
-  if (!vols.length) return [sized];
-  const sum = vols.reduce((a, b) => a + b, 0);
-  const drift = Math.round((sized - sum) * 100) / 100;
-  if (drift !== 0) {
-    vols[vols.length - 1] = round(
-      Math.max(floor, vols[vols.length - 1] + drift)
-    );
-  }
-  return vols;
+  const per = round(
+    Number.isFinite(Number(lotPerTrade)) && Number(lotPerTrade) > 0
+      ? Number(lotPerTrade)
+      : floor
+  );
+  const n = Math.max(
+    1,
+    Math.min(MAX_MARKET_THREADS, Math.floor(Number(threadCount) || 1))
+  );
+  return Array.from({ length: n }, () => per);
 }
 
 /**
  * Market order via GET /OrderSend
  * operation: Buy | Sell
- * Optional `count` opens up to MAX_MARKET_THREADS orders that SPLIT `volume` (total lot).
+ * Optional `count` opens that many orders, each at `volume` (lot per position).
  * Optional `takeProfits` maps thread 1→TP1, 2→TP2, 3+→TP3.
  */
 export async function placeMarketTrade({
@@ -1127,7 +1106,7 @@ export async function placeMarketTrade({
   const requested = normalizeBrokerSymbol(symbol);
   const lots = Number(volume);
   const action = String(side || "BUY").trim().toUpperCase() === "SELL" ? "Sell" : "Buy";
-  // Volume is TOTAL size — split across up to 100 threads (never × count).
+  // Volume is per position — open exactly `count` tickets (up to 100).
   const requestedTimes = Math.max(
     1,
     Math.min(MAX_MARKET_THREADS, Math.floor(Number(count) || 1))

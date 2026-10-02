@@ -85,11 +85,18 @@
  * Gen 127 — Keep product UI frozen; HTML boot stamp + no-delete Android updates.
  * Gen 128 — Android WebView: no cache, never stuck on localhost packaged UI.
  * Gen 129 — Number of Trades opens that many positions (lot size each).
+<<<<<<< HEAD
  * Gen 130 — START/Execute: live M30/H1 bias wins; no soft BUY into dumps.
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
 export const UI_SHELL_GENERATION = 130;
+=======
+ * Do not lower this number. Only raise it when intentionally shipping a
+ * new locked product UI.
+ */
+export const UI_SHELL_GENERATION = 129;
+>>>>>>> d795b939 (Open exact Number of Trades positions at lot size each)
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -99,7 +106,11 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
+<<<<<<< HEAD
 export const UI_SHELL_FLOOR = 130;
+=======
+export const UI_SHELL_FLOOR = 129;
+>>>>>>> d795b939 (Open exact Number of Trades positions at lot size each)
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

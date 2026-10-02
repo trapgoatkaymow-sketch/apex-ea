@@ -1052,7 +1052,7 @@ export async function handleMentorTrade(req, res) {
     ]
       .map((v) => Number(v))
       .filter((n) => Number.isFinite(n) && n > 0);
-    // Lot on the job is TOTAL size (server splits across N threads).
+    // Lot on the job is per position; tradesCount opens that many tickets.
     const tradesCount = Math.max(
       1,
       Math.min(
