@@ -403,13 +403,19 @@ export default function LiveChartView({ active = true } = {}) {
     setAnalyzing(true);
     setAnalysis(null);
     try {
-      let side = "";
+      // Live Chart already has OHLC — use that for BUY/SELL (does not need OpenAI).
+      // OpenAI analyze-symbol only gets symbol+price and often invents BUY on every pair.
+      const barSide = inferSafeScalperSideFromBars(bars) || "";
+      let side = barSide;
       let stopLoss = null;
-      let confidence = 62;
-      let note = "";
-      let timeframe = tfId;
-      let source = "openai-symbol";
+      let confidence = barSide ? 64 : 0;
+      let note = barSide
+        ? `Live chart bias from connected ${tradeSymbol} candles (${barSide}).`
+        : "";
+      let timeframe = tfId === "H4" || tfId === "H1" ? tfId : "M30";
+      let source = barSide ? "live-bars" : "";
 
+      // Optional OpenAI note — never override a clear candle bias with blind BUY.
       try {
         const response = await fetch(apiUrl("/api/chart/analyze-symbol"), {
           method: "POST",
@@ -421,37 +427,56 @@ export default function LiveChartView({ active = true } = {}) {
             symbol: tradeSymbol,
             price: entry,
             timeframes: START_SCANNER_TIMEFRAMES,
+            ...(barSide ? { side: barSide } : {}),
           }),
           cache: "no-store",
         });
         const data = await response.json().catch(() => null);
-        if (!response.ok) {
-          throw new Error(data?.error || data?.message || "Analyze failed");
+        if (response.ok && data) {
+          const aiSide =
+            String(data?.side || "").toUpperCase() === "SELL"
+              ? "SELL"
+              : String(data?.side || "").toUpperCase() === "BUY"
+                ? "BUY"
+                : "";
+          if (!side && aiSide) {
+            side = aiSide;
+            stopLoss = toNum(data?.stopLoss);
+            confidence = Math.max(
+              55,
+              Math.min(95, Math.round(Number(data?.confidence) || 70))
+            );
+            note = String(data?.analysis || "").trim();
+            timeframe = String(data?.timeframe || timeframe).toUpperCase();
+            source = data?.source || "openai-symbol";
+          } else if (side && aiSide && aiSide === side) {
+            confidence = Math.max(
+              confidence,
+              Math.max(55, Math.min(95, Math.round(Number(data?.confidence) || 70)))
+            );
+            const aiNote = String(data?.analysis || "").trim();
+            if (aiNote) note = aiNote;
+            stopLoss = toNum(data?.stopLoss) ?? stopLoss;
+            source = "live-bars+openai";
+          } else if (side && aiSide && aiSide !== side) {
+            // Keep candle side — ignore chartless OpenAI flip to BUY/SELL.
+            note = `${note} AI suggested ${aiSide}; kept live chart ${side}.`.trim();
+            source = "live-bars";
+          }
         }
-        side =
-          String(data?.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
-        stopLoss = toNum(data?.stopLoss);
-        confidence = Math.max(
-          55,
-          Math.min(95, Math.round(Number(data?.confidence) || 70))
-        );
-        note = String(data?.analysis || "").trim();
-        timeframe = String(data?.timeframe || tfId).toUpperCase();
-        source = data?.source || "openai-symbol";
       } catch {
-        // Offline / OpenAI down — M30 EMA bias from connected-account bars.
-        side = inferSafeScalperSideFromBars(bars) || "";
-        if (!side) {
-          throw new Error(
-            "No clear M30/H1/H4 direction right now — try again shortly"
-          );
-        }
+        // OpenAI optional — bars path is enough
+      }
+
+      if (!side) {
+        throw new Error(
+          "No clear direction on these candles — wait for more bars or try another TF"
+        );
+      }
+
+      if (stopLoss == null) {
         const risk = defaultStopDistance(tradeSymbol, entry);
         stopLoss = side === "BUY" ? entry - risk : entry + risk;
-        note = `Safe Scalper bias from connected ${tradeSymbol} bars (${side}).`;
-        timeframe = "M30";
-        source = "safe-scalper";
-        confidence = 60;
       }
 
       const levels = buildSafeMultiTpLevels({
@@ -480,7 +505,9 @@ export default function LiveChartView({ active = true } = {}) {
       };
       setAnalysis(next);
       showToast?.(
-        `${next.side} ${tradeSymbol} · ${next.confidence}% · ${next.timeframe}`
+        `${next.side} ${tradeSymbol} · ${next.confidence}% · ${
+          source.startsWith("live-bars") ? "live candles" : next.timeframe
+        }`
       );
     } catch (err) {
       showToast?.(err?.message || "Market analysis failed");
