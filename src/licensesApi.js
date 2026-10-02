@@ -516,9 +516,15 @@ export async function fetchLicenses() {
 }
 
 export async function fetchLicense(key) {
-  const variants = licenseKeyVariants(key);
+  // Server already expands O/0 lookalike variants — only hit the API with the
+  // formatted key (and compact once). Looping every variant caused 10–20s
+  // timeouts that clients showed as "Invalid license key".
+  const formatted = formatLicenseKey(key);
+  const compact = normalizeLicenseKey(formatted).replace(/-/g, "");
+  const candidates = [...new Set([formatted, compact].filter(Boolean))];
+  let lastError = null;
   for (let pass = 0; pass < 2; pass += 1) {
-    for (const candidate of variants) {
+    for (const candidate of candidates) {
       try {
         const data = await apiFetch(`?key=${encodeURIComponent(candidate)}`);
         const row = normalizeLicense(data?.license);
@@ -526,15 +532,22 @@ export async function fetchLicense(key) {
           forgetDeletedLicenseKey(row.key);
           return row;
         }
-      } catch {
-        // try next lookalike
+      } catch (error) {
+        lastError = error;
+        const status = Number(error?.status) || 0;
+        // Hard miss — stop; other spellings won't help if server variants already ran.
+        if (status === 404) return null;
+        // Network / timeout — retry once, then surface to activateLicense.
+        if (pass === 1 && candidate === candidates[candidates.length - 1]) {
+          throw error;
+        }
       }
     }
-    // Brief pause then retry — newly generated keys can lag one serverless hop.
     if (pass === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      await new Promise((resolve) => setTimeout(resolve, 400));
     }
   }
+  if (lastError && Number(lastError.status) !== 404) throw lastError;
   return null;
 }
 

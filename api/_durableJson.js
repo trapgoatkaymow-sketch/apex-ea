@@ -1019,6 +1019,35 @@ export async function durableRead(opts = {}) {
   }
 
   if (licensesViaGit) {
+    // Unlock / email lookup: Firebase (+ Blob) only. Cloning the repo via
+    // githubGetViaGit on every key check made Activate take 10–20s and clients
+    // timed out as "Invalid license key".
+    const fastLookup = Boolean(opts.fastLookup);
+    if (fastLookup) {
+      const pieces = [];
+      if (firebaseLicensesRaw != null) pieces.push(firebaseLicensesRaw);
+      if (blob && !blob.missing && blob.raw != null) pieces.push(blob.raw);
+      for (const file of localPaths) {
+        const local = readLocalFile(file);
+        if (local != null) pieces.push(local);
+      }
+      if (pieces.length) {
+        let merged = pieces[0];
+        for (let i = 1; i < pieces.length; i += 1) {
+          merged = mergeLicensesDocuments(
+            merged,
+            pieces[i],
+            "license fast lookup merge"
+          );
+        }
+        return {
+          raw: merged,
+          sha: firebaseLicensesEtag || null,
+          source: pieces.length > 1 ? "licenses-fast" : "firebase",
+        };
+      }
+    }
+
     const pieces = [];
     if (firebaseLicensesRaw != null) pieces.push(firebaseLicensesRaw);
     if (blob && !blob.missing && blob.raw != null) pieces.push(blob.raw);
@@ -1033,17 +1062,7 @@ export async function durableRead(opts = {}) {
       if (gh && !gh.missing && gh.raw != null) {
         githubResult = { raw: gh.raw, sha: gh.sha, source: "github" };
       }
-      const preferFresh = Boolean(opts.preferFresh);
-      if (!githubResult && preferFresh) {
-        const viaGit = await githubGetViaGit({
-          repo: githubRepo,
-          branch: githubBranch,
-          filePath: githubPath,
-        });
-        if (viaGit && !viaGit.missing && viaGit.raw != null) {
-          githubResult = { raw: viaGit.raw, sha: null, source: "github-git" };
-        }
-      }
+      // Prefer raw CDN over isomorphic-git clone — git clone blocks unlocks.
       if (!githubResult) {
         const raw = await githubGetRaw({
           repo: githubRepo,
@@ -1054,7 +1073,8 @@ export async function durableRead(opts = {}) {
           githubResult = { raw: raw.raw, sha: null, source: "github-raw" };
         }
       }
-      if (!githubResult) {
+      // Last resort only when nothing else has licenses (not on every preferFresh).
+      if (!githubResult && pieces.length === 0) {
         const viaGit = await githubGetViaGit({
           repo: githubRepo,
           branch: githubBranch,

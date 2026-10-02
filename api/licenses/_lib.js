@@ -1533,8 +1533,27 @@ function writeLocalStore(licenses, deletedKeys = memoryDeletedKeys) {
 
 async function readStore(options = {}) {
   const preferFresh = Boolean(options.preferFresh);
+  const fastLookup = Boolean(options.fastLookup);
   if (
     !preferFresh &&
+    !fastLookup &&
+    Array.isArray(memoryLicenses) &&
+    memoryLicenses.length > 0 &&
+    memoryLicensesAt > 0 &&
+    Date.now() - memoryLicensesAt < MEMORY_LICENSES_TTL_MS
+  ) {
+    return {
+      sha: null,
+      licenses: memoryLicenses.map((row) => ({ ...row })),
+      deletedKeys: normalizeDeletedKeys(memoryDeletedKeys),
+      remote: true,
+      source: "memory-cache",
+    };
+  }
+
+  // Warm memory is fine for unlock when preferFresh was just hydrated.
+  if (
+    fastLookup &&
     Array.isArray(memoryLicenses) &&
     memoryLicenses.length > 0 &&
     memoryLicensesAt > 0 &&
@@ -1562,6 +1581,7 @@ async function readStore(options = {}) {
     snapshotEnv: "LICENSES_SNAPSHOT_B64",
     localPaths: [TMP_FILE, BUNDLED_FILE],
     preferFresh,
+    fastLookup,
   });
   if (durable.raw != null) {
     try {
@@ -2527,15 +2547,16 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
 
   const claimEmail = normalizeEmail(email);
 
-  // Peek current license + signup before mutate so commission rules use paid/first-access.
-  const currentList = await listLicenses({ preferFresh: true });
-  const current =
-    currentList.find((row) => licenseRowMatchesKey(row, rawKey)) || null;
+  // Peek current license via fast Firebase path (avoid git-clone timeouts).
+  let current = await findLicense(rawKey);
   if (!current) {
     const err = new Error("Invalid license key");
     err.status = 404;
     throw err;
   }
+  // Only need the roster for commission "prior used" — use warm/fast store.
+  const currentList = (await readStore({ preferFresh: true, fastLookup: true }))
+    .licenses;
 
   const boundDevice = String(current.deviceId || "").trim();
   const licenseEmail = normalizeEmail(current.clientEmail);
@@ -3083,23 +3104,29 @@ export async function findLicense(rawKey) {
   if (!variants.size) return null;
   const compactOf = (value) => normalizeLicenseKey(value).replace(/-/g, "");
   const wantCompact = compactOf(rawKey);
-  // Unlock/generate must not use a stale memory TTL that predates a key written
-  // on another serverless instance.
-  const store = await readStore({ preferFresh: true });
-  const licenses = store.licenses;
-  const found =
-    licenses.find((row) => {
+  const matchRow = (licenses) =>
+    (Array.isArray(licenses) ? licenses : []).find((row) => {
       const key = normalizeLicenseKey(row.key);
       if (!key) return false;
       return variants.has(key) || compactOf(key) === wantCompact;
     }) || null;
+
+  // Fast path: Firebase/Blob only (no git clone) — unlock must feel instant.
+  let store = await readStore({ preferFresh: true, fastLookup: true });
+  let found = matchRow(store.licenses);
+  if (!found) {
+    // Rare: key only on GitHub Contents/raw — one fuller merge without git clone.
+    store = await readStore({ preferFresh: true, fastLookup: false });
+    found = matchRow(store.licenses);
+  }
   return found ? mergeQuotaGrantsIntoLicense(found) : null;
 }
 
 export async function findLicensesByEmail(email) {
   const key = normalizeEmail(email);
   if (!key) return [];
-  const store = await readStore({ preferFresh: true });
+  // Email unlock fallback — same fast Firebase path as findLicense.
+  const store = await readStore({ preferFresh: true, fastLookup: true });
   return store.licenses.filter((row) => normalizeEmail(row.clientEmail) === key);
 }
 

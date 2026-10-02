@@ -2731,6 +2731,7 @@ export function AppProvider({ children }) {
       let entry = licenseKeys.find(matchKey) || null;
       let usedEmailFallback = false;
 
+      let lookupFailed = false;
       if (!entry) {
         try {
           entry = await fetchLicense(parsedKey);
@@ -2738,12 +2739,18 @@ export function AppProvider({ children }) {
             forgetDeletedLicenseKey(entry.key);
             setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
           }
-        } catch {
+        } catch (error) {
+          lookupFailed = true;
           entry = null;
+          showToast(
+            error?.message ||
+              "Could not reach the license server — check connection and try again"
+          );
+          return false;
         }
       }
       let emailRows = [];
-      if (accountEmail) {
+      if (!entry && accountEmail) {
         try {
           emailRows = await fetchLicensesByEmail(accountEmail);
           if (emailRows.length) {
@@ -2765,29 +2772,15 @@ export function AppProvider({ children }) {
           forgetDeletedLicenseKey(owned.key);
         }
       }
-      if (!entry) {
-        try {
-          const remote = await fetchLicenses();
-          setLicenseKeys((prev) => mergeLicenses(prev, remote));
-          entry = remote.find(matchKey) || null;
-          if (!entry && accountEmail) {
-            const owned = pickOwnedPurchaseLicense(remote, accountEmail);
-            if (owned) {
-              entry = owned;
-              usedEmailFallback = true;
-              forgetDeletedLicenseKey(owned.key);
-            }
-          }
-        } catch {
-          // keep local miss
-        }
-      }
+      // Never pull the full 3MB roster on unlock — that timed out as "invalid".
 
       if (!entry) {
         showToast(
-          accountEmail
-            ? "Invalid license key — use the same email you paid with, or paste the APEX key from your email"
-            : "Invalid license key — ask your mentor to generate a new one"
+          lookupFailed
+            ? "Could not verify license — try again in a moment"
+            : accountEmail
+              ? "Invalid license key — use the same email you paid with, or paste the APEX key from your email"
+              : "Invalid license key — ask your mentor to generate a new one"
         );
         return false;
       }
