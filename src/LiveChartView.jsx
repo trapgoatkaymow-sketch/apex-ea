@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiUrl } from "./apiOrigin.js";
-import { getPriceHistory, getSymbolQuote } from "./metaApi.js";
+import { recordTrade } from "./dailyTradeHistory.js";
 import {
-  normalizeBrokerSymbol,
-  preferBrokerSymbolSpelling,
-  symbolCore,
-} from "./brokerSymbol.js";
-import { normalizeLicenseKey } from "./licensesApi.js";
+  buildScannerFillComment,
+  checkTradeDirection,
+  getPriceHistory,
+  getSymbolQuote,
+  placeTrade,
+} from "./metaApi.js";
+import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import {
   inferSafeScalperSideFromBars,
+  listAppPairs,
   START_SCANNER_TIMEFRAMES,
   START_TP_REWARD_MULTIPLES,
 } from "./silentStartOpen.js";
@@ -17,7 +20,10 @@ import {
   buildSafeMultiTpLevels,
   defaultStopDistance,
 } from "./tradeLevels.js";
-import { clampTradeThreadCount } from "./tradeManagement.js";
+import {
+  buildTpThreads,
+  clampTradeThreadCount,
+} from "./tradeManagement.js";
 
 const TIMEFRAMES = [
   { id: "M1", minutes: 1 },
@@ -120,102 +126,28 @@ function clampLot(value) {
   return Number(Math.min(1000, n).toFixed(4));
 }
 
-/** Mentor portal pairs for this EA — never a hardcoded global catalog. */
-function resolveMentorPairs({
-  activeBot,
-  eas = [],
-  licenseKeys = [],
-  normalizeSymbol,
-} = {}) {
-  const botId = String(activeBot?.id || "").trim();
-  const cover = normalizeLicenseKey(activeBot?.licenseKey);
-  const fromStamp = Array.isArray(activeBot?.mentorSymbols)
-    ? activeBot.mentorSymbols
-    : [];
-
-  let fromLicense = [];
-  const rows = (Array.isArray(licenseKeys) ? licenseKeys : []).filter(
-    (row) => String(row?.botId || row?.bot?.id || "").trim() === botId
-  );
-  const mine =
-    (cover && rows.find((row) => normalizeLicenseKey(row?.key) === cover)) ||
-    null;
-  if (mine && Array.isArray(mine?.bot?.symbols) && mine.bot.symbols.length) {
-    fromLicense = mine.bot.symbols;
-  } else {
-    const ranked = [...rows].sort((a, b) => {
-      const aSync = Number(a?.mentorSymbolsSyncedAt) || 0;
-      const bSync = Number(b?.mentorSymbolsSyncedAt) || 0;
-      if (aSync !== bSync) return bSync - aSync;
-      return (
-        Number(b?.updatedAt || b?.createdAt || 0) -
-        Number(a?.updatedAt || a?.createdAt || 0)
-      );
-    });
-    const best = ranked.find(
-      (row) => Array.isArray(row?.bot?.symbols) && row.bot.symbols.length
-    );
-    fromLicense = best?.bot?.symbols || [];
-  }
-
-  const ea = (Array.isArray(eas) ? eas : []).find(
-    (item) => String(item?.id || "").trim() === botId
-  );
-  const fromEa = Array.isArray(ea?.symbols) ? ea.symbols : [];
-  const fromBot = Array.isArray(activeBot?.symbols) ? activeBot.symbols : [];
-
-  let raw = fromStamp;
-  if (
-    fromLicense.length &&
-    (!fromStamp.length ||
-      (fromStamp.length > fromLicense.length && fromLicense.length <= 40))
-  ) {
-    raw = fromLicense;
-  }
-  if (!raw.length) raw = fromLicense;
-  if (!raw.length) raw = fromEa;
-  if (!raw.length) raw = fromBot;
-
-  // Collapse US30 + .US30. into one pill (prefer broker dotted spelling).
-  const byCore = new Map();
-  for (const rawSym of raw) {
-    const clean =
-      normalizeSymbol?.(rawSym) ||
-      normalizeBrokerSymbol(rawSym) ||
-      String(rawSym || "").trim().toUpperCase();
-    if (!clean) continue;
-    const core = symbolCore(clean) || clean.toUpperCase();
-    const prev = byCore.get(core);
-    byCore.set(core, prev ? preferBrokerSymbolSpelling(prev, clean) : clean);
-  }
-  return Array.from(byCore.values());
-}
-
 export default function LiveChartView({ active = true } = {}) {
   const {
     mt5Session,
     showToast,
     setV2View,
+    setPairsOpen,
     activeBot,
     eas = [],
-    licenseKeys = [],
-    normalizeSymbol,
+    appSymbols,
     getSymbolMeta,
     saveSymbolMeta,
+    publishOrbTrade,
+    clearOrbTrade,
   } = useApp();
   const accountId = String(mt5Session?.accountId || "").trim();
   const connected = Boolean(accountId);
   const tradeSymbolRef = useRef("");
 
+  // Same as Interface 1 — only pairs the user added (not a fixed mentor-only list).
   const symbols = useMemo(
-    () =>
-      resolveMentorPairs({
-        activeBot,
-        eas,
-        licenseKeys,
-        normalizeSymbol,
-      }),
-    [activeBot, eas, licenseKeys, normalizeSymbol]
+    () => listAppPairs(activeBot, eas, appSymbols),
+    [activeBot, eas, appSymbols]
   );
 
   const [symbol, setSymbol] = useState(symbols[0] || "");
@@ -238,6 +170,8 @@ export default function LiveChartView({ active = true } = {}) {
   });
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState(null);
+  const [executing, setExecuting] = useState(false);
+  const [execLabel, setExecLabel] = useState("");
 
   useEffect(() => {
     if (!symbols.length) {
@@ -542,6 +476,132 @@ export default function LiveChartView({ active = true } = {}) {
       .finally(() => setBusy(false));
   }
 
+  async function handleExecute() {
+    if (!analysis?.side || !analysis?.symbol) {
+      showToast?.("Analyze the market first");
+      return;
+    }
+    if (
+      analysis.takeProfit1 == null ||
+      analysis.takeProfit2 == null ||
+      analysis.takeProfit3 == null
+    ) {
+      showToast?.("Setup is missing TP1/TP2/TP3");
+      return;
+    }
+    if (!connected) {
+      showToast?.("Connect MetaTrader to execute");
+      setV2View("metatrader");
+      return;
+    }
+
+    const tradeSymbol =
+      normalizeBrokerSymbol(analysis.symbol || tradeSymbolRef.current || symbol) ||
+      symbol;
+    const side =
+      String(analysis.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
+    const lot = clampLot(lotSize);
+    const count = clampTradeThreadCount(tradeCount);
+
+    try {
+      const dir = await checkTradeDirection({
+        accountId,
+        symbol: tradeSymbol,
+        side,
+      });
+      if (dir && dir.ok === false) {
+        showToast?.(
+          dir.error || "Close open trades in the other direction first"
+        );
+        return;
+      }
+    } catch {
+      /* soft-fail — placeTrade still enforces */
+    }
+
+    const threads = buildTpThreads({
+      tradeCount: count,
+      lot,
+      signal: analysis,
+    });
+    if (!threads.length) {
+      showToast?.("Setup is missing TP prices for the selected trades");
+      return;
+    }
+
+    persistTradeSettings(lot, count);
+    setExecuting(true);
+    setExecLabel("Executing…");
+    const comment = buildScannerFillComment({
+      botName: activeBot?.name,
+      variant: "v2",
+      premium: true,
+    });
+    publishOrbTrade?.({
+      botName: activeBot?.name || "Bot",
+      comment,
+      symbol: tradeSymbol,
+      lotSize: lot,
+      action: side,
+      side,
+      entry: analysis.entry,
+      stopLoss: analysis.stopLoss,
+      takeProfit: analysis.takeProfit1,
+      target: "TP1",
+    });
+
+    let okCount = 0;
+    let lastError = "";
+    try {
+      for (let i = 0; i < threads.length; i += 1) {
+        const thread = threads[i];
+        setExecLabel(`Executing ${i + 1}/${threads.length}…`);
+        try {
+          const fill = await placeTrade({
+            accountId,
+            symbol: tradeSymbol,
+            volume: thread.volume,
+            side,
+            stopLoss: analysis.stopLoss,
+            takeProfit: thread.takeProfit,
+            region: mt5Session?.region || "",
+            comment,
+            source: "chart-scanner",
+          });
+          okCount += 1;
+          const filledSymbol = normalizeBrokerSymbol(
+            String(fill?.symbol || tradeSymbol).replace(/[-–—]+$/g, "")
+          );
+          recordTrade({
+            botName: activeBot?.name || "Bot",
+            symbol: filledSymbol || tradeSymbol,
+            lotSize: thread.volume,
+            action: side,
+            side,
+            comment,
+            entry: analysis.entry,
+            stopLoss: analysis.stopLoss,
+            takeProfit: thread.takeProfit,
+            target: thread.target,
+          });
+        } catch (err) {
+          lastError = err?.message || "Trade failed";
+        }
+      }
+      if (okCount > 0) {
+        showToast?.(
+          `${side} ${tradeSymbol} · ${okCount}/${threads.length} filled`
+        );
+      } else {
+        showToast?.(lastError || "Execute failed");
+        clearOrbTrade?.();
+      }
+    } finally {
+      setExecuting(false);
+      setExecLabel("");
+    }
+  }
+
   return (
     <section className="lc-view" aria-label="Live Chart">
       <header className="lc-header">
@@ -604,7 +664,7 @@ export default function LiveChartView({ active = true } = {}) {
         </div>
       </div>
 
-      <div className="lc-symbols" role="tablist" aria-label="Mentor pairs">
+      <div className="lc-symbols" role="tablist" aria-label="Your pairs">
         {symbols.length ? (
           symbols.map((s) => (
             <button
@@ -620,9 +680,16 @@ export default function LiveChartView({ active = true } = {}) {
           ))
         ) : (
           <p className="lc-symbols-empty">
-            No mentor pairs yet — your mentor adds them in the portal.
+            No pairs yet — add your own symbols like on Home.
           </p>
         )}
+        <button
+          type="button"
+          className="lc-add-pair"
+          onClick={() => setPairsOpen?.(true)}
+        >
+          + Add
+        </button>
       </div>
 
       <div className="lc-chart-card">
@@ -908,7 +975,7 @@ export default function LiveChartView({ active = true } = {}) {
             type="text"
             inputMode="decimal"
             value={lotSize}
-            disabled={!symbol || analyzing}
+            disabled={!symbol || analyzing || executing}
             onChange={(e) =>
               setLotSize(e.target.value.replace(/[^\d.,]/g, ""))
             }
@@ -922,7 +989,7 @@ export default function LiveChartView({ active = true } = {}) {
             min="1"
             max="100"
             value={tradeCount}
-            disabled={!symbol || analyzing}
+            disabled={!symbol || analyzing || executing}
             onChange={(e) =>
               setTradeCount(clampTradeThreadCount(e.target.value))
             }
@@ -931,20 +998,36 @@ export default function LiveChartView({ active = true } = {}) {
         </label>
       </div>
 
-      <button
-        type="button"
-        className="lc-analyze"
-        onClick={handleAnalyze}
-        disabled={analyzing || !connected || !symbol}
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-          <path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z" />
-        </svg>
-        {analyzing ? "Analysing market…" : "Analyze Market"}
-      </button>
+      <div className="lc-action-row">
+        <button
+          type="button"
+          className={`lc-analyze${analysis ? " is-secondary" : ""}`}
+          onClick={handleAnalyze}
+          disabled={analyzing || executing || !connected || !symbol}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z" />
+          </svg>
+          {analyzing
+            ? "Analysing market…"
+            : analysis
+              ? "Analyze again"
+              : "Analyze Market"}
+        </button>
+        {analysis ? (
+          <button
+            type="button"
+            className="lc-execute"
+            onClick={handleExecute}
+            disabled={executing || analyzing || !connected}
+          >
+            {execLabel || `Execute ${analysis.side}`}
+          </button>
+        ) : null}
+      </div>
       {!symbols.length ? (
         <p className="lc-hint">
-          Live Chart lists only pairs your mentor added for this EA in the portal.
+          Add your own symbols with + Add — same as Interface 1 pairs.
         </p>
       ) : null}
       {!connected && (

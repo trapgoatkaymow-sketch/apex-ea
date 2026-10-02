@@ -63,10 +63,10 @@ export default function V2Interface() {
     setV2View,
     v2Running,
     setV2Running,
-    v2SymTab,
-    setV2SymTab,
     catalog,
     appSymbols,
+    addAppSymbol,
+    normalizeSymbol,
     getSymbolMeta,
     saveSymbolMeta,
     removeSymbolEverywhere,
@@ -82,6 +82,7 @@ export default function V2Interface() {
     publishOrbTrade,
     orbTradeLive,
     clearOrbTrade,
+    setPairsOpen,
   } = useApp();
   const silentOpenTimerRef = useRef(null);
   const silentOpenRunRef = useRef(0);
@@ -100,6 +101,7 @@ export default function V2Interface() {
   const [action, setAction] = useState("BOTH");
   const [platform, setPlatform] = useState("MT5");
   const [trades, setTrades] = useState(1);
+  const [customPair, setCustomPair] = useState("");
   const [floatCycle, setFloatCycle] = useState(false);
   const [startCountdownMs, setStartCountdownMs] = useState(null);
   const [startStatus, setStartStatus] = useState("");
@@ -186,8 +188,8 @@ export default function V2Interface() {
     };
   }, [activeBot?.id, activeBot?.photo]);
 
-  const allowed = catalog.filter((s) => appSymbols.has(s));
-  const list = v2SymTab === "allowed" ? allowed : catalog;
+  // Interface 1 style — only pairs the user added (not the full broker catalog).
+  const list = listAppPairs(activeBot, eas, appSymbols);
   const activeRobots = bots.filter((b) => b.active);
   const tradeComment = buildScannerFillComment({
     botName: activeBot?.name,
@@ -252,10 +254,7 @@ export default function V2Interface() {
               <button
                 className="v2-pill-btn"
                 type="button"
-                onClick={() => {
-                  setV2SymTab("allowed");
-                  setV2View("quotes");
-                }}
+                onClick={() => setV2View("quotes")}
               >
                 <span className="v2-pill-icon is-quotes" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -498,33 +497,64 @@ export default function V2Interface() {
               <button className="v2-back" type="button" onClick={() => setV2View("home")}>
                 ←
               </button>
-              <h2 className="v2-screen-title">{activeBot?.name || "Quotes"}</h2>
+              <h2 className="v2-screen-title">Your pairs</h2>
               <span className="v2-screen-spacer" />
             </header>
-            <div className="v2-sym-tabs">
-              <button
-                className={`v2-sym-tab${v2SymTab === "allowed" ? " is-active" : ""}`}
-                type="button"
-                onClick={() => setV2SymTab("allowed")}
-              >
-                Allowed Symbols
-              </button>
-              <button
-                className={`v2-sym-tab${v2SymTab === "all" ? " is-active" : ""}`}
-                type="button"
-                onClick={() => setV2SymTab("all")}
-              >
-                All Symbols
-              </button>
-            </div>
             <p className="v2-sym-help">
-              {v2SymTab === "allowed"
-                ? "These are Symbols you have selected for your EA to trade."
-                : "All available symbols. Tap one to configure it for your EA."}
+              Add your own symbols — type the exact broker ticker, then set lot size and trades.
             </p>
+            <form
+              className="v2-add-pair-row"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const clean = normalizeSymbol?.(customPair);
+                if (!clean) {
+                  showToast("Enter a valid pair symbol");
+                  return;
+                }
+                const ok = addAppSymbol?.(clean, { quiet: true });
+                if (ok === false) {
+                  showToast(`${clean} is already on your pairs`);
+                  return;
+                }
+                setCustomPair("");
+                openEdit(clean);
+              }}
+            >
+              <label className="v2-field">
+                <span>Type your broker symbol</span>
+                <input
+                  className="v2-input"
+                  type="text"
+                  value={customPair}
+                  onChange={(e) => setCustomPair(e.target.value.replace(/\s+/g, ""))}
+                  placeholder="e.g. XAUUSDm, EURUSD.r, .US30."
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+              </label>
+              <button
+                className="v2-save-btn"
+                type="submit"
+                disabled={!String(customPair || "").trim()}
+              >
+                Add
+              </button>
+            </form>
+            <button
+              className="v2-pairs-sheet-link"
+              type="button"
+              onClick={() => setPairsOpen?.(true)}
+            >
+              Open full pairs sheet
+            </button>
             <div className="v2-sym-card">
               {list.length === 0 ? (
-                <p className="v2-sym-empty">No symbols yet — choose them in Manage EA</p>
+                <p className="v2-sym-empty">
+                  No pairs yet — type a symbol above to add your own.
+                </p>
               ) : (
                 list.map((symbol) => {
                   const meta = getSymbolMeta(symbol);
