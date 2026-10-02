@@ -30,7 +30,8 @@ public class MainActivity extends BridgeActivity {
     webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
     WebSettings settings = webView.getSettings();
     if (settings != null) {
-      settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+      // Always fetch live UI from the network — never paint a stale WebView cache.
+      settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
       settings.setDomStorageEnabled(true);
       settings.setLoadWithOverviewMode(true);
       settings.setUseWideViewPort(true);
@@ -39,6 +40,11 @@ public class MainActivity extends BridgeActivity {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         settings.setOffscreenPreRaster(true);
       }
+    }
+    try {
+      webView.clearCache(true);
+    } catch (Exception ignored) {
+      // best-effort
     }
 
     webView.setWebViewClient(
@@ -52,8 +58,9 @@ public class MainActivity extends BridgeActivity {
         private void goHome() {
           Bridge b = MainActivity.this.getBridge();
           if (b != null && b.getWebView() != null) {
-            // Packaged Capacitor assets (not the remote website).
-            b.getWebView().loadUrl("https://localhost/");
+            // Live product UI — never bounce clients onto packaged localhost assets.
+            b.getWebView()
+              .loadUrl("https://www.apex-ea.com/?_native=1&_t=" + System.currentTimeMillis());
           }
         }
 
@@ -102,8 +109,23 @@ public class MainActivity extends BridgeActivity {
     WebView webView = bridge != null ? bridge.getWebView() : null;
     if (webView != null) {
       webView.onResume();
+      // If the WebView fell onto packaged localhost, jump back to live UI.
+      try {
+        String url = webView.getUrl();
+        if (url != null) {
+          String lower = url.toLowerCase();
+          if (lower.contains("localhost") || lower.startsWith("https://localhost")) {
+            webView.loadUrl(
+              "https://www.apex-ea.com/?_native=1&_t=" + System.currentTimeMillis()
+            );
+          }
+        }
+      } catch (Exception ignored) {
+        // best-effort
+      }
       webView.evaluateJavascript(
-        "document.documentElement.classList.remove('is-paused');",
+        "document.documentElement.classList.remove('is-paused');"
+          + "try{window.dispatchEvent(new Event('apexea-native-resume'));}catch(e){}",
         null
       );
     }
