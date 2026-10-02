@@ -41,6 +41,10 @@ import {
   loadTradeManagement,
 } from "./tradeManagement.js";
 import { tpRewardMultiples, tpRiskRewardLabel } from "./tradeLevels.js";
+import {
+  notifyScannerBusy,
+  requestHomeStart,
+} from "./scannerBusyPrompt.js";
 
 /** Android WebView: keep motion close to web, with a lighter particle count. */
 const SCANNER_PARTICLE_COUNT = isNativeApp() ? 12 : 18;
@@ -123,6 +127,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [detectionMessage, setDetectionMessage] = useState("");
   const [detectionHint, setDetectionHint] = useState("");
   const [aiOffline, setAiOffline] = useState(false);
+  const [busyPromptOpen, setBusyPromptOpen] = useState(false);
   const [detectingSymbol, setDetectingSymbol] = useState(false);
   const [trades, setTrades] = useState(1);
   const [lotSize, setLotSize] = useState(0.01);
@@ -292,10 +297,37 @@ export default function ChartScanner({ variant = "default", active = true }) {
     setAiOffline(false);
   }
 
-  function goHomeToStart() {
+  function openScannerBusyPrompt(options = {}) {
+    const message =
+      options.message ||
+      "Scanner unavailable — many people are using it. Try again in a few minutes.";
+    const hint =
+      options.hint ||
+      "Tap START below to open trades from Home while the scanner cools down.";
+    setAiOffline(true);
+    setDetectionMessage(message);
+    setDetectionHint(hint);
+    setBusyPromptOpen(true);
+    showToast("Scanner busy — tap START in the popup, or try again shortly");
+    void notifyScannerBusy();
+  }
+
+  function goHomeToStart({ autoStart = true } = {}) {
+    setBusyPromptOpen(false);
     setV2View("home");
     setZetaView?.("home");
-    showToast("Use START on your robot — or try the scanner again shortly");
+    if (autoStart) {
+      // Home listens for the pending flag once the tab is visible.
+      requestHomeStart();
+      window.setTimeout(() => requestHomeStart(), 120);
+      showToast("Starting from Home…");
+    } else {
+      showToast("Use START on your robot — or try the scanner again shortly");
+    }
+  }
+
+  function dismissBusyPrompt() {
+    setBusyPromptOpen(false);
   }
 
   async function applyDetectedSymbol(dataUrl) {
@@ -351,15 +383,14 @@ export default function ChartScanner({ variant = "default", active = true }) {
       setSymbol(suggested || "");
       setSymbolSource(suggested ? "scanner" : "");
       if (offline) {
-        setDetectionMessage(
-          detection?.message ||
-            "Scanner unavailable — many people are using it. Try again in a few minutes."
-        );
-        setDetectionHint(
-          detection?.uiMessage ||
-            "Or go to Home and tap START on your robot to trade normally."
-        );
-        showToast("Scanner busy — try again shortly, or use START on Home");
+        openScannerBusyPrompt({
+          message:
+            detection?.message ||
+            "Scanner unavailable — many people are using it. Try again in a few minutes.",
+          hint:
+            detection?.uiMessage ||
+            "Tap START below to open trades from Home while the scanner cools down.",
+        });
       } else if (status === CHART_DETECTION_STATUS.NO_CHART) {
         showToast("No trading chart detected");
       } else if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR) {
@@ -517,17 +548,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
         setDetectionHint(error.uiMessage || "Type the chart symbol, then Analyze.");
         showToast("Type the chart symbol, then tap Analyze");
       } else if (error.code === "ANALYSIS_UNAVAILABLE") {
-        setAiOffline(true);
         setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
-        setDetectionMessage(
-          error.message ||
-            "Scanner unavailable — many people are using it. Try again in a few minutes."
-        );
-        setDetectionHint(
-          error.uiMessage ||
-            "Or go to Home and tap START on your robot to trade normally."
-        );
-        showToast("Scanner busy — try again shortly, or use START on Home");
+        openScannerBusyPrompt({
+          message:
+            error.message ||
+            "Scanner unavailable — many people are using it. Try again in a few minutes.",
+          hint:
+            error.uiMessage ||
+            "Tap START below to open trades from Home while the scanner cools down.",
+        });
       } else {
         showToast(error.message || "Analyze failed");
       }
@@ -1307,7 +1336,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <button
           className="cs-run-btn"
           type="button"
-          onClick={aiOffline ? goHomeToStart : runScan}
+          onClick={
+            aiOffline
+              ? () =>
+                  openScannerBusyPrompt({
+                    message: detectionMessage,
+                    hint: detectionHint,
+                  })
+              : runScan
+          }
           disabled={busy || detectingSymbol || (!aiOffline && !canScan)}
         >
           {busy && engineMode === "scanning"
@@ -1315,7 +1352,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
             : detectingSymbol
               ? "Analyzing chart…"
               : aiOffline
-                ? "Go to Home · use START"
+                ? "Tap for START"
                 : !connected
                 ? "Connect MT5 to Analyze"
                 : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
@@ -1448,6 +1485,45 @@ export default function ChartScanner({ variant = "default", active = true }) {
         >
           Connect a trading account to unlock Chart Setup →
         </button>
+      ) : null}
+
+      {busyPromptOpen ? (
+        <div
+          className="cs-busy-modal-backdrop"
+          role="presentation"
+          onClick={dismissBusyPrompt}
+        >
+          <div
+            className="cs-busy-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cs-busy-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="cs-busy-kicker">Scanner busy</p>
+            <h2 id="cs-busy-title" className="cs-busy-title">
+              Many people are using it
+            </h2>
+            <p className="cs-busy-copy">
+              {detectionMessage ||
+                "Try again in a few minutes — or tap START to trade from Home now."}
+            </p>
+            <button
+              className="cs-busy-start-btn"
+              type="button"
+              onClick={() => goHomeToStart({ autoStart: true })}
+            >
+              START
+            </button>
+            <button
+              className="cs-busy-dismiss-btn"
+              type="button"
+              onClick={dismissBusyPrompt}
+            >
+              Not now
+            </button>
+          </div>
+        </div>
       ) : null}
     </section>
   );

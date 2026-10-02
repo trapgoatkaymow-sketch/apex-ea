@@ -9142,6 +9142,100 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
   font-size: 0.78rem;
 }
 
+.cs-busy-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: end center;
+  padding: 16px 16px calc(88px + env(safe-area-inset-bottom, 0px));
+  background: rgba(0, 0, 0, 0.55);
+  animation: cs-busy-fade-in 0.2s ease;
+}
+
+.cs-busy-modal {
+  width: min(420px, 100%);
+  padding: 20px 18px 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #1a1220 0%, #0d0a12 100%);
+  border: 1px solid rgba(255, 45, 138, 0.35);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  animation: cs-busy-slide-up 0.28s ease;
+}
+
+.cs-busy-kicker {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 120, 180, 0.9);
+}
+
+.cs-busy-title {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.25;
+}
+
+.cs-busy-copy {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.cs-busy-start-btn {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 16px;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: linear-gradient(180deg, var(--pink-soft, #ff5aad) 0%, var(--pink-hot, #ff2d8a) 100%);
+  box-shadow: 0 12px 28px rgba(255, 45, 138, 0.4);
+}
+
+.cs-busy-start-btn:active {
+  transform: scale(0.98);
+}
+
+.cs-busy-dismiss-btn {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 42px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@keyframes cs-busy-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cs-busy-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .cs-run-btn {
   width: 100%;
   min-height: 54px;
