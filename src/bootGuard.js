@@ -220,10 +220,14 @@ export function startShellWatch() {
     runBootGuard().catch(() => {});
   };
 
-  // Native: if we somehow landed on packaged localhost, bounce to live immediately.
+  // Native: if we somehow landed on packaged localhost, bounce to live once.
   if (isNativePlatform() && !isProdHost()) {
     try {
-      window.location.replace(liveProductUrl("watch", UI_SHELL_GENERATION));
+      const token = `watch:${UI_SHELL_GENERATION}`;
+      if (sessionStorage.getItem(RELOAD_SESSION_KEY) !== token) {
+        sessionStorage.setItem(RELOAD_SESSION_KEY, token);
+        window.location.replace(liveProductUrl("watch", UI_SHELL_GENERATION));
+      }
     } catch {
       // ignore
     }

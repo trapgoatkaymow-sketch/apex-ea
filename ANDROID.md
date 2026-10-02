@@ -17,9 +17,9 @@ Capacitor shell for the **client trading app only** (not the mentor portal).
 
 ### WhatsApp note for clients
 
-> Update is live — just close ApexEA and open it again. Do **not** delete the
-> app. Your license and bots stay. If you see **Install**, tap it (install over
-> the same app). Download link: https://www.apex-ea.com/android
+> Update is live. Open ApexEA — if you see **Install**, tap it (do **not**
+> delete the app). License and bots stay. Or install over here:
+> https://www.apex-ea.com/android
 
 ## Runtime
 
