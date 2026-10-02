@@ -655,6 +655,10 @@
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
+      "purchasePaid": false,
+      "purchasePaidAt": null,
+      "purchaseAmount": null,
+      "purchaseCurrency": null,
       "emailSentAt": 1790880312727,
       "bot": {
         "id": "cutiieyugly-flvme-v6-mulsf6wc",
@@ -664,11 +668,7 @@
         "symbols": [
           "XAUUSD"
         ]
-      },
-      "purchasePaid": false,
-      "purchasePaidAt": null,
-      "purchaseAmount": null,
-      "purchaseCurrency": null
+      }
     },
     {
       "key": "APEX-66R9-2RP7",
@@ -1035,6 +1035,10 @@
       "purchaseCaptureId": "7K209165EY1613818",
       "purchaseOrderId": "7N904552D7140271M",
       "purchaseSource": "paypal-giveaway-webhook",
+      "purchasePaid": true,
+      "purchasePaidAt": 1790855496865,
+      "purchaseAmount": "25.00",
+      "purchaseCurrency": "USD",
       "emailSentAt": 1790855521183,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
@@ -1046,11 +1050,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "purchasePaid": true,
-      "purchasePaidAt": 1790855496865,
-      "purchaseAmount": "25.00",
-      "purchaseCurrency": "USD"
+      }
     },
     {
       "key": "APEX-N846-UZFH",
@@ -1747,6 +1747,10 @@
       "purchaseCaptureId": "4PX122984E286940C",
       "purchaseOrderId": "7WS66381YE178574X",
       "purchaseSource": "paypal-giveaway",
+      "purchasePaid": true,
+      "purchasePaidAt": 1790834544492,
+      "purchaseAmount": "25.00",
+      "purchaseCurrency": "USD",
       "emailSentAt": 1790835291600,
       "bot": {
         "id": "zeta-scalper-ai-mtyew2ps",
@@ -1758,11 +1762,7 @@
           "US30",
           ".US30."
         ]
-      },
-      "purchasePaid": true,
-      "purchasePaidAt": 1790834544492,
-      "purchaseAmount": "25.00",
-      "purchaseCurrency": "USD"
+      }
     },
     {
       "key": "APEX-MGTB-ZK98",
@@ -3432,9 +3432,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "USDCHF"
         ]
       }
     },
@@ -3539,9 +3537,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "USDCHF"
         ]
       }
     },
