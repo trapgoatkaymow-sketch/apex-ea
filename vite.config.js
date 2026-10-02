@@ -44,7 +44,7 @@ function appVersionPlugin(buildId) {
   const shellGeneration = 125;
   const shellLabel = "product-frozen-stable";
   const uiLocked = true;
-  const minShellGeneration = 124;
+  const minShellGeneration = 125;
   // Keep in sync with android/app/build.gradle versionCode / versionName
   const apkVersionCode = 2480;
   const apkVersionName = "2.48.0";
