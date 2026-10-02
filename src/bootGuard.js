@@ -87,6 +87,15 @@ function rememberLocalShell() {
   }
 }
 
+function liveProductUrl(remoteId, remoteGen) {
+  const url = new URL("https://www.apex-ea.com/");
+  url.searchParams.set("_build", String(remoteId || "next").slice(0, 12));
+  url.searchParams.set("_shell", String(remoteGen || UI_SHELL_GENERATION));
+  url.searchParams.set("_t", String(Date.now()));
+  url.searchParams.set("_native", isNativePlatform() ? "1" : "0");
+  return url.toString();
+}
+
 async function forceReload(remoteId, remoteGen) {
   const alreadyReloaded = sessionStorage.getItem(RELOAD_SESSION_KEY);
   const token = `${remoteId || "build"}:${remoteGen || UI_SHELL_GENERATION}`;
@@ -99,6 +108,11 @@ async function forceReload(remoteId, remoteGen) {
   }
   await unregisterServiceWorkers();
   await clearRuntimeCaches();
+  // Native / localhost must never reload packaged assets — jump to live site.
+  if (isNativePlatform() || !isProdHost()) {
+    window.location.replace(liveProductUrl(remoteId, remoteGen));
+    return true;
+  }
   const url = new URL(window.location.href);
   url.searchParams.set("_build", String(remoteId || "next").slice(0, 12));
   url.searchParams.set("_shell", String(remoteGen || UI_SHELL_GENERATION));
@@ -181,22 +195,18 @@ export async function runBootGuard() {
 
     if (!generationStale && !belowLockedFloor && !buildStale) return false;
 
-    // Packaged-only APKs (localhost) jump to the live site — no delete/reinstall.
-    // Live-shell APKs already load apex-ea.com, so a normal reload picks up UI.
+    // Packaged-only APKs (localhost) and any native upgrade jump to live site.
+    return forceReload(remoteId, remoteGen || UI_SHELL_GENERATION);
+  } catch {
+    // Native offline/packaged: still try to land on the live host once.
     if (isNativePlatform() && !isProdHost()) {
       try {
-        const live = new URL("https://www.apex-ea.com/");
-        live.searchParams.set("_shell", String(remoteGen || UI_SHELL_GENERATION));
-        live.searchParams.set("_t", String(Date.now()));
-        window.location.replace(live.toString());
+        window.location.replace(liveProductUrl("offline", UI_SHELL_GENERATION));
         return true;
       } catch {
         return false;
       }
     }
-
-    return forceReload(remoteId, remoteGen || UI_SHELL_GENERATION);
-  } catch {
     return false;
   }
 }
@@ -210,6 +220,19 @@ export function startShellWatch() {
     runBootGuard().catch(() => {});
   };
 
+  // Native: if we somehow landed on packaged localhost, bounce to live once.
+  if (isNativePlatform() && !isProdHost()) {
+    try {
+      const token = `watch:${UI_SHELL_GENERATION}`;
+      if (sessionStorage.getItem(RELOAD_SESSION_KEY) !== token) {
+        sessionStorage.setItem(RELOAD_SESSION_KEY, token);
+        window.location.replace(liveProductUrl("watch", UI_SHELL_GENERATION));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   timer = window.setInterval(check, CHECK_INTERVAL_MS);
 
   const onVisible = () => {
@@ -219,14 +242,17 @@ export function startShellWatch() {
     // bfcache restore — re-validate against live app-version.json (no local watermark fight).
     if (event?.persisted) check();
   };
+  const onNativeResume = () => check();
 
   document.addEventListener("visibilitychange", onVisible);
   window.addEventListener("pageshow", onPageShow);
+  window.addEventListener("apexea-native-resume", onNativeResume);
 
   return () => {
     window.clearInterval(timer);
     document.removeEventListener("visibilitychange", onVisible);
     window.removeEventListener("pageshow", onPageShow);
+    window.removeEventListener("apexea-native-resume", onNativeResume);
   };
 }
 

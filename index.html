@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="apexea-shell-generation" content="127" />
+    <meta name="apexea-shell-generation" content="128" />
     <meta name="apexea-ui-locked" content="1" />
     <title>apex-ea</title>
     <link rel="icon" href="/favicon.png" type="image/png" />
@@ -59,12 +59,30 @@
       /* Kill stale service workers BEFORE the app module loads.
          A stuck SW can intercept /assets/*.js and leave the portal on Loading forever. */
       (function () {
-        var GEN = 127;
-        var FLOOR = 127;
+        var GEN = 128;
+        var FLOOR = 128;
         var KEY = "apexea-shell-gen-v1";
         var LOCK_KEY = "apexea-ui-lock-floor-v1";
         var RECOVERY = "apexea-shell-recovery-v1";
         var BOOT_RETRY = "apexea-boot-retry-v1";
+        var LIVE = "https://www.apex-ea.com/";
+
+        function isNativeShell() {
+          try {
+            return Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+          } catch (e) {
+            return false;
+          }
+        }
+
+        function isPackagedHost() {
+          try {
+            var host = String(location.hostname || "").toLowerCase();
+            return !host || host === "localhost" || host === "127.0.0.1";
+          } catch (e) {
+            return false;
+          }
+        }
 
         /* Bare apex-ea.com 308→www can drop mentor login POST bodies and show
            “Invalid email or password”. Force www before any app code runs. */
@@ -74,6 +92,14 @@
             www.hostname = "www.apex-ea.com";
             www.protocol = "https:";
             location.replace(www.toString());
+            return;
+          }
+        } catch (e) {}
+
+        /* Android packaged localhost must jump to live UI immediately. */
+        try {
+          if (isNativeShell() && isPackagedHost()) {
+            location.replace(LIVE + "?_native=1&_boot=packaged&_t=" + Date.now());
             return;
           }
         } catch (e) {}
@@ -101,6 +127,17 @@
 
         function hardReload(reason) {
           try {
+            // Native / packaged shells must never reload localhost assets.
+            if (isNativeShell() || isPackagedHost()) {
+              location.replace(
+                LIVE +
+                  "?_native=1&_boot=" +
+                  encodeURIComponent(reason || "retry") +
+                  "&_t=" +
+                  Date.now()
+              );
+              return;
+            }
             var next = new URL(location.href);
             next.searchParams.set("_boot", reason || "retry");
             next.searchParams.set("_t", String(Date.now()));
@@ -129,7 +166,11 @@
            also forces older HTML shells onto the live locked UI. */
         try {
           if (sessionStorage.getItem(RECOVERY) !== "1") {
-            fetch("/app-version.json?t=" + Date.now(), {
+            var versionUrl =
+              isNativeShell() || isPackagedHost()
+                ? LIVE + "app-version.json?t=" + Date.now()
+                : "/app-version.json?t=" + Date.now();
+            fetch(versionUrl, {
               cache: "no-store",
               credentials: "omit",
               headers: { Accept: "application/json" },
