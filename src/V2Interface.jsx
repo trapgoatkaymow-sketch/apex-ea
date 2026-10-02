@@ -512,10 +512,15 @@ export default function V2Interface() {
                   showToast("Enter a valid pair symbol");
                   return;
                 }
-                const ok = addAppSymbol?.(clean, { quiet: true });
-                if (ok === false) {
-                  showToast(`${clean} is already on your pairs`);
-                  return;
+                const already = list.some(
+                  (s) => String(s).toLowerCase() === clean.toLowerCase()
+                );
+                if (!already) {
+                  const ok = addAppSymbol?.(clean, { quiet: true });
+                  if (ok === false) {
+                    showToast("Could not add that symbol");
+                    return;
+                  }
                 }
                 setCustomPair("");
                 openEdit(clean);
