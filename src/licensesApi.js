@@ -23,7 +23,10 @@ async function apiFetch(path = "", { method = "GET", body } = {}) {
     const message =
       (data && (data.error || data.message)) ||
       (typeof data === "string" ? data : `License sync failed (${response.status})`);
-    throw new Error(message);
+    const err = new Error(message);
+    err.status = response.status;
+    err.data = data;
+    throw err;
   }
   return data;
 }
