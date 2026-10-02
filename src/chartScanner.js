@@ -126,7 +126,7 @@ async function inferSideFromChartImage(dataUrl) {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return "BUY";
+    if (!ctx) return null;
     ctx.drawImage(img, 0, 0, w, h);
     // Focus on the price plot: skip headers / price axis chrome.
     const x0 = Math.floor(w * 0.48);
@@ -158,13 +158,13 @@ async function inferSideFromChartImage(dataUrl) {
       if (isBull && !isBear) bull += weight;
       else if (isBear && !isBull) bear += weight;
     }
-    if (bull === 0 && bear === 0) return "BUY";
-    // Require a clearer majority before flipping — avoids noise from UI chrome.
-    if (bull > bear * 1.12) return "BUY";
-    if (bear > bull * 1.12) return "SELL";
-    return bull >= bear ? "BUY" : "SELL";
+    // Never default to BUY when the chart colors are unclear.
+    if (bull === 0 && bear === 0) return null;
+    if (bull > bear * 1.18) return "BUY";
+    if (bear > bull * 1.18) return "SELL";
+    return null;
   } catch {
-    return "BUY";
+    return null;
   }
 }
 
@@ -178,6 +178,15 @@ async function buildLocalFallbackSetup(dataUrl, { hintSymbol = "" } = {}) {
   }
 
   const side = await inferSideFromChartImage(dataUrl);
+  if (side !== "BUY" && side !== "SELL") {
+    const err = new Error(
+      "No clear BUY/SELL bias on this chart — wait for a clearer move"
+    );
+    err.code = "SIDE_UNCLEAR";
+    err.uiMessage =
+      "Could not read a clear direction from the chart. Try again when the move is clearer.";
+    throw err;
+  }
   const entry = estimateEntryForSymbol(symbol);
   const complete = ensureCompleteSetup({
     side,

@@ -112,9 +112,9 @@ export async function analyzeSymbolSetupWithOpenAI({
             `Symbol: ${sym}. Live price: ${live}. ` +
             `Required timeframes (use all): ${tfs.join(", ")}. ` +
             (preferredSide
-              ? `Client pair preference (soft): ${preferredSide}. Prefer multi-TF chart logic over preference. `
+              ? `Live chart bias hint: ${preferredSide}. Do NOT invent the opposite side unless M30+H1+H4 clearly contradict it. `
               : "") +
-            "Return side from M30+H1+H4 confluence, stopLoss, primary timeframe (M30/H1/H4), confidence, analysis.",
+            "Return side from M30+H1+H4 confluence, stopLoss, primary timeframe (M30/H1/H4), confidence, analysis. Never default to BUY.",
         },
       ],
     }),
@@ -144,17 +144,18 @@ export async function analyzeSymbolSetupWithOpenAI({
     parsed = {};
   }
 
-  // Prefer model side; mentor Action is soft. Never invent BUY when model is silent —
-  // fall back to preferredSide, then leave empty for Safe Scalper offline path.
-  const rawSide = parsed?.side || preferredSide || "";
+  // Prefer model side when present. If silent, use live-bar hint — never invent BUY.
+  const modelSide = normalizeTradeSide(parsed?.side || "", { trustSide: true });
+  const hintSide = normalizeTradeSide(preferredSide || "", { trustSide: true });
+  const rawSide = modelSide || hintSide || "";
   if (!String(rawSide).trim()) {
     const err = new Error("No BUY/SELL from market analysis");
     err.status = 422;
     throw err;
   }
-  const side = normalizeTradeSide(rawSide, {
-    trustSide: true,
-  });
+  // When live bars already voted and the model fights them, keep the bar hint.
+  const side =
+    modelSide && hintSide && modelSide !== hintSide ? hintSide : rawSide;
   const timeframe = normalizeChartTimeframe(parsed?.timeframe || "M30");
   const tf = ["M30", "H1", "H4"].includes(timeframe) ? timeframe : "M30";
   // Chart Scanner ladder: H4 → 1:1/1:2/1:3 · M30/H1 → 1:2/1:3/1:4

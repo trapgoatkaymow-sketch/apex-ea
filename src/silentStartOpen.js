@@ -9,6 +9,7 @@
  *
  * When OpenAI is down / out of credits, START switches to the built-in
  * Safe Scalper strategy (not a blind BUY) so accounts are not blown.
+ * Live M30/H1 candle bias always wins over chartless AI direction.
  */
 import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
@@ -252,18 +253,23 @@ function sortBarsOldestFirst(bars = []) {
   return rows;
 }
 
+/**
+ * Offline Safe Scalper bias from OHLC (no OpenAI).
+ * Requires EMA + recent candle bodies + short momentum to agree.
+ * Returns null when unclear — never a soft EMA-only BUY into a dump.
+ */
 export function inferSafeScalperSideFromBars(bars = []) {
   const rows = sortBarsOldestFirst(bars);
   const closes = rows
     .map((b) => toFiniteNumber(b?.close ?? b?.closePrice))
     .filter((n) => n != null && n > 0);
-  if (closes.length < 8) return null;
+  if (closes.length < 12) return null;
 
   const emaFast = emaLast(closes, 9);
   const emaSlow = emaLast(closes, 21);
   if (emaFast == null || emaSlow == null) return null;
 
-  const recent = rows.slice(-3);
+  const recent = rows.slice(-5);
   let bullBodies = 0;
   let bearBodies = 0;
   for (const bar of recent) {
@@ -275,14 +281,24 @@ export function inferSafeScalperSideFromBars(bars = []) {
   }
 
   const last = closes[closes.length - 1];
+  const momentumRef = closes[Math.max(0, closes.length - 4)];
+  const momentumUp = last > momentumRef;
+  const momentumDown = last < momentumRef;
   const bullTrend = emaFast > emaSlow && last >= emaFast;
   const bearTrend = emaFast < emaSlow && last <= emaFast;
 
-  if (bullTrend && bullBodies >= bearBodies) return "BUY";
-  if (bearTrend && bearBodies >= bullBodies) return "SELL";
-  // Soft fallback: follow EMA slope when candles are mixed.
-  if (emaFast > emaSlow * 1.00005) return "BUY";
-  if (emaFast < emaSlow * 0.99995) return "SELL";
+  // Strong confluence only — lagging EMA alone must not open against a dump/rally.
+  if (bullTrend && bullBodies >= 3 && momentumUp) return "BUY";
+  if (bearTrend && bearBodies >= 3 && momentumDown) return "SELL";
+
+  // Medium: clear body majority + momentum with EMA, still no slope-only fallback.
+  if (bullTrend && bullBodies > bearBodies && momentumUp) return "BUY";
+  if (bearTrend && bearBodies > bullBodies && momentumDown) return "SELL";
+
+  // Recent dump/rally can override a lagging EMA cross.
+  if (bearBodies >= 4 && momentumDown && last < emaFast) return "SELL";
+  if (bullBodies >= 4 && momentumUp && last > emaFast) return "BUY";
+
   return null;
 }
 
@@ -329,9 +345,8 @@ export function buildStartSafeScalperPlan({
     ? String(strategySide).trim().toUpperCase()
     : "";
 
-  // Chart/EMA bias wins; pair Action is fallback only (never lock START to SELL).
-  const side = barSide || mentorSide;
-  if (!side) {
+  // Live candle bias required. Pair Action alone must not force a side.
+  if (!barSide) {
     return {
       skip: true,
       source: START_OFFLINE_STRATEGY,
@@ -340,14 +355,12 @@ export function buildStartSafeScalperPlan({
       } — try again shortly`,
     };
   }
+  const side = barSide;
 
   const risk = defaultStopDistance(sym, entry);
   const stopLoss = side === "BUY" ? entry - risk : entry + risk;
   const safeLot = clampLot(Math.max(0.01, clampLot(lot) * 0.5));
   const threads = clampTrades(tradeCount);
-  const biasLabel = barSide
-    ? `M30 EMA ${side}`
-    : `mentor ${side}`;
 
   return {
     skip: false,
@@ -358,8 +371,8 @@ export function buildStartSafeScalperPlan({
     lot: safeLot,
     tradeCount: threads,
     timeframe: "M30",
-    confidence: mentorSide ? 58 : 62,
-    analysis: `Safe Scalper: ${biasLabel}, half lot, ${threads} trade(s), M30/H1/H4 TPs, tight SL.`,
+    confidence: mentorSide && mentorSide === side ? 60 : 64,
+    analysis: `Safe Scalper: M30/H1 ${side}, half lot, ${threads} trade(s), M30/H1/H4 TPs, tight SL.`,
   };
 }
 
@@ -450,19 +463,7 @@ async function openPairSilent({
     // keep estimate — AI path can still open; Safe Scalper will skip
   }
 
-  let ai = null;
-  try {
-    ai = await analyzeSymbolWithOpenAI({
-      symbol: tradeSymbol,
-      price: livePrice,
-      preferredSide,
-      timeframes: START_SCANNER_TIMEFRAMES,
-    });
-  } catch {
-    // Safe Scalper below — M30 EMA bias, never blind BUY on full size
-  }
-
-  // Always read live M30 bars — blind symbol-only AI invents opposite sides on BTC/XAU.
+  // Live M30 bars first — chartless OpenAI invents opposite sides on XAU/BTC.
   let strategySide = "";
   try {
     const hist = await getPriceHistory({
@@ -477,7 +478,51 @@ async function openPairSilent({
       tradeSymbol = normalizeBrokerSymbol(hist.symbol) || tradeSymbol;
     }
   } catch {
-    // mentor Action or AI-only below
+    // Safe Scalper may skip without bars
+  }
+
+  // Optional H1 confirmation — skip when M30 and H1 clearly fight each other.
+  let h1Side = "";
+  try {
+    const histH1 = await getPriceHistory({
+      accountId,
+      symbol: tradeSymbol,
+      timeFrame: 60,
+      fast: true,
+      signal: abortSignalAfter(12_000),
+    });
+    h1Side = inferSafeScalperSideFromBars(histH1?.bars) || "";
+  } catch {
+    /* H1 optional */
+  }
+
+  const barSide = strategySide
+    ? normalizeTradeSide(strategySide, { trustSide: true })
+    : "";
+  if (barSide && h1Side && h1Side !== barSide) {
+    return {
+      ok: false,
+      skipped: true,
+      symbol: tradeSymbol,
+      opened: 0,
+      tradeCount: 0,
+      source: START_OFFLINE_STRATEGY,
+      mode: "tf-conflict",
+      error: `M30 says ${barSide} but H1 says ${h1Side} — waiting for clear direction`,
+    };
+  }
+
+  // Hint OpenAI with live bar side so it cannot invent the opposite BUY/SELL.
+  let ai = null;
+  try {
+    ai = await analyzeSymbolWithOpenAI({
+      symbol: tradeSymbol,
+      price: livePrice,
+      preferredSide: barSide || preferredSide,
+      timeframes: START_SCANNER_TIMEFRAMES,
+    });
+  } catch {
+    // Safe Scalper below — never blind BUY on full size
   }
 
   let signal;
@@ -485,34 +530,14 @@ async function openPairSilent({
   const aiSide = ai?.side
     ? normalizeTradeSide(ai.side, { trustSide: true })
     : "";
-  const barSide = strategySide
-    ? normalizeTradeSide(strategySide, { trustSide: true })
-    : "";
 
-  // Prefer live M30 EMA when it clearly disagrees with chartless OpenAI,
-  // unless the mentor locked this pair to BUY or SELL only.
-  const useBarOverAi =
-    Boolean(aiSide && barSide && aiSide !== barSide) &&
-    (!preferredSide || preferredSide === barSide);
-
-  if (aiSide && !useBarOverAi) {
-    signal = buildScannerAlignedSetup({
-      symbol: tradeSymbol,
-      side: aiSide,
-      entry: livePrice,
-      stopLoss: ai.stopLoss,
-      timeframe: ai.timeframe || "M30",
-      analysis: ai.analysis || "",
-      confidence: ai.confidence || 65,
-      source: ai.source || "openai-symbol",
-    });
-  } else {
-    mode = useBarOverAi ? "safe-scalper-override" : START_OFFLINE_STRATEGY;
+  // Live candle bias always wins. Chartless AI / locked Action must not fight the tape.
+  if (barSide) {
     const plan = buildStartSafeScalperPlan({
       symbol: tradeSymbol,
       livePrice,
-      preferredSide,
-      strategySide: barSide || strategySide,
+      preferredSide: barSide,
+      strategySide: barSide,
       lot,
       tradeCount,
       hasLiveQuote,
@@ -525,24 +550,51 @@ async function openPairSilent({
         opened: 0,
         tradeCount: 0,
         source: plan.source,
-        mode,
+        mode: START_OFFLINE_STRATEGY,
         error: plan.error,
       };
     }
-    lot = plan.lot;
+    const aiAgrees = !aiSide || aiSide === barSide;
+    mode = aiAgrees
+      ? aiSide
+        ? "openai+bars"
+        : START_OFFLINE_STRATEGY
+      : "safe-scalper-override";
+    // Full lot when AI agrees with bars; half lot when overriding a wrong AI side.
+    if (aiAgrees && aiSide) {
+      lot = clampLot(lot);
+    } else {
+      lot = plan.lot;
+    }
     tradeCount = clampTrades(plan.tradeCount || tradeCount);
     signal = buildScannerAlignedSetup({
       symbol: tradeSymbol,
-      side: plan.side,
+      side: barSide,
       entry: plan.entry,
-      stopLoss: plan.stopLoss,
-      timeframe: plan.timeframe,
-      analysis: useBarOverAi
-        ? `Safe Scalper overrode AI ${aiSide}→${plan.side} from live M30 EMA`
-        : plan.analysis,
-      confidence: plan.confidence,
-      source: useBarOverAi ? "safe-scalper-override" : plan.source,
+      stopLoss:
+        aiAgrees && Number(ai?.stopLoss) > 0 ? ai.stopLoss : plan.stopLoss,
+      timeframe: aiAgrees && ai?.timeframe ? ai.timeframe : plan.timeframe,
+      analysis: aiAgrees
+        ? String(ai?.analysis || plan.analysis || "").trim() ||
+          `Live M30/H1 bias ${barSide}`
+        : `Safe Scalper kept live ${barSide} (ignored AI ${aiSide})`,
+      confidence: aiAgrees
+        ? Math.max(plan.confidence, Number(ai?.confidence) || 0)
+        : plan.confidence,
+      source: mode,
     });
+  } else {
+    // No clear live bias — do not open from chartless AI / Action alone.
+    return {
+      ok: false,
+      skipped: true,
+      symbol: tradeSymbol,
+      opened: 0,
+      tradeCount: 0,
+      source: START_OFFLINE_STRATEGY,
+      mode: "no-clear-bias",
+      error: `No clear M30 direction on ${tradeSymbol} — try again shortly`,
+    };
   }
 
   // TP1@M30 · TP2@H1 · TP3@H4 cycling for N saved trades — lot is TOTAL, split.
