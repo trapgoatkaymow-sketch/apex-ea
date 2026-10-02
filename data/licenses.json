@@ -509,9 +509,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUUSD"
         ]
       }
     },
@@ -561,9 +559,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
+          "BTCUSD",
+          "SILVER",
           "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY"
         ]
       }
     },
@@ -3312,7 +3311,7 @@
       "clientSymbols": [
         "XAUUSD.MIC"
       ],
-      "clientSymbolsUpdatedAt": 1790923629086,
+      "clientSymbolsUpdatedAt": 1790923654929,
       "mentorSymbolsSyncedAt": 1790923408521,
       "purchaseCaptureId": "6YA070829U642164P",
       "purchaseOrderId": "617718046U514613F",
@@ -11016,9 +11015,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
         "symbols": [
+          "BTCUSD",
+          "SILVER",
           "XAUUSD",
-          "US30",
-          ".US30."
+          "USDJPY"
         ]
       }
     },
@@ -18047,7 +18047,7 @@
       "robotConnectedAt": 1790923452620,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1790923408521,
+      "mentorSymbolsSyncedAt": 1790921895551,
       "purchaseCaptureId": "7YX55367EJ940053F",
       "purchaseOrderId": "26E182924A234990B",
       "purchaseSource": "paypal-giveaway",
@@ -19328,7 +19328,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1790923408521,
+      "mentorSymbolsSyncedAt": 1790921895551,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -20372,7 +20372,7 @@
         "DE40"
       ],
       "clientSymbolsUpdatedAt": 1790890956092,
-      "mentorSymbolsSyncedAt": 1790923408521,
+      "mentorSymbolsSyncedAt": 1790921895551,
       "purchaseCaptureId": "0K735141NP909183W",
       "purchaseOrderId": "52W8812726909003S",
       "purchaseSource": "paypal-giveaway",
@@ -20421,7 +20421,7 @@
         "AUDUSD"
       ],
       "clientSymbolsUpdatedAt": 1790921938939,
-      "mentorSymbolsSyncedAt": 1790923408521,
+      "mentorSymbolsSyncedAt": 1790921895551,
       "purchaseCaptureId": "4UH51019W08019149",
       "purchaseOrderId": "72K68222UW586780P",
       "purchaseSource": "paypal-giveaway",
@@ -20518,7 +20518,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1790923408521,
+      "mentorSymbolsSyncedAt": 1790921895551,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -84347,7 +84347,11 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790804668191",
         "strategy": "scalper",
-        "symbols": []
+        "symbols": [
+          "XAUUSD",
+          "US30",
+          ".US30."
+        ]
       }
     },
     {
@@ -132465,8 +132469,7 @@
           "XAUUSD",
           "US30",
           "EURUSD",
-          "XAUUSD.CRP",
-          "GOLD"
+          "XAUUSD.CRP"
         ]
       }
     },
