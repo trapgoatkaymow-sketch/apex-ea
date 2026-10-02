@@ -25,7 +25,6 @@ import {
   defaultStopDistance,
   normalizeChartTimeframe,
   normalizeTradeSide,
-  symbolCoreName,
   tpRiskRewardLabel,
 } from "./tradeLevels.js";
 import {
@@ -66,18 +65,6 @@ function clampLot(value) {
 
 function clampTrades(value) {
   return clampTradeThreadCount(value);
-}
-
-function samePairOpen(positions, symbol) {
-  const want = symbolCoreName(symbol);
-  if (!want) return false;
-  return (Array.isArray(positions) ? positions : []).some((row) => {
-    const core = symbolCoreName(row?.symbol);
-    if (!core) return false;
-    if (core === want) return true;
-    if (/^XAUUSD|^GOLD/i.test(want) && /^XAUUSD|^GOLD/i.test(core)) return true;
-    return false;
-  });
 }
 
 function toFiniteNumber(value) {
@@ -571,7 +558,7 @@ async function openPairSilent({
     };
   }
 
-  // Don't flip BUY↔SELL / stack more size while this pair still has open trades.
+  // Block opposite BUY↔SELL only. Same-direction START may add more size.
   try {
     const dir = await checkTradeDirection({
       accountId,
@@ -593,7 +580,10 @@ async function openPairSilent({
         code: dir.code || "OPPOSITE_DIRECTION",
       };
     }
-    if (samePairOpen(dir?.positions, tradeSymbol)) {
+  } catch (error) {
+    // Soft-fail — server still blocks opposite direction on placeTrade.
+    // Do not block same-direction adds when the position check times out.
+    if (error?.code === "OPPOSITE_DIRECTION" || error?.status === 409) {
       return {
         ok: false,
         symbol: tradeSymbol,
@@ -601,25 +591,12 @@ async function openPairSilent({
         tradeCount,
         side: signal.side,
         mode,
-        error: `Close your open ${tradeSymbol} trades first before opening more`,
-        code: "PAIR_ALREADY_OPEN",
+        error:
+          error?.message ||
+          "Close open trades in the other direction first",
+        code: "OPPOSITE_DIRECTION",
       };
     }
-  } catch (error) {
-    // Do not open blind — a failed check previously let same-direction SELL
-    // stack while BUY was blocked server-side by opposite-direction.
-    return {
-      ok: false,
-      symbol: tradeSymbol,
-      opened: 0,
-      tradeCount,
-      side: signal.side,
-      mode,
-      error:
-        error?.message ||
-        "Could not verify open trades — try START again",
-      code: "POSITION_CHECK_FAILED",
-    };
   }
 
   let opened = 0;

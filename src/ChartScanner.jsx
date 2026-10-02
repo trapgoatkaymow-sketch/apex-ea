@@ -40,7 +40,7 @@ import {
   describeManagementPlan,
   loadTradeManagement,
 } from "./tradeManagement.js";
-import { symbolCoreName, tpRewardMultiples, tpRiskRewardLabel } from "./tradeLevels.js";
+import { tpRewardMultiples, tpRiskRewardLabel } from "./tradeLevels.js";
 
 /** Android WebView: keep motion close to web, with a lighter particle count. */
 const SCANNER_PARTICLE_COUNT = isNativeApp() ? 12 : 18;
@@ -53,19 +53,6 @@ const TRADE_SETTLE_MS = isNativeApp() ? 320 : 700;
 /** Number of trades — lot is TOTAL, split across N opens (soft cap via clampTradeThreadCount). */
 function clampTrades(value) {
   return clampTradeThreadCount(value);
-}
-
-function samePairOpen(positions, symbol) {
-  const want = symbolCoreName(symbol);
-  if (!want) return false;
-  return (Array.isArray(positions) ? positions : []).some((row) => {
-    const core = symbolCoreName(row?.symbol);
-    if (!core) return false;
-    if (core === want) return true;
-    // Gold family
-    if (/^XAUUSD|^GOLD/i.test(want) && /^XAUUSD|^GOLD/i.test(core)) return true;
-    return false;
-  });
 }
 
 /** Normalize lot only when saving / trading — not while the user is typing. */
@@ -597,13 +584,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         );
         return;
       }
-      // Don't stack another full START/Execute while this pair is already open.
-      if (samePairOpen(dir?.positions, tradeSymbol)) {
-        showToast(
-          `Close your open ${tradeSymbol} trades first before opening more`
-        );
-        return;
-      }
+      // Same-direction adds are allowed (stack more size on an open BUY/SELL).
     } catch {
       // Soft-fail — server still blocks opposite direction on placeTrade.
     }

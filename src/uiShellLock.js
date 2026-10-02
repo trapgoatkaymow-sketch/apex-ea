@@ -77,10 +77,11 @@
  * Gen 119 — Scanner AI offline → send users to Home START (not type symbol).
  * Gen 120 — Fast license Generate (Firebase first; GitHub mirror background).
  * Gen 121 — Scanner busy copy: many people using it, try again in a few minutes.
+ * Gen 122 — START same-direction adds allowed (no close-first block).
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-export const UI_SHELL_GENERATION = 121;
+export const UI_SHELL_GENERATION = 122;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -90,7 +91,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 121;
+export const UI_SHELL_FLOOR = 122;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

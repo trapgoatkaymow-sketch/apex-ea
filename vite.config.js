@@ -41,10 +41,10 @@ function appVersionPlugin(buildId) {
   // Keep in sync with src/uiShellLock.js — Vite config cannot import ESM app code
   // reliably during config evaluation, so the number is duplicated here.
   // Keep in sync with UI_SHELL_GENERATION / UI_SHELL_FLOOR in src/uiShellLock.js
-  const shellGeneration = 121;
+  const shellGeneration = 122;
   const shellLabel = "product-frozen-stable";
   const uiLocked = true;
-  const minShellGeneration = 121;
+  const minShellGeneration = 122;
   // Keep in sync with android/app/build.gradle versionCode / versionName
   const apkVersionCode = 2480;
   const apkVersionName = "2.48.0";
