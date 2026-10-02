@@ -1,7 +1,9 @@
 import { applyCorsHeaders } from "../_cors.js";
 import {
   findSignup,
+  setSignupAccessPaid,
   setSignupAppAccessUnlocked,
+  upsertSignup,
 } from "../signups/_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
