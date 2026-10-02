@@ -407,15 +407,20 @@ export async function extendGiveawayCountdownByHours(
   const prevEnd = Number.isFinite(latched?.countdownEndsAtMs)
     ? latched.countdownEndsAtMs
     : nowMs;
-  const nextEnd = Math.max(prevEnd, nowMs) + addMs;
+  const prevPurchasesEnd = Number.isFinite(latched?.purchasesEndAtMs)
+    ? latched.purchasesEndAtMs
+    : prevEnd;
+  // Extend from whichever is later (remaining end or now if already closed).
+  const nextEnd = Math.max(prevEnd, prevPurchasesEnd, nowMs) + addMs;
   const durationMs = Math.max(
     latched?.durationMs || 0,
     GIVEAWAY_DURATION_MS,
-    addMs * 10
+    addMs * 10,
+    nextEnd - startMs
   );
   const startsAt = new Date(startMs).toISOString();
   const countdownEndsAt = new Date(nextEnd).toISOString();
-  const purchasesEndAtMs = latched?.purchasesEndAtMs;
+  const purchasesEndAtMs = nextEnd;
   await writeGiveawayWindowDoc(
     {
       startsAt,
@@ -514,10 +519,14 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
     String(packaged?.purchasesEndAt || "")
   );
   const packagedDuration = Number(packaged?.durationMs) || 0;
-  // Prefer packaged hard close when present (does not touch countdown zeros).
-  let purchasesEndAtMs = Number.isFinite(packagedPurchasesEnd)
-    ? packagedPurchasesEnd
-    : latched.purchasesEndAtMs;
+  // Take the later hard close so ops Firebase/Blob extensions win over a
+  // stale packaged end (and a newer packaged ship still wins when ahead).
+  let purchasesEndAtMs = (() => {
+    const candidates = [packagedPurchasesEnd, latched.purchasesEndAtMs].filter(
+      (ms) => Number.isFinite(ms)
+    );
+    return candidates.length ? Math.max(...candidates) : null;
+  })();
   let durationMs = Math.max(
     latched.durationMs || 0,
     packagedDuration || 0,
@@ -572,9 +581,12 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
     return await setGiveawayCountdownHours(GIVEAWAY_COUNTDOWN_HOURS, nowMs);
   }
 
+  // Only latch when the resolved end/duration is strictly newer than durable —
+  // never write a stale packaged end back over a live ops extension.
   const needsPurchasesLatch =
     Number.isFinite(purchasesEndAtMs) &&
-    purchasesEndAtMs !== latched.purchasesEndAtMs;
+    (!Number.isFinite(latched.purchasesEndAtMs) ||
+      purchasesEndAtMs > latched.purchasesEndAtMs);
   const needsDurationLatch = durationMs > (latched.durationMs || 0);
   if (needsPurchasesLatch || needsDurationLatch) {
     const startsAt = new Date(latched.startMs).toISOString();
@@ -583,8 +595,11 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
         startsAt,
         durationMs,
         latchedAt: startsAt,
-        countdownEndsAt: new Date(countdownEndsAtMs).toISOString(),
-        countdownSetAt: packaged?.countdownSetAt || undefined,
+        ...(Number.isFinite(countdownEndsAtMs)
+          ? { countdownEndsAt: new Date(countdownEndsAtMs).toISOString() }
+          : {}),
+        countdownSetAt:
+          String(packaged?.countdownSetAt || "").trim() || undefined,
         countdownVersion: storedVersion || GIVEAWAY_COUNTDOWN_VERSION,
         extendedAt: new Date(nowMs).toISOString(),
         extendedByHours: Number(packaged?.extendedByHours) || 0,
