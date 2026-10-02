@@ -393,8 +393,8 @@ export async function setGiveawayCountdownHours(
 }
 
 /**
- * Add hours onto the current display countdown (from remaining end, or now if past).
- * Checkout stays open after the timer hits zero (until purchasesEndAt).
+ * Add hours onto the live offer end (display + checkout hard close).
+ * Extends from the later of countdownEndsAt / purchasesEndAt / now.
  */
 export async function extendGiveawayCountdownByHours(
   hours = 12,
@@ -404,18 +404,24 @@ export async function extendGiveawayCountdownByHours(
   const addMs = hrs * 60 * 60 * 1000;
   const latched = await readLatchedWindow();
   const startMs = latched?.startMs || nowMs;
-  const prevEnd = Number.isFinite(latched?.countdownEndsAtMs)
+  const prevCountdown = Number.isFinite(latched?.countdownEndsAtMs)
     ? latched.countdownEndsAtMs
     : nowMs;
-  const nextEnd = Math.max(prevEnd, nowMs) + addMs;
+  const prevPurchases = Number.isFinite(latched?.purchasesEndAtMs)
+    ? latched.purchasesEndAtMs
+    : prevCountdown;
+  // Live page shows purchasesEndAt when it is still ahead — move both together.
+  const prevLiveEnd = Math.max(prevCountdown, prevPurchases);
+  const nextEnd = Math.max(prevLiveEnd, nowMs) + addMs;
   const durationMs = Math.max(
     latched?.durationMs || 0,
     GIVEAWAY_DURATION_MS,
+    nextEnd - startMs,
     addMs * 10
   );
   const startsAt = new Date(startMs).toISOString();
   const countdownEndsAt = new Date(nextEnd).toISOString();
-  const purchasesEndAtMs = latched?.purchasesEndAtMs;
+  const purchasesEndAtMs = nextEnd;
   await writeGiveawayWindowDoc(
     {
       startsAt,
@@ -514,10 +520,18 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
     String(packaged?.purchasesEndAt || "")
   );
   const packagedDuration = Number(packaged?.durationMs) || 0;
-  // Prefer packaged hard close when present (does not touch countdown zeros).
-  let purchasesEndAtMs = Number.isFinite(packagedPurchasesEnd)
-    ? packagedPurchasesEnd
-    : latched.purchasesEndAtMs;
+  // Prefer the later hard close — durable ops extensions must beat a stale package.
+  let purchasesEndAtMs = null;
+  if (
+    Number.isFinite(packagedPurchasesEnd) &&
+    Number.isFinite(latched.purchasesEndAtMs)
+  ) {
+    purchasesEndAtMs = Math.max(packagedPurchasesEnd, latched.purchasesEndAtMs);
+  } else if (Number.isFinite(packagedPurchasesEnd)) {
+    purchasesEndAtMs = packagedPurchasesEnd;
+  } else {
+    purchasesEndAtMs = latched.purchasesEndAtMs;
+  }
   let durationMs = Math.max(
     latched.durationMs || 0,
     packagedDuration || 0,
