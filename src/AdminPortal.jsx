@@ -4167,8 +4167,8 @@ export default function AdminPortal() {
                   </AdminBusyLabel>
                 </button>
                 <p className="ea-hint" style={{ marginTop: 10 }}>
-                  The client is emailed this key automatically via Brevo when server
-                  mail is configured.
+                  Key is ready instantly. The client is emailed via Brevo in the
+                  background when server mail is configured.
                 </p>
               </form>
               {latestKey ? (
