@@ -1679,6 +1679,17 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
     localPaths: [TMP_FILE, BUNDLED_FILE],
   });
 
+  // Keep the function alive for deferred Blob/GitHub mirrors without blocking
+  // the Generate HTTP response (Firebase already has the key).
+  if (durable?.background && typeof durable.background.then === "function") {
+    try {
+      const { waitUntil } = await import("@vercel/functions");
+      waitUntil(durable.background.catch(() => null));
+    } catch {
+      void durable.background.catch(() => null);
+    }
+  }
+
   if (durable.durable) {
     memoryLicenses = normalized.map((row) => ({ ...row }));
     memoryDeletedKeys = nextDeleted;

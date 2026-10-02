@@ -1320,55 +1320,67 @@ export async function durableWrite(opts = {}) {
   if (rtdbPath && fb.firebaseConfigured()) {
     const put = await fb.firebasePut(rtdbPath, mentorsViaGit ? mentorsBody : body);
     if (put.ok) {
-      // Best-effort Blob mirror for cold reads.
-      if (blobPath) await blobPut(blobPath, mentorsViaGit ? mentorsBody : body);
-
-      // Licenses MUST also land on GitHub. Older cold instances fall back to
-      // data/licenses.json when Firebase/Blob is briefly unavailable — if GitHub
-      // is weeks behind, clients get "Invalid license key" for freshly generated
-      // keys. Mentors stay Firebase-primary (merged on read).
-      //
-      // Always use git push for licenses — Contents API rejects ~1MB base64
-      // payloads and our store is already near that size.
+      // Licenses: Firebase is enough for a durable Generate response. Blob +
+      // GitHub git push of the multi‑MB store used to block "Generating…" for
+      // many seconds — mirror those in the background via waitUntil.
       if (licensesViaGit && githubPath) {
-        let licenseBody = body;
-        try {
-          const gh = await githubGet({
+        const mirrorPromise = (async () => {
+          if (blobPath) {
+            try {
+              await blobPut(blobPath, body);
+            } catch {
+              // best-effort
+            }
+          }
+          let licenseBody = body;
+          try {
+            const gh = await githubGet({
+              repo: githubRepo,
+              branch: githubBranch,
+              filePath: githubPath,
+            });
+            if (gh && !gh.missing && gh.raw != null) {
+              licenseBody = mergeLicensesDocuments(
+                gh.raw,
+                licenseBody,
+                message || "license firebase mirror"
+              );
+            }
+          } catch {
+            // push intended body
+          }
+          const viaGit = await githubPutViaGit({
             repo: githubRepo,
             branch: githubBranch,
             filePath: githubPath,
+            raw: licenseBody,
+            message: message || "chore: mirror licenses from firebase",
           });
-          if (gh && !gh.missing && gh.raw != null) {
-            licenseBody = mergeLicensesDocuments(
-              gh.raw,
-              licenseBody,
-              message || "license firebase mirror"
-            );
+          if (viaGit.ok) {
+            if (blobPath) await blobPut(blobPath, licenseBody);
+            return {
+              ok: true,
+              source: "github-git",
+              sha: viaGit.sha || null,
+            };
           }
-        } catch {
-          // push intended body
-        }
-        const viaGit = await githubPutViaGit({
-          repo: githubRepo,
-          branch: githubBranch,
-          filePath: githubPath,
-          raw: licenseBody,
-          message: message || "chore: mirror licenses from firebase",
-        });
-        if (viaGit.ok) {
-          if (blobPath) await blobPut(blobPath, licenseBody);
-          return {
-            ok: true,
-            durable: true,
-            source: "firebase+github-git",
-            sha: viaGit.sha || null,
-          };
-        }
-        console.warn(
-          "license github mirror failed after firebase write",
-          viaGit.reason || viaGit.status || "unknown"
-        );
+          console.warn(
+            "license github mirror failed after firebase write",
+            viaGit.reason || viaGit.status || "unknown"
+          );
+          return { ok: false, reason: viaGit.reason || "github mirror failed" };
+        })();
+
+        return {
+          ok: true,
+          durable: true,
+          source: "firebase",
+          background: mirrorPromise,
+        };
       }
+
+      // Best-effort Blob mirror for cold reads (non-license stores).
+      if (blobPath) await blobPut(blobPath, mentorsViaGit ? mentorsBody : body);
 
       return { ok: true, durable: true, source: "firebase" };
     }
