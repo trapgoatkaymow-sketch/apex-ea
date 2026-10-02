@@ -181,17 +181,18 @@ export async function runBootGuard() {
 
     if (!generationStale && !belowLockedFloor && !buildStale) return false;
 
-    if (isNativePlatform()) {
+    // Packaged-only APKs (localhost) jump to the live site — no delete/reinstall.
+    // Live-shell APKs already load apex-ea.com, so a normal reload picks up UI.
+    if (isNativePlatform() && !isProdHost()) {
       try {
-        const seenNative = sessionStorage.getItem("apexea-native-update-hint");
-        if (seenNative !== remoteId) {
-          sessionStorage.setItem("apexea-native-update-hint", remoteId);
-          window.__APEXEA_UPDATE_AVAILABLE__ = remoteId;
-        }
+        const live = new URL("https://www.apex-ea.com/");
+        live.searchParams.set("_shell", String(remoteGen || UI_SHELL_GENERATION));
+        live.searchParams.set("_t", String(Date.now()));
+        window.location.replace(live.toString());
+        return true;
       } catch {
-        // ignore
+        return false;
       }
-      return false;
     }
 
     return forceReload(remoteId, remoteGen || UI_SHELL_GENERATION);

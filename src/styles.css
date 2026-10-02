@@ -1225,6 +1225,73 @@ html:has(.phone[data-interface="v2"]) body {
   animation: toast-in 0.25s ease;
 }
 
+.apk-update-banner {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: calc(10px + var(--safe-top, 0px));
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(12, 0, 8, 0.94);
+  border: 1px solid rgba(var(--pink-rgb), 0.5);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.apk-update-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.apk-update-banner__text strong {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.apk-update-banner__text span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.apk-update-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.apk-update-banner__install {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--pink);
+  color: #1a0010;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.apk-update-banner__dismiss {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 8px 6px;
+  cursor: pointer;
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

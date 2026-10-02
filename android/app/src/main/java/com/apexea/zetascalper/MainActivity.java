@@ -11,9 +11,9 @@ import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
 
 /**
- * Client trading app shell. UI is packaged in the APK for fast cold start;
- * PayPal, licenses, Chart Scanner, MetaAPI, and secrets stay on apex-ea.com.
- * Mentor/admin portal routes are blocked inside the APK.
+ * Client trading app shell. Capacitor loads the live UI from apex-ea.com so
+ * website deploys reach phones without delete/reinstall. Packaged assets remain
+ * as fallback. Mentor/admin portal routes are blocked inside the APK.
  */
 public class MainActivity extends BridgeActivity {
   @Override
