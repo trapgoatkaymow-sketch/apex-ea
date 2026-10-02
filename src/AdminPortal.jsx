@@ -22,6 +22,7 @@ import {
   formatLicenseDuration,
   formatLicenseExpiry,
   isLicenseExpired,
+  isLicenseRealPaid,
   LICENSE_DURATIONS,
   normalizeLicenseKey,
   reconcileCommissionRemote,
@@ -74,6 +75,21 @@ function licenseDayKey(stamp) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function isGiveawayLicense(row) {
+  const src = String(row?.purchaseSource || "").toLowerCase();
+  return src.includes("giveaway") || src.includes("promo");
+}
+
+function licensePaidLabel(row) {
+  if (!isLicenseRealPaid(row)) return "";
+  const amount = String(row?.purchaseAmount || "").trim();
+  if (isGiveawayLicense(row) || amount === "25.00" || amount === "25") {
+    return "Paid $25";
+  }
+  if (amount) return `Paid $${amount.replace(/\.00$/, "")}`;
+  return "Paid";
 }
 
 function monthCursorKey(year, monthIndex) {
@@ -655,6 +671,40 @@ export default function AdminPortal() {
       ).length,
     [signups]
   );
+
+  /** Unique real PayPal $25 giveaway pays today (dedupe capture/order). */
+  const giveawayPaidTodayTotal = useMemo(() => {
+    const today = licenseDayKey(Date.now());
+    const seen = new Set();
+    for (const row of licenseKeys || []) {
+      if (!isLicenseRealPaid(row) || !isGiveawayLicense(row)) continue;
+      const day = licenseDayKey(
+        row.purchasePaidAt || row.createdAt || row.updatedAt
+      );
+      if (day !== today) continue;
+      const id =
+        String(row.purchaseCaptureId || "").trim() ||
+        String(row.purchaseOrderId || "").trim() ||
+        String(row.key || "").trim();
+      if (!id) continue;
+      seen.add(id);
+    }
+    return seen.size;
+  }, [licenseKeys]);
+
+  const giveawayPaidAllTotal = useMemo(() => {
+    const seen = new Set();
+    for (const row of licenseKeys || []) {
+      if (!isLicenseRealPaid(row) || !isGiveawayLicense(row)) continue;
+      const id =
+        String(row.purchaseCaptureId || "").trim() ||
+        String(row.purchaseOrderId || "").trim() ||
+        String(row.key || "").trim();
+      if (!id) continue;
+      seen.add(id);
+    }
+    return seen.size;
+  }, [licenseKeys]);
 
   const filteredPendingClients = useMemo(
     () =>
@@ -3364,6 +3414,13 @@ export default function AdminPortal() {
                     <p className="admin-stat-value is-ok">{paidRealClientsTotal}</p>
                     <p className="admin-card-meta">Real PayPal · not bypassed</p>
                   </button>
+                  <article className="admin-stat-card">
+                    <p className="admin-stat-label">$25 giveaway paid today</p>
+                    <p className="admin-stat-value is-ok">{giveawayPaidTodayTotal}</p>
+                    <p className="admin-card-meta">
+                      Unique PayPal pays · {giveawayPaidAllTotal} all-time
+                    </p>
+                  </article>
                 </div>
               </>
             ) : (
@@ -4298,6 +4355,18 @@ export default function AdminPortal() {
                         >
                           {licenseStatusLabel(entry)}
                         </span>
+                        {licensePaidLabel(entry) ? (
+                          <span
+                            className="license-status-pill is-paid"
+                            title={
+                              entry.purchaseCaptureId
+                                ? `PayPal capture ${entry.purchaseCaptureId}`
+                                : "Real PayPal payment"
+                            }
+                          >
+                            {licensePaidLabel(entry)}
+                          </span>
+                        ) : null}
                       </div>
                       <div className="license-row-actions">
                         <button

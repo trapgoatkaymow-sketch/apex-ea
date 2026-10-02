@@ -933,6 +933,18 @@ export async function fulfillRobotPurchase({
         purchaseCaptureId: captureKey || null,
         purchaseOrderId: orderKey || null,
         purchaseSource: source,
+        purchasePaid: true,
+        purchasePaidAt: Date.now(),
+        purchaseAmount: String(source || "")
+          .toLowerCase()
+          .includes("giveaway")
+          ? GIVEAWAY_PRICE
+          : ROBOT_PRICE,
+        purchaseCurrency: String(source || "")
+          .toLowerCase()
+          .includes("giveaway")
+          ? GIVEAWAY_CURRENCY
+          : ROBOT_CURRENCY,
         bot: {
           id: ROBOT_BOT_ID,
           name: ROBOT_BOT_NAME,

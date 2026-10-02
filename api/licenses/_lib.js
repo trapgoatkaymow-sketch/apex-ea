@@ -1269,6 +1269,58 @@ function normalizeLicense(row) {
     purchaseCaptureId: String(row?.purchaseCaptureId || "").trim() || null,
     purchaseOrderId: String(row?.purchaseOrderId || "").trim() || null,
     purchaseSource: String(row?.purchaseSource || "").trim() || null,
+    // Real money paid (PayPal capture) — never true for mentor-generated free keys.
+    purchasePaid: (() => {
+      if (row?.purchasePaid === true || row?.purchasePaid === false) {
+        return Boolean(row.purchasePaid);
+      }
+      const capture = String(row?.purchaseCaptureId || "").trim();
+      const order = String(row?.purchaseOrderId || "").trim();
+      const src = String(row?.purchaseSource || "").toLowerCase();
+      return Boolean(
+        capture ||
+          (order && src.includes("paypal")) ||
+          src.includes("giveaway") ||
+          src.includes("promo")
+      );
+    })(),
+    purchasePaidAt: (() => {
+      const stamp = Number(row?.purchasePaidAt) || 0;
+      if (stamp > 0) return stamp;
+      const capture = String(row?.purchaseCaptureId || "").trim();
+      const order = String(row?.purchaseOrderId || "").trim();
+      const src = String(row?.purchaseSource || "").toLowerCase();
+      const paid = Boolean(
+        row?.purchasePaid ||
+          capture ||
+          (order && src.includes("paypal")) ||
+          src.includes("giveaway") ||
+          src.includes("promo")
+      );
+      return paid ? Number(row?.createdAt) || null : null;
+    })(),
+    purchaseAmount: (() => {
+      const raw = String(row?.purchaseAmount || "").trim();
+      if (raw) return raw;
+      const src = String(row?.purchaseSource || "").toLowerCase();
+      if (src.includes("giveaway") || src.includes("promo")) return "25.00";
+      if (src.includes("paypal") || row?.purchaseCaptureId) return "95.00";
+      return null;
+    })(),
+    purchaseCurrency: (() => {
+      const raw = String(row?.purchaseCurrency || "").trim().toUpperCase();
+      if (raw) return raw;
+      const src = String(row?.purchaseSource || "").toLowerCase();
+      if (
+        src.includes("paypal") ||
+        src.includes("giveaway") ||
+        src.includes("promo") ||
+        row?.purchaseCaptureId
+      ) {
+        return "USD";
+      }
+      return null;
+    })(),
     // Must survive normalize/merge or Brevo send-once + payment retries never stick.
     emailSentAt: row?.emailSentAt ? Number(row.emailSentAt) || null : null,
     bot: bot
@@ -1380,6 +1432,14 @@ function mergeLicenseLists(...lists) {
         item.purchaseCaptureId || prev.purchaseCaptureId || null,
       purchaseOrderId: item.purchaseOrderId || prev.purchaseOrderId || null,
       purchaseSource: item.purchaseSource || prev.purchaseSource || null,
+      purchasePaid: Boolean(item.purchasePaid || prev.purchasePaid),
+      purchasePaidAt:
+        Number(item.purchasePaidAt) ||
+        Number(prev.purchasePaidAt) ||
+        null,
+      purchaseAmount: item.purchaseAmount || prev.purchaseAmount || null,
+      purchaseCurrency:
+        item.purchaseCurrency || prev.purchaseCurrency || null,
       mentorSymbolsSyncedAt: (() => {
         const a = Number(item.mentorSymbolsSyncedAt) || 0;
         const b = Number(prev.mentorSymbolsSyncedAt) || 0;
@@ -1939,6 +1999,32 @@ export async function createLicense(payload = {}) {
     String(payload.purchaseCaptureId || "").trim() || null;
   const purchaseOrderId = String(payload.purchaseOrderId || "").trim() || null;
   const purchaseSource = String(payload.purchaseSource || "").trim() || null;
+  const purchaseSourceLower = String(purchaseSource || "").toLowerCase();
+  const purchasePaid = Boolean(
+    payload.purchasePaid === true ||
+      purchaseCaptureId ||
+      (purchaseOrderId && purchaseSourceLower.includes("paypal")) ||
+      purchaseSourceLower.includes("giveaway") ||
+      purchaseSourceLower.includes("promo")
+  );
+  const purchasePaidAt = purchasePaid
+    ? Number(payload.purchasePaidAt) || Date.now()
+    : null;
+  const purchaseAmount = (() => {
+    const raw = String(payload.purchaseAmount || "").trim();
+    if (raw) return raw;
+    if (!purchasePaid) return null;
+    if (
+      purchaseSourceLower.includes("giveaway") ||
+      purchaseSourceLower.includes("promo")
+    ) {
+      return "25.00";
+    }
+    return "95.00";
+  })();
+  const purchaseCurrency = purchasePaid
+    ? String(payload.purchaseCurrency || "USD").trim().toUpperCase() || "USD"
+    : null;
   // Paid PayPal fulfillments must never fail on mentor key quota.
   const skipQuota =
     Boolean(payload.skipQuota) ||
@@ -1974,6 +2060,16 @@ export async function createLicense(payload = {}) {
             purchaseOrderId,
           purchaseSource:
             String(byCapture.purchaseSource || "").trim() || purchaseSource,
+          purchasePaid: true,
+          purchasePaidAt:
+            Number(byCapture.purchasePaidAt) ||
+            purchasePaidAt ||
+            Number(byCapture.createdAt) ||
+            Date.now(),
+          purchaseAmount:
+            byCapture.purchaseAmount || purchaseAmount || null,
+          purchaseCurrency:
+            byCapture.purchaseCurrency || purchaseCurrency || null,
           emailSentAt: byCapture.emailSentAt || null,
           updatedAt: Date.now(),
         };
@@ -2000,6 +2096,15 @@ export async function createLicense(payload = {}) {
           purchaseOrderId,
           purchaseSource:
             String(byOrder.purchaseSource || "").trim() || purchaseSource,
+          purchasePaid: true,
+          purchasePaidAt:
+            Number(byOrder.purchasePaidAt) ||
+            purchasePaidAt ||
+            Number(byOrder.createdAt) ||
+            Date.now(),
+          purchaseAmount: byOrder.purchaseAmount || purchaseAmount || null,
+          purchaseCurrency:
+            byOrder.purchaseCurrency || purchaseCurrency || null,
           emailSentAt: byOrder.emailSentAt || null,
           updatedAt: Date.now(),
         };
@@ -2051,6 +2156,14 @@ export async function createLicense(payload = {}) {
           existing.purchaseCaptureId || purchaseCaptureId || null,
         purchaseOrderId: existing.purchaseOrderId || purchaseOrderId || null,
         purchaseSource: existing.purchaseSource || purchaseSource || null,
+        purchasePaid: Boolean(existing.purchasePaid || purchasePaid),
+        purchasePaidAt:
+          Number(existing.purchasePaidAt) ||
+          purchasePaidAt ||
+          null,
+        purchaseAmount: existing.purchaseAmount || purchaseAmount || null,
+        purchaseCurrency:
+          existing.purchaseCurrency || purchaseCurrency || null,
         updatedAt: replacePhoto
           ? Date.now()
           : Number(existing.updatedAt || existing.usedAt || existing.createdAt) ||
@@ -2092,6 +2205,10 @@ export async function createLicense(payload = {}) {
       purchaseCaptureId,
       purchaseOrderId,
       purchaseSource,
+      purchasePaid,
+      purchasePaidAt,
+      purchaseAmount,
+      purchaseCurrency,
       bot,
     };
     return [result, ...licenses];
