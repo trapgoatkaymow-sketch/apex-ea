@@ -612,6 +612,65 @@
       }
     },
     {
+      "key": "APEX-MFNH-JGXE",
+      "botId": "wolf-profit-ai-muqrrwix",
+      "botName": "Wolf Profit AI",
+      "clientEmail": "nkosanamchunu1@gmail.com",
+      "clientName": "Nkosana Mchunu",
+      "mainText": "Nkosana Mchunu",
+      "mentorEmail": "nkosanamchunu1@gmail.com",
+      "mentorId": "f0d669f2-830c-40ff-8b31-064c83f94d7f",
+      "mentorName": "Nkosana",
+      "used": false,
+      "commissionEligible": false,
+      "commissionReason": "",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1790934069538,
+      "usedAt": null,
+      "deviceId": null,
+      "boundAt": null,
+      "updatedAt": 1790979610451,
+      "scanReset": null,
+      "startReset": null,
+      "robotAccountId": "",
+      "robotLogin": "",
+      "robotServer": "",
+      "robotCompany": "",
+      "robotPlatform": "",
+      "robotConnectedAt": null,
+      "clientSymbols": [],
+      "clientSymbolsUpdatedAt": null,
+      "mentorSymbolsSyncedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "purchasePaid": false,
+      "purchasePaidAt": null,
+      "purchaseAmount": null,
+      "purchaseCurrency": null,
+      "emailSentAt": 1790934072852,
+      "bot": {
+        "id": "wolf-profit-ai-muqrrwix",
+        "name": "Wolf Profit AI",
+        "photo": "/api/licenses/photo?botId=wolf-profit-ai-muqrrwix&v=1790933856248",
+        "strategy": "scalper",
+        "symbols": [
+          "XAUUSD",
+          "GBPUSD",
+          "EURUSD",
+          "US30",
+          "US500",
+          "USTECH",
+          "XAGUSD",
+          "USDJPY",
+          "NAS100",
+          "BTCUSD",
+          "ETHUSD"
+        ]
+      }
+    },
+    {
       "key": "APEX-8HRZ-NPYU",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -3922,65 +3981,6 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD"
-        ]
-      }
-    },
-    {
-      "key": "APEX-MFNH-JGXE",
-      "botId": "wolf-profit-ai-muqrrwix",
-      "botName": "Wolf Profit AI",
-      "clientEmail": "nkosanamchunu1@gmail.com",
-      "clientName": "Nkosana Mchunu",
-      "mainText": "Nkosana Mchunu",
-      "mentorEmail": "nkosanamchunu1@gmail.com",
-      "mentorId": "f0d669f2-830c-40ff-8b31-064c83f94d7f",
-      "mentorName": "Nkosana",
-      "used": false,
-      "commissionEligible": false,
-      "commissionReason": "",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1790934069538,
-      "usedAt": null,
-      "deviceId": null,
-      "boundAt": null,
-      "updatedAt": 1790979537158,
-      "scanReset": null,
-      "startReset": null,
-      "robotAccountId": "",
-      "robotLogin": "",
-      "robotServer": "",
-      "robotCompany": "",
-      "robotPlatform": "",
-      "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "purchasePaid": false,
-      "purchasePaidAt": null,
-      "purchaseAmount": null,
-      "purchaseCurrency": null,
-      "emailSentAt": 1790934072852,
-      "bot": {
-        "id": "wolf-profit-ai-muqrrwix",
-        "name": "Wolf Profit AI",
-        "photo": "/api/licenses/photo?botId=wolf-profit-ai-muqrrwix&v=1790933856248",
-        "strategy": "scalper",
-        "symbols": [
-          "XAUUSD",
-          "GBPUSD",
-          "EURUSD",
-          "US30",
-          "US500",
-          "USTECH",
-          "XAGUSD",
-          "USDJPY",
-          "NAS100",
-          "BTCUSD",
-          "ETHUSD"
         ]
       }
     },
@@ -9152,10 +9152,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790962059612",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "EURUSD",
-          "GBPUSD",
-          "BTCUSD"
+          "XAUUSD"
         ]
       }
     },
@@ -10449,7 +10446,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1790962059612",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
