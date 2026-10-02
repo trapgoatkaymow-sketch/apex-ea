@@ -70,6 +70,19 @@ function isGiveawayPurchase(row) {
   return src.includes("giveaway") || src.includes("promo");
 }
 
+/** True when this key came from a real PayPal payment (not mentor-generated). */
+export function isLicenseRealPaid(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.purchasePaid === true) return true;
+  if (String(row.purchaseCaptureId || "").trim()) return true;
+  const src = String(row.purchaseSource || "").toLowerCase();
+  if (src.includes("giveaway") || src.includes("promo")) return true;
+  if (src.includes("paypal") && String(row.purchaseOrderId || "").trim()) {
+    return true;
+  }
+  return false;
+}
+
 /** Best license for a paid special buyer when typed key does not match. */
 export function pickOwnedPurchaseLicense(rows = [], email = "") {
   const account = normalizeEmail(email);
@@ -341,6 +354,31 @@ export function normalizeLicense(row) {
     mentorSymbolsSyncedAt: row?.mentorSymbolsSyncedAt
       ? Number(row.mentorSymbolsSyncedAt) || null
       : null,
+    purchaseCaptureId: String(row?.purchaseCaptureId || "").trim() || null,
+    purchaseOrderId: String(row?.purchaseOrderId || "").trim() || null,
+    purchaseSource: String(row?.purchaseSource || "").trim() || null,
+    purchasePaid: (() => {
+      if (row?.purchasePaid === true || row?.purchasePaid === false) {
+        return Boolean(row.purchasePaid);
+      }
+      return isLicenseRealPaid(row);
+    })(),
+    purchasePaidAt: (() => {
+      const stamp = Number(row?.purchasePaidAt) || 0;
+      if (stamp > 0) return stamp;
+      return isLicenseRealPaid(row) ? Number(row?.createdAt) || null : null;
+    })(),
+    purchaseAmount: (() => {
+      const raw = String(row?.purchaseAmount || "").trim();
+      if (raw) return raw;
+      if (!isLicenseRealPaid(row)) return null;
+      return isGiveawayPurchase(row) ? "25.00" : "95.00";
+    })(),
+    purchaseCurrency: (() => {
+      const raw = String(row?.purchaseCurrency || "").trim().toUpperCase();
+      if (raw) return raw;
+      return isLicenseRealPaid(row) ? "USD" : null;
+    })(),
     bot: bot
       ? {
           id: String(bot.id || row.botId || "").trim(),
@@ -445,6 +483,17 @@ export function mergeLicenses(localList = [], remoteList = []) {
       robotConnectedAt: preferIncoming
         ? row.robotConnectedAt || prev.robotConnectedAt || null
         : prev.robotConnectedAt || row.robotConnectedAt || null,
+      purchaseCaptureId:
+        row.purchaseCaptureId || prev.purchaseCaptureId || null,
+      purchaseOrderId: row.purchaseOrderId || prev.purchaseOrderId || null,
+      purchaseSource: row.purchaseSource || prev.purchaseSource || null,
+      purchasePaid: Boolean(row.purchasePaid || prev.purchasePaid),
+      purchasePaidAt:
+        Number(row.purchasePaidAt) || Number(prev.purchasePaidAt) || null,
+      purchaseAmount: row.purchaseAmount || prev.purchaseAmount || null,
+      purchaseCurrency:
+        row.purchaseCurrency || prev.purchaseCurrency || null,
+      emailSentAt: Number(row.emailSentAt) || Number(prev.emailSentAt) || null,
       updatedAt: Math.max(prev.updatedAt || 0, row.updatedAt || 0),
       bot: preferLicenseBot(row.bot, prev.bot, row.updatedAt || 0, prev.updatedAt || 0),
       createdAt: Math.min(prev.createdAt || Date.now(), row.createdAt || Date.now()),
