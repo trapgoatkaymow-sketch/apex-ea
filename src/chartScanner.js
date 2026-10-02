@@ -369,7 +369,7 @@ async function detectSymbolWithOpenAI(dataUrl, { catalog = [] } = {}) {
 /**
  * Validate chart image and read symbol when clearly visible.
  * Prefers OpenAI Vision; when the AI quota/credits are exhausted, soft-fail
- * to "symbol unclear" so the trader can type the symbol and keep scanning.
+ * and tell the trader to use the robot START button on Home instead.
  */
 export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
   if (!dataUrl) return emptyDetection();
@@ -384,8 +384,8 @@ export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
         isChart: true,
         symbol: null,
         suggestedSymbol: null,
-        message: "Chart ready — type the symbol (AI temporarily offline)",
-        uiMessage: "Enter the chart symbol to continue.",
+        message: "Scanner AI offline — use the robot START button on Home",
+        uiMessage: "Go to Home and tap START on your robot to trade normally.",
         chartConfidence: 70,
         symbolConfidence: 0,
         confidence: 0,
@@ -506,14 +506,13 @@ export async function analyzeChartImage(
     return buildLocalFallbackSetup(dataUrl, { hintSymbol });
   }
 
-  // Live scanner only — never invent a local/demo setup for unknown failures.
+  // Live scanner only — send traders to robot START instead of inventing a setup.
   const err = new Error(
-    openAiError ||
-      setup?.message ||
-      "Live chart analysis unavailable — retry in a moment"
+    "Scanner AI offline — use the robot START button on Home"
   );
   err.code = "ANALYSIS_UNAVAILABLE";
-  err.uiMessage = "Live OpenAI analysis failed. Please retry.";
+  err.uiMessage = "Go to Home and tap START on your robot to trade normally.";
+  err.quotaFallback = isOpenAiQuotaError(openAiError, openAiStatus);
   throw err;
 }
 

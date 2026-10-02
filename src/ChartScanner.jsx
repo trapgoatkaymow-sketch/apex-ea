@@ -135,6 +135,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [detectionStatus, setDetectionStatus] = useState("");
   const [detectionMessage, setDetectionMessage] = useState("");
   const [detectionHint, setDetectionHint] = useState("");
+  const [aiOffline, setAiOffline] = useState(false);
   const [detectingSymbol, setDetectingSymbol] = useState(false);
   const [trades, setTrades] = useState(1);
   const [lotSize, setLotSize] = useState(0.01);
@@ -301,6 +302,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
     setDetectionStatus("");
     setDetectionMessage("");
     setDetectionHint("");
+    setAiOffline(false);
+  }
+
+  function goHomeToStart() {
+    setV2View("home");
+    setZetaView?.("home");
+    showToast("Use START on your robot to trade normally");
   }
 
   async function applyDetectedSymbol(dataUrl) {
@@ -313,9 +321,13 @@ export default function ChartScanner({ variant = "default", active = true }) {
         catalog: [...symbols, ...(catalog || [])],
       });
       const status = String(detection?.status || CHART_DETECTION_STATUS.NO_CHART);
+      const offline =
+        Boolean(detection?.quotaFallback) ||
+        /credit|quota|billing/i.test(String(detection?.error || ""));
       setDetectionStatus(status);
       setDetectionMessage(detection?.message || "");
       setDetectionHint(detection?.uiMessage || "");
+      setAiOffline(offline);
 
       if (
         status === CHART_DETECTION_STATUS.SYMBOL_DETECTED &&
@@ -325,15 +337,21 @@ export default function ChartScanner({ variant = "default", active = true }) {
         ensureCatalog?.(next);
         setSymbol(next);
         setSymbolSource("scanner");
+        setAiOffline(false);
         showToast(`Symbol detected: ${next}`);
         return next;
       }
 
       // OpenAI saw a chart but was unsure — still prefill any OCR guess for edit.
+      // When AI is offline (quota), do not ask them to type a symbol — send to START.
       const suggested = normalizeBrokerSymbol(
         detection?.suggestedSymbol || detection?.symbol || ""
       );
-      if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR && suggested) {
+      if (
+        !offline &&
+        status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR &&
+        suggested
+      ) {
         ensureCatalog?.(suggested);
         setSymbol(suggested);
         setSymbolSource("scanner");
@@ -345,23 +363,16 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
       setSymbol(suggested || "");
       setSymbolSource(suggested ? "scanner" : "");
-      if (detection?.quotaFallback) {
-        showToast(
-          detection.message ||
-            "Chart ready — type the symbol to continue"
+      if (offline) {
+        setDetectionMessage(
+          detection?.message ||
+            "Scanner AI offline — use the robot START button on Home"
         );
-      } else if (
-        status === CHART_DETECTION_STATUS.NO_CHART &&
-        detection?.error &&
-        /credit|quota|billing|unavailable|OpenAI|503|429/i.test(
-          String(detection.error)
-        )
-      ) {
-        showToast(
-          /credit|quota|billing/i.test(String(detection.error))
-            ? "AI offline — type the symbol, then Analyze"
-            : detection.message || detection.error || "Chart analysis unavailable"
+        setDetectionHint(
+          detection?.uiMessage ||
+            "Go to Home and tap START on your robot to trade normally."
         );
+        showToast("Scanner offline — use START on Home");
       } else if (status === CHART_DETECTION_STATUS.NO_CHART) {
         showToast("No trading chart detected");
       } else if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR) {
@@ -519,7 +530,17 @@ export default function ChartScanner({ variant = "default", active = true }) {
         setDetectionHint(error.uiMessage || "Type the chart symbol, then Analyze.");
         showToast("Type the chart symbol, then tap Analyze");
       } else if (error.code === "ANALYSIS_UNAVAILABLE") {
-        showToast(error.message || "Live analysis unavailable — retry");
+        setAiOffline(true);
+        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
+        setDetectionMessage(
+          error.message ||
+            "Scanner AI offline — use the robot START button on Home"
+        );
+        setDetectionHint(
+          error.uiMessage ||
+            "Go to Home and tap START on your robot to trade normally."
+        );
+        showToast("Scanner offline — use START on Home");
       } else {
         showToast(error.message || "Analyze failed");
       }
@@ -1305,14 +1326,16 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <button
           className="cs-run-btn"
           type="button"
-          onClick={runScan}
-          disabled={busy || detectingSymbol || !canScan}
+          onClick={aiOffline ? goHomeToStart : runScan}
+          disabled={busy || detectingSymbol || (!aiOffline && !canScan)}
         >
           {busy && engineMode === "scanning"
             ? "Building trade setup…"
             : detectingSymbol
               ? "Analyzing chart…"
-              : !connected
+              : aiOffline
+                ? "Go to Home · use START"
+                : !connected
                 ? "Connect MT5 to Analyze"
                 : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
                   ? "Upload a trading chart"
