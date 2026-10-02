@@ -329,6 +329,15 @@ function slimLicenseRowForStorage(row) {
     clientSymbolsUpdatedAt: row.clientSymbolsUpdatedAt
       ? Number(row.clientSymbolsUpdatedAt)
       : null,
+    // Keep PayPal paid stamps — calendar / Paid badges need these after refresh.
+    purchaseCaptureId: String(row.purchaseCaptureId || "").trim() || null,
+    purchaseOrderId: String(row.purchaseOrderId || "").trim() || null,
+    purchaseSource: String(row.purchaseSource || "").trim() || null,
+    purchasePaid: Boolean(row.purchasePaid),
+    purchasePaidAt: row.purchasePaidAt ? Number(row.purchasePaidAt) || null : null,
+    purchaseAmount: String(row.purchaseAmount || "").trim() || null,
+    purchaseCurrency: String(row.purchaseCurrency || "").trim().toUpperCase() || null,
+    emailSentAt: row.emailSentAt ? Number(row.emailSentAt) || null : null,
     bot,
   };
 }
