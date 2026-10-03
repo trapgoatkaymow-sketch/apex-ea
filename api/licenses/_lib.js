@@ -562,6 +562,18 @@ async function ghFetch(url, { method = "GET", body, token, auth = true, cache } 
   return data;
 }
 
+function healEmailTypos(email) {
+  let key = normalizeEmail(email);
+  if (!key) return "";
+  key = key.replace(/^@+/, "").replace(/\s+/g, "");
+  return key
+    .replace(/@gmail\.con$/i, "@gmail.com")
+    .replace(/@gmail\.comm$/i, "@gmail.com")
+    .replace(/@gmai\.com$/i, "@gmail.com")
+    .replace(/@gmail\.cpm$/i, "@gmail.com")
+    .replace(/@gnail\.com$/i, "@gmail.com");
+}
+
 function normalizeEmail(email) {
   return String(email || "")
     .trim()
@@ -3309,11 +3321,13 @@ export async function findLicense(rawKey) {
 }
 
 export async function findLicensesByEmail(email) {
-  const key = normalizeEmail(email);
+  const key = healEmailTypos(email) || normalizeEmail(email);
   if (!key) return [];
   // Email unlock fallback — same fast Firebase path as findLicense.
   const store = await readStore({ preferFresh: true, fastLookup: true });
-  return store.licenses.filter((row) => normalizeEmail(row.clientEmail) === key);
+  return store.licenses.filter(
+    (row) => (healEmailTypos(row.clientEmail) || normalizeEmail(row.clientEmail)) === key
+  );
 }
 
 /** Push the merged license store to every durable backend (Firebase/Blob/GitHub). */

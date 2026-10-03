@@ -3122,7 +3122,18 @@ export function AppProvider({ children }) {
   /** Re-bind every non-expired license owned by this email onto this phone. */
   const restoreLicensesByEmail = useCallback(
     async (rawEmail = coverEmail) => {
-      const accountEmail = normalizeEmail(rawEmail || coverEmail);
+      const heal = (value) => {
+        let key = normalizeEmail(value);
+        if (!key) return "";
+        key = key.replace(/^@+/, "").replace(/\s+/g, "");
+        return key
+          .replace(/@gmail\.con$/i, "@gmail.com")
+          .replace(/@gmail\.comm$/i, "@gmail.com")
+          .replace(/@gmai\.com$/i, "@gmail.com")
+          .replace(/@gmail\.cpm$/i, "@gmail.com")
+          .replace(/@gnail\.com$/i, "@gmail.com");
+      };
+      const accountEmail = heal(rawEmail || coverEmail) || normalizeEmail(rawEmail || coverEmail);
       if (!accountEmail || !accountEmail.includes("@")) {
         showToast("Enter the email linked to your license");
         return false;
@@ -3140,23 +3151,35 @@ export function AppProvider({ children }) {
       // stamped with an old device id after Android WebView cleared storage.
       const mine = (remote.length ? remote : licenseKeys).filter(
         (row) =>
-          normalizeEmail(row.clientEmail) === accountEmail &&
+          heal(row.clientEmail) === accountEmail &&
           !isLicenseExpired(row) &&
           String(row.key || "").trim()
       );
 
       const signup = getSignup(accountEmail);
-      // Subscription / admin bypass required — licenses alone do not unlock.
-      if (!isSignupEntitled(signup, accountEmail)) {
+      const ownsPaidKey = mine.some(
+        (row) =>
+          row?.purchasePaid === true ||
+          String(row?.purchaseCaptureId || "").trim() ||
+          /giveaway|promo|paypal/i.test(String(row?.purchaseSource || ""))
+      );
+      // Paid purchase keys restore without asking for PayPal again.
+      if (!isSignupEntitled(signup, accountEmail) && !ownsPaidKey) {
         clearDeviceAccess(accountEmail);
         showToast("Pay lifetime access before restoring robots");
         return false;
       }
 
       rememberDeviceAccess(accountEmail, {
-        paid: Boolean(signup?.accessPaid),
-        bypassed: Boolean(signup?.accessBypassed) && !signup?.accessPaid,
+        paid: Boolean(signup?.accessPaid) || ownsPaidKey,
+        bypassed:
+          Boolean(signup?.accessBypassed) &&
+          !signup?.accessPaid &&
+          !ownsPaidKey,
       });
+      if (ownsPaidKey && !signup?.accessPaid) {
+        void updateSignupAccessPaid(accountEmail).catch(() => null);
+      }
 
       if (!mine.length) {
         return false;

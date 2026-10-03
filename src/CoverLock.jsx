@@ -140,14 +140,38 @@ function licenseStillValid(row) {
   return !isLicenseExpired(row);
 }
 
+function healEmailTypos(email) {
+  let key = normalizeEmail(email);
+  if (!key) return "";
+  key = key.replace(/^@+/, "").replace(/\s+/g, "");
+  return key
+    .replace(/@gmail\.con$/i, "@gmail.com")
+    .replace(/@gmail\.comm$/i, "@gmail.com")
+    .replace(/@gmai\.com$/i, "@gmail.com")
+    .replace(/@gmail\.cpm$/i, "@gmail.com")
+    .replace(/@gnail\.com$/i, "@gmail.com");
+}
+
+function isPaidPurchaseLicense(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.purchasePaid === true) return true;
+  if (String(row.purchaseCaptureId || "").trim()) return true;
+  const src = String(row.purchaseSource || "").toLowerCase();
+  return (
+    src.includes("giveaway") ||
+    src.includes("promo") ||
+    (src.includes("paypal") && String(row.purchaseOrderId || "").trim())
+  );
+}
+
 async function emailOwnsLicense(email) {
-  const key = normalizeEmail(email);
+  const key = healEmailTypos(email) || normalizeEmail(email);
   if (!key.includes("@")) return [];
   try {
     const rows = await fetchLicensesByEmail(key);
     return (rows || []).filter(
       (row) =>
-        normalizeEmail(row.clientEmail) === key &&
+        healEmailTypos(row.clientEmail) === key &&
         licenseStillValid(row) &&
         String(row.key || "").trim()
     );
@@ -578,20 +602,21 @@ export default function CoverLock() {
     return withDeadline(fetchRemote(), ms, null);
   }
 
-  /** Subscription / admin-bypass only — licenses alone never skip payment. */
+  /** Paid subscription, admin bypass, or an already-paid purchase key. */
   async function resolveReturningAccess(key, { waitMs = 900 } = {}) {
     const started = Date.now();
     const BUDGET_MS = Math.max(400, Number(waitMs) || 900);
-    let current = getSignup(key);
+    const account = healEmailTypos(key) || normalizeEmail(key);
+    let current = getSignup(account) || getSignup(key);
 
     const remaining = () => Math.max(0, BUDGET_MS - (Date.now() - started));
     const [remoteSignup, owned, merged] = await Promise.all([
       withDeadline(
-        submitSignup(key).catch(() => null),
+        submitSignup(account).catch(() => null),
         remaining(),
         null
       ),
-      withDeadline(emailOwnsLicense(key), remaining(), []),
+      withDeadline(emailOwnsLicense(account), remaining(), []),
       withDeadline(loadSignupsFast(remaining()), remaining(), null),
     ]);
 
@@ -601,37 +626,51 @@ export default function CoverLock() {
     } else {
       current =
         (Array.isArray(merged)
-          ? merged.find((s) => normalizeEmail(s.email) === key)
+          ? merged.find(
+              (s) =>
+                healEmailTypos(s.email) === account ||
+                normalizeEmail(s.email) === account
+            )
           : null) ||
+        getSignup(account) ||
         getSignup(key) ||
         current;
     }
 
-    // Authoritative: paid subscription or active admin bypass only.
-    if (isAccountPaidOrBypassed(current)) {
-      rememberDeviceAccess(key, {
-        paid: Boolean(current.accessPaid),
-        bypassed: Boolean(current.accessBypassed) && !current.accessPaid,
-      });
-      const stamped = current.accessPaid
-        ? persistPaidLocally(key, current)
+    const ownedRows = Array.isArray(owned) ? owned : [];
+    const ownsPaidKey = ownedRows.some(isPaidPurchaseLicense);
+
+    // Authoritative: paid subscription, admin bypass, or paid purchase key.
+    if (isAccountPaidOrBypassed(current) || ownsPaidKey) {
+      const paid = Boolean(current?.accessPaid) || ownsPaidKey;
+      const bypassed = Boolean(current?.accessBypassed) && !paid;
+      rememberDeviceAccess(account, { paid, bypassed });
+      const stamped = paid
+        ? persistPaidLocally(account, current)
         : {
-            ...(current || { email: key }),
-            email: key,
+            ...(current || { email: account }),
+            email: account,
             status: "approved",
             accessPaid: false,
             accessBypassed: true,
           };
-      if (current.accessPaid) ingestSignup?.(stamped);
+      ingestSignup?.(stamped);
+      if (ownsPaidKey && !current?.accessPaid) {
+        void updateSignupAccessPaid?.(account)
+          .then((remote) => {
+            if (remote) ingestSignup?.(remote);
+          })
+          .catch(() => {});
+      }
       return {
         entitled: true,
         current: stamped,
-        owned: Array.isArray(owned) ? owned : [],
+        owned: ownedRows,
       };
     }
 
     // Stale local cache said paid/bypass but server revoked it — force paywall.
-    clearDeviceAccess(key);
+    clearDeviceAccess(account);
     if (current && (current.accessPaid || current.accessBypassed || current.appAccessUnlockedAt)) {
       ingestSignup?.({
         ...current,
@@ -644,11 +683,11 @@ export default function CoverLock() {
     }
 
     // Offline fallback: only a real paid device stamp (subscription) may unlock.
-    if (hasPaidOnThisDevice(key) && !remoteSignup && !merged) {
+    if (hasPaidOnThisDevice(account) && !remoteSignup && !merged) {
       return {
         entitled: true,
-        current: current || persistPaidLocally(key, null),
-        owned: localLicensesForEmail(key),
+        current: current || persistPaidLocally(account, null),
+        owned: localLicensesForEmail(account),
       };
     }
 
@@ -661,7 +700,11 @@ export default function CoverLock() {
       showToast("Enter a valid email");
       return;
     }
-    const key = await requestSignup(email);
+    const healed = healEmailTypos(email) || normalizeEmail(email);
+    if (healed !== normalizeEmail(email)) {
+      setEmail(healed);
+    }
+    const key = await requestSignup(healed);
     if (!key) return;
     const { entitled, current } = await resolveReturningAccess(key, { waitMs: 6000 });
     if (entitled) {
