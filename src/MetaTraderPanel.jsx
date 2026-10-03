@@ -833,12 +833,15 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
               className="mt-search-input"
               type="password"
               autoComplete="current-password"
-              placeholder="Enter password"
+              placeholder="Master password (not investor)"
               value={creds.password}
               onChange={(e) => updateCred("password", e.target.value)}
               required
             />
           </label>
+          <p className="mt-panel-sub" style={{ marginTop: "-0.35rem" }}>
+            Use the MT5 master password. Investor password is rejected.
+          </p>
 
           <label className="mt-field">
             <span>Server</span>
