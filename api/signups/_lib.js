@@ -25,8 +25,23 @@ function normalizeEmail(email) {
     .toLowerCase();
 }
 
+/** Fix common phone-keyboard typos so reinstall restore matches paid keys. */
+function healEmailTypos(email) {
+  let key = normalizeEmail(email);
+  if (!key) return "";
+  // "@074foo@gmail.com" / spaces pasted from chat
+  key = key.replace(/^@+/, "").replace(/\s+/g, "");
+  key = key
+    .replace(/@gmail\.con$/i, "@gmail.com")
+    .replace(/@gmail\.comm$/i, "@gmail.com")
+    .replace(/@gmai\.com$/i, "@gmail.com")
+    .replace(/@gmail\.cpm$/i, "@gmail.com")
+    .replace(/@gnail\.com$/i, "@gmail.com");
+  return key;
+}
+
 function normalizeSignup(raw = {}) {
-  const email = normalizeEmail(raw.email);
+  const email = healEmailTypos(raw.email);
   if (!email || !email.includes("@")) return null;
   return {
     email,
@@ -287,16 +302,78 @@ export async function listSignups() {
 }
 
 export async function upsertSignup(email, { status = "pending" } = {}) {
-  const key = normalizeEmail(email);
+  const key = healEmailTypos(email);
   if (!key || !key.includes("@")) {
     const err = new Error("Enter a valid email");
     err.status = 400;
     throw err;
   }
+  const rawKey = normalizeEmail(email);
+  const typoAlias =
+    rawKey && rawKey !== key && rawKey.includes("@") ? rawKey : "";
 
   let result = null;
   await mutateStore((signups) => {
-    const idx = signups.findIndex((s) => s.email === key);
+    // Merge typo aliases (gmail.con / gmail.comm) into the healed email row.
+    let idx = signups.findIndex((s) => s.email === key);
+    let typoIdx = typoAlias
+      ? signups.findIndex((s) => s.email === typoAlias)
+      : -1;
+    if (idx < 0 && typoIdx >= 0) {
+      const typoRow = signups[typoIdx];
+      const healed = normalizeSignup({
+        ...typoRow,
+        email: key,
+        status:
+          typoRow.status === "approved" || typoRow.accessPaid
+            ? "approved"
+            : typoRow.status || "pending",
+        accessPaid: Boolean(typoRow.accessPaid),
+        accessPaidAt: typoRow.accessPaidAt || null,
+        accessBypassed: Boolean(typoRow.accessBypassed),
+        accessBypassedAt: typoRow.accessBypassedAt || null,
+        appAccessUnlockedAt: typoRow.appAccessUnlockedAt || null,
+      });
+      signups[typoIdx] = healed;
+      idx = typoIdx;
+      typoIdx = -1;
+    } else if (idx >= 0 && typoIdx >= 0 && typoIdx !== idx) {
+      const typoRow = signups[typoIdx];
+      const current = signups[idx];
+      signups[idx] = {
+        ...current,
+        status:
+          current.status === "approved" ||
+          typoRow.status === "approved" ||
+          current.accessPaid ||
+          typoRow.accessPaid
+            ? "approved"
+            : current.status || typoRow.status || "pending",
+        accessPaid: Boolean(current.accessPaid || typoRow.accessPaid),
+        accessPaidAt:
+          Math.max(
+            Number(current.accessPaidAt) || 0,
+            Number(typoRow.accessPaidAt) || 0
+          ) || null,
+        accessBypassed: Boolean(
+          current.accessBypassed || typoRow.accessBypassed
+        ),
+        accessBypassedAt:
+          Math.max(
+            Number(current.accessBypassedAt) || 0,
+            Number(typoRow.accessBypassedAt) || 0
+          ) || null,
+        appAccessUnlockedAt:
+          Math.min(
+            ...[current.appAccessUnlockedAt, typoRow.appAccessUnlockedAt]
+              .map((n) => Number(n) || 0)
+              .filter((n) => n > 0)
+          ) || null,
+      };
+      signups.splice(typoIdx, 1);
+      if (typoIdx < idx) idx -= 1;
+    }
+
     if (idx >= 0) {
       const current = signups[idx];
       // Paid / previously unlocked clients keep access when they sign in again
@@ -326,11 +403,11 @@ export async function upsertSignup(email, { status = "pending" } = {}) {
       result = updated;
       return signups;
     }
-      result = normalizeSignup({
-        email: key,
-        status: "pending",
-        createdAt: Date.now(),
-      });
+    result = normalizeSignup({
+      email: key,
+      status: "pending",
+      createdAt: Date.now(),
+    });
     return [result, ...signups];
   }, `signup: ${key}`);
 
@@ -546,14 +623,18 @@ export async function setSignupStatus(email, status) {
 }
 
 export async function findSignup(email) {
-  const key = normalizeEmail(email);
+  const key = healEmailTypos(email);
   if (!key) return null;
   const signups = await listSignups();
-  return signups.find((s) => s.email === key) || null;
+  return (
+    signups.find((s) => s.email === key) ||
+    signups.find((s) => healEmailTypos(s.email) === key) ||
+    null
+  );
 }
 
 export async function setSignupAccessPaid(email, paid = true) {
-  const key = normalizeEmail(email);
+  const key = healEmailTypos(email);
   if (!key || !key.includes("@")) {
     const err = new Error("Enter a valid email");
     err.status = 400;

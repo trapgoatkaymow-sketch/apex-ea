@@ -7,19 +7,53 @@ function formatApiError(data, status) {
     const raw = data.error || data.message;
     if (typeof raw === "string") return raw;
   }
-  return typeof data === "string" ? data : `Request failed (${status})`;
+  if (status === 504 || status === 502) {
+    return "Broker is still connecting — wait a moment and tap Connect again";
+  }
+  return typeof data === "string" && data.trim()
+    ? data
+    : `Request failed (${status})`;
 }
 
-async function apiFetch(path, { method = "GET", body, signal } = {}) {
-  const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
-    method,
-    signal,
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+function friendlyNetworkError(error, fallback = "Could not reach the broker server") {
+  const raw = String(error?.message || error || "").trim();
+  if (
+    /^failed to fetch$/i.test(raw) ||
+    /^load failed$/i.test(raw) ||
+    /networkerror/i.test(raw) ||
+    /network request failed/i.test(raw)
+  ) {
+    return "Could not reach the broker server — check connection and try again";
+  }
+  if (/abort|timed out|timeout/i.test(raw)) {
+    return "Broker is slow to answer — wait a moment and tap Connect again";
+  }
+  return raw || fallback;
+}
+
+async function apiFetch(path, { method = "GET", body, signal, retries = 0 } = {}) {
+  let response;
+  try {
+    response = await fetch(`${apiUrl(API_PATH)}${path}`, {
+      method,
+      signal,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+    });
+  } catch (error) {
+    if (retries > 0 && !signal?.aborted) {
+      await new Promise((r) => setTimeout(r, 700));
+      return apiFetch(path, { method, body, signal, retries: retries - 1 });
+    }
+    const err = new Error(friendlyNetworkError(error));
+    err.cause = error;
+    err.status = 0;
+    throw err;
+  }
 
   const text = await response.text();
   let data = null;
@@ -62,22 +96,43 @@ export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
   const { searchLocalBrokers } = await import("./brokerCatalog.js");
   const local = searchLocalBrokers(q, platform).filter((b) => !isBlocked(b));
 
+  // Never block the UI on a hung MT5 /Search (Razor was empty after ~10s).
+  // Race a short remote window; local catalog always paints immediately.
   try {
+    if (signal?.aborted) return local;
     const params = new URLSearchParams({
       q,
       platform: String(platform || "MT5").toUpperCase(),
     });
-    const data = await apiFetch(`/brokers?${params.toString()}`, { signal });
-    const remote = (Array.isArray(data?.brokers) ? data.brokers : []).filter(
-      (b) => !isBlocked(b)
-    );
+    const remotePromise = apiFetch(`/brokers?${params.toString()}`, { signal })
+      .then((data) => ({ ok: true, data }))
+      .catch((error) => ({ ok: false, error }));
+    const timeoutPromise = new Promise((resolve) => {
+      const timer = setTimeout(() => resolve({ ok: false, timedOut: true }), 3500);
+      signal?.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve({ ok: false, aborted: true });
+        },
+        { once: true }
+      );
+    });
+    const outcome = await Promise.race([remotePromise, timeoutPromise]);
+    if (!outcome?.ok) return local;
+    const remote = (
+      Array.isArray(outcome.data?.brokers) ? outcome.data.brokers : []
+    ).filter((b) => !isBlocked(b));
     if (!remote.length) return local;
-    const seen = new Set(remote.map((b) => `${b.company}::${b.name}`.toLowerCase()));
-    const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));
+    const seen = new Set(
+      remote.map((b) => `${b.company}::${b.name}`.toLowerCase())
+    );
+    const extras = local.filter(
+      (b) => !seen.has(`${b.company}::${b.name}`.toLowerCase())
+    );
     return [...remote, ...extras];
-  } catch (error) {
-    if (local.length) return local;
-    throw error;
+  } catch {
+    return local;
   }
 }
 
@@ -87,7 +142,11 @@ export async function getAccountStatus(accountId, { company = "", signal } = {})
   return apiFetch(`/status?${params.toString()}`, { signal });
 }
 
-/** Connect via MT5API ConnectEx (server-side). No MetaAPI pending poll. */
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Connect via MT5API ConnectEx (async job + poll — avoids Vercel 504). */
 export async function connectAccount({
   login,
   password,
@@ -98,19 +157,91 @@ export async function connectAccount({
   onProgress,
 } = {}) {
   onProgress?.({ pending: true, connectionStatus: "CONNECTING" });
-  const session = await apiFetch("/connect", {
-    method: "POST",
-    signal,
-    body: {
-      login,
-      password,
-      server,
-      platform,
-      company,
-    },
-  });
-  onProgress?.(session);
-  return session;
+  let started;
+  try {
+    started = await apiFetch("/connect", {
+      method: "POST",
+      signal,
+      retries: 0,
+      body: {
+        login,
+        password,
+        server,
+        platform,
+        company,
+        async: true,
+      },
+    });
+  } catch (error) {
+    // Credential / server errors finish inside the first hop — surface them.
+    if (Number(error?.status) > 0 && Number(error?.status) !== 202) {
+      throw error;
+    }
+    throw error;
+  }
+
+  // Fast brokers finish inside the first response.
+  if (started?.accountId && started?.pending !== true) {
+    onProgress?.(started);
+    return started;
+  }
+
+  const jobId = String(started?.jobId || "").trim();
+  if (!jobId) {
+    const err = new Error(
+      started?.error || "Could not start broker connection"
+    );
+    err.status = 500;
+    throw err;
+  }
+
+  // Poll up to ~2.5 minutes — Razor/XM cold ConnectEx can be slow.
+  const deadline = Date.now() + 150_000;
+  let lastError = "";
+  while (Date.now() < deadline) {
+    if (signal?.aborted) {
+      const err = new Error("Connection cancelled");
+      err.status = 499;
+      throw err;
+    }
+    onProgress?.({
+      pending: true,
+      connectionStatus: "CONNECTING",
+      jobId,
+    });
+    await sleep(2000);
+    try {
+      const data = await apiFetch(
+        `/connect?jobId=${encodeURIComponent(jobId)}`,
+        { signal, retries: 0 }
+      );
+      if (data?.accountId && data?.pending !== true) {
+        onProgress?.(data);
+        return data;
+      }
+      if (data?.status === "failed" || data?.error) {
+        const err = new Error(data.error || "Connection failed");
+        err.status = data.errorStatus || 500;
+        throw err;
+      }
+    } catch (error) {
+      // 202 Accepted while still running — apiFetch treats 202 as ok and
+      // returns the body. Real failures throw.
+      if (Number(error?.status) === 404) {
+        lastError = error.message || "Connect job not found";
+        continue;
+      }
+      if (Number(error?.status) >= 400) throw error;
+      lastError = error.message || lastError;
+    }
+  }
+
+  const err = new Error(
+    lastError ||
+      "Broker is still connecting — wait a moment and tap Connect again"
+  );
+  err.status = 504;
+  throw err;
 }
 
 export async function disconnectAccount(accountId, { email = "", signal } = {}) {

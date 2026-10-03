@@ -90,8 +90,8 @@
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-/** Gen 132 — Unused license keys activate on any signed-in email. */
-export const UI_SHELL_GENERATION = 132;
+/** Gen 140 — Known Razor/XM servers when MT5 Search hangs + cost trim. */
+export const UI_SHELL_GENERATION = 140;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -101,7 +101,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 132;
+export const UI_SHELL_FLOOR = 140;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

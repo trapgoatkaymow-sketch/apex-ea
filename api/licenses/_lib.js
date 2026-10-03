@@ -421,6 +421,104 @@ function normalizeDeletedKeys(raw) {
   return out;
 }
 
+/** Exact formatted key + hyphenless compact only (never OCR lookalikes). */
+export function licenseKeyIdentity(rawKey) {
+  const formatted = formatLicenseKey(rawKey);
+  if (!formatted) return [];
+  const compact = formatted.replace(/-/g, "");
+  return compact && compact !== formatted
+    ? [formatted, compact]
+    : [formatted];
+}
+
+function lookalikeNeighbors(formattedKey) {
+  const base = formatLicenseKey(formattedKey);
+  if (!base) return [];
+  const pairs = [
+    ["0", "O"],
+    ["1", "I"],
+    ["1", "L"],
+    ["5", "S"],
+    ["8", "B"],
+    ["2", "Z"],
+  ];
+  const out = new Set();
+  const chars = [...base];
+  for (let i = 0; i < chars.length; i += 1) {
+    for (const [a, b] of pairs) {
+      if (chars[i] === a || chars[i] === b) {
+        const next = [...chars];
+        next[i] = chars[i] === a ? b : a;
+        out.add(next.join(""));
+      }
+    }
+  }
+  return Array.from(out);
+}
+
+/**
+ * Drop OCR lookalike tombstone pollution and never bury a live license key.
+ * Old deletes stamped every O/0/1/I/L swap, which wiped valid generated keys.
+ */
+function sanitizeDeletedKeys(deletedKeys, licenses = []) {
+  const tomb = normalizeDeletedKeys(deletedKeys);
+  const live = new Set();
+  for (const row of Array.isArray(licenses) ? licenses : []) {
+    for (const id of licenseKeyIdentity(row?.key)) live.add(id);
+  }
+  // Live keys always win over a false lookalike tombstone.
+  for (const id of live) {
+    delete tomb[id];
+  }
+
+  const formatted = Object.entries(tomb).filter(([k]) =>
+    /^APEX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(k)
+  );
+  const byTime = new Map();
+  for (const [key, at] of formatted) {
+    const stamp = Number(at) || 0;
+    if (!byTime.has(stamp)) byTime.set(stamp, []);
+    byTime.get(stamp).push(key);
+  }
+
+  const keepFormatted = new Set();
+  for (const keys of byTime.values()) {
+    const pending = new Set(keys);
+    while (pending.size) {
+      const seed = [...pending].sort()[0];
+      keepFormatted.add(seed);
+      pending.delete(seed);
+      const queue = [seed];
+      while (queue.length) {
+        const cur = queue.pop();
+        for (const neighbor of lookalikeNeighbors(cur)) {
+          if (!pending.has(neighbor)) continue;
+          pending.delete(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+  }
+
+  // Preserve non-standard tombstones (tests) that are not APEX-XXXX-XXXX.
+  for (const [key, at] of Object.entries(tomb)) {
+    if (/^APEX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) continue;
+    if (/^APEX[A-Z0-9]{8}$/.test(key)) continue;
+    keepFormatted.add(key);
+    void at;
+  }
+
+  const next = {};
+  for (const key of keepFormatted) {
+    const at = Number(tomb[key]) || Date.now();
+    for (const id of licenseKeyIdentity(key)) {
+      if (live.has(id)) continue;
+      next[id] = Math.max(next[id] || 0, at);
+    }
+  }
+  return next;
+}
+
 function mergeDeletedKeyMaps(...maps) {
   const out = {};
   for (const map of maps) {
@@ -436,14 +534,17 @@ function withoutDeletedLicenses(licenses, deletedKeys) {
   if (!Object.keys(tomb).length) {
     return Array.isArray(licenses) ? licenses : [];
   }
-  return (Array.isArray(licenses) ? licenses : []).filter(
-    (row) => row?.key && !tomb[row.key]
-  );
+  return (Array.isArray(licenses) ? licenses : []).filter((row) => {
+    const key = formatLicenseKey(row?.key);
+    if (!key) return false;
+    return !licenseKeyIdentity(key).some((id) => Boolean(tomb[id]));
+  });
 }
 
 function isKeyDeleted(rawKey, deletedKeys = memoryDeletedKeys) {
   const tomb = normalizeDeletedKeys(deletedKeys);
-  return licenseKeyVariants(rawKey).some((k) => Boolean(tomb[k]));
+  // Exact + compact only — lookalike tombstones must not invalidate real keys.
+  return licenseKeyIdentity(rawKey).some((k) => Boolean(tomb[k]));
 }
 
 export function normalizeLicenseKey(key) {
@@ -560,6 +661,18 @@ async function ghFetch(url, { method = "GET", body, token, auth = true, cache } 
     throw err;
   }
   return data;
+}
+
+function healEmailTypos(email) {
+  let key = normalizeEmail(email);
+  if (!key) return "";
+  key = key.replace(/^@+/, "").replace(/\s+/g, "");
+  return key
+    .replace(/@gmail\.con$/i, "@gmail.com")
+    .replace(/@gmail\.comm$/i, "@gmail.com")
+    .replace(/@gmai\.com$/i, "@gmail.com")
+    .replace(/@gmail\.cpm$/i, "@gmail.com")
+    .replace(/@gnail\.com$/i, "@gmail.com");
 }
 
 function normalizeEmail(email) {
@@ -1541,13 +1654,11 @@ function mergeLicenseLists(...lists) {
 
 function readLocalStore() {
   if (Array.isArray(memoryLicenses)) {
-    const deletedKeys = normalizeDeletedKeys(memoryDeletedKeys);
+    const licenses = memoryLicenses.map((row) => ({ ...row }));
+    const deletedKeys = sanitizeDeletedKeys(memoryDeletedKeys, licenses);
     return {
       sha: "local",
-      licenses: withoutDeletedLicenses(
-        memoryLicenses.map((row) => ({ ...row })),
-        deletedKeys
-      ),
+      licenses: withoutDeletedLicenses(licenses, deletedKeys),
       deletedKeys,
       remote: false,
     };
@@ -1567,12 +1678,13 @@ function readLocalStore() {
     }
   }
 
-  const deletedKeys = mergeDeletedKeyMaps(...deletedChunks);
-  memoryDeletedKeys = deletedKeys;
-  memoryLicenses = withoutDeletedLicenses(
-    mergeLicenseLists(...licenseChunks),
-    deletedKeys
+  const mergedLicenses = mergeLicenseLists(...licenseChunks);
+  const deletedKeys = sanitizeDeletedKeys(
+    mergeDeletedKeyMaps(...deletedChunks),
+    mergedLicenses
   );
+  memoryDeletedKeys = deletedKeys;
+  memoryLicenses = withoutDeletedLicenses(mergedLicenses, deletedKeys);
   return {
     sha: "local",
     licenses: memoryLicenses.map((row) => ({ ...row })),
@@ -1603,10 +1715,11 @@ function readLocalFileLicenses() {
 }
 
 function writeLocalStore(licenses, deletedKeys = memoryDeletedKeys) {
-  const nextDeleted = normalizeDeletedKeys(deletedKeys);
-  const next = withoutDeletedLicenses(mergeLicenseLists(licenses), nextDeleted).map(
-    (row) => ({ ...row })
-  );
+  const merged = mergeLicenseLists(licenses);
+  const nextDeleted = sanitizeDeletedKeys(deletedKeys, merged);
+  const next = withoutDeletedLicenses(merged, nextDeleted).map((row) => ({
+    ...row,
+  }));
   memoryLicenses = next;
   memoryDeletedKeys = nextDeleted;
   const payload =
@@ -1735,20 +1848,21 @@ async function readStore(options = {}) {
   const localFiles = readLocalFileLicenses();
   // Always merge durable + /tmp + bundled + memory so redeploys / stale snapshots
   // cannot make newly created keys look "Invalid".
-  // Tombstones win: deleted keys stay deleted across every source.
-  const deletedKeys = mergeDeletedKeyMaps(
-    remote?.deletedKeys,
-    localFiles.deletedKeys,
-    memoryDeletedKeys
+  // Exact tombstones only: lookalike OCR stamps must not wipe live keys.
+  const mergedLicenses = mergeLicenseLists(
+    remote?.licenses || [],
+    localFiles.licenses,
+    Array.isArray(memoryLicenses) ? memoryLicenses : []
   );
-  const merged = withoutDeletedLicenses(
-    mergeLicenseLists(
-      remote?.licenses || [],
-      localFiles.licenses,
-      Array.isArray(memoryLicenses) ? memoryLicenses : []
+  const deletedKeys = sanitizeDeletedKeys(
+    mergeDeletedKeyMaps(
+      remote?.deletedKeys,
+      localFiles.deletedKeys,
+      memoryDeletedKeys
     ),
-    deletedKeys
+    mergedLicenses
   );
+  const merged = withoutDeletedLicenses(mergedLicenses, deletedKeys);
   memoryLicenses = merged.map((row) => ({ ...row }));
   memoryDeletedKeys = deletedKeys;
   memoryLicensesAt = Date.now();
@@ -1762,7 +1876,6 @@ async function readStore(options = {}) {
 }
 
 async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKeys) {
-  const nextDeleted = normalizeDeletedKeys(deletedKeys);
   // Drop embedded data-URL photos so licenses.json stays under Contents API
   // size limits and git pushes stay fast on Vercel.
   const compact = (Array.isArray(licenses) ? licenses : []).map((row) => {
@@ -1779,7 +1892,9 @@ async function writeStore(licenses, sha, message, deletedKeys = memoryDeletedKey
       },
     };
   });
-  const normalized = withoutDeletedLicenses(mergeLicenseLists(compact), nextDeleted);
+  const mergedCompact = mergeLicenseLists(compact);
+  const nextDeleted = sanitizeDeletedKeys(deletedKeys, mergedCompact);
+  const normalized = withoutDeletedLicenses(mergedCompact, nextDeleted);
   // Always keep a local copy first so a failed remote write cannot drop keys.
   writeLocalStore(normalized, nextDeleted);
 
@@ -1843,8 +1958,15 @@ async function mutateStore(mutator, message) {
       const api = {
         deletedKeys,
         tombstone(rawKey) {
-          for (const key of licenseKeyVariants(rawKey)) {
-            deletedKeys[key] = Date.now();
+          // Exact + compact only — never stamp OCR lookalikes onto other keys.
+          const at = Date.now();
+          for (const key of licenseKeyIdentity(rawKey)) {
+            deletedKeys[key] = at;
+          }
+        },
+        untombstone(rawKey) {
+          for (const key of licenseKeyIdentity(rawKey)) {
+            delete deletedKeys[key];
           }
         },
         isDeleted(rawKey) {
@@ -1855,6 +1977,9 @@ async function mutateStore(mutator, message) {
         store.licenses.map((row) => ({ ...row, bot: row.bot ? { ...row.bot } : null })),
         api
       );
+      const cleanedDeleted = sanitizeDeletedKeys(deletedKeys, next);
+      for (const key of Object.keys(deletedKeys)) delete deletedKeys[key];
+      Object.assign(deletedKeys, cleanedDeleted);
       lastWrite = await writeStore(next, store.sha, message, deletedKeys);
       const licenses = withoutDeletedLicenses(mergeLicenseLists(next), deletedKeys);
       return {
@@ -1872,8 +1997,14 @@ async function mutateStore(mutator, message) {
         const api = {
           deletedKeys,
           tombstone(rawKey) {
-            for (const key of licenseKeyVariants(rawKey)) {
-              deletedKeys[key] = Date.now();
+            const at = Date.now();
+            for (const key of licenseKeyIdentity(rawKey)) {
+              deletedKeys[key] = at;
+            }
+          },
+          untombstone(rawKey) {
+            for (const key of licenseKeyIdentity(rawKey)) {
+              delete deletedKeys[key];
             }
           },
           isDeleted(rawKey) {
@@ -1884,6 +2015,9 @@ async function mutateStore(mutator, message) {
           local.licenses.map((row) => ({ ...row, bot: row.bot ? { ...row.bot } : null })),
           api
         );
+        const cleanedDeleted = sanitizeDeletedKeys(deletedKeys, next);
+        for (const key of Object.keys(deletedKeys)) delete deletedKeys[key];
+        Object.assign(deletedKeys, cleanedDeleted);
         const licenses = writeLocalStore(next, deletedKeys);
         return {
           licenses,
@@ -2692,7 +2826,10 @@ export async function claimLicenseViaInvite(payload = {}) {
  * A different phone is rejected — unless the CoverLock email matches the
  * license clientEmail or mentorEmail (owner/mentor reclaim after reinstall).
  */
-export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}) {
+export async function markLicenseUsed(
+  rawKey,
+  { deviceId = "", email = "", license = null, botId = "", botName = "" } = {}
+) {
   const variants = licenseKeyVariants(rawKey);
   if (!variants.length) {
     const err = new Error("License key is required");
@@ -2708,9 +2845,28 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   }
 
   const claimEmail = normalizeEmail(email);
+  const formattedKey = formatLicenseKey(rawKey);
 
   // Peek current license via fast Firebase path (avoid git-clone timeouts).
   let current = await findLicense(rawKey);
+  // Client may still hold the row after a merge race / false tombstone wipe.
+  if (!current && license && typeof license === "object") {
+    const healKey = formatLicenseKey(license.key || rawKey);
+    if (
+      healKey &&
+      (licenseRowMatchesKey({ key: healKey }, rawKey) ||
+        licenseRowMatchesKey({ key: healKey }, formattedKey))
+    ) {
+      const healed = normalizeLicense({
+        ...license,
+        key: healKey,
+        botId: license.botId || botId || license.bot?.id || "",
+        botName: license.botName || botName || license.bot?.name || "Bot",
+        clientEmail: license.clientEmail || claimEmail || "",
+      });
+      if (healed) current = healed;
+    }
+  }
   if (!current) {
     const err = new Error("Invalid license key");
     err.status = 404;
@@ -2742,9 +2898,13 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
     }
     let reclaimed = current;
     const now = Date.now();
-    await mutateStore((licenses) => {
-      const idx = licenses.findIndex((row) => licenseRowMatchesKey(row, rawKey));
-      if (idx < 0) return licenses;
+    await mutateStore((licenses, api) => {
+      let idx = licenses.findIndex((row) => licenseRowMatchesKey(row, rawKey));
+      if (idx < 0) {
+        api.untombstone?.(formattedKey);
+        licenses.unshift({ ...current });
+        idx = 0;
+      }
       const row = licenses[idx];
       const next = {
         ...row,
@@ -2775,11 +2935,15 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
   if (current.used && (!boundDevice || boundDevice === claimDevice)) {
     let claimed = current;
     if (!boundDevice) {
-      await mutateStore((licenses) => {
-        const idx = licenses.findIndex((row) =>
+      await mutateStore((licenses, api) => {
+        let idx = licenses.findIndex((row) =>
           licenseRowMatchesKey(row, rawKey)
         );
-        if (idx < 0) return licenses;
+        if (idx < 0) {
+          api.untombstone?.(formattedKey);
+          licenses.unshift({ ...current });
+          idx = 0;
+        }
         const row = licenses[idx];
         const next = {
           ...row,
@@ -2856,12 +3020,13 @@ export async function markLicenseUsed(rawKey, { deviceId = "", email = "" } = {}
 
   let result = null;
   const now = Date.now();
-  await mutateStore((licenses) => {
-    const idx = licenses.findIndex((row) => licenseRowMatchesKey(row, rawKey));
+  await mutateStore((licenses, api) => {
+    let idx = licenses.findIndex((row) => licenseRowMatchesKey(row, rawKey));
     if (idx < 0) {
-      const err = new Error("Invalid license key");
-      err.status = 404;
-      throw err;
+      // Peek/heal found the key — re-seed so merge races never say Invalid.
+      api.untombstone?.(formattedKey);
+      licenses.unshift({ ...current });
+      idx = 0;
     }
     const row = licenses[idx];
     const alreadyBound = String(row.deviceId || "").trim();
@@ -3257,8 +3422,8 @@ export async function grantScanReset(rawKey, { adminEmail = "" } = {}) {
 }
 
 export async function deleteLicense(rawKey) {
-  const variants = licenseKeyVariants(rawKey);
-  if (!variants.length) {
+  const formattedKey = formatLicenseKey(rawKey);
+  if (!formattedKey) {
     const err = new Error("License key is required");
     err.status = 400;
     throw err;
@@ -3266,22 +3431,44 @@ export async function deleteLicense(rawKey) {
 
   let result = null;
   const write = await mutateStore((licenses, api) => {
-    const idx = licenses.findIndex((row) => variants.includes(row.key));
-    // Always stamp a tombstone so bundled /tmp / migrate cannot resurrect the key.
-    api.tombstone(variants[0]);
+    const idx = licenses.findIndex((row) =>
+      licenseRowMatchesKey(row, formattedKey)
+    );
+    // Exact + compact tombstone only (lookalikes must not wipe other keys).
+    api.tombstone(formattedKey);
     if (idx < 0) {
-      result = { key: variants[0], deleted: true, alreadyGone: true };
+      result = { key: formattedKey, deleted: true, alreadyGone: true };
       return licenses;
     }
     result = licenses[idx];
     api.tombstone(result.key);
     return licenses.filter((_, i) => i !== idx);
-  }, `license deleted: ${variants[0]}`);
+  }, `license deleted: ${formattedKey}`);
 
   return {
-    ...(result || { key: variants[0], deleted: true }),
+    ...(result || { key: formattedKey, deleted: true }),
     deleted: true,
     durable: write?.durable !== false,
+  };
+}
+
+/** Persist cleaned tombstones + resurrect keys falsely buried by lookalike deletes. */
+export async function sanitizeLicenseTombs() {
+  const store = await readStore({ preferFresh: true });
+  const before = Object.keys(normalizeDeletedKeys(store.deletedKeys)).length;
+  const write = await writeStore(
+    store.licenses,
+    store.sha,
+    "chore: sanitize license tombstones (exact keys only)",
+    store.deletedKeys
+  );
+  const after = Object.keys(normalizeDeletedKeys(memoryDeletedKeys)).length;
+  return {
+    ok: write?.durable !== false,
+    durable: write?.durable !== false,
+    deletedKeysBefore: before,
+    deletedKeysAfter: after,
+    licenses: Array.isArray(memoryLicenses) ? memoryLicenses.length : 0,
   };
 }
 
@@ -3309,11 +3496,13 @@ export async function findLicense(rawKey) {
 }
 
 export async function findLicensesByEmail(email) {
-  const key = normalizeEmail(email);
+  const key = healEmailTypos(email) || normalizeEmail(email);
   if (!key) return [];
   // Email unlock fallback — same fast Firebase path as findLicense.
   const store = await readStore({ preferFresh: true, fastLookup: true });
-  return store.licenses.filter((row) => normalizeEmail(row.clientEmail) === key);
+  return store.licenses.filter(
+    (row) => (healEmailTypos(row.clientEmail) || normalizeEmail(row.clientEmail)) === key
+  );
 }
 
 /** Push the merged license store to every durable backend (Firebase/Blob/GitHub). */

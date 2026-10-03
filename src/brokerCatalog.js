@@ -1,14 +1,22 @@
 export const BROKER_CATALOG = [
-  { company: "IC Markets", aliases: [] },
-  { company: "Pepperstone", aliases: [] },
-  { company: "Exness", aliases: [] },
-  { company: "XM", aliases: [] },
+  { company: "IC Markets", aliases: [], servers: ["ICMarketsSC-MT5"] },
+  { company: "Pepperstone", aliases: [], servers: ["Pepperstone-MT5-Live"] },
+  { company: "Exness", aliases: [], servers: ["Exness-MT5Real"] },
+  {
+    company: "XM",
+    aliases: ["xm global", "xm trading", "xm.com"],
+    servers: ["XMGlobal-MT5 5", "XMGlobal-MT5 7", "XMGlobal-MT5 10"],
+  },
   { company: "FP Markets", aliases: [] },
   { company: "Tickmill", aliases: [] },
   { company: "BlackBull Markets", aliases: [] },
   { company: "Vantage", aliases: [] },
   { company: "FxPro", aliases: [] },
-  { company: "HFM", aliases: [] },
+  {
+    company: "HFM",
+    aliases: ["hotforex", "hf markets"],
+    servers: ["HFMarketsSA-Live"],
+  },
   { company: "Octa", aliases: [] },
   { company: "Eightcap", aliases: [] },
   { company: "OANDA", aliases: [] },
@@ -311,14 +319,38 @@ export const BROKER_CATALOG = [
   { company: "Vantage FX", aliases: [] },
   { company: "VT Markets Global", aliases: [] },
   { company: "Windsor Brokers Global", aliases: [] },
-  { company: "XM Global", aliases: [] },
-  { company: "XM Trading", aliases: [] },
-  { company: "XM.com", aliases: [] },
+  {
+    company: "XM Global",
+    aliases: ["xm"],
+    servers: ["XMGlobal-MT5 5", "XMGlobal-MT5 7", "XMGlobal-MT5 10"],
+  },
+  {
+    company: "XM Trading",
+    aliases: ["xm"],
+    servers: ["XMTrading-MT5 5"],
+  },
+  {
+    company: "XM.com",
+    aliases: ["xm"],
+    servers: ["XMGlobal-MT5 5"],
+  },
   { company: "XTB Limited", aliases: [] },
   { company: "XTB Africa", aliases: [] },
   { company: "YesTrader", aliases: [] },
   { company: "Z.com Forex", aliases: [] },
-  { company: "Razor Markets", aliases: ["razor", "razormarkets", "razor markets sa", "razor mt5"] },
+  {
+    company: "Razor Markets",
+    aliases: [
+      "razor",
+      "razormarkets",
+      "razor markets sa",
+      "razor mt5",
+      "razor market",
+      "razormarkets-live",
+      "razormarkets-demo",
+    ],
+    servers: ["RazorMarkets-Live", "RazorMarkets-Demo"],
+  },
   { company: "GT247", aliases: [] },
   { company: "GT247.com", aliases: ["gt247", "gt 247"] },
   { company: "EasyTrader", aliases: [] },
@@ -343,9 +375,21 @@ export const BROKER_CATALOG = [
   { company: "Pepperstone South Africa", aliases: ["pepperstone sa"] },
   { company: "IC Markets South Africa", aliases: ["ic markets sa", "icmarkets"] },
   { company: "Exness South Africa", aliases: ["exness sa", "exness africa"] },
-  { company: "XM South Africa", aliases: ["xm sa", "xm africa"] },
-  { company: "HFM South Africa", aliases: ["hfm", "hotforex", "hf markets"] },
-  { company: "HF Markets South Africa", aliases: ["hfm", "hotforex"] },
+  {
+    company: "XM South Africa",
+    aliases: ["xm sa", "xm africa", "xm"],
+    servers: ["XMGlobal-MT5 5", "XMGlobal-MT5 7"],
+  },
+  {
+    company: "HFM South Africa",
+    aliases: ["hfm", "hotforex", "hf markets"],
+    servers: ["HFMarketsSA-Live"],
+  },
+  {
+    company: "HF Markets South Africa",
+    aliases: ["hfm", "hotforex"],
+    servers: ["HFMarketsSA-Live"],
+  },
   { company: "AvaTrade South Africa", aliases: [] },
   { company: "Tickmill South Africa", aliases: [] },
   { company: "Vantage South Africa", aliases: [] },
@@ -389,18 +433,46 @@ export function searchLocalBrokers(query, platform = "MT5") {
   const q = String(query || "").trim().toLowerCase();
   if (!q) return [];
   const matches = BROKER_CATALOG.filter((b) => {
-    const hay = [b.company, ...(b.aliases || [])].join(" ").toLowerCase();
+    const hay = [b.company, ...(b.aliases || []), ...(b.servers || [])]
+      .join(" ")
+      .toLowerCase();
     return hay.includes(q) || q.split(/\s+/).every((p) => hay.includes(p));
   }).slice(0, 40);
-  return matches.map((b, index) => ({
-    id: `local::${b.company}::${index}`,
-    company: b.company,
-    name: b.company,
-    site: "",
-    logoUrl: "",
-    access: [],
-    platform,
-    custom: false,
-    local: true,
-  }));
+  const rows = [];
+  for (const [index, b] of matches.entries()) {
+    const servers = Array.isArray(b.servers)
+      ? b.servers.map((s) => String(s || "").trim()).filter(Boolean)
+      : [];
+    if (!servers.length) {
+      rows.push({
+        id: `local::${b.company}::${index}`,
+        company: b.company,
+        name: b.company,
+        site: "",
+        logoUrl: "",
+        access: [],
+        platform,
+        custom: false,
+        local: true,
+        defaultServer: "",
+      });
+      continue;
+    }
+    for (const [sIdx, server] of servers.entries()) {
+      rows.push({
+        id: `local::${b.company}::${server}::${sIdx}`,
+        company: b.company,
+        // Show the real MT5 server name so pick/connect never leave it blank.
+        name: server,
+        site: "",
+        logoUrl: "",
+        access: [],
+        platform,
+        custom: false,
+        local: true,
+        defaultServer: server,
+      });
+    }
+  }
+  return rows.slice(0, 40);
 }

@@ -485,20 +485,39 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     setSearchError("");
 
     const timer = setTimeout(async () => {
+      // Paint local catalog first so "Searching…" never hides Razor / known brokers.
       try {
-        const brokers = await searchBrokers(q, platform, { signal: controller.signal });
+        const { searchLocalBrokers } = await import("./brokerCatalog.js");
+        const local = searchLocalBrokers(q, platform).filter(
+          (b) =>
+            !/^razor\s*markets\s*\(pty\)\s*ltd\.?$/i.test(
+              String(b?.company || "").trim()
+            )
+        );
+        if (requestId === searchRef.current && local.length) {
+          setResults(local);
+          setSearching(false);
+        }
+      } catch {
+        // remote path still runs
+      }
+
+      try {
+        const brokers = await searchBrokers(q, platform, {
+          signal: controller.signal,
+        });
         if (requestId !== searchRef.current) return;
         setResults(brokers);
         if (!brokers.length) setSearchError("No brokers match that search.");
       } catch (error) {
         if (controller.signal.aborted) return;
         if (requestId !== searchRef.current) return;
-        setResults([]);
-        setSearchError(error.message || "Broker search failed");
+        // Keep any local results already painted — do not wipe the list.
+        setSearchError((prev) => prev || error.message || "Broker search failed");
       } finally {
         if (requestId === searchRef.current) setSearching(false);
       }
-    }, 350);
+    }, 200);
 
     return () => {
       clearTimeout(timer);
@@ -526,12 +545,17 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
 
   function pickBroker(broker) {
     setSelectedBroker(broker);
-    const server =
-      broker.local || broker.custom ? "" : String(broker.name || "").trim();
+    // Prefer known defaultServer (local catalog). Remote rows use name.
+    // Never blank out Razor/XM when MT5 /Search timed out.
+    const server = String(
+      broker?.defaultServer ||
+        (!broker?.custom ? broker?.name : "") ||
+        ""
+    ).trim();
     setCreds({
       login: "",
       password: "",
-      server,
+      server: broker?.custom ? "" : server,
     });
     setStep("login");
   }
@@ -580,18 +604,25 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
 
     try {
       await advance(0);
+      pushEngineLog("Connecting to broker — keep this screen open");
       await advance(1);
       // Do not send client email on connect — MetaAPI allows max 3 account keywords
       // and email tag would exceed the limit on some deployments. Email is registered
       // after connect via syncHostedAccount (mt5-accounts registry).
+      // Async connect job + poll — no more Vercel 504 while ConnectEx runs.
       const connected = await connectAccount({
         login,
         password,
         server,
         platform,
         company: selectedBroker?.company || "",
-        onProgress: async () => {
-          setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
+        onProgress: async (progress) => {
+          if (progress?.pending) {
+            pushEngineLog("Provisioning cloud terminal");
+            setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
+          } else {
+            setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
+          }
         },
       });
       await advance(2);
@@ -645,7 +676,14 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
       setEngineMode("idle");
     } catch (error) {
       setEngineMode("idle");
-      showToast(error.message || "Connection failed");
+      const raw = String(error?.message || "").trim();
+      const friendly =
+        /^failed to fetch$/i.test(raw) || /^load failed$/i.test(raw)
+          ? "Could not reach the broker server — check connection and try again"
+          : /slow to answer|timed out|timeout/i.test(raw)
+            ? "Broker is slow to answer — wait a moment and tap Connect again"
+            : raw || "Connection failed";
+      showToast(friendly);
     } finally {
       setConnecting(false);
     }
@@ -988,10 +1026,11 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         <ul className="mt-broker-list">
           {!hasQuery ? (
             <li className="mt-broker-empty">Search for your broker</li>
-          ) : searching ? (
-            <li className="mt-broker-empty">Searching brokers…</li>
           ) : (
             <>
+              {searching && !results.length ? (
+                <li className="mt-broker-empty">Searching brokers…</li>
+              ) : null}
               {results.map((broker) => (
                 <li key={broker.id}>
                   <button
@@ -1027,7 +1066,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                   </button>
                 </li>
               ) : null}
-              {!results.length && searchError ? (
+              {!searching && !results.length && searchError ? (
                 <li className="mt-broker-empty">{searchError}</li>
               ) : null}
             </>

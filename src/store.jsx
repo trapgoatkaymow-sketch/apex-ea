@@ -1253,46 +1253,68 @@ export function AppProvider({ children }) {
       return "";
     };
 
+    const rowMatchesAccount = (row) => {
+      if (!account) return false;
+      const client = normalizeEmail(
+        row.clientEmail || row.email || row.boundEmail
+      );
+      const usedBy = normalizeEmail(row.usedByEmail || row.usedBy);
+      return client === account || usedBy === account;
+    };
+
+    const freshest = (rows) =>
+      [...(Array.isArray(rows) ? rows : [])].sort(
+        (a, b) =>
+          Number(b.usedAt || b.updatedAt || 0) -
+          Number(a.usedAt || a.updatedAt || 0)
+      );
+
+    const themeFromRows = (rows) => {
+      for (const row of freshest(rows)) {
+        const color = pickTheme(row.mentorEmail || row.ownerEmail);
+        if (color) return color;
+      }
+      return "";
+    };
+
     let themeColor = "";
 
-    if (account) {
-      const bound = keys.filter((row) => {
-        const client = normalizeEmail(row.clientEmail || row.email || row.boundEmail);
-        const usedBy = normalizeEmail(row.usedByEmail || row.usedBy);
-        return client === account || usedBy === account;
-      });
-      bound.sort(
-        (a, b) =>
-          Number(b.usedAt || b.updatedAt || 0) - Number(a.usedAt || a.updatedAt || 0)
-      );
-      for (const row of bound) {
-        themeColor = pickTheme(row.mentorEmail || row.ownerEmail);
-        if (themeColor) break;
-      }
-    }
-
-    if (!themeColor && botId) {
+    // Active EA on screen wins. Otherwise a newer key from another mentor
+    // (e.g. gold BLACK VENOM) painted Start / robot list yellow while ZETA
+    // (pink) was still the home bot.
+    if (botId) {
       const forBot = keys.filter(
         (row) =>
           String(row.botId || "").trim() === botId ||
           String(row.bot?.id || "").trim() === botId
       );
-      forBot.sort(
-        (a, b) =>
-          Number(b.usedAt || b.updatedAt || 0) - Number(a.usedAt || a.updatedAt || 0)
-      );
-      for (const row of forBot) {
-        themeColor = pickTheme(row.mentorEmail || row.ownerEmail);
-        if (themeColor) break;
-      }
+      const boundForBot = forBot.filter(rowMatchesAccount);
+      themeColor = themeFromRows(boundForBot.length ? boundForBot : forBot);
       if (!themeColor) {
         const ea = eaList.find((item) => item.id === botId);
-        themeColor = pickTheme(ea?.ownerEmail);
+        themeColor = pickTheme(
+          ea?.ownerEmail ||
+            activeBot?.ownerEmail ||
+            activeBot?.mentorEmail ||
+            ""
+        );
       }
     }
 
+    // Signed-in mentor previewing their own portal color on their account.
+    if (!themeColor && account) {
+      const selfTheme = normalizeHexColor(mentorThemes[account] || "", "");
+      if (selfTheme) themeColor = selfTheme;
+    }
+
+    if (!themeColor && account) {
+      themeColor = themeFromRows(keys.filter(rowMatchesAccount));
+    }
+
     if (!themeColor) {
-      const anyKey = keys.find((row) => pickTheme(row.mentorEmail || row.ownerEmail));
+      const anyKey = keys.find((row) =>
+        pickTheme(row.mentorEmail || row.ownerEmail)
+      );
       if (anyKey) themeColor = pickTheme(anyKey.mentorEmail || anyKey.ownerEmail);
     }
 
@@ -2787,6 +2809,39 @@ export function AppProvider({ children }) {
       // Never pull the full 3MB roster on unlock — that timed out as "invalid".
 
       if (!entry) {
+        // Last resort: retry lookup once more (merge race / cold instance).
+        if (!lookupFailed) {
+          try {
+            await new Promise((r) => setTimeout(r, 500));
+            entry = await fetchLicense(parsedKey);
+            if (entry) {
+              forgetDeletedLicenseKey(entry.key);
+              setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
+            }
+          } catch {
+            entry = null;
+          }
+        }
+      }
+      if (!entry && accountEmail) {
+        try {
+          const retryRows = await fetchLicensesByEmail(accountEmail);
+          if (retryRows.length) {
+            setLicenseKeys((prev) => mergeLicenses(prev, retryRows));
+            entry =
+              retryRows.find(matchKey) ||
+              pickOwnedPurchaseLicense(retryRows, accountEmail) ||
+              null;
+            if (entry) {
+              usedEmailFallback = !matchKey(entry);
+              forgetDeletedLicenseKey(entry.key);
+            }
+          }
+        } catch {
+          // keep null
+        }
+      }
+      if (!entry) {
         showToast(
           lookupFailed
             ? "Could not verify license — try again in a moment"
@@ -3122,7 +3177,18 @@ export function AppProvider({ children }) {
   /** Re-bind every non-expired license owned by this email onto this phone. */
   const restoreLicensesByEmail = useCallback(
     async (rawEmail = coverEmail) => {
-      const accountEmail = normalizeEmail(rawEmail || coverEmail);
+      const heal = (value) => {
+        let key = normalizeEmail(value);
+        if (!key) return "";
+        key = key.replace(/^@+/, "").replace(/\s+/g, "");
+        return key
+          .replace(/@gmail\.con$/i, "@gmail.com")
+          .replace(/@gmail\.comm$/i, "@gmail.com")
+          .replace(/@gmai\.com$/i, "@gmail.com")
+          .replace(/@gmail\.cpm$/i, "@gmail.com")
+          .replace(/@gnail\.com$/i, "@gmail.com");
+      };
+      const accountEmail = heal(rawEmail || coverEmail) || normalizeEmail(rawEmail || coverEmail);
       if (!accountEmail || !accountEmail.includes("@")) {
         showToast("Enter the email linked to your license");
         return false;
@@ -3140,23 +3206,35 @@ export function AppProvider({ children }) {
       // stamped with an old device id after Android WebView cleared storage.
       const mine = (remote.length ? remote : licenseKeys).filter(
         (row) =>
-          normalizeEmail(row.clientEmail) === accountEmail &&
+          heal(row.clientEmail) === accountEmail &&
           !isLicenseExpired(row) &&
           String(row.key || "").trim()
       );
 
       const signup = getSignup(accountEmail);
-      // Subscription / admin bypass required — licenses alone do not unlock.
-      if (!isSignupEntitled(signup, accountEmail)) {
+      const ownsPaidKey = mine.some(
+        (row) =>
+          row?.purchasePaid === true ||
+          String(row?.purchaseCaptureId || "").trim() ||
+          /giveaway|promo|paypal/i.test(String(row?.purchaseSource || ""))
+      );
+      // Paid purchase keys restore without asking for PayPal again.
+      if (!isSignupEntitled(signup, accountEmail) && !ownsPaidKey) {
         clearDeviceAccess(accountEmail);
         showToast("Pay lifetime access before restoring robots");
         return false;
       }
 
       rememberDeviceAccess(accountEmail, {
-        paid: Boolean(signup?.accessPaid),
-        bypassed: Boolean(signup?.accessBypassed) && !signup?.accessPaid,
+        paid: Boolean(signup?.accessPaid) || ownsPaidKey,
+        bypassed:
+          Boolean(signup?.accessBypassed) &&
+          !signup?.accessPaid &&
+          !ownsPaidKey,
       });
+      if (ownsPaidKey && !signup?.accessPaid) {
+        void updateSignupAccessPaid(accountEmail).catch(() => null);
+      }
 
       if (!mine.length) {
         return false;

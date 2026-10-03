@@ -292,14 +292,95 @@ export function mapSearchResults(data, platform = "MT5") {
   return brokers.filter((b) => !isBlockedBroker(b));
 }
 
+/** Known MT5 servers when live /Search hangs (common for Razor / XM). */
+const KNOWN_BROKER_SERVERS = [
+  {
+    match: /\brazor\b/i,
+    company: "Razor Markets",
+    servers: ["RazorMarkets-Live", "RazorMarkets-Demo"],
+  },
+  {
+    match: /\bxm\b/i,
+    company: "XM Global",
+    servers: ["XMGlobal-MT5 5", "XMGlobal-MT5 7", "XMGlobal-MT5 10"],
+  },
+  {
+    match: /\bhfm\b|hotforex|hf\s*markets/i,
+    company: "HFM",
+    servers: ["HFMarketsSA-Live"],
+  },
+];
+
+function knownBrokerFallback(query, platform = "MT5") {
+  const q = String(query || "").trim();
+  if (!q) return [];
+  const plat = String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5";
+  const rows = [];
+  for (const entry of KNOWN_BROKER_SERVERS) {
+    if (!entry.match.test(q)) continue;
+    for (const [index, server] of entry.servers.entries()) {
+      rows.push({
+        id: `known::${entry.company}::${server}::${index}`,
+        company: entry.company,
+        name: server,
+        site: "",
+        logoUrl: "",
+        access: [],
+        platform: plat,
+        custom: false,
+        source: "known",
+        defaultServer: server,
+      });
+    }
+  }
+  return rows;
+}
+
 /** GET /Search?company=… — broker catalog only (no MetaAPI). */
 export async function searchBrokers(query, platform = "MT5") {
   const q = String(query || "").trim();
   if (!q) return [];
-  const data = await mt5Fetch(`/Search?company=${encodeURIComponent(q)}`, {
-    timeoutMs: 20000,
-  });
-  return mapSearchResults(data, platform);
+  // Short timeout — hung /Search (e.g. Razor) must not pin the client on
+  // "Searching brokers…". Empty/timeout → known + client local catalog fill in.
+  const trySearch = async (company) => {
+    try {
+      const data = await mt5Fetch(
+        `/Search?company=${encodeURIComponent(company)}`,
+        { timeoutMs: 4500 }
+      );
+      return mapSearchResults(data, platform);
+    } catch {
+      return [];
+    }
+  };
+
+  const relevant = (rows) => {
+    const needle = q.toLowerCase();
+    // "XM" must not keep CXM / Assexmarkets noise when users typed XM.
+    const filtered = (rows || []).filter((b) => {
+      const hay = `${b.company || ""} ${b.name || ""}`.toLowerCase();
+      if (needle === "xm" || needle.startsWith("xm ")) {
+        return /\bxm\b/.test(hay) && !/\bcxm\b/.test(hay);
+      }
+      if (needle.includes("razor")) {
+        return hay.includes("razor");
+      }
+      return true;
+    });
+    return filtered.length ? filtered : [];
+  };
+
+  const primary = relevant(await trySearch(q));
+  if (primary.length) return primary;
+
+  // "Razor markets" often returns empty while "Razor" hits servers.
+  const first = q.split(/\s+/).filter(Boolean)[0] || "";
+  if (first && first.toLowerCase() !== q.toLowerCase()) {
+    const secondary = relevant(await trySearch(first));
+    if (secondary.length) return secondary;
+  }
+
+  return knownBrokerFallback(q, platform);
 }
 
 function pickNumber(...values) {
@@ -833,20 +914,57 @@ export async function connectAccount({
     throw err;
   }
 
+  // Normalize common Razor / broker server spellings clients type by hand.
+  const normalizedServer = userServer
+    .replace(/\s+/g, "")
+    .replace(/^(razor)markets(?=-|$)/i, "RazorMarkets")
+    .replace(/^(razormarkets)$/i, "RazorMarkets-Live");
+  const serverName =
+    /^razormarkets-live$/i.test(normalizedServer)
+      ? "RazorMarkets-Live"
+      : /^razormarkets-demo$/i.test(normalizedServer)
+        ? "RazorMarkets-Demo"
+        : userServer;
+
   const params = new URLSearchParams({
     user: userLogin,
     password: userPassword,
-    server: userServer,
+    server: serverName,
+    // Faster connect — history sync can wait until after login.
+    downloadOrderHistory: "false",
+    connectTimeoutSeconds: "75",
+    connectTimeoutClusterMemberSeconds: "20",
   });
 
+  // Razor Markets cold ConnectEx often needs 50s+. Keep under maxDuration 120
+  // and skip enrichment when login itself used most of the budget.
+  const connectStarted = Date.now();
   let token;
   try {
-    token = await mt5Fetch(`/ConnectEx?${params.toString()}`, { timeoutMs: 60000 });
+    token = await mt5Fetch(`/ConnectEx?${params.toString()}`, {
+      timeoutMs: 95_000,
+    });
   } catch (error) {
     const msg = String(error?.message || "");
     if (/password|login|invalid|auth|credential|reject/i.test(msg)) {
       const err = new Error("Broker rejected the login credentials");
       err.status = 400;
+      err.data = error.data;
+      throw err;
+    }
+    if (/server\s*not\s*found/i.test(msg)) {
+      const err = new Error(
+        `Broker server not found (${serverName}) — check the server name`
+      );
+      err.status = 400;
+      err.data = error.data;
+      throw err;
+    }
+    if (/timed out|abort|unreachable|fetch failed|network/i.test(msg)) {
+      const err = new Error(
+        "Broker is slow to answer — wait a moment and tap Connect again"
+      );
+      err.status = error.status || 504;
       err.data = error.data;
       throw err;
     }
@@ -876,39 +994,54 @@ export async function connectAccount({
     throw err;
   }
 
+  // Fast enrichment only — balance/equity can finish on the next status poll.
+  // When ConnectEx already took a long time (Razor cold path), return now.
+  const connectMs = Date.now() - connectStarted;
   let summary = null;
   let details = null;
   let account = null;
   let ordersProfit = null;
-  try {
-    summary = await fetchAccountSummary(id, { timeoutMs: 20000, tries: 10 });
-  } catch {
-    summary = null;
-  }
-  try {
-    details = await mt5Fetch(`/AccountDetails?id=${encodeURIComponent(id)}`, {
-      timeoutMs: 20000,
-    });
-  } catch {
-    details = null;
-  }
-  try {
-    account = await mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
-      timeoutMs: 20000,
-    });
-  } catch {
-    account = null;
-  }
-  try {
-    ordersProfit = await fetchOpenedOrdersProfit(id, { timeoutMs: 15000 });
-  } catch {
-    ordersProfit = null;
+  if (connectMs < 70_000) {
+    const budgetMs = Math.max(1500, 110_000 - connectMs);
+    const enrichDeadline = Date.now() + Math.min(8_000, budgetMs);
+    const enrichTimeout = Math.max(
+      1500,
+      Math.min(6000, enrichDeadline - Date.now())
+    );
+    const withBudget = async (fn) => {
+      if (Date.now() >= enrichDeadline) return null;
+      try {
+        return await fn();
+      } catch {
+        return null;
+      }
+    };
+    [summary, details, account, ordersProfit] = await Promise.all([
+      withBudget(() =>
+        fetchAccountSummary(id, { timeoutMs: enrichTimeout, tries: 2 })
+      ),
+      withBudget(() =>
+        mt5Fetch(`/AccountDetails?id=${encodeURIComponent(id)}`, {
+          timeoutMs: enrichTimeout,
+        })
+      ),
+      withBudget(() =>
+        mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
+          timeoutMs: enrichTimeout,
+        })
+      ),
+      withBudget(() =>
+        fetchOpenedOrdersProfit(id, {
+          timeoutMs: Math.min(4000, enrichTimeout),
+        })
+      ),
+    ]);
   }
 
   return sessionFromConnect({
     token: id,
     login: userLogin,
-    server: userServer,
+    server: serverName,
     platform,
     company,
     summary,

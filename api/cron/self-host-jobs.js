@@ -1,6 +1,7 @@
 /**
  * Safety net: re-kick stalled / due self-host trade jobs if a hop was lost.
- * Vercel Cron: every minute (see vercel.json).
+ * Vercel Cron: every 5 minutes (see vercel.json) — keeps Pro GB-hours down.
+ * Primary hops still chain via waitUntil; this only recovers lost kicks.
  */
 import {
   getSelfHostJob,
@@ -8,7 +9,7 @@ import {
   listQueuedSelfHostJobIds,
 } from "../metaapi/_selfHostJobs.js";
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 30 };
 
 function sendJson(res, status, payload) {
   res.statusCode = status;

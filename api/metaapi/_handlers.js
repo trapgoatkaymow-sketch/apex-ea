@@ -138,6 +138,49 @@ export async function handleConnect(req, res) {
     endOptions(res);
     return;
   }
+
+  // Poll async connect job — avoids Vercel 504 while ConnectEx is still running.
+  if (req.method === "GET") {
+    try {
+      const host = req.headers.host || "localhost";
+      const url = new URL(req.url || "/", `http://${host}`);
+      const jobId = String(url.searchParams.get("jobId") || "").trim();
+      if (!jobId) {
+        sendJson(res, 400, { error: "jobId is required" });
+        return;
+      }
+      const { getConnectJob, publicConnectJob } = await import(
+        "./_connectJobs.js"
+      );
+      const job =
+        (await getConnectJob(jobId)) ||
+        (await getConnectJob(jobId, { preferRemote: true }));
+      if (!job) {
+        sendJson(res, 404, { error: "Connect job not found" });
+        return;
+      }
+      const pub = publicConnectJob(job);
+      if (pub.status === "done" && pub.session) {
+        sendJson(res, 200, { ...pub.session, jobId: pub.id, pending: false });
+        return;
+      }
+      if (pub.status === "failed") {
+        sendJson(res, pub.errorStatus || 500, {
+          error: pub.error || "Connection failed",
+          jobId: pub.id,
+          pending: false,
+        });
+        return;
+      }
+      sendJson(res, 202, pub);
+    } catch (error) {
+      sendJson(res, error.status || 500, {
+        error: error.message || "Connect job lookup failed",
+      });
+    }
+    return;
+  }
+
   if (req.method !== "POST") {
     sendJson(res, 405, { error: "Method not allowed" });
     return;
@@ -145,14 +188,116 @@ export async function handleConnect(req, res) {
 
   try {
     const body = await readJsonBody(req);
-    const session = await mt5ConnectAccount({
-      login: body.login,
-      password: body.password,
-      server: body.server,
-      platform: body.platform || "MT5",
-      company: body.company || "",
+    const login = body.login;
+    const password = body.password;
+    const server = body.server;
+    const platform = body.platform || "MT5";
+    const company = body.company || "";
+    const syncOnly =
+      body.async === false ||
+      body.sync === true ||
+      String(body.mode || "").toLowerCase() === "sync";
+
+    // Legacy sync path (tests / admin). Default is async so phones never 504.
+    if (syncOnly) {
+      const session = await mt5ConnectAccount({
+        login,
+        password,
+        server,
+        platform,
+        company,
+      });
+      sendJson(res, 200, session);
+      return;
+    }
+
+    const {
+      newConnectJobId,
+      saveConnectJob,
+      updateConnectJob,
+      getConnectJob,
+      publicConnectJob,
+    } = await import("./_connectJobs.js");
+
+    const jobId = newConnectJobId();
+    // Memory-first — do not await Firebase before answering the phone.
+    await saveConnectJob(
+      {
+        id: jobId,
+        status: "running",
+        login: String(login || "").trim(),
+        server: String(server || "").trim(),
+        platform,
+        company: String(company || "").trim(),
+        createdAt: Date.now(),
+      },
+      { durable: true }
+    );
+
+    const runJob = async () => {
+      try {
+        const session = await mt5ConnectAccount({
+          login,
+          password,
+          server,
+          platform,
+          company,
+        });
+        await updateConnectJob(jobId, {
+          status: "done",
+          session,
+          finishedAt: Date.now(),
+          error: "",
+        });
+      } catch (error) {
+        await updateConnectJob(jobId, {
+          status: "failed",
+          error: formatHandlerError(error, "Connection failed"),
+          errorStatus: error.status || 500,
+          finishedAt: Date.now(),
+        });
+      }
+    };
+
+    // Start ConnectEx immediately (same isolate), and also register waitUntil
+    // so Vercel keeps the isolate alive after we return 202.
+    const running = runJob();
+    try {
+      waitUntil(running);
+    } catch {
+      // non-Vercel — running promise already started
+    }
+
+    // Fast brokers only: brief memory poll, then always 202 so clients never 504.
+    const started = Date.now();
+    while (Date.now() - started < 5_000) {
+      await new Promise((r) => setTimeout(r, 350));
+      const job = await getConnectJob(jobId);
+      if (!job) break;
+      if (job.status === "done" && job.session) {
+        sendJson(res, 200, {
+          ...job.session,
+          jobId,
+          pending: false,
+        });
+        return;
+      }
+      if (job.status === "failed") {
+        sendJson(res, job.errorStatus || 500, {
+          error: job.error || "Connection failed",
+          jobId,
+          pending: false,
+        });
+        return;
+      }
+    }
+
+    sendJson(res, 202, {
+      ...publicConnectJob(await getConnectJob(jobId)),
+      pending: true,
+      jobId,
+      message: "Connecting to broker — keep this screen open",
     });
-    sendJson(res, 200, session);
   } catch (error) {
     sendJson(res, error.status || 500, {
       error: formatHandlerError(error, "Connection failed"),
