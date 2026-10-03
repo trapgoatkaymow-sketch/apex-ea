@@ -122,7 +122,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [detectionStatus, setDetectionStatus] = useState("");
   const [detectionMessage, setDetectionMessage] = useState("");
   const [detectionHint, setDetectionHint] = useState("");
-  const [aiOffline, setAiOffline] = useState(false);
   const [detectingSymbol, setDetectingSymbol] = useState(false);
   const [trades, setTrades] = useState(1);
   const [lotSize, setLotSize] = useState(0.01);
@@ -291,7 +290,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
     setDetectionStatus("");
     setDetectionMessage("");
     setDetectionHint("");
-    setAiOffline(false);
   }
 
   async function applyDetectedSymbol(dataUrl) {
@@ -308,16 +306,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
         catalog: [...symbols, ...(catalog || [])],
       });
       const status = String(detection?.status || CHART_DETECTION_STATUS.NO_CHART);
-      const offline =
-        Boolean(detection?.openaiUnavailable) ||
-        Boolean(detection?.quotaFallback) ||
-        /credit|quota|billing|not configured|incorrect api key/i.test(
-          String(detection?.error || "")
-        );
       setDetectionStatus(status);
       setDetectionMessage(detection?.message || "");
       setDetectionHint(detection?.uiMessage || "");
-      setAiOffline(offline);
 
       if (
         status === CHART_DETECTION_STATUS.SYMBOL_DETECTED &&
@@ -327,7 +318,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
         ensureCatalog?.(next);
         setSymbol(next);
         setSymbolSource("scanner");
-        setAiOffline(false);
         showToast(`Symbol detected: ${next}`);
         return next;
       }
@@ -339,43 +329,30 @@ export default function ChartScanner({ variant = "default", active = true }) {
         ensureCatalog?.(suggested);
         setSymbol(suggested);
         setSymbolSource("scanner");
-        if (!offline) {
-          setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
-          setDetectionMessage(`Possible symbol: ${suggested}`);
-          showToast(`Possible symbol: ${suggested} — edit if needed`);
-        } else {
-          showToast(`Type or keep ${suggested}, then tap Scan`);
-        }
+        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
+        setDetectionMessage(`Symbol detected: ${suggested}`);
+        setDetectionHint("");
+        showToast(`Symbol detected: ${suggested}`);
         return suggested;
       }
 
-      if (offline) {
-        if (keptSymbol) {
-          setSymbol(keptSymbol);
-          setSymbolSource("manual");
-          setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
-          setDetectionMessage(`Symbol: ${keptSymbol}`);
-          setDetectionHint("AI credits are out — scanner still works offline.");
-          showToast("AI credits are out — tap Analyze Chart");
-          return keptSymbol;
-        }
-        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
-        setDetectionMessage("Type the chart pair, then tap Analyze");
-        setDetectionHint("AI credits are out — scanner still works offline.");
-        showToast("AI credits are out — type the pair, then tap Analyze");
-        return "";
+      if (keptSymbol) {
+        setSymbol(keptSymbol);
+        setSymbolSource("manual");
+        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
+        setDetectionMessage(`Symbol: ${keptSymbol}`);
+        setDetectionHint("");
+        return keptSymbol;
       }
 
       setSymbol("");
       setSymbolSource("");
       if (status === CHART_DETECTION_STATUS.NO_CHART) {
         showToast("No trading chart detected");
-      } else if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR) {
-        showToast("Chart detected — symbol unclear. Type the symbol manually.");
       } else {
-        showToast(detection?.error || "Chart analysis unavailable");
+        showToast("Chart detected — symbol unclear");
       }
-      return suggested || null;
+      return null;
     } catch {
       resetDetectionState();
       setDetectionStatus(CHART_DETECTION_STATUS.NO_CHART);
@@ -411,15 +388,19 @@ export default function ChartScanner({ variant = "default", active = true }) {
       setEngineProgress(0);
       resetDetectionState();
       showToast("Analyzing image…");
-      void applyDetectedSymbol(dataUrl);
+      void applyDetectedSymbol(dataUrl).then((next) => {
+        if (next) void runScan({ symbol: next, image: dataUrl });
+      });
     };
     reader.readAsDataURL(file);
     event.target.value = "";
   }
 
-  async function runScan() {
+  async function runScan(options = {}) {
     if (!requireConnectedMt5("scan")) return;
-    if (!preview) {
+    const scanImage = options.image || preview;
+    const scanSymbol = normalizeBrokerSymbol(options.symbol || symbol);
+    if (!scanImage) {
       showToast("Capture or upload a chart first");
       return;
     }
@@ -433,12 +414,12 @@ export default function ChartScanner({ variant = "default", active = true }) {
       return;
     }
     if (
-      detectionStatus === CHART_DETECTION_STATUS.NO_CHART ||
-      !symbol
+      !scanSymbol ||
+      (!options.symbol && detectionStatus === CHART_DETECTION_STATUS.NO_CHART)
     ) {
       showToast(
-        preview && !symbol
-          ? "Enter the chart symbol (e.g. US30) or re-upload a clearer screenshot"
+        scanImage && !scanSymbol
+          ? "Chart detected — symbol unclear"
           : "Please upload a clear trading chart."
       );
       return;
@@ -461,9 +442,9 @@ export default function ChartScanner({ variant = "default", active = true }) {
       }
 
       pushEngineLog("Building complete trade setup");
-      const result = await analyzeChartImage(preview, {
+      const result = await analyzeChartImage(scanImage, {
         catalog: [...symbols, ...(catalog || [])],
-        hintSymbol: symbol,
+        hintSymbol: scanSymbol,
         preferDetectedSymbol: true,
         accountId: mt5Session?.accountId || "",
       });
@@ -504,9 +485,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         `Setup ready · ${result.side} ${tradeSymbol} · Entry ${result.entry} · TP1 ${result.takeProfit1} · TP2 ${result.takeProfit2} · TP3 ${result.takeProfit3}`
       );
       showToast(
-        result.source === "local-fallback"
-          ? `${result.side} ${tradeSymbol} ready (offline scan) · ${nextScans} charts left`
-          : `${result.side} ${tradeSymbol} setup ready · ${nextScans} charts left`
+        `${result.side} ${tradeSymbol} setup ready · ${nextScans} charts left`
       );
       await sleep(SCAN_SETTLE_MS);
       setEngineMode("idle");
@@ -523,18 +502,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
       } else if (error.code === "SYMBOL_UNCLEAR") {
         setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
         setDetectionMessage(error.message || "Chart detected — symbol unclear");
-        setDetectionHint(error.uiMessage || "Type the chart symbol, then Analyze.");
-        showToast("Type the chart symbol, then tap Analyze");
+        setDetectionHint(error.uiMessage || "");
+        showToast("Chart detected — symbol unclear");
       } else if (error.code === "SIDE_UNCLEAR") {
         showToast(
           error.uiMessage ||
             "No clear BUY/SELL on this chart — wait for a clearer move"
         );
       } else if (error.code === "ANALYSIS_UNAVAILABLE") {
-        showToast(
-          error.uiMessage ||
-            "Type the chart pair, then tap Scan — scanner works without AI credits"
-        );
+        showToast(error.uiMessage || "Could not read this chart — try another screenshot");
       } else {
         showToast(error.message || "Analyze failed");
       }
@@ -1325,11 +1301,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 ? "Connect MT5 to Analyze"
                 : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
                   ? "Upload a trading chart"
-                  : !symbol
-                    ? "Type symbol, then Analyze"
-                    : aiOffline
-                      ? "Analyze Chart (offline)"
-                      : "Analyze Chart"}
+                  : "Analyze Chart"}
         </button>
       ) : (
         <div className="cs-post-scan-actions">
