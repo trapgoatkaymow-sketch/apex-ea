@@ -1059,24 +1059,31 @@ export async function connectAccount({
   const normalizedServer = userServer
     .replace(/\s+/g, "")
     .replace(/^(razor)markets(?=-|$)/i, "RazorMarkets")
-    .replace(/^(razormarkets)$/i, "RazorMarkets-Live");
+    .replace(/^(razormarkets)$/i, "RazorMarkets-Live")
+    // Exness clients often type Trail instead of Trial.
+    .replace(/^(exness-mt5)trail(\d*)$/i, (_, pfx, num) => `${pfx}Trial${num || ""}`);
   const serverName =
     /^razormarkets-live$/i.test(normalizedServer)
       ? "RazorMarkets-Live"
       : /^razormarkets-demo$/i.test(normalizedServer)
         ? "RazorMarkets-Demo"
-        : userServer;
+        : /^(exness-mt5)trail(\d*)$/i.test(userServer.replace(/\s+/g, ""))
+          ? userServer
+              .replace(/\s+/g, "")
+              .replace(/^(exness-mt5)trail(\d*)$/i, (_, pfx, num) => `${pfx}Trial${num || ""}`)
+          : userServer;
   const isRazor = /razor/i.test(`${company} ${serverName}`);
 
   const connectStarted = Date.now();
   let token;
   let lastError = null;
+  let activeServerName = serverName;
 
-  const tryConnectEx = async (base) => {
+  const tryConnectEx = async (base, serverForConnect = activeServerName) => {
     const qs = connectQuery({
       user: userLogin,
       password: userPassword,
-      server: serverName,
+      server: serverForConnect,
       downloadOrderHistory: "false",
       // Keep Razor tight — long timeouts only make wrong passwords feel broken.
       connectTimeoutSeconds: isRazor ? "45" : "75",
@@ -1106,6 +1113,25 @@ export async function connectAccount({
       `${error?.message || ""} ${error?.code || ""}`
     ) || Number(error?.status) === 504;
 
+  const isBridgeHostError = (error) => {
+    const msg = `${error?.message || ""} ${error?.code || ""}`;
+    return (
+      /trial\s*expired|purchase\s*full\s*version|loginidwebserver|trial\.mtapi\.io/i.test(
+        msg
+      ) ||
+      /disposed object|cannot access a disposed|system\.net\.sockets\.socket/i.test(
+        msg
+      ) ||
+      /connect_error|resource temporarily unavailable|max_sessions/i.test(msg)
+    );
+  };
+
+  const suggestedServerFromError = (error) => {
+    const msg = String(error?.message || "");
+    const m = msg.match(/Did you mean ['"]([^'"]+)['"]/i);
+    return m ? String(m[1] || "").trim() : "";
+  };
+
   const tryRazorDirectFallback = async (base = MT5_API_BASE) => {
     // Only used for timeouts / soft failures — not for INVALID_ACCOUNT.
     const gate = RAZOR_LIVE_ACCESS[0];
@@ -1113,20 +1139,40 @@ export async function connectAccount({
   };
 
   try {
-    // Prefer the fast host first; on timeout only, try the failover MT5API.
+    // Prefer the fast host first; on bridge/timeout errors, try failover MT5API.
     let connected = false;
     for (const base of MT5_API_FAILOVER_BASES) {
       try {
-        token = await tryConnectEx(base);
+        token = await tryConnectEx(base, activeServerName);
         connected = true;
         break;
       } catch (error) {
         lastError = error;
         const msg = String(error?.message || "");
         const code = String(error?.code || error?.data?.code || "");
+        // Auto-fix common MT5 server typos (Trail→Trial, etc.) when API suggests.
+        const suggested = suggestedServerFromError(error);
+        if (
+          suggested &&
+          suggested.toLowerCase() !== String(activeServerName).toLowerCase()
+        ) {
+          try {
+            token = await tryConnectEx(base, suggested);
+            activeServerName = suggested;
+            connected = true;
+            lastError = null;
+            break;
+          } catch (retryErr) {
+            lastError = retryErr;
+          }
+        }
         if (isCredentialErrorMessage(msg) || isCredentialErrorMessage(code)) {
           // Broker reached and rejected — do not burn time on more hosts.
           break;
+        }
+        if (isBridgeHostError(error) || isTimeoutError(error)) {
+          // Dead trial / socket / overload on this host → try next MT5API.
+          continue;
         }
         if (!isTimeoutError(error) && Number(error?.status) < 500) {
           break;
@@ -1148,22 +1194,22 @@ export async function connectAccount({
       }
     }
     if (lastError && (token == null || token === "")) {
-      throwConnectFailure(lastError, serverName);
+      throwConnectFailure(lastError, activeServerName);
     }
   } catch (error) {
-    throwConnectFailure(error, serverName);
+    throwConnectFailure(error, activeServerName);
   }
 
   // Token may be a bare string or { id / token } object depending on host build.
   let id = parseConnectToken(token);
 
   if (!id || /^\[error\]/i.test(id) || /^error[:\s]/i.test(id) || id === "[object Object]") {
-    if (lastError) throwConnectFailure(lastError, serverName);
+    if (lastError) throwConnectFailure(lastError, activeServerName);
     const hint = String(id || "")
       .replace(/^\[error\]:?\s*/i, "")
       .trim() || "INVALID_ACCOUNT";
     const friendly = isCredentialErrorMessage(hint)
-      ? `Broker rejected login on ${serverName}. Use the MT5 master password (not investor). If official MT5 opens with the same details but the app fails, restart your DigitalOcean MT5 API droplet — the bridge may be unhealthy.`
+      ? `Broker rejected login on ${activeServerName}. Use the MT5 master password (not investor), and the exact server name from official MT5.`
       : `Broker connection failed (${hint})`;
     const err = new Error(friendly);
     err.status = 400;
@@ -1223,7 +1269,7 @@ export async function connectAccount({
   return sessionFromConnect({
     token: id,
     login: userLogin,
-    server: serverName,
+    server: activeServerName,
     platform,
     company,
     summary,
