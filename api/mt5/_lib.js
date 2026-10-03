@@ -966,6 +966,21 @@ function connectQuery(params) {
 function throwConnectFailure(error, serverName) {
   const msg = String(error?.message || error || "");
   const code = String(error?.code || error?.data?.code || "");
+  // Self-hosted timurila/mt5rest trial is 14 days — after that brokers authorize
+  // then LoginIdWebServer rejects. Looks like "reject" in the UI, but it is not.
+  if (
+    /trial\s*expired|purchase\s*full\s*version|loginidwebserver|trial\.mtapi\.io/i.test(
+      msg
+    )
+  ) {
+    const err = new Error(
+      "MT5 bridge license expired on your DigitalOcean server (mt5rest trial). Brokers are not rejecting your login — buy/renew the full MT5 REST API at https://mtapi.online, redeploy the paid image on the droplet, then Connect again."
+    );
+    err.status = 503;
+    err.code = "MT5REST_TRIAL_EXPIRED";
+    err.data = error?.data || null;
+    throw err;
+  }
   // DigitalOcean mt5rest bug — connects open then die (seen on vendor demo too).
   if (
     /disposed object|cannot access a disposed|object name:\s*'?system\.net\.sockets\.socket/i.test(
@@ -982,7 +997,7 @@ function throwConnectFailure(error, serverName) {
   }
   if (isCredentialErrorMessage(msg) || isCredentialErrorMessage(code)) {
     const err = new Error(
-      `Broker rejected login on ${serverName}. Use the MT5 master password (not investor). If official MT5 opens with the same details but the app fails, restart your DigitalOcean MT5 API droplet — the bridge may be unhealthy.`
+      `Broker rejected login on ${serverName}. Use the MT5 master password (not investor). If official MT5 opens with the same details but the app fails, your DigitalOcean MT5 API trial/license may be expired — check mtapi.online.`
     );
     err.status = 400;
     err.data = error?.data || null;

@@ -14,7 +14,16 @@ function connectApiUrl(path = "") {
 function formatApiError(data, status) {
   if (data && (data.error || data.message)) {
     const raw = data.error || data.message;
-    if (typeof raw === "string") return raw;
+    if (typeof raw === "string") {
+      if (
+        /trial\s*expired|purchase\s*full\s*version|loginidwebserver|trial\.mtapi\.io|MT5REST_TRIAL_EXPIRED/i.test(
+          raw
+        )
+      ) {
+        return "MT5 bridge license expired on the server — renew at mtapi.online (brokers are not rejecting your login)";
+      }
+      return raw;
+    }
   }
   if (status === 504 || status === 502) {
     return "Broker is still connecting — wait a moment and tap Connect again";
