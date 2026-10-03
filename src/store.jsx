@@ -1253,46 +1253,68 @@ export function AppProvider({ children }) {
       return "";
     };
 
+    const rowMatchesAccount = (row) => {
+      if (!account) return false;
+      const client = normalizeEmail(
+        row.clientEmail || row.email || row.boundEmail
+      );
+      const usedBy = normalizeEmail(row.usedByEmail || row.usedBy);
+      return client === account || usedBy === account;
+    };
+
+    const freshest = (rows) =>
+      [...(Array.isArray(rows) ? rows : [])].sort(
+        (a, b) =>
+          Number(b.usedAt || b.updatedAt || 0) -
+          Number(a.usedAt || a.updatedAt || 0)
+      );
+
+    const themeFromRows = (rows) => {
+      for (const row of freshest(rows)) {
+        const color = pickTheme(row.mentorEmail || row.ownerEmail);
+        if (color) return color;
+      }
+      return "";
+    };
+
     let themeColor = "";
 
-    if (account) {
-      const bound = keys.filter((row) => {
-        const client = normalizeEmail(row.clientEmail || row.email || row.boundEmail);
-        const usedBy = normalizeEmail(row.usedByEmail || row.usedBy);
-        return client === account || usedBy === account;
-      });
-      bound.sort(
-        (a, b) =>
-          Number(b.usedAt || b.updatedAt || 0) - Number(a.usedAt || a.updatedAt || 0)
-      );
-      for (const row of bound) {
-        themeColor = pickTheme(row.mentorEmail || row.ownerEmail);
-        if (themeColor) break;
-      }
-    }
-
-    if (!themeColor && botId) {
+    // Active EA on screen wins. Otherwise a newer key from another mentor
+    // (e.g. gold BLACK VENOM) painted Start / robot list yellow while ZETA
+    // (pink) was still the home bot.
+    if (botId) {
       const forBot = keys.filter(
         (row) =>
           String(row.botId || "").trim() === botId ||
           String(row.bot?.id || "").trim() === botId
       );
-      forBot.sort(
-        (a, b) =>
-          Number(b.usedAt || b.updatedAt || 0) - Number(a.usedAt || a.updatedAt || 0)
-      );
-      for (const row of forBot) {
-        themeColor = pickTheme(row.mentorEmail || row.ownerEmail);
-        if (themeColor) break;
-      }
+      const boundForBot = forBot.filter(rowMatchesAccount);
+      themeColor = themeFromRows(boundForBot.length ? boundForBot : forBot);
       if (!themeColor) {
         const ea = eaList.find((item) => item.id === botId);
-        themeColor = pickTheme(ea?.ownerEmail);
+        themeColor = pickTheme(
+          ea?.ownerEmail ||
+            activeBot?.ownerEmail ||
+            activeBot?.mentorEmail ||
+            ""
+        );
       }
     }
 
+    // Signed-in mentor previewing their own portal color on their account.
+    if (!themeColor && account) {
+      const selfTheme = normalizeHexColor(mentorThemes[account] || "", "");
+      if (selfTheme) themeColor = selfTheme;
+    }
+
+    if (!themeColor && account) {
+      themeColor = themeFromRows(keys.filter(rowMatchesAccount));
+    }
+
     if (!themeColor) {
-      const anyKey = keys.find((row) => pickTheme(row.mentorEmail || row.ownerEmail));
+      const anyKey = keys.find((row) =>
+        pickTheme(row.mentorEmail || row.ownerEmail)
+      );
       if (anyKey) themeColor = pickTheme(anyKey.mentorEmail || anyKey.ownerEmail);
     }
 
