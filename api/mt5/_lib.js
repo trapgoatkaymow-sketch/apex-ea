@@ -354,13 +354,29 @@ export async function searchBrokers(query, platform = "MT5") {
     }
   };
 
-  const primary = await trySearch(q);
+  const relevant = (rows) => {
+    const needle = q.toLowerCase();
+    // "XM" must not keep CXM / Assexmarkets noise when users typed XM.
+    const filtered = (rows || []).filter((b) => {
+      const hay = `${b.company || ""} ${b.name || ""}`.toLowerCase();
+      if (needle === "xm" || needle.startsWith("xm ")) {
+        return /\bxm\b/.test(hay) && !/\bcxm\b/.test(hay);
+      }
+      if (needle.includes("razor")) {
+        return hay.includes("razor");
+      }
+      return true;
+    });
+    return filtered.length ? filtered : [];
+  };
+
+  const primary = relevant(await trySearch(q));
   if (primary.length) return primary;
 
   // "Razor markets" often returns empty while "Razor" hits servers.
   const first = q.split(/\s+/).filter(Boolean)[0] || "";
   if (first && first.toLowerCase() !== q.toLowerCase()) {
-    const secondary = await trySearch(first);
+    const secondary = relevant(await trySearch(first));
     if (secondary.length) return secondary;
   }
 
