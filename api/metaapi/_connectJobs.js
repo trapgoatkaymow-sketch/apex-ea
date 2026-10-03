@@ -129,13 +129,24 @@ export async function saveConnectJob(
 export async function getConnectJob(jobId, { preferRemote = false } = {}) {
   const id = safeId(jobId);
   if (!id) return null;
-  if (!preferRemote && memoryJobs.has(id)) return memoryJobs.get(id);
-  const remote = await readJsonPath(jobPath(id));
-  if (remote && remote.id) {
-    memoryJobs.set(id, remote);
-    return remote;
+  const local = memoryJobs.has(id) ? memoryJobs.get(id) : null;
+  // Always refresh from Firebase when asked — parent isolate memory stays
+  // "running" while the worker isolate writes done/failed.
+  if (preferRemote || !local) {
+    const remote = await readJsonPath(jobPath(id));
+    if (remote && remote.id) {
+      const remoteUpdated = Number(remote.updatedAt || remote.finishedAt || 0);
+      const localUpdated = Number(local?.updatedAt || local?.finishedAt || 0);
+      const remoteTerminal =
+        remote.status === "done" || remote.status === "failed";
+      const localTerminal = local?.status === "done" || local?.status === "failed";
+      if (!local || remoteTerminal || remoteUpdated >= localUpdated || !localTerminal) {
+        memoryJobs.set(id, remote);
+        return remote;
+      }
+    }
   }
-  if (memoryJobs.has(id)) return memoryJobs.get(id);
+  if (local) return local;
   return null;
 }
 

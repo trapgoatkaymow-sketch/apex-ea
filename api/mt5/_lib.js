@@ -894,6 +894,83 @@ function sessionFromConnect({
   };
 }
 
+/** Known Razor live gateways — used when ConnectEx catalog path flakes. */
+const RAZOR_LIVE_ACCESS = [
+  { host: "91.243.176.100", port: 443 },
+  { host: "130.185.254.101", port: 443 },
+  { host: "197.242.69.21", port: 443 },
+  { host: "mt5-1.accesspoints.io", port: 8960 },
+];
+
+function normalizeMt5Password(password) {
+  // Keep significant spaces; only strip iOS/Android autofill newlines.
+  return String(password ?? "").replace(/^\uFEFF/, "").replace(/[\r\n]+$/g, "");
+}
+
+function parseConnectToken(token) {
+  let id = "";
+  if (typeof token === "string") {
+    id = token.trim().replace(/^"|"$/g, "");
+  } else if (token && typeof token === "object") {
+    id = String(token.id || token.token || token.accountId || "").trim();
+  } else {
+    id = String(token || "").trim();
+  }
+  return id;
+}
+
+function isCredentialErrorMessage(msg) {
+  const text = String(msg || "");
+  return (
+    /invalid_account|invalid_password|wrong\s*password|invalid\s*password/i.test(
+      text
+    ) ||
+    /(?:^|[^a-z])password(?:[^a-z]|$)/i.test(text) ||
+    /credentials?\s*(rejected|invalid|incorrect)/i.test(text)
+  );
+}
+
+function connectQuery(params) {
+  // Explicit encoding — avoids +/space ambiguity for broker passwords.
+  return Object.entries(params)
+    .filter(([, v]) => v != null && v !== "")
+    .map(
+      ([k, v]) =>
+        `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`
+    )
+    .join("&");
+}
+
+function throwConnectFailure(error, serverName) {
+  const msg = String(error?.message || error || "");
+  const code = String(error?.code || error?.data?.code || "");
+  if (isCredentialErrorMessage(msg) || isCredentialErrorMessage(code)) {
+    const err = new Error(
+      "Razor/MT5 did not accept this login or password. Use the master password (not investor) and try again."
+    );
+    err.status = 400;
+    err.data = error?.data || null;
+    throw err;
+  }
+  if (/server\s*not\s*found|did you mean/i.test(msg)) {
+    const err = new Error(
+      `Broker server not found (${serverName}) — check the server name`
+    );
+    err.status = 400;
+    err.data = error?.data || null;
+    throw err;
+  }
+  if (/timed out|abort|unreachable|fetch failed|network/i.test(msg)) {
+    const err = new Error(
+      "Broker is slow to answer — wait a moment and tap Connect again"
+    );
+    err.status = error?.status || 504;
+    err.data = error?.data || null;
+    throw err;
+  }
+  throw error instanceof Error ? error : new Error(msg || "Connection failed");
+}
+
 /**
  * Connect via GET /ConnectEx?user&password&server
  * Returns a session shaped like the old MetaAPI payload (accountId = MT5 token).
@@ -906,7 +983,7 @@ export async function connectAccount({
   company = "",
 } = {}) {
   const userLogin = String(login || "").trim();
-  const userPassword = String(password || "");
+  const userPassword = normalizeMt5Password(password);
   const userServer = String(server || "").trim();
   if (!userLogin || !userPassword || !userServer) {
     const err = new Error("Enter login, password, and server");
@@ -925,69 +1002,124 @@ export async function connectAccount({
       : /^razormarkets-demo$/i.test(normalizedServer)
         ? "RazorMarkets-Demo"
         : userServer;
+  const isRazor = /razor/i.test(`${company} ${serverName}`);
 
-  const params = new URLSearchParams({
-    user: userLogin,
-    password: userPassword,
-    server: serverName,
-    // Faster connect — history sync can wait until after login.
-    downloadOrderHistory: "false",
-    connectTimeoutSeconds: "75",
-    connectTimeoutClusterMemberSeconds: "20",
-  });
-
-  // Razor Markets cold ConnectEx often needs 50s+. Keep under maxDuration 120
-  // and skip enrichment when login itself used most of the budget.
   const connectStarted = Date.now();
   let token;
-  try {
-    token = await mt5Fetch(`/ConnectEx?${params.toString()}`, {
-      timeoutMs: 95_000,
+  let lastError = null;
+
+  const tryConnectEx = async () => {
+    const qs = connectQuery({
+      user: userLogin,
+      password: userPassword,
+      server: serverName,
+      downloadOrderHistory: "false",
+      connectTimeoutSeconds: isRazor ? "90" : "75",
+      connectTimeoutClusterMemberSeconds: isRazor ? "30" : "20",
+      connectToNearestByPing: "true",
     });
+    return mt5Fetch(`/ConnectEx?${qs}`, {
+      timeoutMs: isRazor ? 110_000 : 95_000,
+    });
+  };
+
+  const tryConnectHost = async (host, port) => {
+    const qs = connectQuery({
+      user: userLogin,
+      password: userPassword,
+      host,
+      port: String(port),
+      downloadOrderHistory: "false",
+      connectTimeoutSeconds: "35",
+    });
+    return mt5Fetch(`/Connect?${qs}`, { timeoutMs: 45_000 });
+  };
+
+  const tryRazorDirectFallback = async () => {
+    // Race the two fastest live gateways. If both say INVALID_ACCOUNT, the
+    // password/login is wrong — fail fast instead of walking every host.
+    const gates = RAZOR_LIVE_ACCESS.slice(0, 2);
+    const attempts = await Promise.all(
+      gates.map(async (gate) => {
+        try {
+          const value = await tryConnectHost(gate.host, gate.port);
+          return { ok: true, value, gate };
+        } catch (error) {
+          return { ok: false, error, gate };
+        }
+      })
+    );
+    const won = attempts.find((row) => row.ok);
+    if (won) return won.value;
+    const credFails = attempts.filter(
+      (row) =>
+        !row.ok &&
+        (isCredentialErrorMessage(row.error?.message) ||
+          isCredentialErrorMessage(row.error?.code || row.error?.data?.code))
+    );
+    if (credFails.length === attempts.length) {
+      throw credFails[0].error;
+    }
+    // Soft failures (timeouts) — try remaining gateways serially once.
+    for (const gate of RAZOR_LIVE_ACCESS.slice(2)) {
+      try {
+        return await tryConnectHost(gate.host, gate.port);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || attempts.find((row) => !row.ok)?.error || new Error("Connection failed");
+  };
+
+  try {
+    token = await tryConnectEx();
   } catch (error) {
+    lastError = error;
     const msg = String(error?.message || "");
-    if (/password|login|invalid|auth|credential|reject/i.test(msg)) {
-      const err = new Error("Broker rejected the login credentials");
-      err.status = 400;
-      err.data = error.data;
-      throw err;
+    const code = String(error?.code || error?.data?.code || "");
+    const worthFallback =
+      isRazor &&
+      (/invalid_account|invalid_password|timed out|abort|unavailable|fail/i.test(
+        `${msg} ${code}`
+      ) ||
+        Number(error?.status) >= 500);
+    if (worthFallback) {
+      try {
+        token = await tryRazorDirectFallback();
+        lastError = null;
+      } catch (fallbackErr) {
+        lastError = fallbackErr;
+      }
     }
-    if (/server\s*not\s*found/i.test(msg)) {
-      const err = new Error(
-        `Broker server not found (${serverName}) — check the server name`
-      );
-      err.status = 400;
-      err.data = error.data;
-      throw err;
+    if (lastError && (token == null || token === "")) {
+      throwConnectFailure(lastError, serverName);
     }
-    if (/timed out|abort|unreachable|fetch failed|network/i.test(msg)) {
-      const err = new Error(
-        "Broker is slow to answer — wait a moment and tap Connect again"
-      );
-      err.status = error.status || 504;
-      err.data = error.data;
-      throw err;
-    }
-    throw error;
   }
 
   // Token may be a bare string or { id / token } object depending on host build.
-  let id = "";
-  if (typeof token === "string") {
-    id = token.trim().replace(/^"|"$/g, "");
-  } else if (token && typeof token === "object") {
-    id = String(token.id || token.token || token.accountId || "").trim();
-  } else {
-    id = String(token || "").trim();
-  }
+  let id = parseConnectToken(token);
 
   // MT5API often returns HTTP 200 with bodies like "[error]:INVALID_ACCOUNT".
+  if (
+    isRazor &&
+    (!id || /^\[error\]/i.test(id) || /^error[:\s]/i.test(id) || id === "[object Object]")
+  ) {
+    try {
+      token = await tryRazorDirectFallback();
+      id = parseConnectToken(token);
+    } catch (fallbackErr) {
+      lastError = fallbackErr;
+    }
+  }
+
   if (!id || /^\[error\]/i.test(id) || /^error[:\s]/i.test(id) || id === "[object Object]") {
-    const hint = id.replace(/^\[error\]:?\s*/i, "").trim() || "INVALID_ACCOUNT";
-    const friendly =
-      /invalid_account|invalid_password|password|login|auth/i.test(hint)
-        ? "Broker rejected the login credentials"
-        : `Broker connection failed (${hint})`;
+    if (lastError) throwConnectFailure(lastError, serverName);
+    const hint = String(id || "")
+      .replace(/^\[error\]:?\s*/i, "")
+      .trim() || "INVALID_ACCOUNT";
+    const friendly = isCredentialErrorMessage(hint)
+      ? "Razor/MT5 did not accept this login or password. Use the master password (not investor) and try again."
+      : `Broker connection failed (${hint})`;
     const err = new Error(friendly);
     err.status = 400;
     err.data = { raw: token };

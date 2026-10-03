@@ -427,13 +427,12 @@ export async function handleConnect(req, res) {
       void kickWorker();
     }
 
-    // Hold up to ~25s for fast finishes before 202 (still under common proxy caps).
+    // Poll Firebase (preferRemote) so worker done/failed is visible here.
+    // Keep this short — phones should get 202 and poll, not sit on one POST.
     const started = Date.now();
-    while (Date.now() - started < 25_000) {
-      await new Promise((r) => setTimeout(r, 500));
-      const job =
-        (await getConnectJob(jobId)) ||
-        (await getConnectJob(jobId, { preferRemote: true }));
+    while (Date.now() - started < 12_000) {
+      await new Promise((r) => setTimeout(r, 400));
+      const job = await getConnectJob(jobId, { preferRemote: true });
       if (!job) continue;
       if (job.status === "done" && job.session) {
         sendJson(res, 200, {
@@ -454,10 +453,7 @@ export async function handleConnect(req, res) {
     }
 
     sendJson(res, 202, {
-      ...publicConnectJob(
-        (await getConnectJob(jobId)) ||
-          (await getConnectJob(jobId, { preferRemote: true }))
-      ),
+      ...publicConnectJob(await getConnectJob(jobId, { preferRemote: true })),
       pending: true,
       jobId,
       message: "Connecting to broker — keep this screen open",
