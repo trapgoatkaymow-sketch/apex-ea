@@ -129,22 +129,40 @@ function writeDeletedKeyMap(map) {
   }
 }
 
+/** Exact formatted + compact identity (never OCR lookalike swaps). */
+function licenseKeyIdentity(rawKey) {
+  const formatted = formatLicenseKey(rawKey);
+  if (!formatted) return [];
+  const compact = formatted.replace(/-/g, "");
+  return compact && compact !== formatted
+    ? [formatted, compact]
+    : [formatted];
+}
+
 /** Remember a permanently deleted key so refresh/migrate cannot resurrect it. */
 export function rememberDeletedLicenseKey(rawKey) {
-  const key = normalizeLicenseKey(rawKey);
+  const key = formatLicenseKey(rawKey);
   if (!key) return;
   const map = readDeletedKeyMap();
-  map[key] = Date.now();
-  for (const variant of licenseKeyVariants(key)) map[variant] = map[key];
+  const at = Date.now();
+  // Exact + compact only — lookalike stamps were wiping valid generated keys.
+  for (const id of licenseKeyIdentity(key)) map[id] = at;
   writeDeletedKeyMap(map);
 }
 
 /** Clear a local tombstone when the server still has the key. */
 export function forgetDeletedLicenseKey(rawKey) {
-  const key = normalizeLicenseKey(rawKey);
+  const key = formatLicenseKey(rawKey);
   if (!key) return;
   const map = readDeletedKeyMap();
   let changed = false;
+  for (const id of licenseKeyIdentity(key)) {
+    if (map[id]) {
+      delete map[id];
+      changed = true;
+    }
+  }
+  // Also clear any legacy lookalike stamps left from older clients.
   for (const variant of licenseKeyVariants(key)) {
     if (map[variant]) {
       delete map[variant];
@@ -180,10 +198,11 @@ export function rememberDeletedLicenseKeys(input) {
 }
 
 export function isRememberedDeletedLicenseKey(rawKey) {
-  const key = normalizeLicenseKey(rawKey);
+  const key = formatLicenseKey(rawKey);
   if (!key) return false;
   const map = readDeletedKeyMap();
-  return Boolean(map[key]) || licenseKeyVariants(key).some((v) => Boolean(map[v]));
+  // Exact + compact only — do not treat OCR lookalikes as deleted.
+  return licenseKeyIdentity(key).some((id) => Boolean(map[id]));
 }
 
 export function filterOutDeletedLicenses(list = []) {
@@ -554,8 +573,18 @@ function preferLicenseBot(a, b, aUpdatedAt = 0, bUpdatedAt = 0) {
 
 export async function fetchLicenses() {
   const data = await apiFetch();
-  if (data?.deletedKeys) {
-    rememberDeletedLicenseKeys(data.deletedKeys);
+  if (data?.deletedKeys && typeof data.deletedKeys === "object") {
+    // Replace local map with server identity keys — drop OCR lookalike pollution.
+    const next = {};
+    for (const [raw, at] of Object.entries(data.deletedKeys)) {
+      const formatted = formatLicenseKey(raw);
+      if (!formatted) continue;
+      const stamp = Number(at) || Date.now();
+      for (const id of licenseKeyIdentity(formatted)) {
+        next[id] = Math.max(next[id] || 0, stamp);
+      }
+    }
+    writeDeletedKeyMap(next);
   }
   const rows = Array.isArray(data?.licenses)
     ? data.licenses.map(normalizeLicense).filter(Boolean)

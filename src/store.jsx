@@ -2787,6 +2787,39 @@ export function AppProvider({ children }) {
       // Never pull the full 3MB roster on unlock — that timed out as "invalid".
 
       if (!entry) {
+        // Last resort: retry lookup once more (merge race / cold instance).
+        if (!lookupFailed) {
+          try {
+            await new Promise((r) => setTimeout(r, 500));
+            entry = await fetchLicense(parsedKey);
+            if (entry) {
+              forgetDeletedLicenseKey(entry.key);
+              setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
+            }
+          } catch {
+            entry = null;
+          }
+        }
+      }
+      if (!entry && accountEmail) {
+        try {
+          const retryRows = await fetchLicensesByEmail(accountEmail);
+          if (retryRows.length) {
+            setLicenseKeys((prev) => mergeLicenses(prev, retryRows));
+            entry =
+              retryRows.find(matchKey) ||
+              pickOwnedPurchaseLicense(retryRows, accountEmail) ||
+              null;
+            if (entry) {
+              usedEmailFallback = !matchKey(entry);
+              forgetDeletedLicenseKey(entry.key);
+            }
+          }
+        } catch {
+          // keep null
+        }
+      }
+      if (!entry) {
         showToast(
           lookupFailed
             ? "Could not verify license — try again in a moment"
