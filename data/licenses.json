@@ -2834,8 +2834,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
-          ".US30."
+          "XAUSSD"
         ]
       }
     },
@@ -3201,8 +3200,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "BTCUSD",
-          "US30"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -3885,7 +3884,7 @@
         ".US30."
       ],
       "clientSymbolsUpdatedAt": 1791058588843,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": "1BK418134U4961248",
       "purchaseOrderId": "2EY92125V5300881D",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -4308,7 +4307,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002730,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -4416,7 +4415,7 @@
         "XAUUSD"
       ],
       "clientSymbolsUpdatedAt": 1790960382177,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002730,
       "purchaseCaptureId": "5RE25168Y8006414W",
       "purchaseOrderId": "73K9172269648635C",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -4953,7 +4952,7 @@
         "XAUUSDM"
       ],
       "clientSymbolsUpdatedAt": 1791028205032,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": "7BY299128J381363R",
       "purchaseOrderId": "2AW843134A986561X",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -5118,7 +5117,7 @@
         "US30"
       ],
       "clientSymbolsUpdatedAt": 1790963299391,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002730,
       "purchaseCaptureId": "5MH79432GG665120N",
       "purchaseOrderId": "2L457792B83871929",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -5172,7 +5171,7 @@
         "BTCUSD"
       ],
       "clientSymbolsUpdatedAt": 1791063060667,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": "1EJ74140WN1820325",
       "purchaseOrderId": "2L509125853989623",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -5489,7 +5488,7 @@
         "BTCUSD"
       ],
       "clientSymbolsUpdatedAt": 1791065392968,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002730,
       "purchaseCaptureId": "70J27198EC072781P",
       "purchaseOrderId": "8R017805P8917614K",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -5859,7 +5858,7 @@
         "XAUUSDM"
       ],
       "clientSymbolsUpdatedAt": 1790946143166,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002730,
       "purchaseCaptureId": "5NN0383441385601T",
       "purchaseOrderId": "817937539Y7127505",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -5914,7 +5913,7 @@
         "GBPUSD"
       ],
       "clientSymbolsUpdatedAt": 1790942603912,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": "26A64423W7818333J",
       "purchaseOrderId": "1EY38660MH0352615",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -6019,7 +6018,7 @@
         "BTCUSD.M"
       ],
       "clientSymbolsUpdatedAt": 1791042605623,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": null,
       "purchaseOrderId": null,
       "purchaseSource": null,
@@ -6035,7 +6034,6 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "US30",
           ".US30."
         ]
       }
@@ -6501,7 +6499,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": "66L04715TE2710225",
       "purchaseOrderId": "18R00085DF0387518",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -6617,7 +6615,7 @@
         "NAS100"
       ],
       "clientSymbolsUpdatedAt": 1791057228131,
-      "mentorSymbolsSyncedAt": 1791065305511,
+      "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": "70B535104N6644130",
       "purchaseOrderId": "3H6195815E885390C",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -10322,7 +10320,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1791037529116",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -162758,9 +162758,7 @@
         "name": "ZETA SCALPER AI",
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mujzgatc&v=1791037529116",
         "strategy": "scalper",
-        "symbols": [
-          "XAUUSD"
-        ]
+        "symbols": []
       }
     },
     {
