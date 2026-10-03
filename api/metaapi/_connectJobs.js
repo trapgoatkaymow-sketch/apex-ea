@@ -58,11 +58,18 @@ export function publicConnectJob(job) {
   };
 }
 
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 async function readJsonPath(path) {
   if (!path) return null;
   if (!firebaseConfigured()) return null;
   try {
-    const hit = await firebaseGet(toFirebasePath(path));
+    const hit = await withTimeout(firebaseGet(toFirebasePath(path)), 2500, null);
     if (!hit || hit.missing || hit.raw == null) return null;
     let parsed = JSON.parse(String(hit.raw));
     if (parsed && typeof parsed === "object" && typeof parsed.__raw === "string") {
@@ -78,13 +85,20 @@ async function writeJsonPath(path, value) {
   if (!path) return { ok: false, reason: "empty-path" };
   const raw = JSON.stringify({ __raw: JSON.stringify(value) });
   if (firebaseConfigured()) {
-    const put = await firebasePut(toFirebasePath(path), raw);
+    const put = await withTimeout(
+      firebasePut(toFirebasePath(path), raw),
+      2500,
+      { ok: false, reason: "firebase-timeout" }
+    );
     if (put?.ok) return put;
   }
   return { ok: false, reason: "firebase-unavailable" };
 }
 
-export async function saveConnectJob(job, { durable = true } = {}) {
+export async function saveConnectJob(
+  job,
+  { durable = true, awaitDurable = false } = {}
+) {
   const id = safeId(job?.id);
   if (!id) throw new Error("job id required");
   const next = {
@@ -96,15 +110,18 @@ export async function saveConnectJob(job, { durable = true } = {}) {
   };
   memoryJobs.set(id, next);
   if (durable) {
-    // Never block Connect HTTP on a slow Firebase write.
-    void writeJsonPath(jobPath(id), next).then((put) => {
+    const write = writeJsonPath(jobPath(id), next).then((put) => {
       if (!put?.ok) {
         console.warn(
           "connectJob firebase write failed",
           put?.reason || "unknown"
         );
       }
+      return put;
     });
+    // Await final done/failed so other instances can poll the result.
+    if (awaitDurable) await write;
+    else void write;
   }
   return next;
 }
@@ -126,10 +143,15 @@ export async function updateConnectJob(jobId, patch = {}) {
   const prev = (await getConnectJob(jobId)) || {};
   const id = safeId(jobId || prev.id);
   if (!id) throw new Error("job id required");
-  return saveConnectJob({
-    ...prev,
-    ...patch,
-    id,
-    password: undefined,
-  });
+  const status = String(patch.status || prev.status || "");
+  const awaitDurable = status === "done" || status === "failed";
+  return saveConnectJob(
+    {
+      ...prev,
+      ...patch,
+      id,
+      password: undefined,
+    },
+    { durable: true, awaitDurable }
+  );
 }

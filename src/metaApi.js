@@ -157,19 +157,28 @@ export async function connectAccount({
   onProgress,
 } = {}) {
   onProgress?.({ pending: true, connectionStatus: "CONNECTING" });
-  const started = await apiFetch("/connect", {
-    method: "POST",
-    signal,
-    retries: 0,
-    body: {
-      login,
-      password,
-      server,
-      platform,
-      company,
-      async: true,
-    },
-  });
+  let started;
+  try {
+    started = await apiFetch("/connect", {
+      method: "POST",
+      signal,
+      retries: 0,
+      body: {
+        login,
+        password,
+        server,
+        platform,
+        company,
+        async: true,
+      },
+    });
+  } catch (error) {
+    // Credential / server errors finish inside the first hop — surface them.
+    if (Number(error?.status) > 0 && Number(error?.status) !== 202) {
+      throw error;
+    }
+    throw error;
+  }
 
   // Fast brokers finish inside the first response.
   if (started?.accountId && started?.pending !== true) {
