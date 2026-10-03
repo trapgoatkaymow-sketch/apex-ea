@@ -1,7 +1,15 @@
 import { apiUrl } from "./apiOrigin.js";
 import { normalizeBrokerSymbol } from "./brokerSymbol.js";
 import { getPriceHistory, getSymbolQuote } from "./metaApi.js";
-import { inferSafeScalperSideFromBars } from "./silentStartOpen.js";
+import {
+  chartBackgroundIsLight,
+  classifyCandlePixel,
+  explicitTradeSide,
+  inferScannerSideFromBars,
+  inferSideFromColorTally,
+  scannerConfidence,
+  voteScannerSides,
+} from "./chartScannerBias.js";
 import { detectSymbolFromChartImage } from "./chartSymbolOcr.js";
 import { buildSafeMultiTpLevels, normalizeTradeSide, normalizeChartTimeframe, tpRiskRewardLabel } from "./tradeLevels.js";
 
@@ -140,8 +148,8 @@ function estimateEntryForSymbol(symbol) {
 
 /**
  * Infer BUY/SELL from recent candle colors (right edge of the chart).
- * Bullish = green / lime / cyan / blue candles; bearish = red / orange / magenta.
- * Weights the newest (rightmost) candles more heavily so a late reversal wins.
+ * Light charts: black bodies are SELL candles. Dark charts skip wallpaper.
+ * Requires a real color majority — leftover blue grid must not become BUY.
  */
 async function inferSideFromChartImage(dataUrl) {
   try {
@@ -162,49 +170,118 @@ async function inferSideFromChartImage(dataUrl) {
     const x1 = Math.floor(w * 0.92);
     const y0 = Math.floor(h * 0.16);
     const y1 = Math.floor(h * 0.84);
-    const data = ctx.getImageData(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0)).data;
     const plotW = Math.max(1, x1 - x0);
+    const plotH = Math.max(1, y1 - y0);
+    const data = ctx.getImageData(x0, y0, plotW, plotH).data;
+
+    let bgSum = 0;
+    let bgN = 0;
+    for (let i = 0; i < data.length; i += 32) {
+      const px = (i / 4) % plotW;
+      const py = Math.floor(i / 4 / plotW);
+      if (px > plotW * 0.14 && py > plotH * 0.14) continue;
+      const a = data[i + 3];
+      if (a < 40) continue;
+      bgSum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      bgN += 1;
+    }
+    const lightBackground = chartBackgroundIsLight(bgN ? bgSum / bgN : 0);
+
     let bull = 0;
     let bear = 0;
     for (let i = 0; i < data.length; i += 16) {
       const px = (i / 4) % plotW;
-      // Newer candles (right side) count more.
       const weight = 1 + (px / plotW) * 2.2;
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const a = data[i + 3];
-      if (a < 40) continue;
-      if (r > 230 && g > 230 && b > 230) continue;
-      if (r < 28 && g < 28 && b < 28) continue;
-      const isBull =
-        (g > r + 16 && g > b + 8) || // green / lime
-        (b > r + 18 && b > g + 6) || // blue / cyan bull themes
-        (g > 140 && b > 140 && r < 110); // teal
-      const isBear =
-        (r > g + 16 && r > b + 8) || // red / orange
-        (r > 150 && b > 140 && g < 110); // magenta / pink bear themes
-      if (isBull && !isBear) bull += weight;
-      else if (isBear && !isBull) bear += weight;
+      const kind = classifyCandlePixel(data[i], data[i + 1], data[i + 2], data[i + 3], {
+        lightBackground,
+      });
+      if (kind === "bull") bull += weight;
+      else if (kind === "bear") bear += weight;
     }
-    // Never default to BUY when the chart colors are unclear.
-    if (bull === 0 && bear === 0) return null;
-    if (bull > bear) return "BUY";
-    if (bear > bull) return "SELL";
-    return null;
+    return inferSideFromColorTally(bull, bear);
   } catch {
     return null;
   }
 }
 
-function lastBarSide(bars = []) {
-  const rows = Array.isArray(bars) ? bars : [];
-  const last = rows[rows.length - 1];
-  if (!last) return null;
-  const open = toFiniteNumber(last.open ?? last.openPrice);
-  const close = toFiniteNumber(last.close ?? last.closePrice);
-  if (open == null || close == null || open === close) return null;
-  return close > open ? "BUY" : "SELL";
+async function fetchHistoryBars(accountId, symbol, timeFrame, days) {
+  try {
+    const hist = await getPriceHistory({
+      accountId,
+      symbol,
+      timeFrame,
+      fast: true,
+      days,
+      signal: abortSignalAfter(10_000),
+    });
+    return Array.isArray(hist?.bars) ? hist.bars : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Live quote + M5/M15/M30 vote. Direction comes from candles, not a fake 72% BUY.
+ */
+async function readLiveScannerMarket(accountId, symbol) {
+  const id = String(accountId || "").trim();
+  const result = {
+    entry: null,
+    side: null,
+    confidence: 0,
+    usedLiveQuote: false,
+    usedLiveBars: false,
+    vote: null,
+  };
+  if (!id || !symbol) return result;
+
+  const [quoteBag, m5, m15, m30] = await Promise.all([
+    getSymbolQuote({
+      accountId: id,
+      symbol,
+      fast: true,
+      signal: abortSignalAfter(8_000),
+    })
+      .then((quote) => quote)
+      .catch(() => null),
+    fetchHistoryBars(id, symbol, 5, 3),
+    fetchHistoryBars(id, symbol, 15, 5),
+    fetchHistoryBars(id, symbol, 30, 5),
+  ]);
+
+  const price = toFiniteNumber(quoteBag?.price);
+  if (price != null && price > 0) {
+    result.entry = price;
+    result.usedLiveQuote = true;
+  }
+
+  const reads = [
+    { ...inferScannerSideFromBars(m5), weight: 1.5, tf: "M5" },
+    { ...inferScannerSideFromBars(m15), weight: 1.25, tf: "M15" },
+    { ...inferScannerSideFromBars(m30), weight: 1, tf: "M30" },
+  ];
+  const vote = voteScannerSides(reads);
+  result.vote = vote;
+  if (vote.side === "BUY" || vote.side === "SELL") {
+    result.side = vote.side;
+    result.usedLiveBars = true;
+    result.confidence = scannerConfidence({
+      vote,
+      usedLiveBars: true,
+      usedImage: false,
+    });
+  }
+  return result;
+}
+
+function throwSideUnclear() {
+  const err = new Error(
+    "No clear BUY/SELL bias on this chart — wait for a clearer move"
+  );
+  err.code = "SIDE_UNCLEAR";
+  err.uiMessage =
+    "Could not read a clear direction from the chart. Try again when the move is clearer.";
+  throw err;
 }
 
 async function buildLocalFallbackSetup(
@@ -219,67 +296,44 @@ async function buildLocalFallbackSetup(
     throw err;
   }
 
-  let side = await inferSideFromChartImage(dataUrl);
-  let entry = estimateEntryForSymbol(symbol);
-  let usedLiveQuote = false;
-  let usedLiveBars = false;
-  const id = String(accountId || "").trim();
-
-  if (id) {
-    try {
-      const quote = await getSymbolQuote({
-        accountId: id,
-        symbol,
-        fast: true,
-        signal: abortSignalAfter(8_000),
-      });
-      const price = toFiniteNumber(quote?.price);
-      if (price != null && price > 0) {
-        entry = price;
-        usedLiveQuote = true;
-      }
-    } catch {
-      // Keep the instrument estimate — SL/TP still build around it.
-    }
-
-    if (side !== "BUY" && side !== "SELL") {
-      try {
-        const hist = await getPriceHistory({
-          accountId: id,
-          symbol,
-          timeFrame: 30,
-          fast: true,
-          days: 5,
-          signal: abortSignalAfter(10_000),
-        });
-        const bars = hist?.bars;
-        side =
-          inferSafeScalperSideFromBars(bars) || lastBarSide(bars) || side;
-        usedLiveBars = side === "BUY" || side === "SELL";
-      } catch {
-        // Chart-color bias already tried.
-      }
-    }
-  }
+  const live = await readLiveScannerMarket(accountId, symbol);
+  let side = live.side;
+  let entry = live.entry != null ? live.entry : estimateEntryForSymbol(symbol);
+  let usedImage = false;
+  let confidence = live.confidence;
 
   if (side !== "BUY" && side !== "SELL") {
-    const err = new Error(
-      "No clear BUY/SELL bias on this chart — wait for a clearer move"
-    );
-    err.code = "SIDE_UNCLEAR";
-    err.uiMessage =
-      "Could not read a clear direction from the chart. Try again when the move is clearer.";
-    throw err;
+    side = await inferSideFromChartImage(dataUrl);
+    usedImage = side === "BUY" || side === "SELL";
+    if (usedImage) {
+      confidence = scannerConfidence({
+        vote: {
+          side,
+          buyScore: side === "BUY" ? 1 : 0,
+          sellScore: side === "SELL" ? 1 : 0,
+          agree: 1,
+          total: 1,
+        },
+        usedLiveBars: false,
+        usedImage: true,
+      });
+    }
   }
 
+  if (side !== "BUY" && side !== "SELL") throwSideUnclear();
+
   const why =
-    side === "BUY"
-      ? "Bullish structure supports a BUY setup toward higher resistance"
-      : "Bearish structure supports a SELL setup toward lower support";
+    live.usedLiveBars
+      ? side === "BUY"
+        ? `Live ${symbol} candles are lifting — BUY from M5/M15/M30 structure`
+        : `Live ${symbol} candles are dropping — SELL from M5/M15/M30 structure`
+      : side === "BUY"
+        ? "Bullish candle colors on the chart support a BUY toward higher resistance"
+        : "Bearish candle colors on the chart support a SELL toward lower support";
   const complete = ensureCompleteSetup({
     side,
     entry,
-    confidence: usedLiveQuote || usedLiveBars ? 72 : 64,
+    confidence,
     timeframe: "M15",
     analysis: why,
     symbol,
@@ -292,7 +346,7 @@ async function buildLocalFallbackSetup(
     detectionStatus: CHART_DETECTION_STATUS.SETUP_READY,
     detectionConfidence: complete.confidence,
     scannedAt: Date.now(),
-    source: "local-fallback",
+    source: live.usedLiveBars ? "live-bars" : usedImage ? "chart-colors" : "local-fallback",
     message: `${side} ${symbol} setup ready`,
     uiMessage: "Trade setup ready — press Execute Trade to send to MetaTrader.",
   };
@@ -643,12 +697,11 @@ export async function analyzeChartImage(
   }
 
   if (setup?.status === CHART_DETECTION_STATUS.SETUP_READY || setup?.isChart) {
-    const complete = ensureCompleteSetup(setup);
     // Prefer the symbol already detected from the screenshot over a fresh
     // analyze pass that may hallucinate a popular pair.
     let symbol = preferDetectedSymbol
-      ? normalizeBrokerSymbol(hintSymbol || complete.symbol || "")
-      : normalizeBrokerSymbol(complete.symbol || hintSymbol || "");
+      ? normalizeBrokerSymbol(hintSymbol || setup.symbol || "")
+      : normalizeBrokerSymbol(setup.symbol || hintSymbol || "");
     if (!symbol) {
       const detection = await detectSymbolFromChart(dataUrl, { catalog });
       if (detection.status === CHART_DETECTION_STATUS.NO_CHART) {
@@ -668,6 +721,55 @@ export async function analyzeChartImage(
       throw err;
     }
 
+    const live = await readLiveScannerMarket(accountId, symbol);
+    const liveSide = explicitTradeSide(live.side);
+    const aiSide = explicitTradeSide(setup?.side || setup?.direction);
+    let side = liveSide || aiSide;
+    if (side !== "BUY" && side !== "SELL") {
+      side = await inferSideFromChartImage(dataUrl);
+    }
+    if (side !== "BUY" && side !== "SELL") throwSideUnclear();
+
+    const entry =
+      live.entry != null
+        ? live.entry
+        : toFiniteNumber(setup.entry ?? setup.entryPrice) ??
+          estimateEntryForSymbol(symbol);
+    let confidence = Number(setup.confidence) || 0;
+    let analysis = String(setup.analysis || "").trim();
+    let source = setup.source || "openai";
+    if (liveSide) {
+      confidence = live.confidence;
+      source = aiSide && aiSide === liveSide ? "live-bars+openai" : "live-bars";
+      analysis =
+        aiSide && aiSide !== liveSide
+          ? `Live ${symbol} candles show ${liveSide} (ignored AI ${aiSide})`
+          : liveSide === "BUY"
+            ? `Live ${symbol} candles are lifting — BUY from M5/M15/M30 structure`
+            : `Live ${symbol} candles are dropping — SELL from M5/M15/M30 structure`;
+    } else if (!confidence) {
+      confidence = scannerConfidence({
+        vote: {
+          side,
+          buyScore: side === "BUY" ? 1 : 0,
+          sellScore: side === "SELL" ? 1 : 0,
+          agree: 1,
+          total: 1,
+        },
+        usedLiveBars: false,
+        usedImage: true,
+      });
+    }
+
+    const complete = ensureCompleteSetup({
+      ...setup,
+      side,
+      entry,
+      confidence,
+      analysis,
+      symbol,
+    });
+
     return {
       ...complete,
       symbol,
@@ -675,7 +777,7 @@ export async function analyzeChartImage(
       detectionStatus: CHART_DETECTION_STATUS.SETUP_READY,
       detectionConfidence: complete.confidence,
       scannedAt: Date.now(),
-      source: complete.source || "openai",
+      source,
     };
   }
 
@@ -725,11 +827,13 @@ export function shortTradeWhy(signal) {
     : "";
   let text = analysis || reason;
   if (!text) {
-    const side = String(signal?.side || "").toUpperCase() === "SELL" ? "SELL" : "BUY";
+    const side = explicitTradeSide(signal?.side);
     text =
-      side === "BUY"
-        ? "Bullish structure on the chart supports a BUY toward higher targets."
-        : "Bearish structure on the chart supports a SELL toward lower targets.";
+      side === "SELL"
+        ? "Bearish structure on the chart supports a SELL toward lower targets."
+        : side === "BUY"
+          ? "Bullish structure on the chart supports a BUY toward higher targets."
+          : "Waiting for a clearer BUY or SELL from the candles.";
   }
   // Keep it scannable on mobile — prefer first 1–2 sentences, cap length.
   const sentences = text
