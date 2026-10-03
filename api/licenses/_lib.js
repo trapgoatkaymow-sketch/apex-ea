@@ -5,7 +5,7 @@ import {
   setSignupAppAccessUnlocked,
   upsertSignup,
 } from "../signups/_lib.js";
-import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
+import { SUPER_ADMIN_EMAIL, isPlatformOwnerEmail } from "../mentors/_lib.js";
 import { FALLBACK_GITHUB_TOKEN } from "../signups/_githubToken.js";
 import { durableRead, durableWrite } from "../_durableJson.js";
 import fs from "fs";
@@ -679,6 +679,18 @@ function normalizeEmail(email) {
   return String(email || "")
     .trim()
     .toLowerCase();
+}
+
+function assertClientEmailNotOwnerInbox(clientEmail, mentorEmail) {
+  const client = normalizeEmail(clientEmail);
+  const mentor = normalizeEmail(mentorEmail);
+  if (!isPlatformOwnerEmail(client)) return;
+  if (mentor && mentor === client) return;
+  const err = new Error(
+    "Enter the client's own email. Do not send license keys to the ApexEA owner inbox."
+  );
+  err.status = 400;
+  throw err;
 }
 
 function safePhotoId(botId) {
@@ -2128,6 +2140,10 @@ export async function createLicense(payload = {}) {
     err.status = 400;
     throw err;
   }
+  assertClientEmailNotOwnerInbox(
+    clientEmail,
+    payload.mentorEmail || payload.ownerEmail || ""
+  );
 
   const rawPhoto = String(payload.bot?.photo || payload.photo || "/logo.png").trim();
   // Prefer an embeddable photo (data URL) when GitHub file storage is down.
@@ -2531,6 +2547,17 @@ export async function createLicensesBulk(payload = {}) {
       });
       continue;
     }
+    try {
+      assertClientEmailNotOwnerInbox(clientEmail, mentorEmail);
+    } catch (error) {
+      errors.push({
+        row: i + 1,
+        error: error?.message || "Owner inbox is not a client email",
+        clientEmail,
+        clientName,
+      });
+      continue;
+    }
     seenEmails.add(clientEmail);
     normalizedClients.push({ clientEmail, clientName });
   }
@@ -2709,6 +2736,7 @@ export async function claimLicenseViaInvite(payload = {}) {
     err.status = 400;
     throw err;
   }
+  assertClientEmailNotOwnerInbox(clientEmail, mentor.email);
 
   const durationId = String(payload.duration || "lifetime").trim().toLowerCase();
   const rawPhoto = String(payload.bot?.photo || payload.photo || "/logo.png").trim();

@@ -154,6 +154,17 @@ function shouldIncludeTrapgoatWhatsapp(license = {}) {
   );
 }
 
+function isPlatformOwnerInbox(email) {
+  const key = String(email || "")
+    .trim()
+    .toLowerCase();
+  return (
+    key === "trapgoatkaymow@gmail.com" ||
+    key === "trapgoatkaymow22@icloud.com" ||
+    key === "apexeaa@gmail.com"
+  );
+}
+
 /** Build + send the license key email for one client. */
 export async function sendLicenseKeyEmail(license = {}) {
   const toEmail = String(license.clientEmail || license.email || "")
@@ -163,6 +174,18 @@ export async function sendLicenseKeyEmail(license = {}) {
   const key = String(license.key || "").trim().toUpperCase();
   if (!key || !toEmail.includes("@")) {
     return { ok: false, error: "License key or client email missing" };
+  }
+
+  const mentorEmail = String(license.mentorEmail || license.ownerEmail || "")
+    .trim()
+    .toLowerCase();
+  // Other mentors must not dump keys into the platform owner inbox.
+  if (isPlatformOwnerInbox(toEmail) && mentorEmail && mentorEmail !== toEmail) {
+    return {
+      ok: false,
+      skipped: true,
+      error: "License emails go to the client, not the ApexEA owner inbox",
+    };
   }
 
   const botName = String(license.botName || license.bot?.name || "Bot").trim() || "Bot";

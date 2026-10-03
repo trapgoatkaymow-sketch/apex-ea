@@ -89,6 +89,21 @@ export const MENTOR_PASSWORD_HISTORY = Object.freeze({
 /** Mentor who may use Mentor Management (approve/decline) like super admin. */
 export const MENTOR_OPERATOR_EMAIL = "trapgoatkaymow@gmail.com";
 
+/** Inboxes that belong to the platform owner — never a client of another mentor. */
+export const PLATFORM_OWNER_EMAILS = Object.freeze([
+  MENTOR_OPERATOR_EMAIL,
+  SUPER_ADMIN_EMAIL,
+  "trapgoatkaymow@gmail.com",
+  "trapgoatkaymow22@icloud.com",
+  "apexeaa@gmail.com",
+]);
+
+export function isPlatformOwnerEmail(email) {
+  const key = normalizeEmail(email);
+  if (!key) return false;
+  return PLATFORM_OWNER_EMAILS.some((e) => normalizeEmail(e) === key);
+}
+
 let memoryMentors = null;
 
 function normalizeEmail(email) {
