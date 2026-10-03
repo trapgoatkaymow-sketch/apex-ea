@@ -8,7 +8,7 @@ const gunzip = promisify(zlib.gunzip);
 
 export const config = {
   api: { bodyParser: false },
-  maxDuration: 300,
+  maxDuration: 120,
 };
 
 const REPO = "trapgoatkaymow-sketch/apex-ea";
