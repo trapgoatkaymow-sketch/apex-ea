@@ -17,17 +17,18 @@ function cleanMt5Base(value) {
     .replace(/\/$/, "");
 }
 
+// Prefer the licensed/working host. 159.203.191.196 runs expired timurila/mt5rest trial.
 export const MT5_API_BASE = cleanMt5Base(
   process.env.MT5_API_BASE ||
     process.env.MT5_API_TARGET ||
-    "http://159.203.191.196"
+    "http://66.23.225.158"
 );
 
 const MT5_API_FAILOVER_BASES = [
   MT5_API_BASE,
   cleanMt5Base(process.env.MT5_API_FAILOVER || process.env.MT5_API_TARGET),
-  "http://159.203.191.196",
   "http://66.23.225.158",
+  "http://159.203.191.196",
 ].filter((base, index, all) => base && all.indexOf(base) === index);
 
 export function sendJson(res, status, payload) {
@@ -943,11 +944,22 @@ function parseConnectToken(token) {
 
 function isCredentialErrorMessage(msg) {
   const text = String(msg || "");
+  // Never treat mt5rest trial/license failures as bad broker passwords.
+  if (
+    /trial\s*expired|purchase\s*full\s*version|loginidwebserver|trial\.mtapi\.io/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
   return (
     /invalid_account|invalid_password|wrong\s*password|invalid\s*password/i.test(
       text
     ) ||
-    /(?:^|[^a-z])password(?:[^a-z]|$)/i.test(text) ||
+    // Avoid matching "send password" inside ConnectException process traces.
+    /(?:invalid|wrong|incorrect|rejected)\s+password|password\s+(?:invalid|wrong|incorrect|rejected)/i.test(
+      text
+    ) ||
     /credentials?\s*(rejected|invalid|incorrect)/i.test(text)
   );
 }
