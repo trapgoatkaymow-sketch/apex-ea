@@ -17,7 +17,6 @@ import {
   mirrorLicensesToDurableStores,
   readJsonBody,
   resendPurchaseLicenseEmails,
-  sanitizeLicenseTombs,
   sendLicenseKeyEmailOnce,
   sendJson,
   setLicenseClientSymbols,
@@ -25,7 +24,7 @@ import {
 } from "./_lib.js";
 import { SUPER_ADMIN_EMAIL } from "../mentors/_lib.js";
 
-export const config = { maxDuration: 300 };
+export const config = { maxDuration: 60 };
 
 function normalizeEmail(value) {
   return String(value || "")
@@ -265,16 +264,6 @@ export default async function handler(req, res) {
         // Catch-up: push the merged Firebase/Blob store onto GitHub so cold
         // instances never miss keys that only lived in Firebase.
         const result = await mirrorLicensesToDurableStores();
-        sendJson(res, result.ok ? 200 : 503, result);
-        return;
-      }
-      if (
-        action === "sanitize-tombs" ||
-        action === "sanitizetombs" ||
-        action === "sanitize-deleted-keys"
-      ) {
-        // Drop OCR lookalike tombstones that were wiping valid generated keys.
-        const result = await sanitizeLicenseTombs();
         sendJson(res, result.ok ? 200 : 503, result);
         return;
       }

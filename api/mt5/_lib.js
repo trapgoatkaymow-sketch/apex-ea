@@ -292,12 +292,56 @@ export function mapSearchResults(data, platform = "MT5") {
   return brokers.filter((b) => !isBlockedBroker(b));
 }
 
+/** Known MT5 servers when live /Search hangs (common for Razor / XM). */
+const KNOWN_BROKER_SERVERS = [
+  {
+    match: /\brazor\b/i,
+    company: "Razor Markets",
+    servers: ["RazorMarkets-Live", "RazorMarkets-Demo"],
+  },
+  {
+    match: /\bxm\b/i,
+    company: "XM Global",
+    servers: ["XMGlobal-MT5 5", "XMGlobal-MT5 7", "XMGlobal-MT5 10"],
+  },
+  {
+    match: /\bhfm\b|hotforex|hf\s*markets/i,
+    company: "HFM",
+    servers: ["HFMarketsSA-Live"],
+  },
+];
+
+function knownBrokerFallback(query, platform = "MT5") {
+  const q = String(query || "").trim();
+  if (!q) return [];
+  const plat = String(platform || "MT5").toUpperCase() === "MT4" ? "MT4" : "MT5";
+  const rows = [];
+  for (const entry of KNOWN_BROKER_SERVERS) {
+    if (!entry.match.test(q)) continue;
+    for (const [index, server] of entry.servers.entries()) {
+      rows.push({
+        id: `known::${entry.company}::${server}::${index}`,
+        company: entry.company,
+        name: server,
+        site: "",
+        logoUrl: "",
+        access: [],
+        platform: plat,
+        custom: false,
+        source: "known",
+        defaultServer: server,
+      });
+    }
+  }
+  return rows;
+}
+
 /** GET /Search?company=… — broker catalog only (no MetaAPI). */
 export async function searchBrokers(query, platform = "MT5") {
   const q = String(query || "").trim();
   if (!q) return [];
   // Short timeout — hung /Search (e.g. Razor) must not pin the client on
-  // "Searching brokers…". Empty/timeout → client local catalog fills in.
+  // "Searching brokers…". Empty/timeout → known + client local catalog fill in.
   const trySearch = async (company) => {
     try {
       const data = await mt5Fetch(
@@ -316,9 +360,11 @@ export async function searchBrokers(query, platform = "MT5") {
   // "Razor markets" often returns empty while "Razor" hits servers.
   const first = q.split(/\s+/).filter(Boolean)[0] || "";
   if (first && first.toLowerCase() !== q.toLowerCase()) {
-    return trySearch(first);
+    const secondary = await trySearch(first);
+    if (secondary.length) return secondary;
   }
-  return [];
+
+  return knownBrokerFallback(q, platform);
 }
 
 function pickNumber(...values) {

@@ -16,7 +16,7 @@ import {
   listMentors,
   SUPER_ADMIN_EMAIL,
 } from "../mentors/_lib.js";
-export const config = { maxDuration: 300 };
+export const config = { maxDuration: 60 };
 
 function normalizeEmail(value) {
   return String(value || "")
@@ -35,29 +35,9 @@ function assertSuperAdmin(adminEmail, message = "Only super admin can do this") 
 }
 
 async function entitleIfLicenseOwner(email, signup) {
-  if (signup?.accessPaid || signup?.accessBypassed) return signup;
-  const key = normalizeEmail(email);
-  if (!key || !key.includes("@")) return signup;
-  try {
-    const { findLicensesByEmail } = await import("../licenses/_lib.js");
-    const rows = await findLicensesByEmail(key);
-    const paidOwned = (Array.isArray(rows) ? rows : []).some((row) => {
-      if (!row) return false;
-      if (row.purchasePaid === true) return true;
-      if (String(row.purchaseCaptureId || "").trim()) return true;
-      const src = String(row.purchaseSource || "").toLowerCase();
-      return (
-        src.includes("giveaway") ||
-        src.includes("promo") ||
-        (src.includes("paypal") && String(row.purchaseOrderId || "").trim())
-      );
-    });
-    if (!paidOwned) return signup;
-    // Buyer already paid for a key — reinstall must not show the paywall again.
-    return await setSignupAccessPaid(key, true);
-  } catch {
-    return signup;
-  }
+  // License ownership no longer skips the subscription paywall.
+  // Clients must have accessPaid (PayPal) or accessBypassed (admin) to enter.
+  return signup;
 }
 
 export default async function handler(req, res) {
@@ -75,101 +55,11 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
       const body = await readJsonBody(req);
-      const action = String(body?.action || "").toLowerCase();
-      if (
-        action === "mint-missing-keys" ||
-        action === "mintmissingkeys" ||
-        action === "heal-paid-keys"
-      ) {
-        const admin = normalizeEmail(body.adminEmail || body.email || "");
-        const storeToken = String(process.env.LICENSES_STORE_TOKEN || "").trim();
-        const provided = String(body.token || body.secret || "").trim();
-        const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
-        const authed =
-          (admin &&
-            (admin === superAdmin || admin === "trapgoatkaymow@gmail.com")) ||
-          (storeToken && provided && provided === storeToken);
-        if (!authed) {
-          sendJson(res, 403, {
-            error: "Only super admin can mint missing purchase keys",
-          });
-          return;
-        }
-        const { fulfillRobotPurchase } = await import(
-          "../paypal/_robotPurchase.js"
-        );
-        const { listLicenses } = await import("../licenses/_lib.js");
-        const signups = await listSignups();
-        const licenses = await listLicenses({
-          preferFresh: true,
-          fillMentorNames: false,
-        });
-        const byEmail = new Map();
-        for (const row of Array.isArray(licenses) ? licenses : []) {
-          const em = normalizeEmail(row?.clientEmail);
-          if (!em || !em.includes("@")) continue;
-          if (!byEmail.has(em)) byEmail.set(em, []);
-          byEmail.get(em).push(row);
-        }
-        const emails = Array.isArray(body.emails)
-          ? body.emails.map(normalizeEmail).filter((e) => e.includes("@"))
-          : signups
-              .filter(
-                (s) =>
-                  s?.accessPaid &&
-                  !s?.accessBypassed &&
-                  String(s?.email || "").includes("@")
-              )
-              .map((s) => normalizeEmail(s.email));
-        const limit = Math.min(200, Math.max(1, Number(body.limit) || 50));
-        const minted = [];
-        const skipped = [];
-        const errors = [];
-        for (const email of emails) {
-          if (minted.length >= limit) break;
-          const owned = byEmail.get(email) || [];
-          if (owned.length) {
-            skipped.push({ email, reason: "already-has-key", key: owned[0]?.key });
-            continue;
-          }
-          try {
-            const fulfilled = await fulfillRobotPurchase({
-              email,
-              clientName: email.split("@")[0] || "Client",
-              captureId: `heal-${email}-${Date.now()}`,
-              orderId: "",
-              source: "paypal-giveaway-heal",
-            });
-            minted.push({
-              email,
-              key: fulfilled?.key || null,
-              emailSent: Boolean(fulfilled?.emailSent),
-              reused: Boolean(fulfilled?.reused),
-            });
-            if (fulfilled?.key) {
-              if (!byEmail.has(email)) byEmail.set(email, []);
-              byEmail.get(email).push(fulfilled.license || { key: fulfilled.key });
-            }
-          } catch (error) {
-            errors.push({ email, error: error?.message || "mint-failed" });
-          }
-        }
-        sendJson(res, 200, {
-          ok: true,
-          minted: minted.length,
-          skipped: skipped.length,
-          errors: errors.length,
-          sample: minted.slice(0, 15),
-          errorSample: errors.slice(0, 10),
-        });
-        return;
-      }
-
       let signup = await upsertSignup(body.email, {
         status: body.status || "pending",
       });
-      // Paid-key owners keep access on reinstall without paying again.
-      signup = await entitleIfLicenseOwner(body.email || signup?.email, signup);
+      // Old clients who already own a license skip the paywall on reinstall.
+      signup = await entitleIfLicenseOwner(body.email, signup);
       sendJson(res, 200, { signup });
       return;
     }

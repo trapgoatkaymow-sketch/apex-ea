@@ -545,12 +545,17 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
 
   function pickBroker(broker) {
     setSelectedBroker(broker);
-    const server =
-      broker.local || broker.custom ? "" : String(broker.name || "").trim();
+    // Prefer known defaultServer (local catalog). Remote rows use name.
+    // Never blank out Razor/XM when MT5 /Search timed out.
+    const server = String(
+      broker?.defaultServer ||
+        (!broker?.custom ? broker?.name : "") ||
+        ""
+    ).trim();
     setCreds({
       login: "",
       password: "",
-      server,
+      server: broker?.custom ? "" : server,
     });
     setStep("login");
   }

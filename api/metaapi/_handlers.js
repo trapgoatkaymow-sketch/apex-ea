@@ -259,17 +259,19 @@ export async function handleConnect(req, res) {
       }
     };
 
-    // Keep the function alive after 202 so ConnectEx can finish.
+    // Start ConnectEx immediately (same isolate), and also register waitUntil
+    // so Vercel keeps the isolate alive after we return 202.
+    const running = runJob();
     try {
-      waitUntil(runJob());
+      waitUntil(running);
     } catch {
-      void runJob();
+      // non-Vercel — running promise already started
     }
 
     // Fast brokers only: brief memory poll, then always 202 so clients never 504.
     const started = Date.now();
-    while (Date.now() - started < 6_000) {
-      await new Promise((r) => setTimeout(r, 400));
+    while (Date.now() - started < 5_000) {
+      await new Promise((r) => setTimeout(r, 350));
       const job = await getConnectJob(jobId);
       if (!job) break;
       if (job.status === "done" && job.session) {
