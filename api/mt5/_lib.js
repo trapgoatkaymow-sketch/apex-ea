@@ -839,14 +839,27 @@ export async function connectAccount({
     server: userServer,
   });
 
+  // Keep ConnectEx under the serverless budget. Post-login enrichment must
+  // never push the whole handler past maxDuration or clients see "Failed to fetch".
+  const connectStarted = Date.now();
   let token;
   try {
-    token = await mt5Fetch(`/ConnectEx?${params.toString()}`, { timeoutMs: 60000 });
+    token = await mt5Fetch(`/ConnectEx?${params.toString()}`, {
+      timeoutMs: 45000,
+    });
   } catch (error) {
     const msg = String(error?.message || "");
     if (/password|login|invalid|auth|credential|reject/i.test(msg)) {
       const err = new Error("Broker rejected the login credentials");
       err.status = 400;
+      err.data = error.data;
+      throw err;
+    }
+    if (/timed out|abort|unreachable|fetch failed|network/i.test(msg)) {
+      const err = new Error(
+        "Broker login timed out — check login/server and try again"
+      );
+      err.status = error.status || 504;
       err.data = error.data;
       throw err;
     }
@@ -876,34 +889,45 @@ export async function connectAccount({
     throw err;
   }
 
-  let summary = null;
-  let details = null;
-  let account = null;
-  let ordersProfit = null;
-  try {
-    summary = await fetchAccountSummary(id, { timeoutMs: 20000, tries: 10 });
-  } catch {
-    summary = null;
-  }
-  try {
-    details = await mt5Fetch(`/AccountDetails?id=${encodeURIComponent(id)}`, {
-      timeoutMs: 20000,
-    });
-  } catch {
-    details = null;
-  }
-  try {
-    account = await mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
-      timeoutMs: 20000,
-    });
-  } catch {
-    account = null;
-  }
-  try {
-    ordersProfit = await fetchOpenedOrdersProfit(id, { timeoutMs: 15000 });
-  } catch {
-    ordersProfit = null;
-  }
+  // Fast enrichment only — balance/equity can finish on the next status poll.
+  // Sequential 20s×10 summary retries were killing the Vercel function mid-response.
+  const budgetMs = Math.max(
+    2500,
+    55_000 - (Date.now() - connectStarted)
+  );
+  const enrichDeadline = Date.now() + Math.min(12_000, budgetMs);
+  const enrichTimeout = Math.max(
+    2500,
+    Math.min(8000, enrichDeadline - Date.now())
+  );
+
+  const withBudget = async (fn) => {
+    if (Date.now() >= enrichDeadline) return null;
+    try {
+      return await fn();
+    } catch {
+      return null;
+    }
+  };
+
+  const [summary, details, account, ordersProfit] = await Promise.all([
+    withBudget(() =>
+      fetchAccountSummary(id, { timeoutMs: enrichTimeout, tries: 2 })
+    ),
+    withBudget(() =>
+      mt5Fetch(`/AccountDetails?id=${encodeURIComponent(id)}`, {
+        timeoutMs: enrichTimeout,
+      })
+    ),
+    withBudget(() =>
+      mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
+        timeoutMs: enrichTimeout,
+      })
+    ),
+    withBudget(() =>
+      fetchOpenedOrdersProfit(id, { timeoutMs: Math.min(5000, enrichTimeout) })
+    ),
+  ]);
 
   return sessionFromConnect({
     token: id,

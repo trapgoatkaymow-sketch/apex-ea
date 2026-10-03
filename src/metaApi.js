@@ -10,16 +10,45 @@ function formatApiError(data, status) {
   return typeof data === "string" ? data : `Request failed (${status})`;
 }
 
-async function apiFetch(path, { method = "GET", body, signal } = {}) {
-  const response = await fetch(`${apiUrl(API_PATH)}${path}`, {
-    method,
-    signal,
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+function friendlyNetworkError(error, fallback = "Could not reach the broker server") {
+  const raw = String(error?.message || error || "").trim();
+  if (
+    /^failed to fetch$/i.test(raw) ||
+    /^load failed$/i.test(raw) ||
+    /networkerror/i.test(raw) ||
+    /network request failed/i.test(raw)
+  ) {
+    return "Could not reach the broker server — check connection and try again";
+  }
+  if (/abort|timed out|timeout/i.test(raw)) {
+    return "Broker login timed out — try again";
+  }
+  return raw || fallback;
+}
+
+async function apiFetch(path, { method = "GET", body, signal, retries = 0 } = {}) {
+  let response;
+  try {
+    response = await fetch(`${apiUrl(API_PATH)}${path}`, {
+      method,
+      signal,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+    });
+  } catch (error) {
+    if (retries > 0 && !signal?.aborted) {
+      await new Promise((r) => setTimeout(r, 700));
+      return apiFetch(path, { method, body, signal, retries: retries - 1 });
+    }
+    const err = new Error(friendlyNetworkError(error));
+    err.cause = error;
+    err.status = 0;
+    throw err;
+  }
 
   const text = await response.text();
   let data = null;
@@ -98,9 +127,11 @@ export async function connectAccount({
   onProgress,
 } = {}) {
   onProgress?.({ pending: true, connectionStatus: "CONNECTING" });
+  // One automatic retry — cold serverless / brief MT5 blips showed as "Failed to fetch".
   const session = await apiFetch("/connect", {
     method: "POST",
     signal,
+    retries: 1,
     body: {
       login,
       password,

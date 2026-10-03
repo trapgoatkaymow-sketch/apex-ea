@@ -645,7 +645,12 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
       setEngineMode("idle");
     } catch (error) {
       setEngineMode("idle");
-      showToast(error.message || "Connection failed");
+      const raw = String(error?.message || "").trim();
+      const friendly =
+        /^failed to fetch$/i.test(raw) || /^load failed$/i.test(raw)
+          ? "Could not reach the broker server — check connection and try again"
+          : raw || "Connection failed";
+      showToast(friendly);
     } finally {
       setConnecting(false);
     }
