@@ -1341,10 +1341,10 @@
       "duration": "lifetime",
       "expiresAt": null,
       "createdAt": 1791059409265,
-      "usedAt": 1791061257813,
+      "usedAt": 1791061254980,
       "deviceId": "27c282e9-451f-4cac-a462-dd3ead8faa35",
-      "boundAt": 1791061257813,
-      "updatedAt": 1791061257813,
+      "boundAt": 1791061254980,
+      "updatedAt": 1791061258431,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "",
@@ -1353,8 +1353,12 @@
       "robotCompany": "",
       "robotPlatform": "",
       "robotConnectedAt": null,
-      "clientSymbols": [],
-      "clientSymbolsUpdatedAt": null,
+      "clientSymbols": [
+        "XAUUSD",
+        "US30",
+        ".US30."
+      ],
+      "clientSymbolsUpdatedAt": 1791061258431,
       "mentorSymbolsSyncedAt": 1791061002211,
       "purchaseCaptureId": "4GL05304YD014354X",
       "purchaseOrderId": "07610000G4097312J",
@@ -4930,6 +4934,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
+          "US30",
           ".US30."
         ]
       }
@@ -5513,6 +5518,7 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
+          "US30",
           ".US30."
         ]
       }
