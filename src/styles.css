@@ -9318,6 +9318,21 @@ html.is-native.is-paused .cs-engine.is-desk .cs-engine-kicker i {
   animation: cs-execute-pulse 1.2s ease-in-out infinite;
 }
 
+.cs-run-btn.is-analyzing:disabled {
+  opacity: 1;
+  box-shadow:
+    0 12px 28px rgba(var(--pink-hot-rgb), 0.38),
+    0 0 22px rgba(var(--pink-rgb), 0.22);
+  animation: cs-execute-pulse 1.2s ease-in-out infinite;
+}
+
+.cs-field.is-analyzing .cs-symbol-auto {
+  color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(var(--pink-rgb), 0.5);
+  box-shadow: 0 0 0 1px rgba(var(--pink-rgb), 0.18);
+  animation: cs-execute-pulse 1.2s ease-in-out infinite;
+}
+
 @keyframes cs-execute-pulse {
   0%,
   100% {

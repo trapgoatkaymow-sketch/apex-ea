@@ -89,9 +89,10 @@
  * Gen 131 — Ship exact Number of Trades (40 → 40 positions at lot each).
  * Gen 146 — Chart Scanner OCRs the screenshot when OpenAI is down (no typing).
  * Gen 147 — Keep exact chart ticker (XAUUSD) — do not remap to XAUUSD.p.
+ * Gen 148 — OCR-first symbol detect + keep Analyzing UI until finished.
  */
-/** Gen 147 — Scanner keeps the exact symbol from the chart header. */
-export const UI_SHELL_GENERATION = 147;
+/** Gen 148 — Scanner keeps Analyzing on screen until the chart read finishes. */
+export const UI_SHELL_GENERATION = 148;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -101,7 +102,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 147;
+export const UI_SHELL_FLOOR = 148;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

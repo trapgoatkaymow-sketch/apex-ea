@@ -14,15 +14,16 @@ function loadImage(src) {
 }
 
 function withTimeout(promise, ms, fallback = null) {
-  return Promise.race([
-    promise,
-    new Promise((resolve) => {
-      setTimeout(() => resolve(fallback), Math.max(1, Number(ms) || 1));
-    }),
-  ]);
+  let timer = null;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(fallback), Math.max(1, Number(ms) || 1));
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
-function enhancePatch(img, region, { invert = true, scale = 2.4 } = {}) {
+function enhancePatch(img, region, { invert = true, scale = 2.6 } = {}) {
   const iw = img.naturalWidth || img.width || 1;
   const ih = img.naturalHeight || img.height || 1;
   const sx = Math.max(0, Math.floor(iw * region.x));
@@ -44,16 +45,29 @@ function enhancePatch(img, region, { invert = true, scale = 2.4 } = {}) {
   const data = image.data;
   for (let i = 0; i < data.length; i += 4) {
     const lum = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
-    let v = lum;
-    // Boost contrast so faint header text survives phone JPEGs.
-    v = (v - 128) * 1.55 + 128;
+    let v = (lum - 128) * 1.7 + 128;
     v = v < 0 ? 0 : v > 255 ? 255 : v;
-    const bit = invert ? (v > 148 ? 0 : 255) : v > 148 ? 255 : 0;
+    const bit = invert ? (v > 140 ? 0 : 255) : v > 140 ? 255 : 0;
     data[i] = data[i + 1] = data[i + 2] = bit;
     data[i + 3] = 255;
   }
   ctx.putImageData(image, 0, 0);
   return canvas.toDataURL("image/png");
+}
+
+/** Self-hosted paths so Android WebView / blocked CDNs still OCR. */
+function tesseractPaths() {
+  const base =
+    typeof window !== "undefined" && window.location?.origin
+      ? `${window.location.origin}/tesseract`
+      : "/tesseract";
+  return {
+    workerPath: `${base}/worker.min.js`,
+    corePath: `${base}/tesseract-core-simd-lstm.wasm.js`,
+    langPath: `${base}/lang`,
+    gzip: true,
+    workerBlobURL: false,
+  };
 }
 
 let workerPromise = null;
@@ -62,7 +76,24 @@ async function getOcrWorker() {
   if (!workerPromise) {
     workerPromise = (async () => {
       const { createWorker } = await import("tesseract.js");
-      const worker = await createWorker("eng", 1, { logger: () => {} });
+      const paths = tesseractPaths();
+      let worker;
+      try {
+        worker = await createWorker("eng", 1, {
+          ...paths,
+          logger: () => {},
+        });
+      } catch {
+        // SIMD core unavailable on some WebViews — fall back to non-SIMD LSTM.
+        worker = await createWorker("eng", 1, {
+          workerPath: paths.workerPath,
+          corePath: `${typeof window !== "undefined" ? window.location.origin : ""}/tesseract/tesseract-core-lstm.wasm.js`,
+          langPath: paths.langPath,
+          gzip: true,
+          workerBlobURL: false,
+          logger: () => {},
+        });
+      }
       await worker.setParameters({
         tessedit_char_whitelist:
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./+ ",
@@ -89,16 +120,15 @@ async function ocrPatch(worker, dataUrl) {
 }
 
 const HEADER_REGIONS = [
-  { x: 0, y: 0, w: 0.7, h: 0.18 },
-  { x: 0, y: 0, w: 1, h: 0.1 },
+  { x: 0.0, y: 0.0, w: 0.62, h: 0.16 },
+  { x: 0.0, y: 0.04, w: 0.55, h: 0.14 },
+  { x: 0.0, y: 0.0, w: 1.0, h: 0.12 },
 ];
 
-const PRICE_REGION = { x: 0.78, y: 0.12, w: 0.22, h: 0.74 };
+const PRICE_REGION = { x: 0.76, y: 0.1, w: 0.24, h: 0.78 };
 
 /**
  * Read the instrument from a chart screenshot without OpenAI.
- * Uses on-device OCR of the header + price axis, then matches
- * against the client's EA catalog and known tickers.
  */
 export async function detectSymbolFromChartImage(dataUrl, { catalog = [] } = {}) {
   if (!dataUrl) return { symbol: "", text: "", prices: [] };
@@ -110,27 +140,30 @@ export async function detectSymbolFromChartImage(dataUrl, { catalog = [] } = {})
     return { symbol: "", text: "", prices: [] };
   }
 
-  const worker = await withTimeout(getOcrWorker(), 12_000, null);
+  const worker = await withTimeout(getOcrWorker(), 20_000, null);
   if (!worker) return { symbol: "", text: "", prices: [] };
 
   const chunks = [];
   for (const region of HEADER_REGIONS) {
-    const blob = enhancePatch(img, region, { invert: true, scale: 2.6 });
-    const text = await withTimeout(ocrPatch(worker, blob), 7_000, "");
-    if (text) chunks.push(text);
-    const hit = matchSymbolFromText(chunks.join(" \n "), catalog);
-    if (hit) {
-      return {
-        symbol: hit,
-        text: chunks.join(" \n "),
-        prices: parseChartPrices(chunks.join(" \n ")),
-        source: "header-ocr",
-      };
+    for (const invert of [true, false]) {
+      const blob = enhancePatch(img, region, { invert, scale: invert ? 2.8 : 2.4 });
+      const text = await withTimeout(ocrPatch(worker, blob), 9_000, "");
+      if (!text) continue;
+      chunks.push(text);
+      const hit = matchSymbolFromText(chunks.join(" \n "), catalog);
+      if (hit) {
+        return {
+          symbol: hit,
+          text: chunks.join(" \n "),
+          prices: parseChartPrices(chunks.join(" \n ")),
+          source: "header-ocr",
+        };
+      }
     }
   }
 
-  const priceBlob = enhancePatch(img, PRICE_REGION, { invert: true, scale: 2.2 });
-  const priceText = await withTimeout(ocrPatch(worker, priceBlob), 7_000, "");
+  const priceBlob = enhancePatch(img, PRICE_REGION, { invert: true, scale: 2.3 });
+  const priceText = await withTimeout(ocrPatch(worker, priceBlob), 9_000, "");
   if (priceText) chunks.push(priceText);
 
   const combined = chunks.join(" \n ");

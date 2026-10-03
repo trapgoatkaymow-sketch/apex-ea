@@ -292,7 +292,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
     setDetectionHint("");
   }
 
-  async function applyDetectedSymbol(dataUrl) {
+  async function applyDetectedSymbol(dataUrl, { holdAnalyzing = false } = {}) {
     setDetectingSymbol(true);
     const keptSymbol =
       symbolSource === "manual" && symbol
@@ -361,7 +361,8 @@ export default function ChartScanner({ variant = "default", active = true }) {
       showToast("Chart analysis failed");
       return null;
     } finally {
-      setDetectingSymbol(false);
+      // Parent keeps the analyzing UI up through auto-scan when holdAnalyzing.
+      if (!holdAnalyzing) setDetectingSymbol(false);
     }
   }
 
@@ -387,10 +388,20 @@ export default function ChartScanner({ variant = "default", active = true }) {
       setFills([]);
       setEngineProgress(0);
       resetDetectionState();
+      setDetectingSymbol(true);
       showToast("Analyzing image…");
-      void applyDetectedSymbol(dataUrl).then((next) => {
-        if (next) void runScan({ symbol: next, image: dataUrl });
-      });
+      void (async () => {
+        try {
+          const next = await applyDetectedSymbol(dataUrl, {
+            holdAnalyzing: true,
+          });
+          if (next) {
+            await runScan({ symbol: next, image: dataUrl });
+          }
+        } finally {
+          setDetectingSymbol(false);
+        }
+      })();
     };
     reader.readAsDataURL(file);
     event.target.value = "";
@@ -425,6 +436,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       return;
     }
 
+    setDetectingSymbol(false);
     setBusy(true);
     setSignal(null);
     setFills([]);
@@ -1119,9 +1131,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
           )}
         </div>
 
-        <div className="cs-controls">
+        <div className={`cs-controls${detectingSymbol ? " is-analyzing" : ""}`}>
           <label
-            className={`cs-field${symbolSource === "scanner" ? " is-from-scanner" : ""}`}
+            className={`cs-field${symbolSource === "scanner" ? " is-from-scanner" : ""}${
+              detectingSymbol ? " is-analyzing" : ""
+            }`}
           >
             <span>
               Symbol
@@ -1135,13 +1149,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
             </span>
             <input
               className="cs-lot cs-symbol-auto"
-              value={detectingSymbol ? "" : symbol}
+              value={detectingSymbol ? "Analyzing image…" : symbol}
               disabled={busy || detectingSymbol}
               placeholder={detectingSymbol ? "Analyzing image…" : "Symbol (e.g. US30)"}
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
+              readOnly={detectingSymbol}
               onChange={(e) => {
+                if (detectingSymbol) return;
                 const next = normalizeBrokerSymbol(
                   String(e.target.value || "").replace(/\s+/g, "")
                 );
@@ -1162,7 +1178,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               <button
                 type="button"
                 aria-label="Fewer trades"
-                disabled={busy || trades <= 1}
+                disabled={busy || detectingSymbol || trades <= 1}
                 onClick={() => {
                   const next = clampTrades(trades - 1);
                   setTrades(next);
@@ -1176,14 +1192,14 @@ export default function ChartScanner({ variant = "default", active = true }) {
                 min="1"
                 max="100"
                 value={trades}
-                disabled={busy}
+                disabled={busy || detectingSymbol}
                 onChange={(e) => setTrades(clampTrades(e.target.value))}
                 onBlur={() => persistTradeSettings(trades, lotSize)}
               />
               <button
                 type="button"
                 aria-label="More trades"
-                disabled={busy || trades >= 100}
+                disabled={busy || detectingSymbol || trades >= 100}
                 onClick={() => {
                   const next = clampTrades(trades + 1);
                   setTrades(next);
@@ -1207,7 +1223,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
               spellCheck={false}
               placeholder="0.01"
               value={lotSize}
-              disabled={busy}
+              disabled={busy || detectingSymbol}
               onChange={(e) => {
                 const next = e.target.value.replace(/[^\d.,]/g, "");
                 setLotSize(next);
@@ -1288,15 +1304,15 @@ export default function ChartScanner({ variant = "default", active = true }) {
 
       {!setupReady ? (
         <button
-          className="cs-run-btn"
+          className={`cs-run-btn${detectingSymbol ? " is-analyzing" : ""}`}
           type="button"
           onClick={runScan}
           disabled={busy || detectingSymbol || !canScan}
         >
-          {busy && engineMode === "scanning"
-            ? "Building trade setup…"
-            : detectingSymbol
-              ? "Analyzing chart…"
+          {detectingSymbol
+            ? "Analyzing chart…"
+            : busy && engineMode === "scanning"
+              ? "Building trade setup…"
               : !connected
                 ? "Connect MT5 to Analyze"
                 : detectionStatus === CHART_DETECTION_STATUS.NO_CHART

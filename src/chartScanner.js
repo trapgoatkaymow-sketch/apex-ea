@@ -488,11 +488,36 @@ function detectedSymbolResult(symbol, source = "local-ocr") {
 
 /**
  * Validate chart image and read symbol when clearly visible.
- * Prefers OpenAI Vision; if credits/API fail, OCR the screenshot locally
- * so clients never have to type the pair.
+ * OCR the screenshot first (works with no OpenAI credits). Vision is only
+ * a backup when OCR cannot read the header.
  */
 export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
   if (!dataUrl) return emptyDetection();
+
+  // Always try on-device OCR first — OpenAI credits are often exhausted.
+  try {
+    const local = await detectSymbolFromChartImage(dataUrl, { catalog });
+    if (local?.symbol) {
+      return detectedSymbolResult(local.symbol, local.source || "local-ocr");
+    }
+  } catch {
+    // Fall through to Vision backup.
+  }
+
+  if (skipOpenAiVision) {
+    return {
+      status: CHART_DETECTION_STATUS.SYMBOL_UNCLEAR,
+      isChart: true,
+      symbol: null,
+      suggestedSymbol: null,
+      message: CHART_DETECTION_MESSAGES.symbol_unclear.message,
+      uiMessage: CHART_DETECTION_MESSAGES.symbol_unclear.uiMessage,
+      chartConfidence: 70,
+      symbolConfidence: 0,
+      confidence: 0,
+      source: "local-ocr",
+    };
+  }
 
   let remote = null;
   try {
@@ -513,21 +538,9 @@ export async function detectSymbolFromChart(dataUrl, { catalog = [] } = {}) {
   if (
     remoteSymbol &&
     !remote?.openaiUnavailable &&
-    String(remote?.status) === CHART_DETECTION_STATUS.SYMBOL_DETECTED
+    (String(remote?.status) === CHART_DETECTION_STATUS.SYMBOL_DETECTED ||
+      Boolean(remoteSymbol))
   ) {
-    return remote;
-  }
-
-  try {
-    const local = await detectSymbolFromChartImage(dataUrl, { catalog });
-    if (local?.symbol) {
-      return detectedSymbolResult(local.symbol, local.source || "local-ocr");
-    }
-  } catch {
-    // Screenshot OCR is best-effort.
-  }
-
-  if (remoteSymbol) {
     return detectedSymbolResult(remoteSymbol, remote?.source || "openai");
   }
 
