@@ -84,7 +84,7 @@ async function writeJsonPath(path, value) {
   return { ok: false, reason: "firebase-unavailable" };
 }
 
-export async function saveConnectJob(job) {
+export async function saveConnectJob(job, { durable = true } = {}) {
   const id = safeId(job?.id);
   if (!id) throw new Error("job id required");
   const next = {
@@ -95,9 +95,16 @@ export async function saveConnectJob(job) {
     updatedAt: Date.now(),
   };
   memoryJobs.set(id, next);
-  const put = await writeJsonPath(jobPath(id), next);
-  if (!put.ok) {
-    console.warn("connectJob firebase write failed", put.reason || "unknown");
+  if (durable) {
+    // Never block Connect HTTP on a slow Firebase write.
+    void writeJsonPath(jobPath(id), next).then((put) => {
+      if (!put?.ok) {
+        console.warn(
+          "connectJob firebase write failed",
+          put?.reason || "unknown"
+        );
+      }
+    });
   }
   return next;
 }

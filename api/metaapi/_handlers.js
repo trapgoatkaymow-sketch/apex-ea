@@ -220,15 +220,19 @@ export async function handleConnect(req, res) {
     } = await import("./_connectJobs.js");
 
     const jobId = newConnectJobId();
-    await saveConnectJob({
-      id: jobId,
-      status: "running",
-      login: String(login || "").trim(),
-      server: String(server || "").trim(),
-      platform,
-      company: String(company || "").trim(),
-      createdAt: Date.now(),
-    });
+    // Memory-first — do not await Firebase before answering the phone.
+    await saveConnectJob(
+      {
+        id: jobId,
+        status: "running",
+        login: String(login || "").trim(),
+        server: String(server || "").trim(),
+        platform,
+        company: String(company || "").trim(),
+        createdAt: Date.now(),
+      },
+      { durable: true }
+    );
 
     const runJob = async () => {
       try {
@@ -259,17 +263,14 @@ export async function handleConnect(req, res) {
     try {
       waitUntil(runJob());
     } catch {
-      // Local / non-Vercel — still kick without blocking the response.
       void runJob();
     }
 
-    // Fast brokers: wait briefly and return the session in one hop.
+    // Fast brokers only: brief memory poll, then always 202 so clients never 504.
     const started = Date.now();
-    while (Date.now() - started < 12_000) {
-      await new Promise((r) => setTimeout(r, 900));
-      const job =
-        (await getConnectJob(jobId)) ||
-        (await getConnectJob(jobId, { preferRemote: true }));
+    while (Date.now() - started < 6_000) {
+      await new Promise((r) => setTimeout(r, 400));
+      const job = await getConnectJob(jobId);
       if (!job) break;
       if (job.status === "done" && job.session) {
         sendJson(res, 200, {
