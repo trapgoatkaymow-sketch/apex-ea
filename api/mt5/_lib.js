@@ -995,18 +995,23 @@ export async function connectAccount({
   }
 
   // Fast enrichment only — balance/equity can finish on the next status poll.
-  // When ConnectEx already took a long time (Razor cold path), return now.
+  // Skip enrichment for Razor / slow ConnectEx so the session returns immediately.
   const connectMs = Date.now() - connectStarted;
+  const companyHint = `${company} ${serverName}`.toLowerCase();
+  const skipEnrich =
+    connectMs >= 45_000 ||
+    companyHint.includes("razor") ||
+    /razormarkets/i.test(serverName);
   let summary = null;
   let details = null;
   let account = null;
   let ordersProfit = null;
-  if (connectMs < 70_000) {
+  if (!skipEnrich && connectMs < 70_000) {
     const budgetMs = Math.max(1500, 110_000 - connectMs);
-    const enrichDeadline = Date.now() + Math.min(8_000, budgetMs);
+    const enrichDeadline = Date.now() + Math.min(5_000, budgetMs);
     const enrichTimeout = Math.max(
-      1500,
-      Math.min(6000, enrichDeadline - Date.now())
+      1200,
+      Math.min(4000, enrichDeadline - Date.now())
     );
     const withBudget = async (fn) => {
       if (Date.now() >= enrichDeadline) return null;
@@ -1018,7 +1023,7 @@ export async function connectAccount({
     };
     [summary, details, account, ordersProfit] = await Promise.all([
       withBudget(() =>
-        fetchAccountSummary(id, { timeoutMs: enrichTimeout, tries: 2 })
+        fetchAccountSummary(id, { timeoutMs: enrichTimeout, tries: 1 })
       ),
       withBudget(() =>
         mt5Fetch(`/AccountDetails?id=${encodeURIComponent(id)}`, {
@@ -1032,7 +1037,7 @@ export async function connectAccount({
       ),
       withBudget(() =>
         fetchOpenedOrdersProfit(id, {
-          timeoutMs: Math.min(4000, enrichTimeout),
+          timeoutMs: Math.min(2500, enrichTimeout),
         })
       ),
     ]);

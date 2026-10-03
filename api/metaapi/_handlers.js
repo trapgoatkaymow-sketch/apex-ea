@@ -133,6 +133,42 @@ export async function handleHealth(req, res) {
   }
 }
 
+function connectWorkerAuthorized(req) {
+  const provided = String(req.headers["x-apex-connect-worker"] || "").trim();
+  if (!provided) return false;
+  const secrets = [
+    process.env.CRON_SECRET,
+    process.env.LICENSES_STORE_TOKEN,
+    process.env.CONNECT_WORKER_SECRET,
+    "apex-connect-worker",
+  ]
+    .map((v) => String(v || "").trim())
+    .filter(Boolean);
+  return secrets.includes(provided);
+}
+
+function connectWorkerSecret() {
+  return (
+    String(process.env.CRON_SECRET || "").trim() ||
+    String(process.env.LICENSES_STORE_TOKEN || "").trim() ||
+    String(process.env.CONNECT_WORKER_SECRET || "").trim() ||
+    "apex-connect-worker"
+  );
+}
+
+function connectPublicOrigin(req) {
+  const host = String(
+    req.headers["x-forwarded-host"] || req.headers.host || "www.apex-ea.com"
+  )
+    .split(",")[0]
+    .trim()
+    .replace(/^apex-ea\.com$/i, "www.apex-ea.com");
+  const proto = String(req.headers["x-forwarded-proto"] || "https")
+    .split(",")[0]
+    .trim();
+  return `${proto}://${host}`;
+}
+
 export async function handleConnect(req, res) {
   if (req.method === "OPTIONS") {
     endOptions(res);
@@ -149,15 +185,28 @@ export async function handleConnect(req, res) {
         sendJson(res, 400, { error: "jobId is required" });
         return;
       }
-      const { getConnectJob, publicConnectJob } = await import(
+      const { getConnectJob, updateConnectJob, publicConnectJob } = await import(
         "./_connectJobs.js"
       );
-      const job =
-        (await getConnectJob(jobId)) ||
-        (await getConnectJob(jobId, { preferRemote: true }));
+      // Prefer remote so polls on other isolates see done/failed.
+      let job =
+        (await getConnectJob(jobId, { preferRemote: true })) ||
+        (await getConnectJob(jobId));
       if (!job) {
         sendJson(res, 404, { error: "Connect job not found" });
         return;
+      }
+      const ageMs = Date.now() - Number(job.updatedAt || job.createdAt || 0);
+      if (
+        (job.status === "running" || job.status === "queued") &&
+        ageMs > 120_000
+      ) {
+        job = await updateConnectJob(jobId, {
+          status: "failed",
+          error: "Broker is slow to answer — wait a moment and tap Connect again",
+          errorStatus: 504,
+          finishedAt: Date.now(),
+        });
       }
       const pub = publicConnectJob(job);
       if (pub.status === "done" && pub.session) {
@@ -193,10 +242,85 @@ export async function handleConnect(req, res) {
     const server = body.server;
     const platform = body.platform || "MT5";
     const company = body.company || "";
+    const mode = String(body.mode || "").toLowerCase();
     const syncOnly =
       body.async === false ||
       body.sync === true ||
-      String(body.mode || "").toLowerCase() === "sync";
+      mode === "sync";
+
+    const {
+      newConnectJobId,
+      saveConnectJob,
+      updateConnectJob,
+      getConnectJob,
+      publicConnectJob,
+    } = await import("./_connectJobs.js");
+
+    // Separate isolate runs ConnectEx so the phone's 202 response cannot kill it.
+    if (mode === "run-job" || mode === "runjob") {
+      if (!connectWorkerAuthorized(req)) {
+        sendJson(res, 401, { error: "Unauthorized connect worker" });
+        return;
+      }
+      const jobId = String(body.jobId || "").trim();
+      if (!jobId) {
+        sendJson(res, 400, { error: "jobId is required" });
+        return;
+      }
+      const existing =
+        (await getConnectJob(jobId, { preferRemote: true })) ||
+        (await getConnectJob(jobId));
+      if (!existing) {
+        sendJson(res, 404, { error: "Connect job not found" });
+        return;
+      }
+      if (existing.status === "done" || existing.status === "failed") {
+        sendJson(res, 200, { ok: true, skipped: existing.status, jobId });
+        return;
+      }
+      // Claim lease so only one worker runs ConnectEx.
+      if (existing.workerClaimed && Number(existing.leaseUntil || 0) > Date.now()) {
+        sendJson(res, 200, { ok: true, skipped: "claimed", jobId });
+        return;
+      }
+      await updateConnectJob(jobId, {
+        status: "running",
+        workerClaimed: true,
+        leaseUntil: Date.now() + 130_000,
+        heartbeatAt: Date.now(),
+      });
+      try {
+        const session = await mt5ConnectAccount({
+          login: login || existing.login,
+          password,
+          server: server || existing.server,
+          platform: platform || existing.platform || "MT5",
+          company: company || existing.company || "",
+        });
+        await updateConnectJob(jobId, {
+          status: "done",
+          session,
+          finishedAt: Date.now(),
+          error: "",
+          workerClaimed: true,
+        });
+        sendJson(res, 200, { ok: true, jobId, pending: false });
+      } catch (error) {
+        await updateConnectJob(jobId, {
+          status: "failed",
+          error: formatHandlerError(error, "Connection failed"),
+          errorStatus: error.status || 500,
+          finishedAt: Date.now(),
+          workerClaimed: true,
+        });
+        sendJson(res, 200, {
+          ok: false,
+          jobId,
+          error: formatHandlerError(error, "Connection failed"),
+        });
+      }
+      return;
+    }
 
     // Legacy sync path (tests / admin). Default is async so phones never 504.
     if (syncOnly) {
@@ -211,16 +335,8 @@ export async function handleConnect(req, res) {
       return;
     }
 
-    const {
-      newConnectJobId,
-      saveConnectJob,
-      updateConnectJob,
-      getConnectJob,
-      publicConnectJob,
-    } = await import("./_connectJobs.js");
-
     const jobId = newConnectJobId();
-    // Memory-first — do not await Firebase before answering the phone.
+    // Await durable write so polls on other isolates can see the job.
     await saveConnectJob(
       {
         id: jobId,
@@ -230,12 +346,26 @@ export async function handleConnect(req, res) {
         platform,
         company: String(company || "").trim(),
         createdAt: Date.now(),
+        heartbeatAt: Date.now(),
       },
-      { durable: true }
+      { durable: true, awaitDurable: true }
     );
 
     const runJob = async () => {
       try {
+        const current =
+          (await getConnectJob(jobId, { preferRemote: true })) ||
+          (await getConnectJob(jobId));
+        if (current?.status === "done" || current?.status === "failed") return;
+        if (current?.workerClaimed && Number(current.leaseUntil || 0) > Date.now()) {
+          return;
+        }
+        await updateConnectJob(jobId, {
+          status: "running",
+          workerClaimed: true,
+          leaseUntil: Date.now() + 130_000,
+          heartbeatAt: Date.now(),
+        });
         const session = await mt5ConnectAccount({
           login,
           password,
@@ -250,6 +380,10 @@ export async function handleConnect(req, res) {
           error: "",
         });
       } catch (error) {
+        const current =
+          (await getConnectJob(jobId, { preferRemote: true })) ||
+          (await getConnectJob(jobId));
+        if (current?.status === "done") return;
         await updateConnectJob(jobId, {
           status: "failed",
           error: formatHandlerError(error, "Connection failed"),
@@ -259,21 +393,48 @@ export async function handleConnect(req, res) {
       }
     };
 
-    // Start ConnectEx immediately (same isolate), and also register waitUntil
-    // so Vercel keeps the isolate alive after we return 202.
-    const running = runJob();
+    // Kick a fresh isolate for ConnectEx (survives this response), and also
+    // keep a same-isolate backup via waitUntil.
+    const workerUrl = `${connectPublicOrigin(req)}/api/metaapi/connect`;
+    const workerPayload = JSON.stringify({
+      mode: "run-job",
+      jobId,
+      login,
+      password,
+      server,
+      platform,
+      company,
+    });
+    const kickWorker = async () => {
+      try {
+        const workerRes = await fetch(workerUrl, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "x-apex-connect-worker": connectWorkerSecret(),
+          },
+          body: workerPayload,
+        });
+        await workerRes.text().catch(() => "");
+      } catch {
+        await runJob();
+      }
+    };
     try {
-      waitUntil(running);
+      waitUntil(kickWorker());
     } catch {
-      // non-Vercel — running promise already started
+      void kickWorker();
     }
 
-    // Fast brokers only: brief memory poll, then always 202 so clients never 504.
+    // Hold up to ~25s for fast finishes before 202 (still under common proxy caps).
     const started = Date.now();
-    while (Date.now() - started < 5_000) {
-      await new Promise((r) => setTimeout(r, 350));
-      const job = await getConnectJob(jobId);
-      if (!job) break;
+    while (Date.now() - started < 25_000) {
+      await new Promise((r) => setTimeout(r, 500));
+      const job =
+        (await getConnectJob(jobId)) ||
+        (await getConnectJob(jobId, { preferRemote: true }));
+      if (!job) continue;
       if (job.status === "done" && job.session) {
         sendJson(res, 200, {
           ...job.session,
@@ -293,7 +454,10 @@ export async function handleConnect(req, res) {
     }
 
     sendJson(res, 202, {
-      ...publicConnectJob(await getConnectJob(jobId)),
+      ...publicConnectJob(
+        (await getConnectJob(jobId)) ||
+          (await getConnectJob(jobId, { preferRemote: true }))
+      ),
       pending: true,
       jobId,
       message: "Connecting to broker — keep this screen open",

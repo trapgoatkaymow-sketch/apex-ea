@@ -595,20 +595,17 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     setEngineMode("connecting");
     setEngineStep(0);
     pushEngineLog(CONNECT_ENGINE_STEPS[0].label);
+    pushEngineLog("Keep this screen open — Razor/XM can take up to 2 minutes");
 
     const advance = async (index) => {
       setEngineStep(index);
       pushEngineLog(CONNECT_ENGINE_STEPS[index].label);
-      await sleep(380);
+      await sleep(280);
     };
 
     try {
-      await advance(0);
-      pushEngineLog("Connecting to broker — keep this screen open");
-      await advance(1);
-      // Do not send client email on connect — MetaAPI allows max 3 account keywords
-      // and email tag would exceed the limit on some deployments. Email is registered
-      // after connect via syncHostedAccount (mt5-accounts registry).
+      // Do not fake-complete steps before the broker answers — only advance
+      // from real connect progress so Provisioning never looks stuck forever.
       // Async connect job + poll — no more Vercel 504 while ConnectEx runs.
       const connected = await connectAccount({
         login,
@@ -617,12 +614,24 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         platform,
         company: selectedBroker?.company || "",
         onProgress: async (progress) => {
-          if (progress?.pending) {
-            pushEngineLog("Provisioning cloud terminal");
-            setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
-          } else {
-            setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
+          if (!progress?.pending) {
+            setEngineStep(2);
+            return;
           }
+          const phase = String(progress.phase || "provision");
+          const step =
+            phase === "auth" ? 0 : phase === "handshake" ? 2 : phase === "arm" ? 3 : 1;
+          setEngineStep(step);
+          const secs = Math.max(1, Math.round(Number(progress.elapsedMs || 0) / 1000));
+          const label =
+            step === 0
+              ? CONNECT_ENGINE_STEPS[0].label
+              : step === 2
+                ? CONNECT_ENGINE_STEPS[2].label
+                : step === 3
+                  ? CONNECT_ENGINE_STEPS[3].label
+                  : `${CONNECT_ENGINE_STEPS[1].label} · ${secs}s`;
+          pushEngineLog(label);
         },
       });
       await advance(2);

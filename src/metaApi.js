@@ -1,6 +1,15 @@
-import { apiUrl } from "./apiOrigin.js";
+import { apiUrl, PROD_API_ORIGIN, isBareApexHost } from "./apiOrigin.js";
 
 const API_PATH = "/api/metaapi";
+
+/** Always hit www for connect — bare apex-ea.com 308s can stall POSTs. */
+function connectApiUrl(path = "") {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (typeof window !== "undefined" && isBareApexHost(window.location?.hostname)) {
+    return `${PROD_API_ORIGIN}${API_PATH}${p}`;
+  }
+  return `${apiUrl(API_PATH)}${p}`;
+}
 
 function formatApiError(data, status) {
   if (data && (data.error || data.message)) {
@@ -146,6 +155,44 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function connectFetch(path, { method = "GET", body, signal } = {}) {
+  let response;
+  try {
+    response = await fetch(connectApiUrl(path), {
+      method,
+      signal,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+    });
+  } catch (error) {
+    const err = new Error(friendlyNetworkError(error));
+    err.cause = error;
+    err.status = 0;
+    throw err;
+  }
+
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+
+  if (!response.ok) {
+    const message = formatApiError(data, response.status);
+    const err = new Error(message);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
 /** Connect via MT5API ConnectEx (async job + poll — avoids Vercel 504). */
 export async function connectAccount({
   login,
@@ -156,13 +203,18 @@ export async function connectAccount({
   signal,
   onProgress,
 } = {}) {
-  onProgress?.({ pending: true, connectionStatus: "CONNECTING" });
+  const startedAt = Date.now();
+  onProgress?.({
+    pending: true,
+    connectionStatus: "CONNECTING",
+    phase: "auth",
+    elapsedMs: 0,
+  });
   let started;
   try {
-    started = await apiFetch("/connect", {
+    started = await connectFetch("/connect", {
       method: "POST",
       signal,
-      retries: 0,
       body: {
         login,
         password,
@@ -198,37 +250,46 @@ export async function connectAccount({
   // Poll up to ~2.5 minutes — Razor/XM cold ConnectEx can be slow.
   const deadline = Date.now() + 150_000;
   let lastError = "";
+  let misses = 0;
   while (Date.now() < deadline) {
     if (signal?.aborted) {
       const err = new Error("Connection cancelled");
       err.status = 499;
       throw err;
     }
+    const elapsedMs = Date.now() - startedAt;
+    const phase =
+      elapsedMs < 20_000 ? "provision" : elapsedMs < 60_000 ? "handshake" : "arm";
     onProgress?.({
       pending: true,
       connectionStatus: "CONNECTING",
       jobId,
+      phase,
+      elapsedMs,
     });
-    await sleep(2000);
+    await sleep(elapsedMs < 30_000 ? 1500 : 2500);
     try {
-      const data = await apiFetch(
+      const data = await connectFetch(
         `/connect?jobId=${encodeURIComponent(jobId)}`,
-        { signal, retries: 0 }
+        { signal }
       );
+      misses = 0;
       if (data?.accountId && data?.pending !== true) {
         onProgress?.(data);
         return data;
       }
-      if (data?.status === "failed" || data?.error) {
+      if (data?.status === "failed" || (data?.error && data?.pending === false)) {
         const err = new Error(data.error || "Connection failed");
         err.status = data.errorStatus || 500;
         throw err;
       }
     } catch (error) {
-      // 202 Accepted while still running — apiFetch treats 202 as ok and
+      // 202 Accepted while still running — connectFetch treats 202 as ok and
       // returns the body. Real failures throw.
       if (Number(error?.status) === 404) {
+        misses += 1;
         lastError = error.message || "Connect job not found";
+        if (misses >= 8) throw error;
         continue;
       }
       if (Number(error?.status) >= 400) throw error;
