@@ -594,19 +594,17 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     setEngineLogs([]);
     setEngineMode("connecting");
     setEngineStep(0);
-    pushEngineLog(CONNECT_ENGINE_STEPS[0].label);
-    pushEngineLog("Keep this screen open — Razor/XM can take up to 2 minutes");
+    pushEngineLog("Connecting to broker — waiting for Razor Markets");
+    pushEngineLog("Green checks appear only after Razor accepts the login");
 
     const advance = async (index) => {
       setEngineStep(index);
       pushEngineLog(CONNECT_ENGINE_STEPS[index].label);
-      await sleep(280);
+      await sleep(220);
     };
 
     try {
-      // Do not fake-complete steps before the broker answers — only advance
-      // from real connect progress so Provisioning never looks stuck forever.
-      // Async connect job + poll — no more Vercel 504 while ConnectEx runs.
+      // Steps stay on "connecting" until the broker accepts — no fake success.
       const connected = await connectAccount({
         login,
         password,
@@ -614,26 +612,16 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         platform,
         company: selectedBroker?.company || "",
         onProgress: async (progress) => {
-          if (!progress?.pending) {
+          if (!progress?.pending && progress?.accountId) {
             setEngineStep(2);
             return;
           }
-          const phase = String(progress.phase || "provision");
-          const step =
-            phase === "auth" ? 0 : phase === "handshake" ? 2 : phase === "arm" ? 3 : 1;
-          setEngineStep(step);
+          setEngineStep(0);
           const secs = Math.max(1, Math.round(Number(progress.elapsedMs || 0) / 1000));
-          const label =
-            step === 0
-              ? CONNECT_ENGINE_STEPS[0].label
-              : step === 2
-                ? CONNECT_ENGINE_STEPS[2].label
-                : step === 3
-                  ? CONNECT_ENGINE_STEPS[3].label
-                  : `${CONNECT_ENGINE_STEPS[1].label} · ${secs}s`;
-          pushEngineLog(label);
+          pushEngineLog(`Waiting for Razor Markets · ${secs}s`);
         },
       });
+      await advance(1);
       await advance(2);
       await advance(3);
 
@@ -832,15 +820,19 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
             <input
               className="mt-search-input"
               type="password"
-              autoComplete="current-password"
-              placeholder="Master password (not investor)"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              placeholder="Type master password fresh"
               value={creds.password}
               onChange={(e) => updateCred("password", e.target.value)}
               required
             />
           </label>
           <p className="mt-panel-sub" style={{ marginTop: "-0.35rem" }}>
-            Use the MT5 master password. Investor password is rejected.
+            Type the MT5 master password manually (turn off autofill). Investor
+            password is rejected by Razor.
           </p>
 
           <label className="mt-field">

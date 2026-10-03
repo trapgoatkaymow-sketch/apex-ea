@@ -207,7 +207,7 @@ export async function connectAccount({
   onProgress?.({
     pending: true,
     connectionStatus: "CONNECTING",
-    phase: "auth",
+    phase: "connecting",
     elapsedMs: 0,
   });
   let started;
@@ -234,7 +234,7 @@ export async function connectAccount({
 
   // Fast brokers finish inside the first response.
   if (started?.accountId && started?.pending !== true) {
-    onProgress?.(started);
+    onProgress?.({ ...started, phase: "done", pending: false });
     return started;
   }
 
@@ -247,8 +247,8 @@ export async function connectAccount({
     throw err;
   }
 
-  // Poll up to ~2.5 minutes — Razor/XM cold ConnectEx can be slow.
-  const deadline = Date.now() + 150_000;
+  // Poll up to ~90s — Razor should accept or reject well before this.
+  const deadline = Date.now() + 90_000;
   let lastError = "";
   let misses = 0;
   while (Date.now() < deadline) {
@@ -258,16 +258,15 @@ export async function connectAccount({
       throw err;
     }
     const elapsedMs = Date.now() - startedAt;
-    const phase =
-      elapsedMs < 20_000 ? "provision" : elapsedMs < 60_000 ? "handshake" : "arm";
+    // Honest progress only — do not mark auth/provision done until broker accepts.
     onProgress?.({
       pending: true,
       connectionStatus: "CONNECTING",
       jobId,
-      phase,
+      phase: "connecting",
       elapsedMs,
     });
-    await sleep(elapsedMs < 30_000 ? 1500 : 2500);
+    await sleep(elapsedMs < 20_000 ? 1200 : 2000);
     try {
       const data = await connectFetch(
         `/connect?jobId=${encodeURIComponent(jobId)}`,
@@ -275,7 +274,7 @@ export async function connectAccount({
       );
       misses = 0;
       if (data?.accountId && data?.pending !== true) {
-        onProgress?.(data);
+        onProgress?.({ ...data, phase: "done", pending: false });
         return data;
       }
       if (data?.status === "failed" || (data?.error && data?.pending === false)) {
