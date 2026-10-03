@@ -107,7 +107,7 @@ export const GIVEAWAY_COUNTDOWN_HOURS = Math.max(
   Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 17
 );
 /** Bump to force a fresh on-page countdown latch (checkout stays open). */
-export const GIVEAWAY_COUNTDOWN_VERSION = 4;
+export const GIVEAWAY_COUNTDOWN_VERSION = 5;
 
 function countdownFromLatched(row) {
   const ms = Date.parse(String(row?.countdownEndsAt || "").trim());
@@ -538,7 +538,7 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
   );
   let countdownEndsAtMs = latched.countdownEndsAtMs;
   const storedVersion = Number(latched.countdownVersion) || 0;
-  // Version bump latches a fresh countdown once per bump (v4 = +17h).
+  // Version bump latches a fresh countdown once per bump (v5 = +21h).
   if (
     !Number.isFinite(countdownEndsAtMs) ||
     storedVersion < GIVEAWAY_COUNTDOWN_VERSION
@@ -551,6 +551,9 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
       Number.isFinite(packagedEnd)
     ) {
       const startsAt = new Date(latched.startMs).toISOString();
+      const hardEndMs = Number.isFinite(purchasesEndAtMs)
+        ? Math.max(purchasesEndAtMs, packagedEnd)
+        : packagedEnd;
       await writeGiveawayWindowDoc(
         {
           startsAt,
@@ -565,7 +568,7 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
           extendedByHours:
             Number(packaged?.extendedByHours) || GIVEAWAY_COUNTDOWN_HOURS,
           extendedByDays: 0,
-          ...purchasesEndFields(purchasesEndAtMs),
+          ...purchasesEndFields(hardEndMs),
         },
         "chore: latch packaged giveaway countdown"
       );
@@ -574,7 +577,7 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
         nowMs,
         Math.max(durationMs, packagedDuration || 0),
         packagedEnd,
-        purchasesEndAtMs
+        hardEndMs
       );
     }
     // Fresh 17h display from deploy time only when packaged has no countdown.
