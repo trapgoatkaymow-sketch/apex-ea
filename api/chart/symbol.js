@@ -274,9 +274,28 @@ export default async function handler(req, res) {
     });
     sendJson(res, 200, result);
   } catch (error) {
-    sendJson(res, error.status || 500, {
-      error: error.message || "Chart analysis failed",
-      details: error.data || null,
+    const status = Number(error.status) || 500;
+    if (status === 400 || status === 413) {
+      sendJson(res, status, {
+        error: error.message || "Chart analysis failed",
+        details: error.data || null,
+      });
+      return;
+    }
+    // Credits / key / rate-limit — keep Chart Scanner usable without OpenAI.
+    sendJson(res, 200, {
+      status: "symbol_unclear",
+      isChart: true,
+      symbol: null,
+      suggestedSymbol: null,
+      message: "Type the chart pair, then tap Analyze",
+      uiMessage: "AI credits are out — type the pair, then tap Analyze. Scanner still works.",
+      chartConfidence: 70,
+      symbolConfidence: 0,
+      source: "local-fallback",
+      openaiUnavailable: true,
+      quotaFallback: true,
+      error: error.message || "Chart analysis unavailable",
     });
   }
 }

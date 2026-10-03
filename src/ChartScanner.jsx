@@ -41,10 +41,6 @@ import {
   loadTradeManagement,
 } from "./tradeManagement.js";
 import { tpRewardMultiples, tpRiskRewardLabel } from "./tradeLevels.js";
-import {
-  notifyScannerBusy,
-  requestHomeStart,
-} from "./scannerBusyPrompt.js";
 
 /** Android WebView: keep motion close to web, with a lighter particle count. */
 const SCANNER_PARTICLE_COUNT = isNativeApp() ? 12 : 18;
@@ -127,7 +123,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
   const [detectionMessage, setDetectionMessage] = useState("");
   const [detectionHint, setDetectionHint] = useState("");
   const [aiOffline, setAiOffline] = useState(false);
-  const [busyPromptOpen, setBusyPromptOpen] = useState(false);
   const [detectingSymbol, setDetectingSymbol] = useState(false);
   const [trades, setTrades] = useState(1);
   const [lotSize, setLotSize] = useState(0.01);
@@ -288,51 +283,24 @@ export default function ChartScanner({ variant = "default", active = true }) {
     cameraRef.current?.click();
   }
 
-  function resetDetectionState() {
-    setSymbol("");
-    setSymbolSource("");
+  function resetDetectionState({ keepSymbol = false } = {}) {
+    if (!keepSymbol) {
+      setSymbol("");
+      setSymbolSource("");
+    }
     setDetectionStatus("");
     setDetectionMessage("");
     setDetectionHint("");
     setAiOffline(false);
   }
 
-  function openScannerBusyPrompt(options = {}) {
-    const message =
-      options.message ||
-      "Scanner unavailable — many people are using it. Try again in a few minutes.";
-    const hint =
-      options.hint ||
-      "Tap START below to open trades from Home while the scanner cools down.";
-    setAiOffline(true);
-    setDetectionMessage(message);
-    setDetectionHint(hint);
-    setBusyPromptOpen(true);
-    showToast("Scanner busy — tap START in the popup, or try again shortly");
-    void notifyScannerBusy();
-  }
-
-  function goHomeToStart({ autoStart = true } = {}) {
-    setBusyPromptOpen(false);
-    setV2View("home");
-    setZetaView?.("home");
-    if (autoStart) {
-      // Home listens for the pending flag once the tab is visible.
-      requestHomeStart();
-      window.setTimeout(() => requestHomeStart(), 120);
-      showToast("Starting from Home…");
-    } else {
-      showToast("Use START on your robot — or try the scanner again shortly");
-    }
-  }
-
-  function dismissBusyPrompt() {
-    setBusyPromptOpen(false);
-  }
-
   async function applyDetectedSymbol(dataUrl) {
     setDetectingSymbol(true);
-    resetDetectionState();
+    const keptSymbol =
+      symbolSource === "manual" && symbol
+        ? normalizeBrokerSymbol(symbol)
+        : "";
+    resetDetectionState({ keepSymbol: Boolean(keptSymbol) });
     setSignal(null);
     setFills([]);
     try {
@@ -341,8 +309,11 @@ export default function ChartScanner({ variant = "default", active = true }) {
       });
       const status = String(detection?.status || CHART_DETECTION_STATUS.NO_CHART);
       const offline =
+        Boolean(detection?.openaiUnavailable) ||
         Boolean(detection?.quotaFallback) ||
-        /credit|quota|billing/i.test(String(detection?.error || ""));
+        /credit|quota|billing|not configured|incorrect api key/i.test(
+          String(detection?.error || "")
+        );
       setDetectionStatus(status);
       setDetectionMessage(detection?.message || "");
       setDetectionHint(detection?.uiMessage || "");
@@ -361,37 +332,43 @@ export default function ChartScanner({ variant = "default", active = true }) {
         return next;
       }
 
-      // OpenAI saw a chart but was unsure — still prefill any OCR guess for edit.
-      // When AI is offline (quota), do not ask them to type a symbol — send to START.
       const suggested = normalizeBrokerSymbol(
         detection?.suggestedSymbol || detection?.symbol || ""
       );
-      if (
-        !offline &&
-        status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR &&
-        suggested
-      ) {
+      if (suggested) {
         ensureCatalog?.(suggested);
         setSymbol(suggested);
         setSymbolSource("scanner");
-        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
-        setDetectionMessage(`Possible symbol: ${suggested}`);
-        showToast(`Possible symbol: ${suggested} — edit if needed`);
+        if (!offline) {
+          setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
+          setDetectionMessage(`Possible symbol: ${suggested}`);
+          showToast(`Possible symbol: ${suggested} — edit if needed`);
+        } else {
+          showToast(`Type or keep ${suggested}, then tap Scan`);
+        }
         return suggested;
       }
 
-      setSymbol(suggested || "");
-      setSymbolSource(suggested ? "scanner" : "");
       if (offline) {
-        openScannerBusyPrompt({
-          message:
-            detection?.message ||
-            "Scanner unavailable — many people are using it. Try again in a few minutes.",
-          hint:
-            detection?.uiMessage ||
-            "Tap START below to open trades from Home while the scanner cools down.",
-        });
-      } else if (status === CHART_DETECTION_STATUS.NO_CHART) {
+        if (keptSymbol) {
+          setSymbol(keptSymbol);
+          setSymbolSource("manual");
+          setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_DETECTED);
+          setDetectionMessage(`Symbol: ${keptSymbol}`);
+          setDetectionHint("AI credits are out — scanner still works offline.");
+          showToast("AI credits are out — tap Analyze Chart");
+          return keptSymbol;
+        }
+        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
+        setDetectionMessage("Type the chart pair, then tap Analyze");
+        setDetectionHint("AI credits are out — scanner still works offline.");
+        showToast("AI credits are out — type the pair, then tap Analyze");
+        return "";
+      }
+
+      setSymbol("");
+      setSymbolSource("");
+      if (status === CHART_DETECTION_STATUS.NO_CHART) {
         showToast("No trading chart detected");
       } else if (status === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR) {
         showToast("Chart detected — symbol unclear. Type the symbol manually.");
@@ -488,6 +465,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
         catalog: [...symbols, ...(catalog || [])],
         hintSymbol: symbol,
         preferDetectedSymbol: true,
+        accountId: mt5Session?.accountId || "",
       });
 
       if (
@@ -527,7 +505,7 @@ export default function ChartScanner({ variant = "default", active = true }) {
       );
       showToast(
         result.source === "local-fallback"
-          ? `${result.side} ${tradeSymbol} setup ready (offline AI) · ${nextScans} charts left`
+          ? `${result.side} ${tradeSymbol} ready (offline scan) · ${nextScans} charts left`
           : `${result.side} ${tradeSymbol} setup ready · ${nextScans} charts left`
       );
       await sleep(SCAN_SETTLE_MS);
@@ -547,16 +525,16 @@ export default function ChartScanner({ variant = "default", active = true }) {
         setDetectionMessage(error.message || "Chart detected — symbol unclear");
         setDetectionHint(error.uiMessage || "Type the chart symbol, then Analyze.");
         showToast("Type the chart symbol, then tap Analyze");
+      } else if (error.code === "SIDE_UNCLEAR") {
+        showToast(
+          error.uiMessage ||
+            "No clear BUY/SELL on this chart — wait for a clearer move"
+        );
       } else if (error.code === "ANALYSIS_UNAVAILABLE") {
-        setDetectionStatus(CHART_DETECTION_STATUS.SYMBOL_UNCLEAR);
-        openScannerBusyPrompt({
-          message:
-            error.message ||
-            "Scanner unavailable — many people are using it. Try again in a few minutes.",
-          hint:
-            error.uiMessage ||
-            "Tap START below to open trades from Home while the scanner cools down.",
-        });
+        showToast(
+          error.uiMessage ||
+            "Type the chart pair, then tap Scan — scanner works without AI credits"
+        );
       } else {
         showToast(error.message || "Analyze failed");
       }
@@ -1336,32 +1314,22 @@ export default function ChartScanner({ variant = "default", active = true }) {
         <button
           className="cs-run-btn"
           type="button"
-          onClick={
-            aiOffline
-              ? () =>
-                  openScannerBusyPrompt({
-                    message: detectionMessage,
-                    hint: detectionHint,
-                  })
-              : runScan
-          }
-          disabled={busy || detectingSymbol || (!aiOffline && !canScan)}
+          onClick={runScan}
+          disabled={busy || detectingSymbol || !canScan}
         >
           {busy && engineMode === "scanning"
             ? "Building trade setup…"
             : detectingSymbol
               ? "Analyzing chart…"
-              : aiOffline
-                ? "Tap for START"
-                : !connected
+              : !connected
                 ? "Connect MT5 to Analyze"
                 : detectionStatus === CHART_DETECTION_STATUS.NO_CHART
                   ? "Upload a trading chart"
                   : !symbol
-                    ? detectionStatus === CHART_DETECTION_STATUS.SYMBOL_UNCLEAR
-                      ? "Type symbol, then Analyze"
-                      : "Waiting for symbol…"
-                    : "Analyze Chart"}
+                    ? "Type symbol, then Analyze"
+                    : aiOffline
+                      ? "Analyze Chart (offline)"
+                      : "Analyze Chart"}
         </button>
       ) : (
         <div className="cs-post-scan-actions">
@@ -1485,45 +1453,6 @@ export default function ChartScanner({ variant = "default", active = true }) {
         >
           Connect a trading account to unlock Chart Setup →
         </button>
-      ) : null}
-
-      {busyPromptOpen ? (
-        <div
-          className="cs-busy-modal-backdrop"
-          role="presentation"
-          onClick={dismissBusyPrompt}
-        >
-          <div
-            className="cs-busy-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cs-busy-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <p className="cs-busy-kicker">Scanner busy</p>
-            <h2 id="cs-busy-title" className="cs-busy-title">
-              Many people are using it
-            </h2>
-            <p className="cs-busy-copy">
-              {detectionMessage ||
-                "Try again in a few minutes — or tap START to trade from Home now."}
-            </p>
-            <button
-              className="cs-busy-start-btn"
-              type="button"
-              onClick={() => goHomeToStart({ autoStart: true })}
-            >
-              START
-            </button>
-            <button
-              className="cs-busy-dismiss-btn"
-              type="button"
-              onClick={dismissBusyPrompt}
-            >
-              Not now
-            </button>
-          </div>
-        </div>
       ) : null}
     </section>
   );

@@ -455,8 +455,10 @@ export default async function handler(req, res) {
     });
     sendJson(res, 200, result);
   } catch (error) {
-    sendJson(res, error.status || 500, {
+    sendJson(res, error.status || 503, {
       error: error.message || "Chart setup analysis failed",
+      code: "OPENAI_UNAVAILABLE",
+      openaiUnavailable: true,
       details: error.data || null,
     });
   }
