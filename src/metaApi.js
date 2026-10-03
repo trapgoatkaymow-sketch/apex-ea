@@ -7,7 +7,12 @@ function formatApiError(data, status) {
     const raw = data.error || data.message;
     if (typeof raw === "string") return raw;
   }
-  return typeof data === "string" ? data : `Request failed (${status})`;
+  if (status === 504 || status === 502) {
+    return "Broker is still connecting — wait a moment and tap Connect again";
+  }
+  return typeof data === "string" && data.trim()
+    ? data
+    : `Request failed (${status})`;
 }
 
 function friendlyNetworkError(error, fallback = "Could not reach the broker server") {
@@ -137,7 +142,11 @@ export async function getAccountStatus(accountId, { company = "", signal } = {})
   return apiFetch(`/status?${params.toString()}`, { signal });
 }
 
-/** Connect via MT5API ConnectEx (server-side). No MetaAPI pending poll. */
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Connect via MT5API ConnectEx (async job + poll — avoids Vercel 504). */
 export async function connectAccount({
   login,
   password,
@@ -148,21 +157,82 @@ export async function connectAccount({
   onProgress,
 } = {}) {
   onProgress?.({ pending: true, connectionStatus: "CONNECTING" });
-  // One automatic retry — cold serverless / brief MT5 blips showed as "Failed to fetch".
-  const session = await apiFetch("/connect", {
+  const started = await apiFetch("/connect", {
     method: "POST",
     signal,
-    retries: 1,
+    retries: 0,
     body: {
       login,
       password,
       server,
       platform,
       company,
+      async: true,
     },
   });
-  onProgress?.(session);
-  return session;
+
+  // Fast brokers finish inside the first response.
+  if (started?.accountId && started?.pending !== true) {
+    onProgress?.(started);
+    return started;
+  }
+
+  const jobId = String(started?.jobId || "").trim();
+  if (!jobId) {
+    const err = new Error(
+      started?.error || "Could not start broker connection"
+    );
+    err.status = 500;
+    throw err;
+  }
+
+  // Poll up to ~2.5 minutes — Razor/XM cold ConnectEx can be slow.
+  const deadline = Date.now() + 150_000;
+  let lastError = "";
+  while (Date.now() < deadline) {
+    if (signal?.aborted) {
+      const err = new Error("Connection cancelled");
+      err.status = 499;
+      throw err;
+    }
+    onProgress?.({
+      pending: true,
+      connectionStatus: "CONNECTING",
+      jobId,
+    });
+    await sleep(2000);
+    try {
+      const data = await apiFetch(
+        `/connect?jobId=${encodeURIComponent(jobId)}`,
+        { signal, retries: 0 }
+      );
+      if (data?.accountId && data?.pending !== true) {
+        onProgress?.(data);
+        return data;
+      }
+      if (data?.status === "failed" || data?.error) {
+        const err = new Error(data.error || "Connection failed");
+        err.status = data.errorStatus || 500;
+        throw err;
+      }
+    } catch (error) {
+      // 202 Accepted while still running — apiFetch treats 202 as ok and
+      // returns the body. Real failures throw.
+      if (Number(error?.status) === 404) {
+        lastError = error.message || "Connect job not found";
+        continue;
+      }
+      if (Number(error?.status) >= 400) throw error;
+      lastError = error.message || lastError;
+    }
+  }
+
+  const err = new Error(
+    lastError ||
+      "Broker is still connecting — wait a moment and tap Connect again"
+  );
+  err.status = 504;
+  throw err;
 }
 
 export async function disconnectAccount(accountId, { email = "", signal } = {}) {
