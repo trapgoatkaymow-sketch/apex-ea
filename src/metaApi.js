@@ -21,7 +21,7 @@ function friendlyNetworkError(error, fallback = "Could not reach the broker serv
     return "Could not reach the broker server — check connection and try again";
   }
   if (/abort|timed out|timeout/i.test(raw)) {
-    return "Broker login timed out — try again";
+    return "Broker is slow to answer — wait a moment and tap Connect again";
   }
   return raw || fallback;
 }

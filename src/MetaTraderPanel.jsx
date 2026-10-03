@@ -599,20 +599,44 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
 
     try {
       await advance(0);
+      pushEngineLog("Connecting to broker — this can take up to a minute");
       await advance(1);
       // Do not send client email on connect — MetaAPI allows max 3 account keywords
       // and email tag would exceed the limit on some deployments. Email is registered
       // after connect via syncHostedAccount (mt5-accounts registry).
-      const connected = await connectAccount({
-        login,
-        password,
-        server,
-        platform,
-        company: selectedBroker?.company || "",
-        onProgress: async () => {
-          setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
-        },
-      });
+      // Razor Markets cold login often needs 50–90s; one retry covers MT5 blips.
+      let connected;
+      try {
+        connected = await connectAccount({
+          login,
+          password,
+          server,
+          platform,
+          company: selectedBroker?.company || "",
+          onProgress: async () => {
+            setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
+          },
+        });
+      } catch (firstError) {
+        const msg = String(firstError?.message || "");
+        const retryable =
+          /slow to answer|timed out|timeout|reach the broker|try again/i.test(
+            msg
+          );
+        if (!retryable) throw firstError;
+        pushEngineLog("Broker still opening — retrying once");
+        await sleep(1200);
+        connected = await connectAccount({
+          login,
+          password,
+          server,
+          platform,
+          company: selectedBroker?.company || "",
+          onProgress: async () => {
+            setEngineStep((prev) => Math.min(2, Math.max(1, prev)));
+          },
+        });
+      }
       await advance(2);
       await advance(3);
 

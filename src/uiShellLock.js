@@ -90,8 +90,8 @@
  * Do not lower this number. Only raise it when intentionally shipping a
  * new locked product UI.
  */
-/** Gen 137 — Broker search local-first so Razor is not stuck on Searching. */
-export const UI_SHELL_GENERATION = 137;
+/** Gen 138 — Longer Razor Markets ConnectEx budget; retry slow broker logins. */
+export const UI_SHELL_GENERATION = 138;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -101,7 +101,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 137;
+export const UI_SHELL_FLOOR = 138;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

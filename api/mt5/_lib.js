@@ -852,19 +852,35 @@ export async function connectAccount({
     throw err;
   }
 
+  // Normalize common Razor / broker server spellings clients type by hand.
+  const normalizedServer = userServer
+    .replace(/\s+/g, "")
+    .replace(/^(razor)markets(?=-|$)/i, "RazorMarkets")
+    .replace(/^(razormarkets)$/i, "RazorMarkets-Live");
+  const serverName =
+    /^razormarkets-live$/i.test(normalizedServer)
+      ? "RazorMarkets-Live"
+      : /^razormarkets-demo$/i.test(normalizedServer)
+        ? "RazorMarkets-Demo"
+        : userServer;
+
   const params = new URLSearchParams({
     user: userLogin,
     password: userPassword,
-    server: userServer,
+    server: serverName,
+    // Faster connect — history sync can wait until after login.
+    downloadOrderHistory: "false",
+    connectTimeoutSeconds: "75",
+    connectTimeoutClusterMemberSeconds: "20",
   });
 
-  // Keep ConnectEx under the serverless budget. Post-login enrichment must
-  // never push the whole handler past maxDuration or clients see "Failed to fetch".
+  // Razor Markets cold ConnectEx often needs 50s+. Keep under maxDuration 120
+  // and skip enrichment when login itself used most of the budget.
   const connectStarted = Date.now();
   let token;
   try {
     token = await mt5Fetch(`/ConnectEx?${params.toString()}`, {
-      timeoutMs: 45000,
+      timeoutMs: 95_000,
     });
   } catch (error) {
     const msg = String(error?.message || "");
@@ -874,9 +890,17 @@ export async function connectAccount({
       err.data = error.data;
       throw err;
     }
+    if (/server\s*not\s*found/i.test(msg)) {
+      const err = new Error(
+        `Broker server not found (${serverName}) — check the server name`
+      );
+      err.status = 400;
+      err.data = error.data;
+      throw err;
+    }
     if (/timed out|abort|unreachable|fetch failed|network/i.test(msg)) {
       const err = new Error(
-        "Broker login timed out — check login/server and try again"
+        "Broker is slow to answer — wait a moment and tap Connect again"
       );
       err.status = error.status || 504;
       err.data = error.data;
@@ -909,49 +933,53 @@ export async function connectAccount({
   }
 
   // Fast enrichment only — balance/equity can finish on the next status poll.
-  // Sequential 20s×10 summary retries were killing the Vercel function mid-response.
-  const budgetMs = Math.max(
-    2500,
-    55_000 - (Date.now() - connectStarted)
-  );
-  const enrichDeadline = Date.now() + Math.min(12_000, budgetMs);
-  const enrichTimeout = Math.max(
-    2500,
-    Math.min(8000, enrichDeadline - Date.now())
-  );
-
-  const withBudget = async (fn) => {
-    if (Date.now() >= enrichDeadline) return null;
-    try {
-      return await fn();
-    } catch {
-      return null;
-    }
-  };
-
-  const [summary, details, account, ordersProfit] = await Promise.all([
-    withBudget(() =>
-      fetchAccountSummary(id, { timeoutMs: enrichTimeout, tries: 2 })
-    ),
-    withBudget(() =>
-      mt5Fetch(`/AccountDetails?id=${encodeURIComponent(id)}`, {
-        timeoutMs: enrichTimeout,
-      })
-    ),
-    withBudget(() =>
-      mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
-        timeoutMs: enrichTimeout,
-      })
-    ),
-    withBudget(() =>
-      fetchOpenedOrdersProfit(id, { timeoutMs: Math.min(5000, enrichTimeout) })
-    ),
-  ]);
+  // When ConnectEx already took a long time (Razor cold path), return now.
+  const connectMs = Date.now() - connectStarted;
+  let summary = null;
+  let details = null;
+  let account = null;
+  let ordersProfit = null;
+  if (connectMs < 70_000) {
+    const budgetMs = Math.max(1500, 110_000 - connectMs);
+    const enrichDeadline = Date.now() + Math.min(8_000, budgetMs);
+    const enrichTimeout = Math.max(
+      1500,
+      Math.min(6000, enrichDeadline - Date.now())
+    );
+    const withBudget = async (fn) => {
+      if (Date.now() >= enrichDeadline) return null;
+      try {
+        return await fn();
+      } catch {
+        return null;
+      }
+    };
+    [summary, details, account, ordersProfit] = await Promise.all([
+      withBudget(() =>
+        fetchAccountSummary(id, { timeoutMs: enrichTimeout, tries: 2 })
+      ),
+      withBudget(() =>
+        mt5Fetch(`/AccountDetails?id=${encodeURIComponent(id)}`, {
+          timeoutMs: enrichTimeout,
+        })
+      ),
+      withBudget(() =>
+        mt5Fetch(`/Account?id=${encodeURIComponent(id)}`, {
+          timeoutMs: enrichTimeout,
+        })
+      ),
+      withBudget(() =>
+        fetchOpenedOrdersProfit(id, {
+          timeoutMs: Math.min(4000, enrichTimeout),
+        })
+      ),
+    ]);
+  }
 
   return sessionFromConnect({
     token: id,
     login: userLogin,
-    server: userServer,
+    server: serverName,
     platform,
     company,
     summary,
