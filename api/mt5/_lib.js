@@ -17,16 +17,17 @@ function cleanMt5Base(value) {
     .replace(/\/$/, "");
 }
 
-// Prefer the licensed/working host. 159.203.191.196 runs expired timurila/mt5rest trial.
+// Fresh trial droplet (137.184.57.206). Old 159.203.191.196 trial expired.
 export const MT5_API_BASE = cleanMt5Base(
   process.env.MT5_API_BASE ||
     process.env.MT5_API_TARGET ||
-    "http://66.23.225.158"
+    "http://137.184.57.206"
 );
 
 const MT5_API_FAILOVER_BASES = [
   MT5_API_BASE,
   cleanMt5Base(process.env.MT5_API_FAILOVER || process.env.MT5_API_TARGET),
+  "http://137.184.57.206",
   "http://66.23.225.158",
   "http://159.203.191.196",
 ].filter((base, index, all) => base && all.indexOf(base) === index);
