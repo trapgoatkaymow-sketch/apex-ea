@@ -966,9 +966,23 @@ function connectQuery(params) {
 function throwConnectFailure(error, serverName) {
   const msg = String(error?.message || error || "");
   const code = String(error?.code || error?.data?.code || "");
+  // DigitalOcean mt5rest bug — connects open then die (seen on vendor demo too).
+  if (
+    /disposed object|cannot access a disposed|object name:\s*'?system\.net\.sockets\.socket/i.test(
+      msg
+    ) ||
+    (/disconnected/i.test(msg) && /socket/i.test(msg))
+  ) {
+    const err = new Error(
+      "Broker bridge on your API server is broken (MT5 socket error). Restart the DigitalOcean MT5 API droplet, then try Connect again."
+    );
+    err.status = 503;
+    err.data = error?.data || null;
+    throw err;
+  }
   if (isCredentialErrorMessage(msg) || isCredentialErrorMessage(code)) {
     const err = new Error(
-      `Razor Markets rejected login on ${serverName}. In official MT5, open the same server with this master password (not investor). If MT5 opens but the app fails, change the master password in MT5 and retry here.`
+      `Broker rejected login on ${serverName}. Use the MT5 master password (not investor). If official MT5 opens with the same details but the app fails, restart your DigitalOcean MT5 API droplet — the bridge may be unhealthy.`
     );
     err.status = 400;
     err.data = error?.data || null;
@@ -1121,7 +1135,7 @@ export async function connectAccount({
       .replace(/^\[error\]:?\s*/i, "")
       .trim() || "INVALID_ACCOUNT";
     const friendly = isCredentialErrorMessage(hint)
-      ? `Razor Markets rejected login on ${serverName}. In official MT5, open the same server with this master password (not investor). If MT5 opens but the app fails, change the master password in MT5 and retry here.`
+      ? `Broker rejected login on ${serverName}. Use the MT5 master password (not investor). If official MT5 opens with the same details but the app fails, restart your DigitalOcean MT5 API droplet — the bridge may be unhealthy.`
       : `Broker connection failed (${hint})`;
     const err = new Error(friendly);
     err.status = 400;
