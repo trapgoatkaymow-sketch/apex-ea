@@ -296,10 +296,29 @@ export function mapSearchResults(data, platform = "MT5") {
 export async function searchBrokers(query, platform = "MT5") {
   const q = String(query || "").trim();
   if (!q) return [];
-  const data = await mt5Fetch(`/Search?company=${encodeURIComponent(q)}`, {
-    timeoutMs: 20000,
-  });
-  return mapSearchResults(data, platform);
+  // Short timeout — hung /Search (e.g. Razor) must not pin the client on
+  // "Searching brokers…". Empty/timeout → client local catalog fills in.
+  const trySearch = async (company) => {
+    try {
+      const data = await mt5Fetch(
+        `/Search?company=${encodeURIComponent(company)}`,
+        { timeoutMs: 4500 }
+      );
+      return mapSearchResults(data, platform);
+    } catch {
+      return [];
+    }
+  };
+
+  const primary = await trySearch(q);
+  if (primary.length) return primary;
+
+  // "Razor markets" often returns empty while "Razor" hits servers.
+  const first = q.split(/\s+/).filter(Boolean)[0] || "";
+  if (first && first.toLowerCase() !== q.toLowerCase()) {
+    return trySearch(first);
+  }
+  return [];
 }
 
 function pickNumber(...values) {

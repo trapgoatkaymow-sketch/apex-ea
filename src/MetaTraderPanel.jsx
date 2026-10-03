@@ -485,20 +485,39 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
     setSearchError("");
 
     const timer = setTimeout(async () => {
+      // Paint local catalog first so "Searching…" never hides Razor / known brokers.
       try {
-        const brokers = await searchBrokers(q, platform, { signal: controller.signal });
+        const { searchLocalBrokers } = await import("./brokerCatalog.js");
+        const local = searchLocalBrokers(q, platform).filter(
+          (b) =>
+            !/^razor\s*markets\s*\(pty\)\s*ltd\.?$/i.test(
+              String(b?.company || "").trim()
+            )
+        );
+        if (requestId === searchRef.current && local.length) {
+          setResults(local);
+          setSearching(false);
+        }
+      } catch {
+        // remote path still runs
+      }
+
+      try {
+        const brokers = await searchBrokers(q, platform, {
+          signal: controller.signal,
+        });
         if (requestId !== searchRef.current) return;
         setResults(brokers);
         if (!brokers.length) setSearchError("No brokers match that search.");
       } catch (error) {
         if (controller.signal.aborted) return;
         if (requestId !== searchRef.current) return;
-        setResults([]);
-        setSearchError(error.message || "Broker search failed");
+        // Keep any local results already painted — do not wipe the list.
+        setSearchError((prev) => prev || error.message || "Broker search failed");
       } finally {
         if (requestId === searchRef.current) setSearching(false);
       }
-    }, 350);
+    }, 200);
 
     return () => {
       clearTimeout(timer);
@@ -993,10 +1012,11 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
         <ul className="mt-broker-list">
           {!hasQuery ? (
             <li className="mt-broker-empty">Search for your broker</li>
-          ) : searching ? (
-            <li className="mt-broker-empty">Searching brokers…</li>
           ) : (
             <>
+              {searching && !results.length ? (
+                <li className="mt-broker-empty">Searching brokers…</li>
+              ) : null}
               {results.map((broker) => (
                 <li key={broker.id}>
                   <button
@@ -1032,7 +1052,7 @@ export default function MetaTraderPanel({ variant = "zeta" }) {
                   </button>
                 </li>
               ) : null}
-              {!results.length && searchError ? (
+              {!searching && !results.length && searchError ? (
                 <li className="mt-broker-empty">{searchError}</li>
               ) : null}
             </>

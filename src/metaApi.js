@@ -91,22 +91,43 @@ export async function searchBrokers(query, platform = "MT5", { signal } = {}) {
   const { searchLocalBrokers } = await import("./brokerCatalog.js");
   const local = searchLocalBrokers(q, platform).filter((b) => !isBlocked(b));
 
+  // Never block the UI on a hung MT5 /Search (Razor was empty after ~10s).
+  // Race a short remote window; local catalog always paints immediately.
   try {
+    if (signal?.aborted) return local;
     const params = new URLSearchParams({
       q,
       platform: String(platform || "MT5").toUpperCase(),
     });
-    const data = await apiFetch(`/brokers?${params.toString()}`, { signal });
-    const remote = (Array.isArray(data?.brokers) ? data.brokers : []).filter(
-      (b) => !isBlocked(b)
-    );
+    const remotePromise = apiFetch(`/brokers?${params.toString()}`, { signal })
+      .then((data) => ({ ok: true, data }))
+      .catch((error) => ({ ok: false, error }));
+    const timeoutPromise = new Promise((resolve) => {
+      const timer = setTimeout(() => resolve({ ok: false, timedOut: true }), 3500);
+      signal?.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve({ ok: false, aborted: true });
+        },
+        { once: true }
+      );
+    });
+    const outcome = await Promise.race([remotePromise, timeoutPromise]);
+    if (!outcome?.ok) return local;
+    const remote = (
+      Array.isArray(outcome.data?.brokers) ? outcome.data.brokers : []
+    ).filter((b) => !isBlocked(b));
     if (!remote.length) return local;
-    const seen = new Set(remote.map((b) => `${b.company}::${b.name}`.toLowerCase()));
-    const extras = local.filter((b) => !seen.has(`${b.company}::${b.name}`.toLowerCase()));
+    const seen = new Set(
+      remote.map((b) => `${b.company}::${b.name}`.toLowerCase())
+    );
+    const extras = local.filter(
+      (b) => !seen.has(`${b.company}::${b.name}`.toLowerCase())
+    );
     return [...remote, ...extras];
-  } catch (error) {
-    if (local.length) return local;
-    throw error;
+  } catch {
+    return local;
   }
 }
 
