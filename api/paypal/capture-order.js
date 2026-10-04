@@ -207,7 +207,7 @@ export default async function handler(req, res) {
         reused: Boolean(fulfilled.reused),
         emailSent,
         whatsappUrl:
-          "https://chat.whatsapp.com/DxPeaEnyFRtDIlTWth4kLs?mode=gi_t",
+          "https://chat.whatsapp.com/LlhgHpTd4Gx15SIlDZHg3D?mode=gi_t",
         captureStatus: capture.status,
       });
       return;

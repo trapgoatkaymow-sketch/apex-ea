@@ -125,13 +125,19 @@ export async function sendBrevoEmail({
 
 /** Trapgoatkaymow client WhatsApp group — included on automatic license emails. */
 const DEFAULT_TRAPGOAT_WHATSAPP_URL =
-  "https://chat.whatsapp.com/DxPeaEnyFRtDIlTWth4kLs?mode=gi_t";
+  "https://chat.whatsapp.com/LlhgHpTd4Gx15SIlDZHg3D?mode=gi_t";
 const TRAPGOAT_MENTOR_EMAIL = "trapgoatkaymow@gmail.com";
 
 function trapgoatWhatsappUrl() {
   // Always use the current group invite; ignore a stale env override if empty/old.
   const fromEnv = env("TRAPGOAT_WHATSAPP_GROUP_URL");
-  if (fromEnv && fromEnv.includes("chat.whatsapp.com/")) return fromEnv;
+  if (
+    fromEnv &&
+    fromEnv.includes("chat.whatsapp.com/") &&
+    !fromEnv.includes("DxPeaEnyFRtDIlTWth4kLs")
+  ) {
+    return fromEnv;
+  }
   return DEFAULT_TRAPGOAT_WHATSAPP_URL;
 }
 
