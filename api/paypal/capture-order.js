@@ -1,5 +1,6 @@
 import { waitUntil } from "@vercel/functions";
 import { endOptions } from "../_cors.js";
+import { TRAPGOAT_WHATSAPP_GROUP_URL } from "../_brevo.js";
 import {
   captureLifetimeOrder,
   extractCaptureClientName,
@@ -206,8 +207,7 @@ export default async function handler(req, res) {
             : null,
         reused: Boolean(fulfilled.reused),
         emailSent,
-        whatsappUrl:
-          "https://chat.whatsapp.com/LlhgHpTd4Gx15SIlDZHg3D?mode=gi_t",
+        whatsappUrl: TRAPGOAT_WHATSAPP_GROUP_URL,
         captureStatus: capture.status,
       });
       return;

@@ -123,22 +123,25 @@ export async function sendBrevoEmail({
   }
 }
 
-/** Trapgoatkaymow client WhatsApp group — included on automatic license emails. */
-const DEFAULT_TRAPGOAT_WHATSAPP_URL =
+/** Trapgoatkaymow client WhatsApp group — always the open invite (old group is full). */
+export const TRAPGOAT_WHATSAPP_GROUP_URL =
   "https://chat.whatsapp.com/LlhgHpTd4Gx15SIlDZHg3D?mode=gi_t";
+/** @deprecated use TRAPGOAT_WHATSAPP_GROUP_URL */
+const DEFAULT_TRAPGOAT_WHATSAPP_URL = TRAPGOAT_WHATSAPP_GROUP_URL;
 const TRAPGOAT_MENTOR_EMAIL = "trapgoatkaymow@gmail.com";
+/** Full / closed groups — never email these again. */
+const RETIRED_WHATSAPP_INVITES = [
+  "DxPeaEnyFRtDIlTWth4kLs",
+];
 
-function trapgoatWhatsappUrl() {
-  // Always use the current group invite; ignore a stale env override if empty/old.
+export function trapgoatWhatsappUrl() {
+  // Always prefer the open group. Ignore env if it still points at a full group.
   const fromEnv = env("TRAPGOAT_WHATSAPP_GROUP_URL");
-  if (
-    fromEnv &&
-    fromEnv.includes("chat.whatsapp.com/") &&
-    !fromEnv.includes("DxPeaEnyFRtDIlTWth4kLs")
-  ) {
-    return fromEnv;
+  if (fromEnv && fromEnv.includes("chat.whatsapp.com/")) {
+    const retired = RETIRED_WHATSAPP_INVITES.some((id) => fromEnv.includes(id));
+    if (!retired) return fromEnv;
   }
-  return DEFAULT_TRAPGOAT_WHATSAPP_URL;
+  return TRAPGOAT_WHATSAPP_GROUP_URL;
 }
 
 function shouldIncludeTrapgoatWhatsapp(license = {}) {

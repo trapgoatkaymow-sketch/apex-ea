@@ -479,7 +479,7 @@
       let useClientPayPalOrder = false;
       // Provisional 17h urgency countdown until server syncs display end time.
       // Checkout stays open after this hits zero.
-      const WHATSAPP_GROUP_URL =
+      let WHATSAPP_GROUP_URL =
         "https://chat.whatsapp.com/LlhgHpTd4Gx15SIlDZHg3D?mode=gi_t";
       let endsAtMs = Date.now() + 17 * 60 * 60 * 1000;
       let timerSynced = false;
@@ -1056,6 +1056,15 @@
           }
 
           lastWindowSyncAt = Date.now();
+          if (
+            giveaway.whatsappUrl &&
+            String(giveaway.whatsappUrl).includes("chat.whatsapp.com/") &&
+            !String(giveaway.whatsappUrl).includes("DxPeaEnyFRtDIlTWth4kLs")
+          ) {
+            WHATSAPP_GROUP_URL = String(giveaway.whatsappUrl).trim();
+            const waLink = document.getElementById("wa-link");
+            if (waLink) waLink.href = WHATSAPP_GROUP_URL;
+          }
           const stillOpen = applyGiveawayWindow(windowInfo);
           if (windowInfo.notStarted) {
             setMsg("This giveaway has not started yet. Check back soon.", "err");

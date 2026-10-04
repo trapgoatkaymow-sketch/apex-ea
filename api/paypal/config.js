@@ -5,6 +5,7 @@ import {
   PAYPAL_CLIENT_ID,
   sendJson,
 } from "./_lib.js";
+import { TRAPGOAT_WHATSAPP_GROUP_URL } from "../_brevo.js";
 import {
   GIVEAWAY_CURRENCY,
   GIVEAWAY_DISPLAY_CURRENCY,
@@ -54,6 +55,7 @@ export default async function handler(req, res) {
       label: "Giveaway — App access + ZETA SCALPER AI",
       window: giveawayWindow,
       shareUrl: "https://www.apex-ea.com/giveaway.html",
+      whatsappUrl: TRAPGOAT_WHATSAPP_GROUP_URL,
     },
     mode: String(process.env.PAYPAL_MODE || "live").toLowerCase() === "sandbox" ? "sandbox" : "live",
     ready: Boolean(PAYPAL_CLIENT_ID) && secretConfigured,
