@@ -18,7 +18,7 @@ import {
   ROBOT_PRICE,
 } from "./_robotPurchase.js";
 
-export const config = { maxDuration: 10 };
+export const config = { maxDuration: 20 };
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {

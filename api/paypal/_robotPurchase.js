@@ -107,7 +107,38 @@ export const GIVEAWAY_COUNTDOWN_HOURS = Math.max(
   Number(process.env.GIVEAWAY_COUNTDOWN_HOURS) || 17
 );
 /** Bump to force a fresh on-page countdown latch (checkout stays open). */
-export const GIVEAWAY_COUNTDOWN_VERSION = 6;
+export const GIVEAWAY_COUNTDOWN_VERSION = 7;
+
+/** Rolling special: when this close, jump back to 21h until manually stopped. */
+export const GIVEAWAY_AUTO_EXTEND_HOURS = Math.max(
+  1,
+  Number(process.env.GIVEAWAY_AUTO_EXTEND_HOURS) || 21
+);
+export const GIVEAWAY_AUTO_EXTEND_AT_MS = Math.max(
+  5_000,
+  Number(process.env.GIVEAWAY_AUTO_EXTEND_AT_MS) || 2 * 60 * 1000
+);
+
+let autoExtendInFlight = null;
+
+export function autoExtendFlagOn(value) {
+  return value === true || String(value || "").trim().toLowerCase() === "true";
+}
+
+/** When remaining hits 2 minutes (or already ended), return the new 21h end. */
+export function nextAutoExtendEndMs({
+  remainingMs,
+  nowMs = Date.now(),
+  autoExtendUntilStopped = false,
+  hours = GIVEAWAY_AUTO_EXTEND_HOURS,
+  atRemainingMs = GIVEAWAY_AUTO_EXTEND_AT_MS,
+} = {}) {
+  if (!autoExtendFlagOn(autoExtendUntilStopped)) return null;
+  const left = Number(remainingMs);
+  if (!Number.isFinite(left) || left > atRemainingMs) return null;
+  const hrs = Math.max(1, Number(hours) || GIVEAWAY_AUTO_EXTEND_HOURS);
+  return Number(nowMs) + hrs * 60 * 60 * 1000;
+}
 
 function countdownFromLatched(row) {
   const ms = Date.parse(String(row?.countdownEndsAt || "").trim());
@@ -229,6 +260,17 @@ async function readLatchedWindow() {
           countdownVersion,
           Number(memoryGiveawayWindow?.countdownVersion) || 0
         ),
+        autoExtendUntilStopped:
+          autoExtendFlagOn(parsed?.autoExtendUntilStopped) ||
+          autoExtendFlagOn(memoryGiveawayWindow?.autoExtendUntilStopped),
+        autoExtendHours:
+          Number(parsed?.autoExtendHours) ||
+          Number(memoryGiveawayWindow?.autoExtendHours) ||
+          GIVEAWAY_AUTO_EXTEND_HOURS,
+        autoExtendAtRemainingMs:
+          Number(parsed?.autoExtendAtRemainingMs) ||
+          Number(memoryGiveawayWindow?.autoExtendAtRemainingMs) ||
+          GIVEAWAY_AUTO_EXTEND_AT_MS,
         ...(Number.isFinite(countdownEndsAtMs)
           ? { countdownEndsAt: new Date(countdownEndsAtMs).toISOString() }
           : {}),
@@ -242,6 +284,9 @@ async function readLatchedWindow() {
         countdownEndsAtMs,
         purchasesEndAtMs,
         countdownVersion: memoryGiveawayWindow.countdownVersion,
+        autoExtendUntilStopped: memoryGiveawayWindow.autoExtendUntilStopped,
+        autoExtendHours: memoryGiveawayWindow.autoExtendHours,
+        autoExtendAtRemainingMs: memoryGiveawayWindow.autoExtendAtRemainingMs,
       };
     }
   } catch {
@@ -256,6 +301,15 @@ async function readLatchedWindow() {
         countdownEndsAtMs: countdownFromLatched(memoryGiveawayWindow),
         purchasesEndAtMs: purchasesEndFromLatched(memoryGiveawayWindow),
         countdownVersion: Number(memoryGiveawayWindow.countdownVersion) || 0,
+        autoExtendUntilStopped: autoExtendFlagOn(
+          memoryGiveawayWindow.autoExtendUntilStopped
+        ),
+        autoExtendHours:
+          Number(memoryGiveawayWindow.autoExtendHours) ||
+          GIVEAWAY_AUTO_EXTEND_HOURS,
+        autoExtendAtRemainingMs:
+          Number(memoryGiveawayWindow.autoExtendAtRemainingMs) ||
+          GIVEAWAY_AUTO_EXTEND_AT_MS,
       };
     }
   }
@@ -275,6 +329,11 @@ async function writeGiveawayWindowDoc(doc, message) {
     durationMs,
     countdownVersion:
       Number(doc?.countdownVersion) || GIVEAWAY_COUNTDOWN_VERSION,
+    autoExtendUntilStopped: autoExtendFlagOn(doc?.autoExtendUntilStopped),
+    autoExtendHours:
+      Number(doc?.autoExtendHours) || GIVEAWAY_AUTO_EXTEND_HOURS,
+    autoExtendAtRemainingMs:
+      Number(doc?.autoExtendAtRemainingMs) || GIVEAWAY_AUTO_EXTEND_AT_MS,
     ...(countdownEndsAt ? { countdownEndsAt } : {}),
     ...(purchasesEndAt ? { purchasesEndAt } : {}),
   };
@@ -296,6 +355,11 @@ async function writeGiveawayWindowDoc(doc, message) {
       countdownVersion:
         Number(doc?.countdownVersion) || GIVEAWAY_COUNTDOWN_VERSION,
       purchasesOpenAfterCountdown: true,
+      autoExtendUntilStopped: autoExtendFlagOn(doc?.autoExtendUntilStopped),
+      autoExtendHours:
+        Number(doc?.autoExtendHours) || GIVEAWAY_AUTO_EXTEND_HOURS,
+      autoExtendAtRemainingMs:
+        Number(doc?.autoExtendAtRemainingMs) || GIVEAWAY_AUTO_EXTEND_AT_MS,
     },
     null,
     2
@@ -350,6 +414,91 @@ function purchasesEndFields(latchedOrMs) {
 }
 
 /**
+ * Reset countdown + checkout close to N hours from now (both move together).
+ */
+export async function resetGiveawayCountdownHours(
+  hours = GIVEAWAY_AUTO_EXTEND_HOURS,
+  nowMs = Date.now(),
+  extra = {}
+) {
+  const hrs = Math.max(1, Number(hours) || GIVEAWAY_AUTO_EXTEND_HOURS);
+  const latched = await readLatchedWindow();
+  const startMs = latched?.startMs || nowMs;
+  const nextEnd = nowMs + hrs * 60 * 60 * 1000;
+  const countdownEndsAt = new Date(nextEnd).toISOString();
+  const startsAt = new Date(startMs).toISOString();
+  const durationMs = Math.max(
+    latched?.durationMs || 0,
+    GIVEAWAY_DURATION_MS,
+    nextEnd - startMs
+  );
+  const autoOn =
+    extra.autoExtendUntilStopped != null
+      ? autoExtendFlagOn(extra.autoExtendUntilStopped)
+      : autoExtendFlagOn(latched?.autoExtendUntilStopped);
+  await writeGiveawayWindowDoc(
+    {
+      startsAt,
+      durationMs,
+      latchedAt: startsAt,
+      countdownEndsAt,
+      countdownSetAt: new Date(nowMs).toISOString(),
+      countdownVersion: Math.max(
+        Number(latched?.countdownVersion) || 0,
+        GIVEAWAY_COUNTDOWN_VERSION
+      ),
+      extendedAt: new Date(nowMs).toISOString(),
+      extendedByDays: 0,
+      extendedByHours: hrs,
+      autoExtendUntilStopped: autoOn,
+      autoExtendHours: hrs,
+      autoExtendAtRemainingMs:
+        Number(extra.autoExtendAtRemainingMs) ||
+        Number(latched?.autoExtendAtRemainingMs) ||
+        GIVEAWAY_AUTO_EXTEND_AT_MS,
+      ...purchasesEndFields(nextEnd),
+    },
+    extra.message || `chore: reset giveaway countdown to ${hrs}h`
+  );
+  const window = windowFromStart(startMs, nowMs, durationMs, nextEnd, nextEnd);
+  window.autoExtendUntilStopped = autoOn;
+  return window;
+}
+
+async function maybeAutoExtendGiveaway(window, latched, packaged, nowMs) {
+  const autoOn =
+    autoExtendFlagOn(latched?.autoExtendUntilStopped) ||
+    autoExtendFlagOn(packaged?.autoExtendUntilStopped) ||
+    autoExtendFlagOn(memoryGiveawayWindow?.autoExtendUntilStopped);
+  const hours =
+    Number(latched?.autoExtendHours) ||
+    Number(packaged?.autoExtendHours) ||
+    GIVEAWAY_AUTO_EXTEND_HOURS;
+  const atRemainingMs =
+    Number(latched?.autoExtendAtRemainingMs) ||
+    Number(packaged?.autoExtendAtRemainingMs) ||
+    GIVEAWAY_AUTO_EXTEND_AT_MS;
+  const nextEnd = nextAutoExtendEndMs({
+    remainingMs: window?.remainingMs,
+    nowMs,
+    autoExtendUntilStopped: autoOn,
+    hours,
+    atRemainingMs,
+  });
+  if (window) window.autoExtendUntilStopped = autoOn;
+  if (!nextEnd) return window;
+  if (autoExtendInFlight) return autoExtendInFlight;
+  autoExtendInFlight = resetGiveawayCountdownHours(hours, nowMs, {
+    autoExtendUntilStopped: true,
+    autoExtendAtRemainingMs: atRemainingMs,
+    message: `chore: auto-extend giveaway to ${hours}h`,
+  }).finally(() => {
+    autoExtendInFlight = null;
+  });
+  return autoExtendInFlight;
+}
+
+/**
  * Reset the on-page countdown to N hours from now.
  * Checkout stays open after the timer hits zero (until purchasesEndAt).
  */
@@ -379,6 +528,13 @@ export async function setGiveawayCountdownHours(
       countdownVersion: GIVEAWAY_COUNTDOWN_VERSION,
       extendedAt: new Date(nowMs).toISOString(),
       extendedByDays: 0,
+      autoExtendUntilStopped: autoExtendFlagOn(
+        latched?.autoExtendUntilStopped
+      ),
+      autoExtendHours:
+        Number(latched?.autoExtendHours) || GIVEAWAY_AUTO_EXTEND_HOURS,
+      autoExtendAtRemainingMs:
+        Number(latched?.autoExtendAtRemainingMs) || GIVEAWAY_AUTO_EXTEND_AT_MS,
       ...purchasesEndFields(purchasesEndAtMs),
     },
     `chore: set giveaway countdown to ${hrs}h`
@@ -435,6 +591,13 @@ export async function extendGiveawayCountdownByHours(
       extendedAt: new Date(nowMs).toISOString(),
       extendedByDays: 0,
       extendedByHours: hrs,
+      autoExtendUntilStopped: autoExtendFlagOn(
+        latched?.autoExtendUntilStopped
+      ),
+      autoExtendHours:
+        Number(latched?.autoExtendHours) || GIVEAWAY_AUTO_EXTEND_HOURS,
+      autoExtendAtRemainingMs:
+        Number(latched?.autoExtendAtRemainingMs) || GIVEAWAY_AUTO_EXTEND_AT_MS,
       ...purchasesEndFields(purchasesEndAtMs),
     },
     `chore: extend giveaway countdown by ${hrs}h`
@@ -538,7 +701,18 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
   );
   let countdownEndsAtMs = latched.countdownEndsAtMs;
   const storedVersion = Number(latched.countdownVersion) || 0;
-  // Version bump latches a fresh countdown once per bump (v6 = +21h).
+  const autoExtendUntilStopped =
+    autoExtendFlagOn(latched?.autoExtendUntilStopped) ||
+    autoExtendFlagOn(packaged?.autoExtendUntilStopped);
+  const autoExtendHours =
+    Number(packaged?.autoExtendHours) ||
+    Number(latched?.autoExtendHours) ||
+    GIVEAWAY_AUTO_EXTEND_HOURS;
+  const autoExtendAtRemainingMs =
+    Number(packaged?.autoExtendAtRemainingMs) ||
+    Number(latched?.autoExtendAtRemainingMs) ||
+    GIVEAWAY_AUTO_EXTEND_AT_MS;
+  // Version bump latches a fresh countdown once per bump (v7 = rolling 21h).
   if (
     !Number.isFinite(countdownEndsAtMs) ||
     storedVersion < GIVEAWAY_COUNTDOWN_VERSION
@@ -551,15 +725,20 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
       Number.isFinite(packagedEnd)
     ) {
       const startsAt = new Date(latched.startMs).toISOString();
+      const countdownCandidates = [
+        packagedEnd,
+        latched.countdownEndsAtMs,
+      ].filter((ms) => Number.isFinite(ms));
+      const livePackagedEnd = Math.max(...countdownCandidates);
       const hardEndMs = Number.isFinite(purchasesEndAtMs)
-        ? Math.max(purchasesEndAtMs, packagedEnd)
-        : packagedEnd;
+        ? Math.max(purchasesEndAtMs, livePackagedEnd)
+        : livePackagedEnd;
       await writeGiveawayWindowDoc(
         {
           startsAt,
           durationMs: Math.max(durationMs, packagedDuration || 0),
           latchedAt: startsAt,
-          countdownEndsAt: new Date(packagedEnd).toISOString(),
+          countdownEndsAt: new Date(livePackagedEnd).toISOString(),
           countdownSetAt:
             String(packaged?.countdownSetAt || "").trim() ||
             new Date(nowMs).toISOString(),
@@ -568,20 +747,38 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
           extendedByHours:
             Number(packaged?.extendedByHours) || GIVEAWAY_COUNTDOWN_HOURS,
           extendedByDays: 0,
+          autoExtendUntilStopped,
+          autoExtendHours,
+          autoExtendAtRemainingMs,
           ...purchasesEndFields(hardEndMs),
         },
         "chore: latch packaged giveaway countdown"
       );
-      return windowFromStart(
-        latched.startMs,
-        nowMs,
-        Math.max(durationMs, packagedDuration || 0),
-        packagedEnd,
-        hardEndMs
+      return maybeAutoExtendGiveaway(
+        windowFromStart(
+          latched.startMs,
+          nowMs,
+          Math.max(durationMs, packagedDuration || 0),
+          livePackagedEnd,
+          hardEndMs
+        ),
+        {
+          ...latched,
+          autoExtendUntilStopped,
+          autoExtendHours,
+          autoExtendAtRemainingMs,
+        },
+        packaged,
+        nowMs
       );
     }
     // Fresh 17h display from deploy time only when packaged has no countdown.
-    return await setGiveawayCountdownHours(GIVEAWAY_COUNTDOWN_HOURS, nowMs);
+    return maybeAutoExtendGiveaway(
+      await setGiveawayCountdownHours(GIVEAWAY_COUNTDOWN_HOURS, nowMs),
+      latched,
+      packaged,
+      nowMs
+    );
   }
 
   // Only latch when the resolved end/duration is strictly newer than durable —
@@ -591,7 +788,9 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
     (!Number.isFinite(latched.purchasesEndAtMs) ||
       purchasesEndAtMs > latched.purchasesEndAtMs);
   const needsDurationLatch = durationMs > (latched.durationMs || 0);
-  if (needsPurchasesLatch || needsDurationLatch) {
+  const needsAutoFlagLatch =
+    autoExtendUntilStopped && !autoExtendFlagOn(latched?.autoExtendUntilStopped);
+  if (needsPurchasesLatch || needsDurationLatch || needsAutoFlagLatch) {
     const startsAt = new Date(latched.startMs).toISOString();
     await writeGiveawayWindowDoc(
       {
@@ -607,17 +806,30 @@ export async function resolveGiveawayWindow(nowMs = Date.now()) {
         extendedAt: new Date(nowMs).toISOString(),
         extendedByHours: Number(packaged?.extendedByHours) || 0,
         extendedByDays: Number(packaged?.extendedByDays) || 0,
+        autoExtendUntilStopped,
+        autoExtendHours,
+        autoExtendAtRemainingMs,
         ...purchasesEndFields(purchasesEndAtMs),
       },
       "chore: latch giveaway purchases end"
     );
   }
-  return windowFromStart(
-    latched.startMs,
-    nowMs,
-    durationMs,
-    countdownEndsAtMs,
-    purchasesEndAtMs
+  return maybeAutoExtendGiveaway(
+    windowFromStart(
+      latched.startMs,
+      nowMs,
+      durationMs,
+      countdownEndsAtMs,
+      purchasesEndAtMs
+    ),
+    {
+      ...latched,
+      autoExtendUntilStopped,
+      autoExtendHours,
+      autoExtendAtRemainingMs,
+    },
+    packaged,
+    nowMs
   );
 }
 

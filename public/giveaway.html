@@ -553,15 +553,20 @@
         if (!endsAtMs) return;
         const left = endsAtMs - Date.now();
         if (left <= 0) {
-          // Counting to purchasesEndAt — when it hits zero the special closes.
-          if (
-            Number.isFinite(purchasesEndAtMs) &&
-            endsAtMs === purchasesEndAtMs
-          ) {
-            showOfferEndedUi();
-          } else {
-            showCountdownEndedUi();
-          }
+          void refreshGiveawayWindow().then((stillOpen) => {
+            if (stillOpen) {
+              tickTimer();
+              return;
+            }
+            if (
+              Number.isFinite(purchasesEndAtMs) &&
+              endsAtMs === purchasesEndAtMs
+            ) {
+              showOfferEndedUi();
+            } else {
+              showCountdownEndedUi();
+            }
+          });
           return;
         }
         timerEl.classList.remove("is-expired");
@@ -569,6 +574,83 @@
         if (timerSynced) {
           timerEnds.textContent = "Ends " + formatEndLocal(endsAtMs);
         }
+        const syncEveryMs = left <= 2.5 * 60 * 1000 ? 8000 : 25000;
+        if (Date.now() - lastWindowSyncAt >= syncEveryMs) {
+          void refreshGiveawayWindow();
+        }
+      }
+
+      function applyGiveawayWindow(windowInfo) {
+        const serverEnd = Date.parse(
+          windowInfo.countdownEndsAt || windowInfo.endsAt || ""
+        );
+        const serverPurchasesEnd = Date.parse(
+          windowInfo.purchasesEndAt || ""
+        );
+        if (Number.isFinite(serverPurchasesEnd) && serverPurchasesEnd > 0) {
+          purchasesEndAtMs = serverPurchasesEnd;
+        }
+        const liveCountdownEnd =
+          Number.isFinite(purchasesEndAtMs) && purchasesEndAtMs > Date.now()
+            ? purchasesEndAtMs
+            : Number.isFinite(serverEnd) && serverEnd > 0
+              ? serverEnd
+              : 0;
+        const remainingMs = Number(windowInfo.remainingMs) || 0;
+        const countdownStillLive =
+          remainingMs > 0 ||
+          (Number.isFinite(liveCountdownEnd) && liveCountdownEnd > Date.now());
+        const serverSaysClosed =
+          windowInfo.purchaseOpen === false ||
+          windowInfo.purchasesExpired === true;
+        if (windowInfo.notStarted) {
+          giveawayActive = false;
+          buyForm.classList.add("hidden");
+          hidePayUi();
+          timerLabel.textContent = "Starts soon";
+          return false;
+        }
+        if (countdownStillLive) {
+          if (liveCountdownEnd > 0) {
+            endsAtMs = liveCountdownEnd;
+            timerSynced = true;
+          }
+          timerEl.classList.remove("is-expired");
+          endedBox.classList.add("hidden");
+          buyForm.classList.remove("hidden");
+          giveawayActive = true;
+          if (
+            Number.isFinite(purchasesEndAtMs) &&
+            endsAtMs === purchasesEndAtMs
+          ) {
+            timerLabel.textContent = "Offer ends in";
+          }
+          tickTimer();
+          return true;
+        }
+        if (serverSaysClosed && !countdownStillLive) {
+          showOfferEndedUi();
+          return false;
+        }
+        return giveawayActive;
+      }
+
+      let windowSyncInFlight = null;
+      let lastWindowSyncAt = 0;
+      async function refreshGiveawayWindow() {
+        if (windowSyncInFlight) return windowSyncInFlight;
+        windowSyncInFlight = (async () => {
+          try {
+            const cfg = await api("/config");
+            lastWindowSyncAt = Date.now();
+            return applyGiveawayWindow(cfg.giveaway?.window || {});
+          } catch {
+            return giveawayActive;
+          } finally {
+            windowSyncInFlight = null;
+          }
+        })();
+        return windowSyncInFlight;
       }
 
       // Live countdown from first paint — people see seconds move immediately.
@@ -973,74 +1055,23 @@
             priceLabel.textContent = "$" + Number(giveaway.amount).toFixed(2);
           }
 
-          const serverEnd = Date.parse(
-            windowInfo.countdownEndsAt || windowInfo.endsAt || ""
-          );
-          const serverPurchasesEnd = Date.parse(
-            windowInfo.purchasesEndAt || ""
-          );
-          if (Number.isFinite(serverPurchasesEnd) && serverPurchasesEnd > 0) {
-            purchasesEndAtMs = serverPurchasesEnd;
-          }
-          // Live countdown to the hard special end (purchasesEndAt) when set.
-          // Falls back to the older urgency countdownEndsAt otherwise.
-          const liveCountdownEnd =
-            Number.isFinite(purchasesEndAtMs) && purchasesEndAtMs > Date.now()
-              ? purchasesEndAtMs
-              : Number.isFinite(serverEnd) && serverEnd > 0
-                ? serverEnd
-                : 0;
-          if (liveCountdownEnd > 0) {
-            endsAtMs = liveCountdownEnd;
-            timerSynced = true;
-            if (
-              Number.isFinite(purchasesEndAtMs) &&
-              endsAtMs === purchasesEndAtMs
-            ) {
-              timerLabel.textContent = "Offer ends in";
-            }
-            tickTimer();
-          }
-          // Timer hitting zero must NOT hide checkout — payments stay open
-          // until purchasesEndAt (if set). If the server hard-close flag is
-          // stale but remainingMs / live countdown is still ahead, keep checkout.
+          lastWindowSyncAt = Date.now();
+          const stillOpen = applyGiveawayWindow(windowInfo);
           if (windowInfo.notStarted) {
-            giveawayActive = false;
-            buyForm.classList.add("hidden");
-            hidePayUi();
-            timerLabel.textContent = "Starts soon";
             setMsg("This giveaway has not started yet. Check back soon.", "err");
             return;
           }
-          const remainingMs = Number(windowInfo.remainingMs) || 0;
-          const countdownStillLive =
-            remainingMs > 0 ||
-            (Number.isFinite(liveCountdownEnd) && liveCountdownEnd > Date.now());
-          const serverSaysClosed =
-            windowInfo.purchaseOpen === false ||
-            windowInfo.purchasesExpired === true;
-          if (serverSaysClosed && !countdownStillLive) {
-            giveawayActive = false;
-            buyForm.classList.add("hidden");
-            hidePayUi();
-            timerEl.classList.add("is-expired");
-            paintDigits(0);
-            timerLabel.textContent = "Offer ended";
-            timerEnds.textContent = "This special has closed";
-            endedBox.classList.remove("hidden");
+          if (!stillOpen) {
             setMsg("This giveaway special has ended.", "err");
             return;
           }
-          // Stale packaged hard-close with live countdown → show pay UI anyway.
-          if (serverSaysClosed && countdownStillLive) {
+          if (
+            windowInfo.purchaseOpen === false &&
+            (Number(windowInfo.remainingMs) || 0) > 0
+          ) {
             useClientPayPalOrder = true;
-            endedBox.classList.add("hidden");
-            timerEl.classList.remove("is-expired");
-            timerLabel.textContent = "Offer ends in";
             setMsg("");
           }
-          giveawayActive = true;
-          buyForm.classList.remove("hidden");
 
           if (!cfg.ready || !clientId) {
             setMsg(

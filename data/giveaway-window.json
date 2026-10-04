@@ -4,10 +4,13 @@
   "latchedAt": "2026-09-27T08:31:50.873Z",
   "countdownEndsAt": "2026-10-05T13:24:00.000Z",
   "countdownSetAt": "2026-10-04T16:23:00.000Z",
-  "countdownVersion": 6,
+  "countdownVersion": 7,
   "extendedAt": "2026-10-04T16:23:00.000Z",
   "extendedByDays": 0,
   "extendedByHours": 21,
   "purchasesEndAt": "2026-10-05T13:24:00.000Z",
-  "purchasesOpenAfterCountdown": true
+  "purchasesOpenAfterCountdown": true,
+  "autoExtendUntilStopped": true,
+  "autoExtendHours": 21,
+  "autoExtendAtRemainingMs": 120000
 }
