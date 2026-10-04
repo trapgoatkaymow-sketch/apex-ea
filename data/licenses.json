@@ -1,6 +1,57 @@
 {
   "licenses": [
     {
+      "key": "APEX-DYSB-GKQ4",
+      "botId": "zeta-scalper-ai-mtyew2ps",
+      "botName": "ZETA SCALPER AI",
+      "clientEmail": "trapgoatkaymow@gmail.com",
+      "clientName": "NENE.FX",
+      "mainText": "NENE.FX",
+      "mentorEmail": "forexhlulii@proton.me",
+      "mentorId": "8bc83872-c615-4b73-b765-d91cc7bacc24",
+      "mentorName": "Hluli.fx",
+      "used": true,
+      "commissionEligible": false,
+      "commissionReason": "access_already_active",
+      "duration": "lifetime",
+      "expiresAt": null,
+      "createdAt": 1791089724889,
+      "usedAt": 1791089820127,
+      "deviceId": "ad641f87-a86d-4b53-bece-5d4e1fa8ebb6",
+      "boundAt": 1791089820127,
+      "updatedAt": 1791142796838,
+      "scanReset": null,
+      "startReset": null,
+      "robotAccountId": "09d8473c-fdac-4fcd-99f7-13080187d6fd",
+      "robotLogin": "21890719",
+      "robotServer": "DerivBVI-Server",
+      "robotCompany": "Deriv (BVI) Ltd.",
+      "robotPlatform": "MT5",
+      "robotConnectedAt": 1791139953204,
+      "clientSymbols": [
+        "BTC"
+      ],
+      "clientSymbolsUpdatedAt": 1791142796838,
+      "mentorSymbolsSyncedAt": null,
+      "purchaseCaptureId": null,
+      "purchaseOrderId": null,
+      "purchaseSource": null,
+      "purchasePaid": false,
+      "purchasePaidAt": null,
+      "purchaseAmount": null,
+      "purchaseCurrency": null,
+      "emailSentAt": null,
+      "bot": {
+        "id": "zeta-scalper-ai-mtyew2ps",
+        "name": "ZETA SCALPER AI",
+        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
+        "strategy": "scalper",
+        "symbols": [
+          "BTC"
+        ]
+      }
+    },
+    {
       "key": "APEX-33BT-56B3",
       "botId": "zeta-scalper-ai-mtyew2ps",
       "botName": "ZETA SCALPER AI",
@@ -16954,7 +17005,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "XAUUSDM"
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -21112,7 +21164,9 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791122694318",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30."
         ]
       }
     },
@@ -31413,63 +31467,6 @@
           "USDJPY",
           "EURUSD",
           "GBPUSD"
-        ]
-      }
-    },
-    {
-      "key": "APEX-DYSB-GKQ4",
-      "botId": "zeta-scalper-ai-mtyew2ps",
-      "botName": "ZETA SCALPER AI",
-      "clientEmail": "trapgoatkaymow@gmail.com",
-      "clientName": "NENE.FX",
-      "mainText": "NENE.FX",
-      "mentorEmail": "forexhlulii@proton.me",
-      "mentorId": "8bc83872-c615-4b73-b765-d91cc7bacc24",
-      "mentorName": "Hluli.fx",
-      "used": true,
-      "commissionEligible": false,
-      "commissionReason": "access_already_active",
-      "duration": "lifetime",
-      "expiresAt": null,
-      "createdAt": 1791089724889,
-      "usedAt": 1791089820127,
-      "deviceId": "ad641f87-a86d-4b53-bece-5d4e1fa8ebb6",
-      "boundAt": 1791089820127,
-      "updatedAt": 1791141644303,
-      "scanReset": null,
-      "startReset": null,
-      "robotAccountId": "09d8473c-fdac-4fcd-99f7-13080187d6fd",
-      "robotLogin": "21890719",
-      "robotServer": "DerivBVI-Server",
-      "robotCompany": "Deriv (BVI) Ltd.",
-      "robotPlatform": "MT5",
-      "robotConnectedAt": 1791139953204,
-      "clientSymbols": [
-        "XAUUSD",
-        "XAUUD",
-        "XAUUSD.P",
-        "USDCAD",
-        "GBPUSD",
-        "USDJPY",
-        "AUDCAD"
-      ],
-      "clientSymbolsUpdatedAt": 1791133065096,
-      "mentorSymbolsSyncedAt": null,
-      "purchaseCaptureId": null,
-      "purchaseOrderId": null,
-      "purchaseSource": null,
-      "purchasePaid": false,
-      "purchasePaidAt": null,
-      "purchaseAmount": null,
-      "purchaseCurrency": null,
-      "emailSentAt": null,
-      "bot": {
-        "id": "zeta-scalper-ai-mtyew2ps",
-        "name": "ZETA SCALPER AI",
-        "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
-        "strategy": "scalper",
-        "symbols": [
-          "BTC"
         ]
       }
     },
@@ -146010,8 +146007,8 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "BTCUSD",
-          "US30"
+          "US30",
+          ".US30."
         ]
       }
     },
