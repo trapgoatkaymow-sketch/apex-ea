@@ -19,7 +19,7 @@
       "usedAt": 1790959281603,
       "deviceId": "c8e1b45f-a91b-460f-82eb-15620ea8dc1b",
       "boundAt": 1791044927661,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": {
         "day": "2026-10-01",
         "dayUtc": "2026-10-01",
@@ -89,7 +89,7 @@
       "usedAt": 1791037860859,
       "deviceId": "54f32f03-9048-4d4c-86f8-61bbede9bb54",
       "boundAt": 1791088507347,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "d8f2c5fa-5658-4644-b4cd-b9af2f5480df",
@@ -142,7 +142,7 @@
       "usedAt": 1791036649847,
       "deviceId": "c8e1b45f-a91b-460f-82eb-15620ea8dc1b",
       "boundAt": 1791044844316,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "d8f2c5fa-5658-4644-b4cd-b9af2f5480df",
@@ -197,7 +197,7 @@
       "usedAt": 1791086680504,
       "deviceId": "53b64af1-e110-4b38-a7e3-d5360b078492",
       "boundAt": 1791086680504,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "d8f2c5fa-5658-4644-b4cd-b9af2f5480df",
@@ -247,7 +247,7 @@
       "usedAt": 1791044923506,
       "deviceId": "aa2cb1fa-acf7-453f-a5bc-9d384448b375",
       "boundAt": 1791046134910,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "d8f2c5fa-5658-4644-b4cd-b9af2f5480df",
@@ -311,7 +311,7 @@
       "usedAt": 1791044923320,
       "deviceId": "c8e1b45f-a91b-460f-82eb-15620ea8dc1b",
       "boundAt": 1791044923320,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "d8f2c5fa-5658-4644-b4cd-b9af2f5480df",
@@ -362,7 +362,7 @@
       "usedAt": 1791059488183,
       "deviceId": "c0b7631f-0f31-483b-bd99-0de0ac25db21",
       "boundAt": 1791059488183,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "d8f2c5fa-5658-4644-b4cd-b9af2f5480df",
@@ -411,7 +411,7 @@
       "usedAt": 1790959267350,
       "deviceId": "c8e1b45f-a91b-460f-82eb-15620ea8dc1b",
       "boundAt": 1791044849589,
-      "updatedAt": 1791089332199,
+      "updatedAt": 1791089334880,
       "scanReset": null,
       "startReset": null,
       "robotAccountId": "d8f2c5fa-5658-4644-b4cd-b9af2f5480df",
@@ -3701,7 +3701,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
         "strategy": "scalper",
         "symbols": [
-          "BTCLISDM"
+          "XAUUSD",
+          "US30",
+          ".US30.",
+          "BTC"
         ]
       }
     },
@@ -7379,12 +7382,12 @@
       "updatedAt": 1791089140873,
       "scanReset": null,
       "startReset": null,
-      "robotAccountId": "44abf10c-7cf8-44d3-93e7-850161008423",
+      "robotAccountId": "b733bf65-a60a-4eaa-8c77-c6154985dc2e",
       "robotLogin": "4039917",
-      "robotServer": "RazorMarkets-live",
+      "robotServer": "RazorMarkets-Live",
       "robotCompany": "Razor Markets",
       "robotPlatform": "MT5",
-      "robotConnectedAt": 1790671445327,
+      "robotConnectedAt": 1791032324796,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
       "mentorSymbolsSyncedAt": 1791088231771,
@@ -7877,7 +7880,7 @@
         "XAUUSD"
       ],
       "clientSymbolsUpdatedAt": 1790961055116,
-      "mentorSymbolsSyncedAt": 1791088097614,
+      "mentorSymbolsSyncedAt": 1791088231771,
       "purchaseCaptureId": "8YS441412X493374M",
       "purchaseOrderId": "1M00036317858061E",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -7893,8 +7896,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          "BTCUSD",
-          "BTCUSD.M"
+          "US30",
+          ".US30.",
+          "BTC"
         ]
       }
     },
@@ -7954,7 +7958,8 @@
           "GBPUSD",
           "GOLD.MIC",
           "XAUUUSDM",
-          "EURUSD"
+          "EURUSD",
+          "BTCUSDM"
         ]
       }
     },
@@ -12170,7 +12175,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1791088097614,
+      "mentorSymbolsSyncedAt": 1791088231771,
       "purchaseCaptureId": "90P98059UM200781S",
       "purchaseOrderId": "1LP29438YJ253751F",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -13961,10 +13966,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30.",
-          "BTC"
+          "BTCLISDM"
         ]
       }
     },
@@ -14673,7 +14675,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30.",
+          "BTC"
         ]
       }
     },
@@ -16028,7 +16033,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD"
+          "XAUUSD",
+          "US30",
+          ".US30.",
+          "BTC"
         ]
       }
     },
@@ -19807,7 +19815,9 @@
         "strategy": "scalper",
         "symbols": [
           "XAUUSD",
-          ".US30."
+          "US30",
+          ".US30.",
+          "BTC"
         ]
       }
     },
@@ -21997,7 +22007,7 @@
         "XAUUSD"
       ],
       "clientSymbolsUpdatedAt": 1790963204331,
-      "mentorSymbolsSyncedAt": 1791088097614,
+      "mentorSymbolsSyncedAt": 1791088231771,
       "purchaseCaptureId": "1VP62822V9980250R",
       "purchaseOrderId": "5HU90803W8679054L",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -22910,7 +22920,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1791088097614,
+      "mentorSymbolsSyncedAt": 1791088231771,
       "purchaseCaptureId": "40W66025XJ652333W",
       "purchaseOrderId": "0H439635WF5617602",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -23129,7 +23139,7 @@
         ".US30."
       ],
       "clientSymbolsUpdatedAt": 1791053205101,
-      "mentorSymbolsSyncedAt": 1791088097614,
+      "mentorSymbolsSyncedAt": 1791088231771,
       "purchaseCaptureId": "76210348SV0416104",
       "purchaseOrderId": "1RF707484S697480J",
       "purchaseSource": "paypal-giveaway-webhook",
@@ -23449,7 +23459,7 @@
       "robotConnectedAt": null,
       "clientSymbols": [],
       "clientSymbolsUpdatedAt": null,
-      "mentorSymbolsSyncedAt": 1791087485811,
+      "mentorSymbolsSyncedAt": 1791088231771,
       "purchaseCaptureId": "5JE205498X837043B",
       "purchaseOrderId": "2NJ23130AG6161940",
       "purchaseSource": "paypal-giveaway",
@@ -32987,10 +32997,7 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
         "strategy": "scalper",
         "symbols": [
-          "XAUUSD",
-          "US30",
-          ".US30.",
-          "BTC"
+          "BTCLISDM"
         ]
       }
     },
@@ -33200,7 +33207,10 @@
         "photo": "/api/licenses/photo?botId=zeta-scalper-ai-mtyew2ps&v=1791053197008",
         "strategy": "scalper",
         "symbols": [
-          "BTCLISDM"
+          "XAUUSD",
+          "US30",
+          ".US30.",
+          "BTC"
         ]
       }
     },
