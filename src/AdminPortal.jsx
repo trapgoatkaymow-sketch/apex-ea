@@ -1465,13 +1465,14 @@ export default function AdminPortal() {
     setAppColorSaveBusy(true);
     try {
       await setAppColor(next, { persistEmail: email });
+      const savedAt = Date.now();
       setMentors((prev) =>
         prev.map((m) =>
           normalizeAdminEmail(m.email) === normalizeAdminEmail(email)
             ? {
                 ...m,
                 appColor: next,
-                appColorUpdatedAt: Date.now(),
+                appColorUpdatedAt: savedAt,
               }
             : m
         )

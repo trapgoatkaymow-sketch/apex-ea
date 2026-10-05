@@ -1667,13 +1667,6 @@ export async function updateMentorProfile(email, profileInput = {}) {
   return publicMentor(updated);
 }
 
-/** Operating mentor emails that inherit the superadmin portal brand color. */
-function brandThemeLinkedEmails() {
-  return Object.keys(DURABLE_MENTOR_PASSWORDS || {})
-    .map(normalizeEmail)
-    .filter((email) => email && email.includes("@") && email !== SUPER_ADMIN_EMAIL);
-}
-
 function applyAppColorToMentorList(list, key, appColor) {
   const now = Date.now();
   const idx = findMentorIndex(list, key);
@@ -1687,19 +1680,8 @@ function applyAppColorToMentorList(list, key, appColor) {
     appColor,
     appColorUpdatedAt: now,
   };
-  // Superadmin App color is the brand theme — mirror onto linked operator
-  // accounts so license.mentorEmail lookups (gmail) match the portal choice.
-  if (key === SUPER_ADMIN_EMAIL) {
-    for (const linked of brandThemeLinkedEmails()) {
-      const li = findMentorIndex(list, linked);
-      if (li < 0) continue;
-      list[li] = {
-        ...list[li],
-        appColor,
-        appColorUpdatedAt: now,
-      };
-    }
-  }
+  // Each mentor's portal App color drives their own clients' robot accents.
+  // Do not mirror superadmin color onto other mentor accounts.
   return list[idx];
 }
 

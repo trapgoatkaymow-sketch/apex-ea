@@ -744,6 +744,8 @@ export function AppProvider({ children }) {
   /** mentorEmail → portal username (for client header) */
   const [mentorDirectory, setMentorDirectory] = useState({});
   const [mentorThemes, setMentorThemes] = useState({});
+  /** email → appColorUpdatedAt — keep newer portal colors over stale polls. */
+  const mentorThemeTimesRef = useRef({});
   const portalThemeOwnerRef = useRef("");
   const [toast, setToast] = useState("");
   const [adminOpen, setAdminOpenState] = useState(() =>
@@ -925,14 +927,13 @@ export function AppProvider({ children }) {
         portalThemeOwnerRef.current = persistEmail;
         try {
           await updateMentorAppColor(persistEmail, color);
-          setMentorThemes((prev) => {
-            const nextThemes = { ...prev, [persistEmail]: color };
-            // Brand color also drives license mentors that inherit it.
-            if (persistEmail === normalizeEmail(SUPER_ADMIN_EMAIL)) {
-              nextThemes["trapgoatkaymow@gmail.com"] = color;
-            }
-            return nextThemes;
-          });
+          // Only this mentor's portal color — never overwrite other mentors.
+          const savedAt = Date.now();
+          mentorThemeTimesRef.current = {
+            ...mentorThemeTimesRef.current,
+            [persistEmail]: savedAt,
+          };
+          setMentorThemes((prev) => ({ ...prev, [persistEmail]: color }));
         } catch (error) {
           showToast(error?.message || "Could not save app color");
           return color;
@@ -1171,16 +1172,34 @@ export function AppProvider({ children }) {
     try {
       const list = await fetchMentors();
       const map = {};
-      const themes = {};
+      const incomingThemes = {};
+      const incomingTimes = {};
       for (const mentor of list || []) {
         const email = normalizeEmail(mentor?.email);
         const username = String(mentor?.username || "").trim();
         if (email && username) map[email] = username;
         const color = normalizeHexColor(mentor?.appColor || "", "");
-        if (email && color) themes[email] = color;
+        if (email && color) {
+          incomingThemes[email] = color;
+          incomingTimes[email] = Number(mentor?.appColorUpdatedAt) || 0;
+        }
       }
       setMentorDirectory(map);
-      setMentorThemes(themes);
+      // Merge by stamp so a stale poll cannot wipe a mentor's just-saved color.
+      setMentorThemes((prev) => {
+        const next = { ...prev };
+        const times = { ...mentorThemeTimesRef.current };
+        for (const [email, color] of Object.entries(incomingThemes)) {
+          const prevAt = Number(times[email]) || 0;
+          const nextAt = Number(incomingTimes[email]) || 0;
+          if (!prev[email] || nextAt >= prevAt) {
+            next[email] = color;
+            times[email] = Math.max(prevAt, nextAt);
+          }
+        }
+        mentorThemeTimesRef.current = times;
+        return next;
+      });
       return map;
     } catch {
       return null;
@@ -1188,21 +1207,30 @@ export function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Android APK: one delayed fetch so first paint is not blocked.
+    // Poll on web AND Android — mentors change portal color and clients must
+    // pick it up without reinstalling the APK.
+    const pollMs = isNativeApp() ? 12000 : 8000;
     const bootDelay = isNativeApp() ? 1200 : 0;
-    const bootTimer = setTimeout(() => {
-      refreshMentorDirectory();
-    }, bootDelay);
-    if (isNativeApp()) {
-      return () => clearTimeout(bootTimer);
-    }
-    const timer = setInterval(() => {
+    const tick = () => {
       if (typeof document !== "undefined" && document.hidden) return;
       refreshMentorDirectory();
-    }, 20000);
+    };
+    const bootTimer = setTimeout(tick, bootDelay);
+    const timer = setInterval(tick, pollMs);
+    const onVis = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        refreshMentorDirectory();
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
     return () => {
       clearTimeout(bootTimer);
       clearInterval(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
     };
   }, [refreshMentorDirectory]);
 
@@ -1232,7 +1260,7 @@ export function AppProvider({ children }) {
 
   // Apply the mentor's portal App color to home / lock / scanner (robot accents).
   useEffect(() => {
-    if (adminOpen) return undefined;
+    // Still apply while portal is open so Save App Color previews on the robot.
     if (!Object.keys(mentorThemes).length) return undefined;
 
     const keys = Array.isArray(licenseKeys) ? licenseKeys : [];
@@ -1241,14 +1269,21 @@ export function AppProvider({ children }) {
     const botId = String(activeBot?.id || "").trim();
     const brandEmail = normalizeEmail(SUPER_ADMIN_EMAIL);
     const brandTheme = normalizeHexColor(mentorThemes[brandEmail] || "", "");
+    const portalOwner = normalizeEmail(portalThemeOwnerRef.current || "");
+
+    // Own portal color only — never invent a color for a mentor who has none.
+    const ownTheme = (email) => {
+      const key = normalizeEmail(email);
+      if (!key) return "";
+      return normalizeHexColor(mentorThemes[key] || "", "");
+    };
 
     const pickTheme = (email) => {
       const key = normalizeEmail(email);
       if (!key) return "";
-      const own = normalizeHexColor(mentorThemes[key] || "", "");
+      const own = ownTheme(key);
       if (own) return own;
-      // Licenses usually store the operating mentor email (gmail). When that
-      // mentor has no custom color, inherit the Admin Portal brand color.
+      // Only inherit brand when this mentor never set a portal color.
       if (key !== brandEmail && brandTheme) return brandTheme;
       return "";
     };
@@ -1269,6 +1304,15 @@ export function AppProvider({ children }) {
           Number(a.usedAt || a.updatedAt || 0)
       );
 
+    /** Prefer the mentor's OWN portal color; skip brand inheritance here. */
+    const ownThemeFromRows = (rows) => {
+      for (const row of freshest(rows)) {
+        const color = ownTheme(row.mentorEmail || row.ownerEmail);
+        if (color) return color;
+      }
+      return "";
+    };
+
     const themeFromRows = (rows) => {
       for (const row of freshest(rows)) {
         const color = pickTheme(row.mentorEmail || row.ownerEmail);
@@ -1279,17 +1323,56 @@ export function AppProvider({ children }) {
 
     let themeColor = "";
 
-    // Active EA on screen wins. Otherwise a newer key from another mentor
-    // (e.g. gold BLACK VENOM) painted Start / robot list yellow while ZETA
-    // (pink) was still the home bot.
-    if (botId) {
+    // Mentor who just saved App Color in the portal — their color wins so the
+    // robot matches what they picked (not another EA's mentor on device).
+    if (portalOwner) {
+      const portalTheme = ownTheme(portalOwner);
+      if (portalTheme) themeColor = portalTheme;
+    }
+
+    // Signed-in mentor with a saved portal color, viewing their own EA.
+    if (!themeColor && account && ownTheme(account)) {
+      const ownsActive =
+        !botId ||
+        normalizeEmail(activeBot?.ownerEmail || activeBot?.mentorEmail) ===
+          account ||
+        keys.some(
+          (row) =>
+            (String(row.botId || "").trim() === botId ||
+              String(row.bot?.id || "").trim() === botId) &&
+            normalizeEmail(row.mentorEmail || row.ownerEmail) === account
+        ) ||
+        eaList.some(
+          (ea) =>
+            ea.id === botId && normalizeEmail(ea.ownerEmail) === account
+        );
+      if (ownsActive || adminOpen) themeColor = ownTheme(account);
+    }
+
+    // Active EA on screen — use THAT mentor's portal App color.
+    if (!themeColor && botId) {
       const forBot = keys.filter(
         (row) =>
           String(row.botId || "").trim() === botId ||
           String(row.bot?.id || "").trim() === botId
       );
       const boundForBot = forBot.filter(rowMatchesAccount);
-      themeColor = themeFromRows(boundForBot.length ? boundForBot : forBot);
+      themeColor = ownThemeFromRows(
+        boundForBot.length ? boundForBot : forBot
+      );
+      if (!themeColor) {
+        const ea = eaList.find((item) => item.id === botId);
+        themeColor = ownTheme(
+          ea?.ownerEmail ||
+            activeBot?.ownerEmail ||
+            activeBot?.mentorEmail ||
+            ""
+        );
+      }
+      // Fall back to brand inheritance only when the issuing mentor has no color.
+      if (!themeColor) {
+        themeColor = themeFromRows(boundForBot.length ? boundForBot : forBot);
+      }
       if (!themeColor) {
         const ea = eaList.find((item) => item.id === botId);
         themeColor = pickTheme(
@@ -1301,31 +1384,25 @@ export function AppProvider({ children }) {
       }
     }
 
-    // Signed-in mentor previewing their own portal color on their account.
     if (!themeColor && account) {
-      const selfTheme = normalizeHexColor(mentorThemes[account] || "", "");
-      if (selfTheme) themeColor = selfTheme;
+      themeColor = ownThemeFromRows(keys.filter(rowMatchesAccount));
     }
-
     if (!themeColor && account) {
       themeColor = themeFromRows(keys.filter(rowMatchesAccount));
     }
 
     if (!themeColor) {
-      const anyKey = keys.find((row) =>
-        pickTheme(row.mentorEmail || row.ownerEmail)
+      const anyOwn = keys.find((row) =>
+        ownTheme(row.mentorEmail || row.ownerEmail)
       );
-      if (anyKey) themeColor = pickTheme(anyKey.mentorEmail || anyKey.ownerEmail);
+      if (anyOwn) {
+        themeColor = ownTheme(anyOwn.mentorEmail || anyOwn.ownerEmail);
+      }
     }
 
     if (!themeColor) {
-      const owned = eaList.find((item) => pickTheme(item.ownerEmail));
-      if (owned) themeColor = pickTheme(owned.ownerEmail);
-    }
-
-    // Portal owner previewing as themselves (web) — use their saved theme.
-    if (!themeColor && portalThemeOwnerRef.current) {
-      themeColor = pickTheme(portalThemeOwnerRef.current);
+      const owned = eaList.find((item) => ownTheme(item.ownerEmail));
+      if (owned) themeColor = ownTheme(owned.ownerEmail);
     }
 
     // Last resort: Admin Portal brand color (superadmin App color).

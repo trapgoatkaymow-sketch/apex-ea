@@ -92,9 +92,10 @@
  * Gen 148 — OCR-first symbol detect + keep Analyzing UI until finished.
  * Gen 149 — Chart Scanner follows live candles (not a fake 72% BUY on every pair).
  * Gen 150 — Paid keys never show false invalid; robot accents match portal pink.
+ * Gen 151 — Robot accents follow each mentor's portal App color (live sync).
  */
-/** Gen 150 — License unlock hardened + robot color follows portal pink. */
-export const UI_SHELL_GENERATION = 150;
+/** Gen 151 — Mentor portal App color drives their clients' robot. */
+export const UI_SHELL_GENERATION = 151;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -104,7 +105,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 150;
+export const UI_SHELL_FLOOR = 151;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;
