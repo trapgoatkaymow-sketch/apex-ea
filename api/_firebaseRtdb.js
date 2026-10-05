@@ -143,11 +143,21 @@ export async function firebasePut(docPath, raw) {
   const path = toFirebasePath(docPath);
   if (!path) return { ok: false, reason: "empty-path" };
   try {
+    const text = String(raw ?? "");
+    // Licenses/mentors JSON is large and contains arrays. RTDB turns arrays into
+    // { "0": ... } objects and can drop nested maps — store the exact string so
+    // deletes/tombstones survive round-trips.
+    const preferRaw =
+      /licenses|mentors|signups/i.test(path) || text.length > 200_000;
     let payload;
-    try {
-      payload = JSON.parse(String(raw ?? ""));
-    } catch {
-      payload = { __raw: String(raw ?? "") };
+    if (preferRaw) {
+      payload = { __raw: text };
+    } else {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = { __raw: text };
+      }
     }
     await getDatabase(app).ref(path).set(payload);
     return { ok: true, durable: "firebase" };
