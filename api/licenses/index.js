@@ -17,6 +17,7 @@ import {
   mirrorLicensesToDurableStores,
   readJsonBody,
   resendPurchaseLicenseEmails,
+  sanitizeLicenseTombs,
   sendLicenseKeyEmailOnce,
   sendJson,
   setLicenseClientSymbols,
@@ -264,6 +265,17 @@ export default async function handler(req, res) {
         // Catch-up: push the merged Firebase/Blob store onto GitHub so cold
         // instances never miss keys that only lived in Firebase.
         const result = await mirrorLicensesToDurableStores();
+        sendJson(res, result.ok ? 200 : 503, result);
+        return;
+      }
+      if (
+        action === "sanitize-tombs" ||
+        action === "sanitizetombs" ||
+        action === "sanitize-deleted" ||
+        action === "clean-tombs"
+      ) {
+        // Drop OCR lookalike tombstones so live purchase keys never look invalid.
+        const result = await sanitizeLicenseTombs();
         sendJson(res, result.ok ? 200 : 503, result);
         return;
       }

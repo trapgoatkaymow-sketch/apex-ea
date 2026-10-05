@@ -2752,6 +2752,10 @@ export function AppProvider({ children }) {
         return false;
       }
 
+      // Drop any stale local tombstone for this paste before lookup.
+      forgetDeletedLicenseKey(parsedKey);
+      forgetDeletedLicenseKey(key);
+
       const variants = licenseKeyVariants(parsedKey);
       const wantCompact = normalizeLicenseKey(parsedKey).replace(/-/g, "");
       const matchKey = (item) => {
@@ -2773,14 +2777,10 @@ export function AppProvider({ children }) {
             forgetDeletedLicenseKey(entry.key);
             setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
           }
-        } catch (error) {
+        } catch {
+          // Network/timeout — keep going; email fallback may still unlock.
           lookupFailed = true;
           entry = null;
-          showToast(
-            error?.message ||
-              "Could not reach the license server — check connection and try again"
-          );
-          return false;
         }
       }
       let emailRows = [];
@@ -2792,6 +2792,7 @@ export function AppProvider({ children }) {
           }
         } catch {
           emailRows = [];
+          lookupFailed = true;
         }
       }
       if (!entry && emailRows.length) {
@@ -2810,17 +2811,16 @@ export function AppProvider({ children }) {
 
       if (!entry) {
         // Last resort: retry lookup once more (merge race / cold instance).
-        if (!lookupFailed) {
-          try {
-            await new Promise((r) => setTimeout(r, 500));
-            entry = await fetchLicense(parsedKey);
-            if (entry) {
-              forgetDeletedLicenseKey(entry.key);
-              setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
-            }
-          } catch {
-            entry = null;
+        try {
+          await new Promise((r) => setTimeout(r, 500));
+          entry = await fetchLicense(parsedKey);
+          if (entry) {
+            forgetDeletedLicenseKey(entry.key);
+            setLicenseKeys((prev) => mergeLicenses(prev, [entry]));
           }
+        } catch {
+          lookupFailed = true;
+          entry = null;
         }
       }
       if (!entry && accountEmail) {
@@ -2838,14 +2838,14 @@ export function AppProvider({ children }) {
             }
           }
         } catch {
-          // keep null
+          lookupFailed = true;
         }
       }
       if (!entry) {
         showToast(
           lookupFailed
-            ? "Could not verify license — try again in a moment"
-            : "Invalid license key — paste the full APEX-XXXX-XXXX key from your email"
+            ? "Could not verify license — check connection and try again"
+            : "Could not find that key — paste the full APEX-XXXX-XXXX from your email, or use the same email you paid with"
         );
         return false;
       }
@@ -2927,17 +2927,60 @@ export function AppProvider({ children }) {
           ? options.license
           : entry;
       let remote = null;
+      const bindPayload = {
+        deviceId,
+        email: accountEmail,
+        license: healLicense,
+        botId: entry.botId || entry.bot?.id || "",
+        botName: entry.botName || entry.bot?.name || "",
+      };
       try {
-        remote = await markLicenseUsedRemote(entry.key || key, {
-          deviceId,
-          email: accountEmail,
-          license: healLicense,
-          botId: entry.botId || entry.bot?.id || "",
-          botName: entry.botName || entry.bot?.name || "",
-        });
+        remote = await markLicenseUsedRemote(entry.key || key, bindPayload);
       } catch (error) {
-        showToast(error.message || "Could not lock license to this phone");
-        return false;
+        const msg = String(error?.message || "");
+        const looksMissing = /invalid\s*license/i.test(msg);
+        // False tombstone / merge race — clear local denial, re-fetch, heal once.
+        if (looksMissing) {
+          forgetDeletedLicenseKey(entry.key || key);
+          try {
+            const revived =
+              (await fetchLicense(entry.key || parsedKey)) ||
+              (accountEmail
+                ? pickOwnedPurchaseLicense(
+                    await fetchLicensesByEmail(accountEmail),
+                    accountEmail
+                  )
+                : null);
+            if (revived) {
+              entry = revived;
+              forgetDeletedLicenseKey(revived.key);
+              setLicenseKeys((prev) => mergeLicenses(prev, [revived]));
+              remote = await markLicenseUsedRemote(revived.key, {
+                ...bindPayload,
+                license: revived,
+                botId: revived.botId || revived.bot?.id || bindPayload.botId,
+                botName:
+                  revived.botName || revived.bot?.name || bindPayload.botName,
+              });
+            } else {
+              showToast(
+                "Could not lock license — try again in a moment"
+              );
+              return false;
+            }
+          } catch (retryError) {
+            const retryMsg = String(retryError?.message || "");
+            showToast(
+              /invalid\s*license/i.test(retryMsg)
+                ? "Could not lock license — try again in a moment"
+                : retryMsg || "Could not lock license to this phone"
+            );
+            return false;
+          }
+        } else {
+          showToast(msg || "Could not lock license to this phone");
+          return false;
+        }
       }
       if (remote) {
         entry = remote;

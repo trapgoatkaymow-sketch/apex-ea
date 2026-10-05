@@ -91,9 +91,10 @@
  * Gen 147 — Keep exact chart ticker (XAUUSD) — do not remap to XAUUSD.p.
  * Gen 148 — OCR-first symbol detect + keep Analyzing UI until finished.
  * Gen 149 — Chart Scanner follows live candles (not a fake 72% BUY on every pair).
+ * Gen 150 — Paid keys never show false invalid; robot accents match portal pink.
  */
-/** Gen 149 — Scanner side from live M5/M15/M30, not a hardcoded BUY. */
-export const UI_SHELL_GENERATION = 149;
+/** Gen 150 — License unlock hardened + robot color follows portal pink. */
+export const UI_SHELL_GENERATION = 150;
 
 /** Stable lock label written to app-version.json and document dataset. */
 export const UI_SHELL_LABEL = "product-frozen-stable";
@@ -103,7 +104,7 @@ export const UI_SHELL_LABEL = "product-frozen-stable";
  * live app-version.json must upgrade. Keep equal to UI_SHELL_GENERATION
  * while the product is locked.
  */
-export const UI_SHELL_FLOOR = 149;
+export const UI_SHELL_FLOOR = 150;
 
 /** Product UI is frozen — old interfaces must not stick on devices. */
 export const UI_SHELL_LOCKED = true;

@@ -91,13 +91,18 @@ export function pickOwnedPurchaseLicense(rows = [], email = "") {
     (row) => normalizeEmail(row?.clientEmail) === account
   );
   if (!owned.length) return null;
-  const giveaway = owned
-    .filter(isGiveawayPurchase)
-    .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+  const byNewest = (a, b) =>
+    (Number(b.usedAt || b.updatedAt || b.createdAt) || 0) -
+    (Number(a.usedAt || a.updatedAt || a.createdAt) || 0);
+  // Prefer an already-activated key so reinstall reclaim wins over a duplicate
+  // unused webhook twin that still shows "invalid" after paste mistakes.
+  const usedOwned = owned.filter((row) => row?.used).sort(byNewest);
+  if (usedOwned.length) return usedOwned[0];
+  const giveaway = owned.filter(isGiveawayPurchase).sort(byNewest);
   if (giveaway.length) return giveaway[0];
-  return owned.sort(
-    (a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)
-  )[0];
+  const paid = owned.filter(isLicenseRealPaid).sort(byNewest);
+  if (paid.length) return paid[0];
+  return owned.sort(byNewest)[0];
 }
 
 const DELETED_KEYS_STORAGE = "apexea-deleted-license-keys-v1";
@@ -604,6 +609,7 @@ export async function fetchLicense(key) {
   const compact = normalizeLicenseKey(formatted).replace(/-/g, "");
   const candidates = [...new Set([formatted, compact].filter(Boolean))];
   let lastError = null;
+  let sawHardMiss = false;
   for (let pass = 0; pass < 2; pass += 1) {
     for (const candidate of candidates) {
       try {
@@ -616,8 +622,10 @@ export async function fetchLicense(key) {
       } catch (error) {
         lastError = error;
         const status = Number(error?.status) || 0;
-        // Hard miss — stop; other spellings won't help if server variants already ran.
-        if (status === 404) return null;
+        if (status === 404) {
+          sawHardMiss = true;
+          continue;
+        }
         // Network / timeout — retry once, then surface to activateLicense.
         if (pass === 1 && candidate === candidates[candidates.length - 1]) {
           throw error;
@@ -628,7 +636,9 @@ export async function fetchLicense(key) {
       await new Promise((resolve) => setTimeout(resolve, 400));
     }
   }
-  if (lastError && Number(lastError.status) !== 404) throw lastError;
+  if (lastError && Number(lastError.status) !== 404 && !sawHardMiss) {
+    throw lastError;
+  }
   return null;
 }
 

@@ -2684,9 +2684,10 @@ html:has(.phone[data-interface="v2"]) body {
 }
 
 .mt-panel--v2 {
-  --mt-accent: #c026d3;
-  --mt-accent-hot: #e879f9;
-  --mt-accent-rgb: 192, 38, 211;
+  /* Follow portal App color (pink brand) — no hardcoded purple. */
+  --mt-accent: var(--pink);
+  --mt-accent-hot: var(--pink-hot);
+  --mt-accent-rgb: var(--pink-rgb);
 }
 
 .mt-panel--v2 .mt-panel-title,
@@ -8277,9 +8278,10 @@ html.is-native.is-paused .mt-platform-btn.is-active {
 
 /* Interface 2 Trading Engine — glass desk with ring meter */
 .cs-engine.is-desk {
-  --cs-engine-accent: #c026d3;
-  --cs-engine-accent-hot: #e879f9;
-  --cs-engine-accent-rgb: 192, 38, 211;
+  /* Follow portal App color (pink brand) — no hardcoded purple. */
+  --cs-engine-accent: var(--pink);
+  --cs-engine-accent-hot: var(--pink-hot);
+  --cs-engine-accent-rgb: var(--pink-rgb);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -12131,18 +12133,19 @@ html.is-native.is-paused .cs-scan-grid.is-on {
 /* ========== Interface 2 TrapGoat Scanner (exact reference layout) ========== */
 .phone[data-interface="v2"]:has(.view-scanner.cs-tg) .v2-stage {
   background:
-    radial-gradient(120% 70% at 50% -8%, rgba(168, 85, 247, 0.28), transparent 52%),
-    radial-gradient(90% 50% at 100% 20%, rgba(236, 72, 153, 0.12), transparent 45%),
+    radial-gradient(120% 70% at 50% -8%, rgba(var(--pink-rgb), 0.28), transparent 52%),
+    radial-gradient(90% 50% at 100% 20%, rgba(var(--pink-soft-rgb), 0.14), transparent 45%),
     linear-gradient(180deg, #12081c 0%, #07040d 48%, #0a0612 100%);
   padding: 6px 12px 10px;
 }
 
 .view-scanner.cs-tg {
-  --tg-purple: #c026d3;
-  --tg-purple-hot: #e879f9;
-  --tg-purple-deep: #7c1fa0;
-  --tg-purple-rgb: 192, 38, 211;
-  --tg-pink-rgb: 236, 72, 153;
+  /* Robot / scanner accents follow portal App color (pink), not fixed purple. */
+  --tg-purple: var(--pink);
+  --tg-purple-hot: var(--pink-soft);
+  --tg-purple-deep: var(--pink-deep);
+  --tg-purple-rgb: var(--pink-rgb);
+  --tg-pink-rgb: var(--pink-soft-rgb);
   --tg-green: #22c55e;
   --tg-red: #f43f5e;
   --tg-ink: #f8fafc;
