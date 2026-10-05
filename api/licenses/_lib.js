@@ -457,8 +457,11 @@ function lookalikeNeighbors(formattedKey) {
 }
 
 /**
- * Drop OCR lookalike tombstone pollution and never bury a live license key.
- * Old deletes stamped every O/0/1/I/L swap, which wiped valid generated keys.
+ * Drop OCR lookalike tombstone pollution.
+ * Exact delete stamps stick — a stale remote copy of a purged key must not
+ * resurrect it (capture/webhook cleanup / unused-duplicate purge).
+ * Lookalike neighbors of a live key are still cleared so O/0 swaps cannot
+ * wipe a different real key.
  */
 function sanitizeDeletedKeys(deletedKeys, licenses = []) {
   const tomb = normalizeDeletedKeys(deletedKeys);
@@ -466,9 +469,19 @@ function sanitizeDeletedKeys(deletedKeys, licenses = []) {
   for (const row of Array.isArray(licenses) ? licenses : []) {
     for (const id of licenseKeyIdentity(row?.key)) live.add(id);
   }
-  // Live keys always win over a false lookalike tombstone.
+  // Clear lookalike tombs near live keys, but keep EXACT delete stamps.
   for (const id of live) {
-    delete tomb[id];
+    if (tomb[id]) continue;
+    const formattedLive = formatLicenseKey(id);
+    if (!formattedLive || !/^APEX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(formattedLive)) {
+      continue;
+    }
+    for (const neighbor of lookalikeNeighbors(formattedLive)) {
+      if (licenseKeyIdentity(formattedLive).includes(neighbor)) continue;
+      delete tomb[neighbor];
+      const compact = String(neighbor || "").replace(/-/g, "");
+      if (compact && compact !== neighbor) delete tomb[compact];
+    }
   }
 
   const formatted = Object.entries(tomb).filter(([k]) =>
@@ -512,7 +525,7 @@ function sanitizeDeletedKeys(deletedKeys, licenses = []) {
   for (const key of keepFormatted) {
     const at = Number(tomb[key]) || Date.now();
     for (const id of licenseKeyIdentity(key)) {
-      if (live.has(id)) continue;
+      // Keep exact tombs even if a stale store still lists the key — delete wins.
       next[id] = Math.max(next[id] || 0, at);
     }
   }
