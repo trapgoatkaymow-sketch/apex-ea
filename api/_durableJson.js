@@ -543,6 +543,30 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
   return JSON.stringify({ mentors }, null, 2) + "\n";
 }
 
+/** RTDB turns JSON arrays into { "0": row, "1": row }. Coerce back to arrays. */
+function coerceJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+  return Object.keys(value)
+    .filter((k) => /^\d+$/.test(k))
+    .sort((a, b) => Number(a) - Number(b))
+    .map((k) => value[k])
+    .filter((row) => row && typeof row === "object");
+}
+
+function coerceDeletedKeyMap(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    const key = String(k || "")
+      .trim()
+      .toUpperCase();
+    if (!key) continue;
+    out[key] = Number(v) || Date.now();
+  }
+  return out;
+}
+
 /**
  * Merge two licenses.json documents by key so concurrent git pushes do not
  * wipe each other's newly claimed keys. Prefer the newer row stamp.
@@ -551,7 +575,9 @@ function mergeMentorsDocuments(remoteRaw, intendedRaw, opts = {}) {
  * Empty intended + reset message → overwrite (clear-all).
  */
 function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
-  const isReset = /reset all license|clear all license/i.test(String(message || ""));
+  const msg = String(message || "");
+  const isReset = /reset all license|clear all license/i.test(msg);
+  const isPurge = /purge unused duplicate|license deleted:/i.test(msg);
   let remote;
   let intended;
   try {
@@ -560,22 +586,79 @@ function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
   } catch {
     return String(intendedRaw ?? "");
   }
-  const intendedList = Array.isArray(intended?.licenses) ? intended.licenses : null;
-  const remoteList = Array.isArray(remote?.licenses) ? remote.licenses : null;
-  if (!intendedList) return String(intendedRaw ?? "");
+  const intendedList = coerceJsonArray(intended?.licenses);
+  const remoteList = coerceJsonArray(remote?.licenses);
+  if (!intendedList.length && !isReset && !isPurge) {
+    // Intended empty (often RTDB array coercion miss) — keep remote, still
+    // merge tombstones so deletes are not lost.
+    if (!remoteList.length) return String(intendedRaw ?? "");
+  }
   if (isReset && intendedList.length === 0) {
     return (
       JSON.stringify(
         {
           licenses: [],
-          deletedKeys: intended?.deletedKeys || {},
+          deletedKeys: coerceDeletedKeyMap(intended?.deletedKeys),
         },
         null,
         2
       ) + "\n"
     );
   }
-  if (!remoteList) return String(intendedRaw ?? "");
+  // Purge / delete pass: intended roster + tombs win — do not re-ingest stale
+  // remote copies of keys that were just removed.
+  if (isPurge) {
+    const deletedKeys = {
+      ...coerceDeletedKeyMap(remote?.deletedKeys),
+      ...coerceDeletedKeyMap(intended?.deletedKeys),
+    };
+    const deletedSet = new Set(
+      Object.keys(deletedKeys).map((k) => String(k).trim().toUpperCase())
+    );
+    const licenses = intendedList.filter((row) => {
+      const key = String(row?.key || "")
+        .trim()
+        .toUpperCase();
+      return key && !deletedSet.has(key) && !deletedSet.has(key.replace(/-/g, ""));
+    });
+    return JSON.stringify({ licenses, deletedKeys }, null, 2) + "\n";
+  }
+  if (!remoteList.length && intendedList.length) {
+    // Remote empty/coercion miss — still apply remote tombs onto intended.
+    const deletedKeys = {
+      ...coerceDeletedKeyMap(remote?.deletedKeys),
+      ...coerceDeletedKeyMap(intended?.deletedKeys),
+    };
+    const deletedSet = new Set(
+      Object.keys(deletedKeys).map((k) => String(k).trim().toUpperCase())
+    );
+    const licenses = intendedList.filter((row) => {
+      const key = String(row?.key || "")
+        .trim()
+        .toUpperCase();
+      return key && !deletedSet.has(key) && !deletedSet.has(key.replace(/-/g, ""));
+    });
+    return JSON.stringify({ licenses, deletedKeys }, null, 2) + "\n";
+  }
+  if (!intendedList.length && remoteList.length) {
+    const deletedKeys = {
+      ...coerceDeletedKeyMap(remote?.deletedKeys),
+      ...coerceDeletedKeyMap(intended?.deletedKeys),
+    };
+    const deletedSet = new Set(
+      Object.keys(deletedKeys).map((k) => String(k).trim().toUpperCase())
+    );
+    const licenses = remoteList.filter((row) => {
+      const key = String(row?.key || "")
+        .trim()
+        .toUpperCase();
+      return key && !deletedSet.has(key) && !deletedSet.has(key.replace(/-/g, ""));
+    });
+    return JSON.stringify({ licenses, deletedKeys }, null, 2) + "\n";
+  }
+  if (!remoteList.length && !intendedList.length) {
+    return String(intendedRaw ?? "");
+  }
 
   const map = new Map();
   const stamp = (row) =>
@@ -634,12 +717,8 @@ function mergeLicensesDocuments(remoteRaw, intendedRaw, message = "") {
   for (const row of intendedList) ingest(row);
 
   const deletedKeys = {
-    ...(remote?.deletedKeys && typeof remote.deletedKeys === "object"
-      ? remote.deletedKeys
-      : {}),
-    ...(intended?.deletedKeys && typeof intended.deletedKeys === "object"
-      ? intended.deletedKeys
-      : {}),
+    ...coerceDeletedKeyMap(remote?.deletedKeys),
+    ...coerceDeletedKeyMap(intended?.deletedKeys),
   };
   // Tombstones remove keys from the merged list.
   const deletedSet = new Set(

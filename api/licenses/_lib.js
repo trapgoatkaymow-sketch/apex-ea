@@ -1526,7 +1526,7 @@ function decodeContent(file) {
   );
   try {
     const parsed = JSON.parse(raw || "{}");
-    const licenses = Array.isArray(parsed?.licenses) ? parsed.licenses : [];
+    const licenses = coerceLicenseArray(parsed?.licenses);
     const deletedKeys = normalizeDeletedKeys(parsed?.deletedKeys);
     return {
       sha: file.sha,
@@ -1538,10 +1538,21 @@ function decodeContent(file) {
   }
 }
 
+/** RTDB stores JSON arrays as { "0": row }. Coerce back before merge/decode. */
+function coerceLicenseArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+  return Object.keys(value)
+    .filter((k) => /^\d+$/.test(k))
+    .sort((a, b) => Number(a) - Number(b))
+    .map((k) => value[k])
+    .filter((row) => row && typeof row === "object");
+}
+
 function decodeLicensesJson(raw, sha = "local") {
   try {
     const parsed = JSON.parse(raw || "{}");
-    const licenses = Array.isArray(parsed?.licenses) ? parsed.licenses : [];
+    const licenses = coerceLicenseArray(parsed?.licenses);
     const deletedKeys = normalizeDeletedKeys(parsed?.deletedKeys);
     return {
       sha,
@@ -1829,7 +1840,7 @@ async function readStore(options = {}) {
   if (durable.raw != null) {
     try {
       const parsed = JSON.parse(durable.raw || "{}");
-      const licenses = Array.isArray(parsed?.licenses) ? parsed.licenses : [];
+      const licenses = coerceLicenseArray(parsed?.licenses);
       const deletedKeys = normalizeDeletedKeys(parsed?.deletedKeys);
       remote = {
         sha: durable.source === "github" ? durable.sha : null,
