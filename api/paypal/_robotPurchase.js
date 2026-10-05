@@ -984,6 +984,18 @@ async function resolveMentor() {
   return { mentorEmail: email, mentorId, mentorName };
 }
 
+function isPaidPurchaseRow(row) {
+  if (!row || typeof row !== "object") return false;
+  if (row.purchasePaid === true) return true;
+  if (String(row.purchaseCaptureId || "").trim()) return true;
+  const src = String(row.purchaseSource || "").toLowerCase();
+  return (
+    src.includes("paypal") ||
+    src.includes("giveaway") ||
+    src.includes("promo")
+  );
+}
+
 function findPurchaseLicense(licenses, { buyer, captureKey, orderKey } = {}) {
   const rows = Array.isArray(licenses) ? licenses : [];
   if (captureKey) {
@@ -1008,6 +1020,21 @@ function findPurchaseLicense(licenses, { buyer, captureKey, orderKey } = {}) {
         (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
       );
     if (byOrder[0]?.key) return byOrder[0];
+  }
+  // Capture + webhook often disagree on capture/order ids — one paid ZETA key
+  // per buyer is enough (stops spam license emails).
+  if (buyer) {
+    const byBuyer = rows
+      .filter(
+        (row) =>
+          normalizeEmail(row?.clientEmail) === buyer &&
+          String(row?.botId || "").trim() === ROBOT_BOT_ID &&
+          isPaidPurchaseRow(row)
+      )
+      .sort(
+        (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+      );
+    if (byBuyer[0]?.key) return byBuyer[0];
   }
   return null;
 }

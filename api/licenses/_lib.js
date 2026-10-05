@@ -2308,6 +2308,77 @@ export async function createLicense(payload = {}) {
       }
     }
 
+    // One paid/giveaway key per buyer+bot — stops capture/webhook email spam.
+    if (purchasePaid || purchaseSource) {
+      const paidSameBuyer = licenses
+        .filter(
+          (row) =>
+            normalizeEmail(row?.clientEmail) === clientEmail &&
+            String(row?.botId || "").trim() === botId &&
+            (row?.purchasePaid === true ||
+              String(row?.purchaseCaptureId || "").trim() ||
+              /paypal|giveaway|promo/i.test(
+                String(row?.purchaseSource || "")
+              ))
+        )
+        .sort(
+          (a, b) => (Number(a?.createdAt) || 0) - (Number(b?.createdAt) || 0)
+        );
+      if (paidSameBuyer[0]?.key) {
+        createdNew = false;
+        const prev = paidSameBuyer[0];
+        const idx = licenses.findIndex((row) => row.key === prev.key);
+        result = {
+          ...prev,
+          clientEmail: prev.clientEmail || clientEmail,
+          clientName: prev.clientName || clientName,
+          purchaseCaptureId:
+            String(prev.purchaseCaptureId || "").trim() ||
+            purchaseCaptureId,
+          purchaseOrderId:
+            String(prev.purchaseOrderId || "").trim() || purchaseOrderId,
+          purchaseSource:
+            String(prev.purchaseSource || "").trim() || purchaseSource,
+          purchasePaid: true,
+          purchasePaidAt:
+            Number(prev.purchasePaidAt) ||
+            purchasePaidAt ||
+            Number(prev.createdAt) ||
+            Date.now(),
+          purchaseAmount: prev.purchaseAmount || purchaseAmount || null,
+          purchaseCurrency:
+            prev.purchaseCurrency || purchaseCurrency || null,
+          emailSentAt: prev.emailSentAt || null,
+          updatedAt: Date.now(),
+        };
+        if (idx >= 0) licenses[idx] = result;
+        return licenses;
+      }
+    }
+
+    // Mentor Generate: reuse an unused key for the same client+bot instead of
+    // minting (and emailing) another one — unless forceNew is set.
+    const forceNew =
+      payload.forceNew === true ||
+      String(payload.forceNew || "").toLowerCase() === "true";
+    if (!forceNew && !purchasePaid && !purchaseSource) {
+      const unusedSame = licenses
+        .filter(
+          (row) =>
+            normalizeEmail(row?.clientEmail) === clientEmail &&
+            String(row?.botId || "").trim() === botId &&
+            !row?.used
+        )
+        .sort(
+          (a, b) => (Number(b?.createdAt) || 0) - (Number(a?.createdAt) || 0)
+        );
+      if (unusedSame[0]?.key) {
+        createdNew = false;
+        result = unusedSame[0];
+        return licenses;
+      }
+    }
+
     const existing = licenses.find((row) => row.key === key);
     if (!existing && ownerEmailForQuota && keyAllowance != null && !skipQuota) {
       const used = licenses.filter(
@@ -3477,6 +3548,132 @@ export async function deleteLicense(rawKey) {
     ...(result || { key: formattedKey, deleted: true }),
     deleted: true,
     durable: write?.durable !== false,
+  };
+}
+
+/**
+ * Per clientEmail+botId: keep used keys; delete unused extras.
+ * - If any used → delete all unused for that email+bot
+ * - If only unused and count > 1 → keep one (prefer paid, then newest)
+ * Also returns emails that previously received many keys (for tracking).
+ */
+export async function purgeUnusedDuplicateLicenses({ dryRun = false } = {}) {
+  const store = await readStore({ preferFresh: true });
+  const licenses = Array.isArray(store.licenses) ? store.licenses : [];
+  const groups = new Map();
+  for (const row of licenses) {
+    const email = normalizeEmail(row?.clientEmail);
+    const botId = String(row?.botId || row?.bot?.id || "").trim();
+    if (!email || !email.includes("@") || !botId) continue;
+    const gkey = `${email}|${botId}`;
+    if (!groups.has(gkey)) groups.set(gkey, []);
+    groups.get(gkey).push(row);
+  }
+
+  const deleteKeys = new Set();
+  const kept = [];
+  const multiEmails = new Map();
+
+  for (const [gkey, rows] of groups) {
+    const [email, botId] = gkey.split("|");
+    const used = rows.filter((r) => r?.used);
+    const unused = rows.filter((r) => !r?.used);
+    if (rows.length >= 2) {
+      const prev = multiEmails.get(email) || {
+        email,
+        total: 0,
+        used: 0,
+        unused: 0,
+        bots: new Set(),
+      };
+      prev.total += rows.length;
+      prev.used += used.length;
+      prev.unused += unused.length;
+      prev.bots.add(botId);
+      multiEmails.set(email, prev);
+    }
+    if (used.length && unused.length) {
+      for (const row of unused) {
+        const key = formatLicenseKey(row?.key);
+        if (key) deleteKeys.add(key);
+      }
+      for (const row of used) kept.push(row.key);
+      continue;
+    }
+    if (unused.length > 1) {
+      const ranked = [...unused].sort((a, b) => {
+        const aPaid =
+          a?.purchasePaid === true ||
+          /paypal|giveaway|promo/i.test(String(a?.purchaseSource || ""))
+            ? 1
+            : 0;
+        const bPaid =
+          b?.purchasePaid === true ||
+          /paypal|giveaway|promo/i.test(String(b?.purchaseSource || ""))
+            ? 1
+            : 0;
+        if (bPaid !== aPaid) return bPaid - aPaid;
+        return (Number(b?.createdAt) || 0) - (Number(a?.createdAt) || 0);
+      });
+      kept.push(ranked[0]?.key);
+      for (const row of ranked.slice(1)) {
+        const key = formatLicenseKey(row?.key);
+        if (key) deleteKeys.add(key);
+      }
+    }
+  }
+
+  const trackedEmails = [...multiEmails.values()]
+    .map((row) => ({
+      email: row.email,
+      total: row.total,
+      used: row.used,
+      unused: row.unused,
+      bots: row.bots.size,
+      unusedDeleted: Math.max(0, row.unused - (row.used ? 0 : 1)),
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  if (dryRun || !deleteKeys.size) {
+    return {
+      ok: true,
+      dryRun: Boolean(dryRun),
+      deletedCount: dryRun ? deleteKeys.size : 0,
+      deleteKeys: [...deleteKeys].slice(0, 200),
+      keptSample: kept.filter(Boolean).slice(0, 50),
+      emailsWithManyKeys: trackedEmails.slice(0, 100),
+      emailsWithManyKeysCount: trackedEmails.length,
+      durable: true,
+    };
+  }
+
+  const remove = new Set(
+    [...deleteKeys].flatMap((k) => licenseKeyIdentity(k))
+  );
+  let removed = 0;
+  const write = await mutateStore((list, api) => {
+    const next = [];
+    for (const row of list) {
+      const ids = licenseKeyIdentity(row?.key);
+      if (ids.some((id) => remove.has(id))) {
+        api.tombstone?.(row.key);
+        removed += 1;
+        continue;
+      }
+      next.push(row);
+    }
+    return next;
+  }, `chore: purge ${deleteKeys.size} unused duplicate license keys`);
+
+  return {
+    ok: write?.durable !== false,
+    dryRun: false,
+    deletedCount: removed,
+    deleteKeys: [...deleteKeys].slice(0, 200),
+    emailsWithManyKeys: trackedEmails.slice(0, 100),
+    emailsWithManyKeysCount: trackedEmails.length,
+    durable: write?.durable !== false,
+    source: write?.source || null,
   };
 }
 

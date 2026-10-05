@@ -15,6 +15,7 @@ import {
   markLicenseEmailSent,
   markLicenseUsed,
   mirrorLicensesToDurableStores,
+  purgeUnusedDuplicateLicenses,
   readJsonBody,
   resendPurchaseLicenseEmails,
   sanitizeLicenseTombs,
@@ -276,6 +277,34 @@ export default async function handler(req, res) {
       ) {
         // Drop OCR lookalike tombstones so live purchase keys never look invalid.
         const result = await sanitizeLicenseTombs();
+        sendJson(res, result.ok ? 200 : 503, result);
+        return;
+      }
+      if (
+        action === "purge-unused-duplicates" ||
+        action === "purgeunusedduplicates" ||
+        action === "purge-dup-keys" ||
+        action === "track-multi-keys"
+      ) {
+        const admin = normalizeEmail(body.adminEmail || body.email || "");
+        const storeToken = String(process.env.LICENSES_STORE_TOKEN || "").trim();
+        const provided = String(body.token || body.secret || "").trim();
+        const superAdmin = normalizeEmail(SUPER_ADMIN_EMAIL);
+        const authed =
+          (admin &&
+            (admin === superAdmin || admin === "trapgoatkaymow@gmail.com")) ||
+          (storeToken && provided && provided === storeToken);
+        if (!authed) {
+          sendJson(res, 403, {
+            error: "Only super admin can purge unused duplicate license keys",
+          });
+          return;
+        }
+        const dryRun =
+          action === "track-multi-keys" ||
+          body.dryRun === true ||
+          String(body.dryRun || "").toLowerCase() === "true";
+        const result = await purgeUnusedDuplicateLicenses({ dryRun });
         sendJson(res, result.ok ? 200 : 503, result);
         return;
       }
